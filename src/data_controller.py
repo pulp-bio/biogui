@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-# import serial
+import serial
 import numpy as np
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
-# from scipy import signal
+from scipy import signal
 
 
 class SerialThread(QThread):
@@ -38,23 +38,20 @@ class SerialThread(QThread):
         self, serial_port: str, packet_size: int = 243, baude_rate: int = 4000000
     ) -> None:
         super(QThread, self).__init__()
-        # self._ser = serial.Serial(serial_port, baude_rate)
+        self._ser = serial.Serial(serial_port, baude_rate)
         self._packet_size = packet_size
         self._trigger = 0
 
     def run(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
-        # self._ser.write(b"=")
+        self._ser.write(b"=")
         while not self.isInterruptionRequested():
-            # data = self._ser.read(self._packet_size)
-            data = 500 * np.random.randn(16).astype("float32")
-            data = data.tobytes()
+            data = self._ser.read(self._packet_size)
             data = bytearray(data)
-            # data[-1] = self._trigger
+            data[-1] = self._trigger
             self.data_ready_sig.emit(data)
-            self.msleep(1)
-        # self._ser.write(b"=")
-        # self._ser.close()
+        self._ser.write(b"=")
+        self._ser.close()
         print("Serial stopped")
 
     def update_trigger(self, trigger: int) -> None:
@@ -87,7 +84,7 @@ class FileWorker(QObject):
 
     def __init__(self, file_path: str) -> None:
         super(QObject, self).__init__()
-        self._f = open(file_path, "w")
+        self._f = open(file_path, "wb")
 
     @pyqtSlot(bytearray)
     def write(self, data: bytearray) -> None:
@@ -99,7 +96,7 @@ class FileWorker(QObject):
         data : bytearray
             New binary data.
         """
-        self._f.write(" ".join([str(x) for x in data]))
+        self._f.write(data)
 
     def close_file(self) -> None:
         """Close the file."""
@@ -161,10 +158,10 @@ class PreprocessWorker(QObject):
         self._gain_scale_factor = gain_scale_factor
         self._v_scale_factor = v_scale_factor
         self._counter = 0
-        # self._b, self._a = signal.iirfilter(
-        #     2, Wn=20, fs=fs, btype="high", ftype="butter"
-        # )
-        # self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(n_ch)]
+        self._b, self._a = signal.iirfilter(
+            2, Wn=20, fs=fs, btype="high", ftype="butter"
+        )
+        self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(n_ch)]
 
     @pyqtSlot(bytearray)
     def preprocess(self, data: bytearray) -> None:
@@ -176,26 +173,25 @@ class PreprocessWorker(QObject):
         data : bytearray
             New binary data.
         """
-        # data_ref = np.zeros(shape=(self._n_samp, self._n_ch), dtype="uint32")
-        # data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
-        # for k in range(self._n_samp):
-        #     for i in range(self._n_ch):
-        #         data_ref[k, i] = (
-        #             data[k * 48 + (3 * i)] * 256 * 256 * 256
-        #             + data[0 * k * 48 + (3 * i) + 1] * 256 * 256
-        #             + data[0 * k * 48 + (3 * i) + 2] * 256
-        #         )
-        # data_ref = data_ref.view("int32").astype("float32")
-        # data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
-        data_ref = np.frombuffer(data, dtype="float32")
-        # for i in range(self._n_ch):
-        #     data_ref[:, i], self.zi[i] = signal.lfilter(
-        #         self.b, self.a, data_ref[:, i], zi=self.zi[i]
-        #     )
+        data_ref = np.zeros(shape=(self._n_samp, self._n_ch), dtype="uint32")
+        data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
+        for k in range(self._n_samp):
+            for i in range(self._n_ch):
+                data_ref[k, i] = (
+                    data[k * 48 + (3 * i)] * 256 * 256 * 256
+                    + data[0 * k * 48 + (3 * i) + 1] * 256 * 256
+                    + data[0 * k * 48 + (3 * i) + 2] * 256
+                )
+        data_ref = data_ref.view("int32").astype("float32")
+        data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
+        for i in range(self._n_ch):
+            data_ref[:, i], self._zi[i] = signal.lfilter(
+                self._b, self._a, data_ref[:, i], zi=self._zi[i]
+            )
 
-        # if self._counter % 2 == 0:  # emit one in 4 packets
-        self.data_ready_sig.emit(data_ref)
-        # self._counter += 1
+        if self._counter % 4 == 0:  # emit one in 4 packets
+            self.data_ready_sig.emit(data_ref)
+        self._counter += 1
 
 
 class DataController(QObject):

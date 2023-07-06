@@ -84,18 +84,17 @@ class GraphWindow(QMainWindow):
         data : ndarray
             Data to plot.
         """
-        data = np.frombuffer(data, dtype="float32")
+        for samples in data:
+            self._x.append(self._x[-1] + 1 / self._fs)
+            self._y.append(samples)
 
-        self._x.append(self._x[-1] + 1 / self._fs)
-        self._y.append(data)
-
-        if self._i == 50:
-            xs = list(self._x)
-            ys = np.asarray(list(self._y)).T
-            for i in range(self._n_ch):
-                self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
-            self._i = 0
-        self._i += 1
+            if self._i == 50:
+                xs = list(self._x)
+                ys = np.asarray(list(self._y)).T
+                for i in range(self._n_ch):
+                    self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
+                self._i = 0
+            self._i += 1
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.close_sig.emit()
@@ -113,7 +112,7 @@ class GeturesWindow(QWidget):
         self.title = "Image Viewer"
         self.setWindowTitle(self.title)
         # self.image_folder = f"C:\\Users\pierangelomaria.rap2\Documents\hand_mov\\"
-        self.image_folder = f"./src/hand_mov/"
+        self.image_folder = ".\\src\hand_mov\\"
         self.label = QLabel(self)
         self.pixmap = QPixmap(f"{self.image_folder}start.png")
         self.resize(840, 840)
@@ -182,7 +181,7 @@ if __name__ == "__main__":
     gest_win.show()
 
     data_controller = DataController(
-        serial_kw={"serial_port": ""},
+        serial_kw={"serial_port": "COM16"},
         file_kw={"file_path": "serial.bin"},
         preprocess_kw={"n_samp": 1},
     )
