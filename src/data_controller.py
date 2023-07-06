@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import serial
 import numpy as np
+import serial
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-
 from scipy import signal
 
 
-class SerialThread(QThread):
+class _SerialWorker(QObject):
     """Worker that reads data from a serial port indefinitely, and sends it via a Qt signal.
-    Having an infinite loop, it must directly subclass QThread.
 
     Parameters
     ----------
@@ -30,6 +28,8 @@ class SerialThread(QThread):
         Size of each packet read from the serial port.
     _trigger : int
         Trigger value to add to each packet.
+    _stop_acquisition : bool
+        Whether to stop the acquisition.
     """
 
     data_ready_sig = pyqtSignal(bytearray)
@@ -37,36 +37,38 @@ class SerialThread(QThread):
     def __init__(
         self, serial_port: str, packet_size: int = 243, baude_rate: int = 4000000
     ) -> None:
-        super(QThread, self).__init__()
+        super(QObject, self).__init__()
         self._ser = serial.Serial(serial_port, baude_rate)
         self._packet_size = packet_size
         self._trigger = 0
+        self._stop_acquisition = False
 
-    def run(self) -> None:
+    @property
+    def trigger(self) -> int:
+        return self._trigger
+
+    @trigger.setter
+    def trigger(self, trigger: int) -> None:
+        self._trigger = trigger
+
+    def start_acquisition(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
         self._ser.write(b"=")
-        while not self.isInterruptionRequested():
+        while not self._stop_acquisition:
             data = self._ser.read(self._packet_size)
             data = bytearray(data)
             data[-1] = self._trigger
             self.data_ready_sig.emit(data)
-        self._ser.write(b"=")
+        self._ser.write(b":")
         self._ser.close()
         print("Serial stopped")
 
-    def update_trigger(self, trigger: int) -> None:
-        """Update the trigger value.
-
-        Parameters
-        ----------
-        trigger : int
-            New trigger value.
-        """
-        self._trigger = trigger
-        print(self._trigger)
+    def stop_acquisition(self) -> None:
+        """Stop the acquisition."""
+        self._stop_acquisition = True
 
 
-class FileWorker(QObject):
+class _FileWorker(QObject):
     """Worker that writes into a binary file the data it receives via a Qt signal.
 
     Parameters
@@ -104,7 +106,7 @@ class FileWorker(QObject):
         print("File closed")
 
 
-class PreprocessWorker(QObject):
+class _PreprocessWorker(QObject):
     """Worker that preprocess the binary data it receives via a Qt signal.
 
     Parameters
@@ -212,19 +214,23 @@ class DataController(QObject):
             preprocess_kw = {}
 
         # Create threads and workers
-        self.serial_thread = SerialThread(**serial_kw)
-        self.file_worker = FileWorker(**file_kw)
-        self.preprocess_worker = PreprocessWorker(**preprocess_kw)
+        self.serial_worker = _SerialWorker(**serial_kw)
+        self.file_worker = _FileWorker(**file_kw)
+        self.preprocess_worker = _PreprocessWorker(**preprocess_kw)
+        self.serial_thread = QThread()
+        self.serial_worker.moveToThread(self.serial_thread)
         self.file_thread = QThread()
         self.file_worker.moveToThread(self.file_thread)
         self.preprocess_thread = QThread()
         self.preprocess_worker.moveToThread(self.preprocess_thread)
 
         # Create connections
+        self.serial_thread.started.connect(self.serial_worker.start_acquisition)
         self.serial_thread.data_ready_sig.connect(self.file_worker.write)
         self.serial_thread.data_ready_sig.connect(self.preprocess_worker.preprocess)
 
     def start_threads(self):
+        """Start all the threads."""
         self.file_thread.start()
         self.preprocess_thread.start()
         self.serial_thread.start()
@@ -239,18 +245,22 @@ class DataController(QObject):
         trigger : int
             New trigger value.
         """
-        self.serial_thread.update_trigger(trigger)
+        self.serial_worker.trigger = trigger
+        print(self.serial_worker.trigger)
 
     @pyqtSlot()
     def stop_file_writer(self) -> None:
-        self.serial_thread.data_ready_sig.disconnect(self.file_worker.write)
+        """Stop the file writer worker."""
+        self.serial_worker.data_ready_sig.disconnect(self.file_worker.write)
         self.file_worker.close_file()
         self.file_thread.quit()
         self.file_thread.wait()
 
     @pyqtSlot()
     def stop_acquistion(self) -> None:
-        self.serial_thread.requestInterruption()
+        """Stop the acquisition, i.e. serial and preprocess workers."""
+        self.serial_worker.stop_acquisition()
+        self.serial_thread.quit()
         self.serial_thread.wait()
         self.preprocess_thread.quit()
         self.preprocess_thread.wait()
