@@ -1,10 +1,10 @@
 import sys
 from collections import deque
-from PyQt6 import QtGui
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
+from PyQt6 import QtGui
+from PyQt6.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget
 
