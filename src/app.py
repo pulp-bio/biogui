@@ -113,7 +113,7 @@ class GeturesWindow(QWidget):
         self.title = "Image Viewer"
         self.setWindowTitle(self.title)
         # self.image_folder = f"C:\\Users\pierangelomaria.rap2\Documents\hand_mov\\"
-        self.image_folder = f"./hand_mov/"
+        self.image_folder = f"./src/hand_mov/"
         self.label = QLabel(self)
         self.pixmap = QPixmap(f"{self.image_folder}start.png")
         self.resize(840, 840)
