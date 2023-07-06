@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import serial
+import time 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from scipy import signal
 
@@ -59,7 +60,15 @@ class _SerialWorker(QObject):
             data = bytearray(data)
             data[-1] = self._trigger
             self.data_ready_sig.emit(data)
+        print("Serial precommand")
         self._ser.write(b":")
+        print("Serial before flush")
+        time.sleep(0.2)
+        self._ser.flush()
+        # self._ser.reset_input_buffer()
+        # self._ser.reset_output_buffer()
+        time.sleep(0.2)
+        print("Serial before close")
         self._ser.close()
         print("Serial stopped")
 
@@ -191,9 +200,9 @@ class _PreprocessWorker(QObject):
                 self._b, self._a, data_ref[:, i], zi=self._zi[i]
             )
 
-        if self._counter % 4 == 0:  # emit one in 4 packets
-            self.data_ready_sig.emit(data_ref)
-        self._counter += 1
+        #if self._counter % 4 == 0:  # emit one in 4 packets
+        self.data_ready_sig.emit(data_ref)
+        #self._counter += 1
 
 
 class DataController(QObject):
@@ -226,8 +235,8 @@ class DataController(QObject):
 
         # Create connections
         self.serial_thread.started.connect(self.serial_worker.start_acquisition)
-        self.serial_thread.data_ready_sig.connect(self.file_worker.write)
-        self.serial_thread.data_ready_sig.connect(self.preprocess_worker.preprocess)
+        self.serial_worker.data_ready_sig.connect(self.file_worker.write)
+        self.serial_worker.data_ready_sig.connect(self.preprocess_worker.preprocess)
 
     def start_threads(self):
         """Start all the threads."""

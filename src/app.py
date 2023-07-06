@@ -97,8 +97,9 @@ class GraphWindow(QMainWindow):
             self._i += 1
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        self.close_sig.emit()
         event.accept()
+        self.close_sig.emit()
+        
 
 
 class GeturesWindow(QWidget):
@@ -175,7 +176,7 @@ class GeturesWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    graph_win = GraphWindow(n_ch=16, fs=4000, queue_mem=1000)
+    graph_win = GraphWindow(n_ch=16, fs=4000, queue_mem=2000)
     graph_win.showMaximized()
     gest_win = GeturesWindow()
     gest_win.show()
