@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import time
+
 import numpy as np
 import serial
-import time 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from scipy import signal
 
@@ -60,15 +61,10 @@ class _SerialWorker(QObject):
             data = bytearray(data)
             data[-1] = self._trigger
             self.data_ready_sig.emit(data)
-        print("Serial precommand")
         self._ser.write(b":")
-        print("Serial before flush")
         time.sleep(0.2)
         self._ser.flush()
-        # self._ser.reset_input_buffer()
-        # self._ser.reset_output_buffer()
         time.sleep(0.2)
-        print("Serial before close")
         self._ser.close()
         print("Serial stopped")
 
@@ -168,7 +164,6 @@ class _PreprocessWorker(QObject):
         self._n_samp = n_samp
         self._gain_scale_factor = gain_scale_factor
         self._v_scale_factor = v_scale_factor
-        self._counter = 0
         self._b, self._a = signal.iirfilter(
             2, Wn=20, fs=fs, btype="high", ftype="butter"
         )
@@ -199,10 +194,7 @@ class _PreprocessWorker(QObject):
             data_ref[:, i], self._zi[i] = signal.lfilter(
                 self._b, self._a, data_ref[:, i], zi=self._zi[i]
             )
-
-        #if self._counter % 4 == 0:  # emit one in 4 packets
         self.data_ready_sig.emit(data_ref)
-        #self._counter += 1
 
 
 class DataController(QObject):
