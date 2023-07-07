@@ -1,17 +1,20 @@
+import os
 import sys
 from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6 import QtGui
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent, QPixmap
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget
 
 from data_controller import DataController
 
+os.chdir("src")
+ui_class, base_class = pg.Qt.loadUiType("main_window.ui")
 
-class GraphWindow(QMainWindow):
+
+class GraphWindow(ui_class, base_class):
     """Widget showing the real time plot.
 
     Parameters
@@ -44,12 +47,6 @@ class GraphWindow(QMainWindow):
     def __init__(self, n_ch: int, fs: int, queue_mem: int):
         super(GraphWindow, self).__init__()
 
-        # Handle color palette
-        cm = pg.colormap.get("CET-C1")
-        cm.setMappingMode("diverging")
-        lut = cm.getLookupTable(nPts=n_ch, mode="qcolor")
-        colors = [lut[i] for i in range(n_ch)]
-
         self._n_ch = n_ch
         self._fs = fs
         # Initialize deques
@@ -59,19 +56,25 @@ class GraphWindow(QMainWindow):
             self._x.append(i / fs)
             self._y.append(np.zeros(n_ch))
 
-        # Create graph widget
-        self._graph = pg.PlotWidget()
-        self._graph.setYRange(-2000, 30000)
-        self._graph.getPlotItem().hideAxis("bottom")
-        self._graph.getPlotItem().hideAxis("left")
-        self.setCentralWidget(self._graph)
+        self.setupUi(self)
+
+        # Handle color palette
+        cm = pg.colormap.get("CET-C1")
+        cm.setMappingMode("diverging")
+        lut = cm.getLookupTable(nPts=n_ch, mode="qcolor")
+        colors = [lut[i] for i in range(n_ch)]
+
+        # Initialize graph widget
+        self.graphWidget.setYRange(-2000, 30000)
+        self.graphWidget.getPlotItem().hideAxis("bottom")
+        self.graphWidget.getPlotItem().hideAxis("left")
 
         # Plot placeholder data
         self._plots = []
         y = np.asarray(self._y).T
         for i in range(n_ch):
             pen = pg.mkPen(color=colors[i])
-            self._plots.append(self._graph.plot(self._x, y[i] + 2 * i, pen=pen))
+            self._plots.append(self.graphWidget.plot(self._x, y[i] + 2000 * i, pen=pen))
         self._i = 0
 
     @pyqtSlot(np.ndarray)
@@ -99,7 +102,6 @@ class GraphWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         event.accept()
         self.close_sig.emit()
-        
 
 
 class GeturesWindow(QWidget):
@@ -112,10 +114,9 @@ class GeturesWindow(QWidget):
         super().__init__()
         self.title = "Image Viewer"
         self.setWindowTitle(self.title)
-        # self.image_folder = f"C:\\Users\pierangelomaria.rap2\Documents\hand_mov\\"
-        self.image_folder = ".\\src\hand_mov\\"
+        self.image_folder = "hand_mov"
         self.label = QLabel(self)
-        self.pixmap = QPixmap(f"{self.image_folder}start.png")
+        self.pixmap = QPixmap(os.path.join(self.image_folder, "start.png"))
         self.resize(840, 840)
         self.pixmap = self.pixmap.scaled(self.width(), self.height())
         self.label.setPixmap(self.pixmap)
@@ -147,7 +148,7 @@ class GeturesWindow(QWidget):
             self.close()
         if self.startStop:
             self.pixmap = QPixmap(
-                f"{self.image_folder}{self.gesturesLabel[self.i]}.png"
+                os.path.join(self.image_folder, f"{self.gesturesLabel[self.i]}.png")
             )
             self.pixmap = self.pixmap.scaled(self.width(), self.height())
             self.label.setPixmap(self.pixmap)
@@ -157,7 +158,7 @@ class GeturesWindow(QWidget):
             self.signal_trigger.emit(self.gesturesLabel[self.i])
             self.i += 1
         else:
-            self.pixmap = QPixmap(f"{self.image_folder}Stop.png")
+            self.pixmap = QPixmap(os.path.join(self.image_folder, "Stop.png"))
             self.pixamp = self.pixmap.scaled(840, 840)
 
             self.label.setPixmap(self.pixmap)
