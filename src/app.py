@@ -15,7 +15,7 @@ ui_class, base_class = pg.Qt.loadUiType("main_window.ui")
 
 
 class GraphWindow(ui_class, base_class):
-    """Widget showing the real time plot.
+    """Main window showing the real time plot.
 
     Parameters
     ----------
@@ -28,6 +28,8 @@ class GraphWindow(ui_class, base_class):
 
     Attributes
     ----------
+    graphWidget : PlotWidget
+        Widget encompassing the plot.
     _x : deque
         Deque for X values.
     _y : deque
@@ -36,8 +38,6 @@ class GraphWindow(ui_class, base_class):
         Number of channels.
     _fs : int
         Sampling frequency.
-    _graph : PlotWidget
-        Widget encompassing the plot.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
     """
@@ -45,7 +45,7 @@ class GraphWindow(ui_class, base_class):
     close_sig = pyqtSignal()
 
     def __init__(self, n_ch: int, fs: int, queue_mem: int):
-        super(GraphWindow, self).__init__()
+        super().__init__()
 
         self._n_ch = n_ch
         self._fs = fs
@@ -75,7 +75,7 @@ class GraphWindow(ui_class, base_class):
         for i in range(n_ch):
             pen = pg.mkPen(color=colors[i])
             self._plots.append(self.graphWidget.plot(self._x, y[i] + 2000 * i, pen=pen))
-        self._i = 0
+        self._buf_count = 0
 
     @pyqtSlot(np.ndarray)
     def grab_data(self, data: np.ndarray):
@@ -91,13 +91,13 @@ class GraphWindow(ui_class, base_class):
             self._x.append(self._x[-1] + 1 / self._fs)
             self._y.append(samples)
 
-            if self._i == 50:
+            if self._buf_count == 50:
                 xs = list(self._x)
                 ys = np.asarray(list(self._y)).T
                 for i in range(self._n_ch):
                     self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
-                self._i = 0
-            self._i += 1
+                self._buf_count = 0
+            self._buf_count += 1
 
     def closeEvent(self, event: QCloseEvent) -> None:
         event.accept()
@@ -105,81 +105,101 @@ class GraphWindow(ui_class, base_class):
 
 
 class GeturesWindow(QWidget):
-    """"""
+    """Widget showing the gestures to perform.
 
-    signal_trigger = pyqtSignal(int)
-    signal_close_file = pyqtSignal()
+    Parameters
+    ----------
+    image_folder : str
+        Path to the folder containing the images of each gesture (start.png, stop.png, <idx>.png).
+    gesture_duration_ms : int, default=5000
+        Gesture duration (in ms).
 
-    def __init__(self):
+    Attributes
+    ----------
+    _image_folder : str
+        Path to the folder containing the images of each gesture.
+    _label : QLabel
+        Label containing the image widget.
+    _pixmap : QPixmap
+        Image widget.
+    _gestures_label : list of ints
+        List of gestures encoded as integers.
+    _timer : QTimer
+        Timer.
+    _toggle_timer : bool
+        Pause/start the timer.
+    _trial_idx : int
+        Trial index.
+    """
+
+    trigger_sig = pyqtSignal(int)
+    stop_sig = pyqtSignal()
+
+    def __init__(self, image_folder: str, gesture_duration_ms: int = 5000) -> None:
         super().__init__()
-        self.title = "Image Viewer"
-        self.setWindowTitle(self.title)
-        self.image_folder = "hand_mov"
-        self.label = QLabel(self)
-        self.pixmap = QPixmap(os.path.join(self.image_folder, "start.png"))
-        self.resize(840, 840)
-        self.pixmap = self.pixmap.scaled(self.width(), self.height())
-        self.label.setPixmap(self.pixmap)
-        movements = [
-            "open hand",
-            "fist (power grip)",
-            "index pointed",
-            "ok (thumb up)",
-            "right flexion (wrist supination)",
-            "left flexion (wristpronation)",
-            "horns",
-            "shaka",
-        ]
-        movements = [ele for ele in movements for i in range(3)]
-        self.gesturesLabel = list(range(1, 9))
-        self.gesturesLabel = sorted(self.gesturesLabel * 3)
-        # self.setCentralWidget(self.label)
 
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.showImage)
-        self.startStop = False
-        self.i = 0
-        self.startTimer()
-        self.closeWidget = False
+        self.setWindowTitle("Gesture Viewer")
+        self.resize(480, 480)
+
+        self._image_folder = image_folder
+
+        self._label = QLabel(self)
+        self._pixmap = QPixmap(os.path.join(self._image_folder, "start.png"))
+        self._pixmap = self._pixmap.scaled(self.width(), self.height())
+        self._label.setPixmap(self._pixmap)
+        self._gestures_label = list(range(1, 9))
+        self._gestures_label = sorted(self._gestures_label * 3)
+
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self.showImage)
+        self._toggle_timer = True
+        self._trial_idx = 0
+        self._timer.start(gesture_duration_ms)
 
     def showImage(self):
-        if self.i == 3:
-            self.closeWidget = True
+        if self._trial_idx == len(self._gestures_label):
             self.close()
-        if self.startStop:
-            self.pixmap = QPixmap(
-                os.path.join(self.image_folder, f"{self.gesturesLabel[self.i]}.png")
+        elif self._toggle_timer:
+            self._pixmap = QPixmap(
+                os.path.join(self._image_folder, f"{self._gestures_label[self._trial_idx]}.png")
             )
-            self.pixmap = self.pixmap.scaled(self.width(), self.height())
-            self.label.setPixmap(self.pixmap)
-            self.label.resize(self.width(), self.height())
-            self.label.setPixmap(self.pixmap)
-            self.startStop = False
-            self.signal_trigger.emit(self.gesturesLabel[self.i])
-            self.i += 1
+            self._pixmap = self._pixmap.scaled(self.width(), self.height())
+            self._label.setPixmap(self._pixmap)
+
+            self._toggle_timer = False
+            self.trigger_sig.emit(self._gestures_label[self._trial_idx])
+            self._trial_idx += 1
         else:
-            self.pixmap = QPixmap(os.path.join(self.image_folder, "Stop.png"))
-            self.pixamp = self.pixmap.scaled(840, 840)
+            self._pixmap = QPixmap(os.path.join(self._image_folder, "stop.png"))
+            self._pixmap = self._pixmap.scaled(self.width(), self.height())
+            self._label.setPixmap(self._pixmap)
 
-            self.label.setPixmap(self.pixmap)
-            self.startStop = True
-            self.signal_trigger.emit(0)
-
-    def startTimer(self):
-        self.timer.start(5000)
+            self._toggle_timer = True
+            self.trigger_sig.emit(0)
 
     def closeEvent(self, event):
-        self.timer.stop()
-        self.signal_close_file.emit()
+        self._timer.stop()
+        self.stop_sig.emit()
         event.accept()
 
 
 if __name__ == "__main__":
+    # movements = [
+    #     "open hand",
+    #     "fist (power grip)",
+    #     "index pointed",
+    #     "ok (thumb up)",
+    #     "right flexion (wrist supination)",
+    #     "left flexion (wristpronation)",
+    #     "horns",
+    #     "shaka",
+    # ]
+
     app = QApplication(sys.argv)
 
     graph_win = GraphWindow(n_ch=16, fs=4000, queue_mem=2000)
-    graph_win.showMaximized()
-    gest_win = GeturesWindow()
+    graph_win.show()
+    gest_win = GeturesWindow(image_folder="hand_mov")
     gest_win.show()
 
     data_controller = DataController(
@@ -190,8 +210,8 @@ if __name__ == "__main__":
 
     data_controller.preprocess_worker.data_ready_sig.connect(graph_win.grab_data)
     graph_win.close_sig.connect(data_controller.stop_acquistion)
-    gest_win.signal_trigger.connect(data_controller.update_trigger)
-    gest_win.signal_close_file.connect(data_controller.stop_file_writer)
+    gest_win.trigger_sig.connect(data_controller.update_trigger)
+    gest_win.stop_sig.connect(data_controller.stop_file_writer)
 
     data_controller.start_threads()
 
