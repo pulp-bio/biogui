@@ -1,0 +1,15 @@
+{
+    "gestures": {
+        "open hand": "1.png",
+        "fist (power grip)": "2.png",
+        "index pointed": "3.png",
+        "ok (thumb up)": "4.png",
+        "right flexion (wrist supination)": "5.png",
+        "left flexion (wrist pronation)": "6.png",
+        "horns": "7.png",
+        "shaka": "8.png"
+    },
+    "n_reps": 3,
+    "duration_ms": 5000,
+    "image_folder": "../experiments/hand_mov"
+}
