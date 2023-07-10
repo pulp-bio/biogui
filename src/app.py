@@ -104,8 +104,9 @@ class GraphWindow(ui_class, base_class):
 
         # Serial ports
         self._rescan_serial_ports()
-        self.rescanSerialPortsButton.clicked.connect(self._rescan_serial_ports)
         self._serial_port = self.serialPortsComboBox.currentText()
+        self.serialPortsComboBox.currentTextChanged.connect(self._serial_port_change)
+        self.rescanSerialPortsButton.clicked.connect(self._rescan_serial_ports)
 
         # Number of channels
         ch_buttons = filter(
@@ -128,6 +129,8 @@ class GraphWindow(ui_class, base_class):
 
         # Acquisition
         self._acq_controller = None
+        self.startAcquisitionButton.setEnabled(self._serial_port != "")
+        self.stopAcquisitionButton.setEnabled(False)
         self.startAcquisitionButton.clicked.connect(self._start_acquisition)
         self.stopAcquisitionButton.clicked.connect(self._stop_acquisition)
 
@@ -136,6 +139,16 @@ class GraphWindow(ui_class, base_class):
             N=2, Wn=100, fs=fs, btype="low", ftype="butter"
         )
         self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)]
+
+    def _rescan_serial_ports(self) -> None:
+        """Rescan the serial ports to update the combo box."""
+        self.serialPortsComboBox.clear()
+        self.serialPortsComboBox.addItems(serial_ports())
+
+    def _serial_port_change(self) -> None:
+        """"""
+        self._serial_port = self.serialPortsComboBox.currentText()
+        self.startAcquisitionButton.setEnabled(self._serial_port != "")
 
     def _initialize_plot(self) -> None:
         """Render the initial plot."""
@@ -170,11 +183,6 @@ class GraphWindow(ui_class, base_class):
 
         display_text = "JSON config invalid!" if self._config is None else file_path
         self.JSONLabel.setText(display_text)
-
-    def _rescan_serial_ports(self) -> None:
-        """Rescan the serial ports to update the combo box."""
-        self.serialPortsComboBox.clear()
-        self.serialPortsComboBox.addItems(serial_ports())
 
     def _update_channels(self) -> None:
         """Update the number of channels depending on user selection."""
