@@ -23,8 +23,10 @@ class GeturesWindow(QWidget):
 
     Attributes
     ----------
-    _gesture_dict : dict of {str : str
+    _gesture_dict : dict of {str : str}
         Dictionary containing pairs of gesture labels and paths to images.
+    _gestures_id : dict of {str : int}
+        Dictionary containing pairs of gesture labels and integer indexes.
     _gestures_labels : list of str
         List of gesture labels accounting for the number of repetitions.
     _label : QLabel
@@ -52,6 +54,7 @@ class GeturesWindow(QWidget):
         super().__init__()
 
         self._gesture_dict = gestures
+        self._gestures_id = {k: i + 1 for i, k in enumerate(gestures.keys())}
         self._gestures_labels = []
         for k in gestures.keys():
             self._gestures_labels.extend([k] * n_reps)
@@ -86,7 +89,7 @@ class GeturesWindow(QWidget):
 
             self._toggle_timer = False
             self.trigger_sig.emit(
-                self._gesture_dict[self._gestures_labels[self._rep_idx]]
+                self._gestures_id[self._gestures_labels[self._rep_idx]]
             )
             self._rep_idx += 1
         else:

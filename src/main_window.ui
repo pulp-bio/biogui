@@ -76,12 +76,18 @@
            <property name="text">
             <string>32</string>
            </property>
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QRadioButton" name="radioButton_3">
            <property name="text">
             <string>64</string>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
            </property>
           </widget>
          </item>
