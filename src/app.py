@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import datetime
 import json
 import os
 import sys
@@ -6,9 +9,11 @@ from collections import deque
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QRadioButton
+from PyQt6.QtWidgets import QApplication, QFileDialog, QRadioButton
+from scipy import signal
 
 from acq_controller import AcquisitionController, serial_ports
+from file_controller import FileController
 from gesture_window import GeturesWindow
 
 os.chdir("src")
@@ -79,6 +84,12 @@ class GraphWindow(ui_class, base_class):
         List containing a PlotItem for each channel.
     _gest_win : GeturesWindow
         Window for gesture visualization.
+    _b : ndarray
+        Numerator polynomials for the filter.
+    _a : ndarray
+        Denominator polynomials for the filter.
+    _zi : list of ndarrays
+        Initial state for the filter (one per channel).
     """
 
     def __init__(self, fs: int, queue_mem: int):
@@ -92,8 +103,8 @@ class GraphWindow(ui_class, base_class):
         self.setupUi(self)
 
         # Serial ports
-        self.rescan_serial_ports()
-        self.rescanSerialPortsButton.clicked.connect(self.rescan_serial_ports)
+        self._rescan_serial_ports()
+        self.rescanSerialPortsButton.clicked.connect(self._rescan_serial_ports)
         self._serial_port = self.serialPortsComboBox.currentText()
 
         # Number of channels
@@ -102,7 +113,7 @@ class GraphWindow(ui_class, base_class):
             self.channelsGroupBox.children(),
         )
         for ch_button in ch_buttons:
-            ch_button.clicked.connect(self.update_channels)
+            ch_button.clicked.connect(self._update_channels)
             if ch_button.isChecked():
                 self._n_ch = int(ch_button.text())  # set initial number of channels
 
@@ -117,8 +128,14 @@ class GraphWindow(ui_class, base_class):
 
         # Acquisition
         self._acq_controller = None
-        self.startAcquisitionButton.clicked.connect(self.start_acquisition)
-        self.stopAcquisitionButton.clicked.connect(self.stop_acquisition)
+        self.startAcquisitionButton.clicked.connect(self._start_acquisition)
+        self.stopAcquisitionButton.clicked.connect(self._stop_acquisition)
+
+        # Filtering
+        self._b, self._a = signal.iirfilter(
+            N=2, Wn=100, fs=fs, btype="low", ftype="butter"
+        )
+        self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)]
 
     def _initialize_plot(self) -> None:
         """Render the initial plot."""
@@ -154,12 +171,12 @@ class GraphWindow(ui_class, base_class):
         display_text = "JSON config invalid!" if self._config is None else file_path
         self.JSONLabel.setText(display_text)
 
-    def rescan_serial_ports(self) -> None:
+    def _rescan_serial_ports(self) -> None:
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
         self.serialPortsComboBox.addItems(serial_ports())
 
-    def update_channels(self) -> None:
+    def _update_channels(self) -> None:
         """Update the number of channels depending on user selection."""
         ch_button = next(
             filter(
@@ -168,35 +185,14 @@ class GraphWindow(ui_class, base_class):
             )
         )
         self._n_ch = int(ch_button.text())
+        self._plots = []
         self._initialize_plot()  # redraw plot
+        self._zi = [
+            signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)
+        ]  # re-initialize filter
 
-    @pyqtSlot(np.ndarray)
-    def grab_data(self, data: np.ndarray):
-        """This method is called automatically when the associated signal is received,
-        it grabs data from the signal and plots it.
-
-        Parameters
-        ----------
-        data : ndarray
-            Data to plot.
-        """
-        for samples in data:
-            self._x.append(self._x[-1] + 1 / self._fs)
-            self._y.append(samples)
-
-            if self._buf_count == 50:
-                xs = list(self._x)
-                ys = np.asarray(list(self._y)).T
-                for i in range(self._n_ch):
-                    self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
-                self._buf_count = 0
-            self._buf_count += 1
-
-    def start_acquisition(self) -> None:
+    def _start_acquisition(self) -> None:
         """Start the acquisition."""
-        if self.experimentGroupBox.isChecked() and self._config is not None:
-            self._gest_win = GeturesWindow(**self._config)
-            self._gest_win.show()
         # Handle UI elements
         self.serialPortsGroupBox.setEnabled(False)
         self.channelsGroupBox.setEnabled(False)
@@ -204,11 +200,31 @@ class GraphWindow(ui_class, base_class):
         self.startAcquisitionButton.setEnabled(False)
         self.stopAcquisitionButton.setEnabled(True)
 
-        self._acq_controller = AcquisitionController(self._serial_port, n_ch=self._n_ch, fs=self._fs, n_samp=1)
+        self._acq_controller = AcquisitionController(self._serial_port, n_ch=self._n_ch)
         self._acq_controller.preprocess_worker.data_ready_sig.connect(self.grab_data)
+        if self.experimentGroupBox.isChecked() and self._config is not None:
+            # Output file
+            exp_dir = os.path.dirname(self.JSONLabel.text())
+            out_file_name = self.experimentTextField.text()
+            if out_file_name == "":
+                out_file_name = (
+                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
+                    .replace(":", "-")
+                    .replace(".", "-")
+                )
+            out_file_name = f"{out_file_name}.bin"
+            out_file_path = os.path.join(exp_dir, out_file_name)
+
+            # Create gesture window and file controller
+            self._gest_win = GeturesWindow(**self._config)
+            self._gest_win.show()
+            self._gest_win.trigger_sig.connect(self._acq_controller.update_trigger)
+            self._file_controller = FileController(out_file_path, self._acq_controller)
+            self._gest_win.stop_sig.connect(self._file_controller.stop_file_writer)
+
         self._acq_controller.start_acquisition()
 
-    def stop_acquisition(self) -> None:
+    def _stop_acquisition(self) -> None:
         """Stop the acquisition."""
         self._acq_controller.stop_acquisition()
 
@@ -221,24 +237,38 @@ class GraphWindow(ui_class, base_class):
         self.startAcquisitionButton.setEnabled(True)
         self.stopAcquisitionButton.setEnabled(False)
 
+    @pyqtSlot(np.ndarray)
+    def grab_data(self, data: np.ndarray):
+        """This method is called automatically when the associated signal is received,
+        it grabs data from the signal and plots it.
+
+        Parameters
+        ----------
+        data : ndarray
+            Data to plot.
+        """
+        for i in range(self._n_ch):
+            data[:, i], self._zi[i] = signal.lfilter(
+                self._b, self._a, data[:, i], zi=self._zi[i]
+            )
+
+        for samples in data:
+            self._x.append(self._x[-1] + 1 / self._fs)
+            self._y.append(samples)
+
+            if self._buf_count == 50:
+                xs = list(self._x)
+                ys = np.asarray(list(self._y)).T
+                for i in range(self._n_ch):
+                    self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
+                self._buf_count = 0
+            self._buf_count += 1
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     graph_win = GraphWindow(fs=4000, queue_mem=2000)
     graph_win.show()
-
-    # data_controller = DataController(
-    #     serial_kw={"serial_port": "COM16"},
-    #     file_kw={"file_path": "serial.bin"},
-    #     preprocess_kw={"n_samp": 1},
-    # )
-
-    # data_controller.preprocess_worker.data_ready_sig.connect(graph_win.grab_data)
-    # graph_win.close_sig.connect(data_controller.stop_acquistion)
-    # gest_win.trigger_sig.connect(data_controller.update_trigger)
-    # gest_win.stop_sig.connect(data_controller.stop_file_writer)
-
-    # data_controller.start_threads()
 
     sys.exit(app.exec())

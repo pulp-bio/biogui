@@ -72,7 +72,7 @@ class _SerialWorker(QObject):
 
     def __init__(self, serial_port: str, packet_size: int, baude_rate: int) -> None:
         super(QObject, self).__init__()
-        # self._ser = serial.Serial(serial_port, baude_rate)
+        self._ser = serial.Serial(serial_port, baude_rate)
         self._packet_size = packet_size
         self._trigger = 0
         self._stop_acquisition = False
@@ -87,20 +87,17 @@ class _SerialWorker(QObject):
 
     def start_acquisition(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
-        # self._ser.write(b"=")
+        self._ser.write(b"=")
         while not self._stop_acquisition:
-            # data = self._ser.read(self._packet_size)
-            data = 500 * np.random.randn(5, 16).astype("float32")
-            data = data.tobytes()
+            data = self._ser.read(self._packet_size)
             data = bytearray(data)
-            # data[-1] = self._trigger
+            data[-1] = self._trigger
             self.data_ready_sig.emit(data)
-            time.sleep(1e-3)
-        # self._ser.write(b":")
-        # time.sleep(0.2)
-        # self._ser.flush()
-        # time.sleep(0.2)
-        # self._ser.close()
+        self._ser.write(b":")
+        time.sleep(0.2)
+        self._ser.flush()
+        time.sleep(0.2)
+        self._ser.close()
         print("Serial stopped")
 
     def stop_acquisition(self) -> None:
@@ -161,19 +158,19 @@ class _PreprocessWorker(QObject):
         data : bytearray
             New binary data.
         """
-        # data_ref = np.zeros(shape=(self._n_samp, self._n_ch + 1), dtype="uint32")
-        # data_ref[:, self._n_ch + 1] = [data[242]] * self._n_samp
-        # data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
-        # for k in range(self._n_samp):
-        #     for i in range(self._n_ch):
-        #         data_ref[k, i] = (
-        #             data[k * 48 + (3 * i)] * 256 * 256 * 256
-        #             + data[0 * k * 48 + (3 * i) + 1] * 256 * 256
-        #             + data[0 * k * 48 + (3 * i) + 2] * 256
-        #         )
-        # data_ref = data_ref.view("int32").astype("float32")
-        # data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
-        data_ref = np.frombuffer(data, dtype="float32").reshape(5, 16)
+        data_ref = np.zeros(shape=(self._n_samp, self._n_ch + 1), dtype="uint32")
+        data_ref[:, self._n_ch + 1] = [data[242]] * self._n_samp
+        data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
+        for k in range(self._n_samp):
+            for i in range(self._n_ch):
+                data_ref[k, i] = (
+                    data[k * 48 + (3 * i)] * 256 * 256 * 256
+                    + data[0 * k * 48 + (3 * i) + 1] * 256 * 256
+                    + data[0 * k * 48 + (3 * i) + 2] * 256
+                )
+        data_ref = data_ref.view("int32").astype("float32")
+        data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
+
         self.data_ready_sig.emit(data_ref)
 
 
