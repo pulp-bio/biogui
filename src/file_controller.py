@@ -21,7 +21,7 @@ class _FileWorker(QObject):
 
     def __init__(self, file_path: str) -> None:
         super(QObject, self).__init__()
-        self._f = open(file_path, "w")
+        self._f = open(file_path, "wb")
 
     @pyqtSlot(bytearray)
     def write(self, data: bytearray) -> None:
@@ -33,7 +33,7 @@ class _FileWorker(QObject):
         data : bytearray
             New binary data.
         """
-        self._f.write(" ".join([str(x) for x in data]))
+        self._f.write(data)
 
     def close_file(self) -> None:
         """Close the file."""
