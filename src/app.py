@@ -1,17 +1,52 @@
+import json
 import os
 import sys
 from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import QTimer, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QCloseEvent, QPixmap
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QRadioButton
 
-from data_controller import DataController
+from acq_controller import AcquisitionController, serial_ports
+from gesture_window import GeturesWindow
 
 os.chdir("src")
 ui_class, base_class = pg.Qt.loadUiType("main_window.ui")
+
+
+def load_validate_json(file_path: str) -> dict | None:
+    """Load and validate a JSON file representing the experiment configuration.
+
+    Parameters
+    ----------
+    file_path : str
+        Path the the JSON file.
+
+    Returns
+    -------
+    dict or None
+        Dictionary corresponding to the configuration, or None if it's not valid.
+    """
+    with open(file_path) as f:
+        config = json.load(f)
+    # Check keys
+    provided_keys = set(config.keys())
+    valid_keys = set(("gestures", "n_reps", "duration_ms", "image_folder"))
+    if provided_keys != valid_keys:
+        return None
+    # Check paths
+    if not os.path.isdir(config["image_folder"]):
+        return None
+    for image_path in config["gestures"].values():
+        image_path = os.path.join(config["image_folder"], image_path)
+        if not (
+            os.path.isfile(image_path)
+            and (image_path.endswith(".png") or image_path.endswith(".jpg"))
+        ):
+            return None
+
+    return config
 
 
 class GraphWindow(ui_class, base_class):
@@ -19,17 +54,13 @@ class GraphWindow(ui_class, base_class):
 
     Parameters
     ----------
-    n_ch : int, default=16
-        Number of channels.
-    fs : int, default=4000
+    fs : int
         Sampling frequency.
     queue_mem : int
         Memory of the internal deques.
 
     Attributes
     ----------
-    graphWidget : PlotWidget
-        Widget encompassing the plot.
     _x : deque
         Deque for X values.
     _y : deque
@@ -38,44 +69,106 @@ class GraphWindow(ui_class, base_class):
         Number of channels.
     _fs : int
         Sampling frequency.
+    _serial_port : str
+        Serial port.
+    _config : dit
+        Dictionary representing the experiment configuration.
+    _buf_count : int
+        Counter for the plot buffer.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
+    _gest_win : GeturesWindow
+        Window for gesture visualization.
     """
 
-    close_sig = pyqtSignal()
-
-    def __init__(self, n_ch: int, fs: int, queue_mem: int):
+    def __init__(self, fs: int, queue_mem: int):
         super().__init__()
 
-        self._n_ch = n_ch
         self._fs = fs
-        # Initialize deques
         self._x = deque(maxlen=queue_mem)
         self._y = deque(maxlen=queue_mem)
-        for i in range(-queue_mem, 0):
-            self._x.append(i / fs)
-            self._y.append(np.zeros(n_ch))
+        self._buf_count = 0
 
         self.setupUi(self)
 
-        # Handle color palette
-        cm = pg.colormap.get("CET-C1")
-        cm.setMappingMode("diverging")
-        lut = cm.getLookupTable(nPts=n_ch, mode="qcolor")
-        colors = [lut[i] for i in range(n_ch)]
+        # Serial ports
+        self.rescan_serial_ports()
+        self.rescanSerialPortsButton.clicked.connect(self.rescan_serial_ports)
+        self._serial_port = self.serialPortsComboBox.currentText()
 
-        # Initialize graph widget
-        self.graphWidget.setYRange(-2000, 30000)
+        # Number of channels
+        ch_buttons = filter(
+            lambda elem: isinstance(elem, QRadioButton),
+            self.channelsGroupBox.children(),
+        )
+        for ch_button in ch_buttons:
+            ch_button.clicked.connect(self.update_channels)
+            if ch_button.isChecked():
+                self._n_ch = int(ch_button.text())  # set initial number of channels
+
+        # Plot
+        self._plots = []
+        self._initialize_plot()
+
+        # Experiments
+        self._gest_win = None
+        self._config = None
+        self.browseJSONButton.clicked.connect(self._browse_json)
+
+        # Acquisition
+        self._acq_controller = None
+        self.startAcquisitionButton.clicked.connect(self.start_acquisition)
+        self.stopAcquisitionButton.clicked.connect(self.stop_acquisition)
+
+    def _initialize_plot(self) -> None:
+        """Render the initial plot."""
+        # Reset graph
+        self.graphWidget.clear()
+        self.graphWidget.setYRange(0, 2000 * (self._n_ch - 1))
         self.graphWidget.getPlotItem().hideAxis("bottom")
         self.graphWidget.getPlotItem().hideAxis("left")
-
+        # Initialize deques
+        for i in range(-self._x.maxlen, 0):
+            self._x.append(i / self._fs)
+            self._y.append(np.zeros(self._n_ch))
+        # Get colormap
+        cm = pg.colormap.get("CET-C1")
+        cm.setMappingMode("diverging")
+        lut = cm.getLookupTable(nPts=self._n_ch, mode="qcolor")
+        colors = [lut[i] for i in range(self._n_ch)]
         # Plot placeholder data
-        self._plots = []
         y = np.asarray(self._y).T
-        for i in range(n_ch):
+        for i in range(self._n_ch):
             pen = pg.mkPen(color=colors[i])
             self._plots.append(self.graphWidget.plot(self._x, y[i] + 2000 * i, pen=pen))
-        self._buf_count = 0
+
+    def _browse_json(self) -> None:
+        """Browse to select the JSON file with the experiment configuration."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load JSON configuration",
+            filter="*.json",
+        )
+        self._config = load_validate_json(file_path)
+
+        display_text = "JSON config invalid!" if self._config is None else file_path
+        self.JSONLabel.setText(display_text)
+
+    def rescan_serial_ports(self) -> None:
+        """Rescan the serial ports to update the combo box."""
+        self.serialPortsComboBox.clear()
+        self.serialPortsComboBox.addItems(serial_ports())
+
+    def update_channels(self) -> None:
+        """Update the number of channels depending on user selection."""
+        ch_button = next(
+            filter(
+                lambda elem: isinstance(elem, QRadioButton) and elem.isChecked(),
+                self.channelsGroupBox.children(),
+            )
+        )
+        self._n_ch = int(ch_button.text())
+        self._initialize_plot()  # redraw plot
 
     @pyqtSlot(np.ndarray)
     def grab_data(self, data: np.ndarray):
@@ -99,120 +192,53 @@ class GraphWindow(ui_class, base_class):
                 self._buf_count = 0
             self._buf_count += 1
 
-    def closeEvent(self, event: QCloseEvent) -> None:
-        event.accept()
-        self.close_sig.emit()
+    def start_acquisition(self) -> None:
+        """Start the acquisition."""
+        if self.experimentGroupBox.isChecked() and self._config is not None:
+            self._gest_win = GeturesWindow(**self._config)
+            self._gest_win.show()
+        # Handle UI elements
+        self.serialPortsGroupBox.setEnabled(False)
+        self.channelsGroupBox.setEnabled(False)
+        self.experimentGroupBox.setEnabled(False)
+        self.startAcquisitionButton.setEnabled(False)
+        self.stopAcquisitionButton.setEnabled(True)
 
+        self._acq_controller = AcquisitionController(self._serial_port, n_ch=self._n_ch, fs=self._fs, n_samp=1)
+        self._acq_controller.preprocess_worker.data_ready_sig.connect(self.grab_data)
+        self._acq_controller.start_acquisition()
 
-class GeturesWindow(QWidget):
-    """Widget showing the gestures to perform.
+    def stop_acquisition(self) -> None:
+        """Stop the acquisition."""
+        self._acq_controller.stop_acquisition()
 
-    Parameters
-    ----------
-    image_folder : str
-        Path to the folder containing the images of each gesture (start.png, stop.png, <idx>.png).
-    gesture_duration_ms : int, default=5000
-        Gesture duration (in ms).
-
-    Attributes
-    ----------
-    _image_folder : str
-        Path to the folder containing the images of each gesture.
-    _label : QLabel
-        Label containing the image widget.
-    _pixmap : QPixmap
-        Image widget.
-    _gestures_label : list of ints
-        List of gestures encoded as integers.
-    _timer : QTimer
-        Timer.
-    _toggle_timer : bool
-        Pause/start the timer.
-    _trial_idx : int
-        Trial index.
-    """
-
-    trigger_sig = pyqtSignal(int)
-    stop_sig = pyqtSignal()
-
-    def __init__(self, image_folder: str, gesture_duration_ms: int = 5000) -> None:
-        super().__init__()
-
-        self.setWindowTitle("Gesture Viewer")
-        self.resize(480, 480)
-
-        self._image_folder = image_folder
-
-        self._label = QLabel(self)
-        self._pixmap = QPixmap(os.path.join(self._image_folder, "start.png"))
-        self._pixmap = self._pixmap.scaled(self.width(), self.height())
-        self._label.setPixmap(self._pixmap)
-        self._gestures_label = list(range(1, 9))
-        self._gestures_label = sorted(self._gestures_label * 3)
-
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self.showImage)
-        self._toggle_timer = True
-        self._trial_idx = 0
-        self._timer.start(gesture_duration_ms)
-
-    def showImage(self):
-        if self._trial_idx == len(self._gestures_label):
-            self.close()
-        elif self._toggle_timer:
-            self._pixmap = QPixmap(
-                os.path.join(self._image_folder, f"{self._gestures_label[self._trial_idx]}.png")
-            )
-            self._pixmap = self._pixmap.scaled(self.width(), self.height())
-            self._label.setPixmap(self._pixmap)
-
-            self._toggle_timer = False
-            self.trigger_sig.emit(self._gestures_label[self._trial_idx])
-            self._trial_idx += 1
-        else:
-            self._pixmap = QPixmap(os.path.join(self._image_folder, "stop.png"))
-            self._pixmap = self._pixmap.scaled(self.width(), self.height())
-            self._label.setPixmap(self._pixmap)
-
-            self._toggle_timer = True
-            self.trigger_sig.emit(0)
-
-    def closeEvent(self, event):
-        self._timer.stop()
-        self.stop_sig.emit()
-        event.accept()
+        if self._gest_win is not None:
+            self._gest_win.close()
+        # Handle UI elements
+        self.serialPortsGroupBox.setEnabled(True)
+        self.channelsGroupBox.setEnabled(True)
+        self.experimentGroupBox.setEnabled(True)
+        self.startAcquisitionButton.setEnabled(True)
+        self.stopAcquisitionButton.setEnabled(False)
 
 
 if __name__ == "__main__":
-    # movements = [
-    #     "open hand",
-    #     "fist (power grip)",
-    #     "index pointed",
-    #     "ok (thumb up)",
-    #     "right flexion (wrist supination)",
-    #     "left flexion (wristpronation)",
-    #     "horns",
-    #     "shaka",
-    # ]
-
     app = QApplication(sys.argv)
 
-    graph_win = GraphWindow(n_ch=16, fs=4000, queue_mem=2000)
+    graph_win = GraphWindow(fs=4000, queue_mem=2000)
     graph_win.show()
-    gest_win = GeturesWindow(image_folder="hand_mov")
-    gest_win.show()
 
-    data_controller = DataController(
-        serial_kw={"serial_port": "COM16"},
-        file_kw={"file_path": "serial.bin"},
-        preprocess_kw={"n_samp": 1},
-    )
+    # data_controller = DataController(
+    #     serial_kw={"serial_port": "COM16"},
+    #     file_kw={"file_path": "serial.bin"},
+    #     preprocess_kw={"n_samp": 1},
+    # )
 
-    data_controller.preprocess_worker.data_ready_sig.connect(graph_win.grab_data)
-    graph_win.close_sig.connect(data_controller.stop_acquistion)
-    gest_win.trigger_sig.connect(data_controller.update_trigger)
-    gest_win.stop_sig.connect(data_controller.stop_file_writer)
+    # data_controller.preprocess_worker.data_ready_sig.connect(graph_win.grab_data)
+    # graph_win.close_sig.connect(data_controller.stop_acquistion)
+    # gest_win.trigger_sig.connect(data_controller.update_trigger)
+    # gest_win.stop_sig.connect(data_controller.stop_file_writer)
 
-    data_controller.start_threads()
+    # data_controller.start_threads()
 
     sys.exit(app.exec())
