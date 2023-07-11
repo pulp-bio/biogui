@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QObject, QThread, pyqtSlot
 
-from acq_controller import AcquisitionController
+from emg_armband_gui.acq_controller import AcquisitionController
 
 
 class _FileWorker(QObject):
