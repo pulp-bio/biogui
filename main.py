@@ -26,8 +26,8 @@ from emg_armband_gui.main_window import MainWindow
 def main():
     app = QApplication(sys.argv)
 
-    graph_win = MainWindow(fs=4000, queue_mem=2000)
-    graph_win.show()
+    window = MainWindow(fs=4000, queue_mem=2000)
+    window.show()
 
     sys.exit(app.exec())
 
