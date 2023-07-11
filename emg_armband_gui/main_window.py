@@ -19,7 +19,6 @@ limitations under the License.
 from __future__ import annotations
 
 import datetime
-import json
 import os
 from collections import deque
 
@@ -29,47 +28,14 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
 from scipy import signal
 
-from emg_armband_gui.acq_controller import AcquisitionController, serial_ports
+from emg_armband_gui.acq_controller import AcquisitionController
 from emg_armband_gui.file_controller import FileController
 from emg_armband_gui.gesture_window import GeturesWindow
 from emg_armband_gui.ui.main_window_ui import Ui_MainWindow
+from emg_armband_gui._utils import load_validate_json, serial_ports
 
 
-def load_validate_json(file_path: str) -> dict | None:
-    """Load and validate a JSON file representing the experiment configuration.
-
-    Parameters
-    ----------
-    file_path : str
-        Path the the JSON file.
-
-    Returns
-    -------
-    dict or None
-        Dictionary corresponding to the configuration, or None if it's not valid.
-    """
-    with open(file_path) as f:
-        config = json.load(f)
-    # Check keys
-    provided_keys = set(config.keys())
-    valid_keys = set(("gestures", "n_reps", "duration_ms", "image_folder"))
-    if provided_keys != valid_keys:
-        return None
-    # Check paths
-    if not os.path.isdir(config["image_folder"]):
-        return None
-    for image_path in config["gestures"].values():
-        image_path = os.path.join(config["image_folder"], image_path)
-        if not (
-            os.path.isfile(image_path)
-            and (image_path.endswith(".png") or image_path.endswith(".jpg"))
-        ):
-            return None
-
-    return config
-
-
-class GraphWindow(QMainWindow, Ui_MainWindow):
+class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window showing the real time plot.
 
     Parameters
@@ -108,7 +74,7 @@ class GraphWindow(QMainWindow, Ui_MainWindow):
     """
 
     def __init__(self, fs: int, queue_mem: int):
-        super(GraphWindow, self).__init__()
+        super(MainWindow, self).__init__()
 
         self._fs = fs
         self._x = deque(maxlen=queue_mem)
