@@ -1,23 +1,38 @@
+"""This module contains the main window of the app.
+
+
+Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 import datetime
 import json
 import os
-import sys
 from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QApplication, QFileDialog, QRadioButton
+from PyQt6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
 from scipy import signal
 
-from acq_controller import AcquisitionController, serial_ports
-from file_controller import FileController
-from gesture_window import GeturesWindow
-
-os.chdir("src")
-ui_class, base_class = pg.Qt.loadUiType("main_window.ui")
+from emg_armband_gui.acq_controller import AcquisitionController, serial_ports
+from emg_armband_gui.file_controller import FileController
+from emg_armband_gui.gesture_window import GeturesWindow
+from emg_armband_gui.ui.main_window_ui import Ui_MainWindow
 
 
 def load_validate_json(file_path: str) -> dict | None:
@@ -54,7 +69,7 @@ def load_validate_json(file_path: str) -> dict | None:
     return config
 
 
-class GraphWindow(ui_class, base_class):
+class GraphWindow(QMainWindow, Ui_MainWindow):
     """Main window showing the real time plot.
 
     Parameters
@@ -93,7 +108,7 @@ class GraphWindow(ui_class, base_class):
     """
 
     def __init__(self, fs: int, queue_mem: int):
-        super().__init__()
+        super(GraphWindow, self).__init__()
 
         self._fs = fs
         self._x = deque(maxlen=queue_mem)
@@ -146,7 +161,7 @@ class GraphWindow(ui_class, base_class):
         self.serialPortsComboBox.addItems(serial_ports())
 
     def _serial_port_change(self) -> None:
-        """"""
+        """Detect if the serial port has changed."""
         self._serial_port = self.serialPortsComboBox.currentText()
         self.startAcquisitionButton.setEnabled(self._serial_port != "")
 
@@ -271,12 +286,3 @@ class GraphWindow(ui_class, base_class):
                     self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
                 self._buf_count = 0
             self._buf_count += 1
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    graph_win = GraphWindow(fs=4000, queue_mem=2000)
-    graph_win.show()
-
-    sys.exit(app.exec())
