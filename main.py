@@ -20,13 +20,13 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from emg_armband_gui.graph_window import GraphWindow
+from emg_armband_gui.main_window import MainWindow
 
 
 def main():
     app = QApplication(sys.argv)
 
-    graph_win = GraphWindow(fs=4000, queue_mem=2000)
+    graph_win = MainWindow(fs=4000, queue_mem=2000)
     graph_win.show()
 
     sys.exit(app.exec())
