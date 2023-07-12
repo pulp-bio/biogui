@@ -128,6 +128,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)]
 
+        # TODO: temporarily disable 32 and 64 channels with real signals
+        if not dummy:
+            self.ch32RadioButton.setEnabled(False)
+            self.ch64RadioButton.setEnabled(False)
+
     def _rescan_serial_ports(self) -> None:
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()

@@ -18,12 +18,10 @@ limitations under the License.
 
 from __future__ import annotations
 
-import glob
 import json
 import os
-import sys
 
-import serial
+import serial.tools.list_ports
 
 
 def serial_ports():
@@ -33,30 +31,8 @@ def serial_ports():
     -------
     list of str
         A list of the serial ports available on the system.
-
-    Raises
-    ------
-        EnvironmentError
-            On unsupported or unknown platforms.
     """
-    if sys.platform.startswith("win"):
-        ports = ["COM%s" % (i + 1) for i in range(16)]
-    elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
-        ports = glob.glob("/dev/tty[A-Za-z]*")
-    elif sys.platform.startswith("darwin"):
-        ports = glob.glob("/dev/tty.*")
-    else:
-        raise EnvironmentError("Unsupported platform")
-
-    result = []
-    for port in ports:
-        try:
-            s = serial.Serial(port)
-            s.close()
-            result.append(port)
-        except (OSError, serial.SerialException):
-            pass
-    return result
+    return [info[0] for info in serial.tools.list_ports.comports()]
 
 
 def load_validate_json(file_path: str) -> dict | None:
