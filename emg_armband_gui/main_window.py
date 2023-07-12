@@ -167,9 +167,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "Load JSON configuration",
             filter="*.json",
         )
-        self._config = load_validate_json(file_path)
-
-        display_text = "JSON config invalid!" if self._config is None else file_path
+        display_text = ""
+        if file_path:
+            self._config = load_validate_json(file_path)
+            display_text = "JSON config invalid!" if self._config is None else file_path
         self.JSONLabel.setText(display_text)
 
     def _update_channels(self) -> None:
