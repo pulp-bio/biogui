@@ -19,6 +19,7 @@ limitations under the License.
 from __future__ import annotations
 
 import time
+from typing import Any, Callable
 
 import numpy as np
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
@@ -65,6 +66,7 @@ class _DataWorker(QObject):
         while not self._stop_acquisition:
             data = 500 * np.random.randn(self._n_samp, self._n_ch)
             self.data_ready_sig.emit(data)
+            time.sleep(1e-3)
         print("Generator stopped")
 
     def stop_acquisition(self) -> None:
@@ -108,6 +110,26 @@ class DummyAcquisitionController(AcquisitionController):
         self.data_worker.stop_acquisition()
         self.data_thread.quit()
         self.data_thread.wait()
+
+    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Connect the "data ready" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "data ready" signal.
+        """
+        self.data_worker.data_ready_sig.connect(fn)
+
+    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Disconnect the "data ready" signal from the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to disconnect from the "data ready" signal.
+        """
+        self.data_worker.data_ready_sig.disconnect(fn)
 
     @pyqtSlot(int)
     def update_trigger(self, trigger: int) -> None:

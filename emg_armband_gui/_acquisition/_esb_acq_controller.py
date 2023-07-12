@@ -19,6 +19,7 @@ limitations under the License.
 from __future__ import annotations
 
 import time
+from typing import Any, Callable
 
 import numpy as np
 import serial
@@ -118,7 +119,7 @@ class _PreprocessWorker(QObject):
         Voltage scale factor.
     """
 
-    data_ready_sig = pyqtSignal(object)
+    data_ready_sig = pyqtSignal(np.ndarray)
 
     def __init__(
         self,
@@ -181,13 +182,13 @@ class ESBAcquisitionController(AcquisitionController):
 
     Attributes
     ----------
-    serial_worker : _SerialWorker
+    _serial_worker : _SerialWorker
         Worker for reading data from a serial port.
-    preprocess_worker : _PreprocessWorker
+    _preprocess_worker : _PreprocessWorker
         Worker for preprocessing the data read by the serial worker.
-    serial_thread : QThread
+    _serial_thread : QThread
         QThread associated to the serial worker.
-    preprocess_thread : QThread
+    _preprocess_thread : QThread
         QThread associated to the preprocess worker.
     """
 
@@ -202,31 +203,50 @@ class ESBAcquisitionController(AcquisitionController):
         v_scale_factor: int = 1000000,
     ) -> None:
         # Create workers and threads
-        self.serial_worker = _SerialWorker(serial_port, packet_size, baude_rate)
-        self.preprocess_worker = _PreprocessWorker(
+        self._serial_worker = _SerialWorker(serial_port, packet_size, baude_rate)
+        self._preprocess_worker = _PreprocessWorker(
             n_ch, n_samp, gain_scale_factor, v_scale_factor
         )
-        self.serial_thread = QThread()
-        self.serial_worker.moveToThread(self.serial_thread)
-        self.preprocess_thread = QThread()
-        self.preprocess_worker.moveToThread(self.preprocess_thread)
+        self._serial_thread = QThread()
+        self._serial_worker.moveToThread(self._serial_thread)
+        self._preprocess_thread = QThread()
+        self._preprocess_worker.moveToThread(self._preprocess_thread)
 
         # Create connections
-        self.serial_thread.started.connect(self.serial_worker.start_acquisition)
-        self.serial_worker.data_ready_sig.connect(self.preprocess_worker.preprocess)
+        self._serial_thread.started.connect(self._serial_worker.start_acquisition)
+        self._serial_worker.data_ready_sig.connect(self._preprocess_worker.preprocess)
 
     def start_acquisition(self):
-        """Start the threads."""
-        self.preprocess_thread.start()
-        self.serial_thread.start()
+        """Start the acquisition."""
+        self._preprocess_thread.start()
+        self._serial_thread.start()
 
     def stop_acquisition(self) -> None:
-        """Stop the acquisition, i.e. serial and preprocess workers."""
-        self.serial_worker.stop_acquisition()
-        self.serial_thread.quit()
-        self.serial_thread.wait()
-        self.preprocess_thread.quit()
-        self.preprocess_thread.wait()
+        """Stop the acquisition."""
+        self._serial_worker.stop_acquisition()
+        self._serial_thread.quit()
+        self._serial_thread.wait()
+        self._preprocess_thread.quit()
+        self._preprocess_thread.wait()
+
+    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Connect the "data ready" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "data ready" signal.
+        """
+        self._preprocess_worker.data_ready_sig.connect(fn)
+
+    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Disconnect the "data ready" signal from the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to disconnect from the "data ready" signal.
+        """
 
     @pyqtSlot(int)
     def update_trigger(self, trigger: int) -> None:
@@ -238,4 +258,4 @@ class ESBAcquisitionController(AcquisitionController):
         trigger : int
             New trigger value.
         """
-        self.serial_worker.trigger = trigger
+        self._serial_worker.trigger = trigger
