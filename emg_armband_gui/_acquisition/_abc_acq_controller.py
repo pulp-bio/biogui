@@ -18,10 +18,18 @@ limitations under the License.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
+from typing import Any, Callable
+
+import numpy as np
+from PyQt6.QtCore import QObject
 
 
-class AcquisitionController(ABC):
+class AcquisitionControllerMeta(type(QObject), ABCMeta):
+    """Meta-class for acquisition controller."""
+
+
+class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
     """Interface for acquisition controllers."""
 
     @abstractmethod
@@ -31,6 +39,24 @@ class AcquisitionController(ABC):
     @abstractmethod
     def stop_acquisition(self) -> None:
         """Stop the acquisition."""
+
+    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Connect the "data ready" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "data ready" signal.
+        """
+
+    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+        """Disconnect the "data ready" signal from the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to disconnect from the "data ready" signal.
+        """
 
     @abstractmethod
     def update_trigger(self, trigger: int) -> None:
