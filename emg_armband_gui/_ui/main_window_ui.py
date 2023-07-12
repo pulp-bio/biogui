@@ -135,7 +135,7 @@ class Ui_MainWindow(object):
         self.experimentGroupBox.setTitle(
             _translate("MainWindow", "Configure experiment")
         )
-        self.label.setText(_translate("MainWindow", "File name:"))
+        self.label.setText(_translate("MainWindow", "Output file name:"))
         self.experimentTextField.setToolTip(
             _translate(
                 "MainWindow",

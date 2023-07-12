@@ -206,7 +206,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.experimentGroupBox.isChecked() and self._config is not None:
             # Output file
             exp_dir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
-            os.mkdir(exp_dir)
+            os.makedirs(exp_dir, exist_ok=True)
             out_file_name = self.experimentTextField.text()
             if out_file_name == "":
                 out_file_name = (
@@ -251,7 +251,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         for i in range(self._n_ch):
             data[:, i], self._zi[i] = signal.lfilter(
-                self._b, self._a, data[:, i], zi=self._zi[i], axis = 0
+                self._b, self._a, data[:, i], axis=0, zi=self._zi[i]
             )
 
         for samples in data:
