@@ -28,11 +28,13 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
 from scipy import signal
 
-from emg_armband_gui.acq_controller import AcquisitionController
-from emg_armband_gui.file_controller import FileController
-from emg_armband_gui.gesture_window import GeturesWindow
-from emg_armband_gui.ui.main_window_ui import Ui_MainWindow
-from emg_armband_gui._utils import load_validate_json, serial_ports
+from ._acquisition._abc_acq_controller import AcquisitionController
+from ._acquisition._dummy_acq_controller import DummyAcquisitionController
+from ._acquisition._esb_acq_controller import ESBAcquisitionController
+from ._file_controller import FileController
+from ._gesture_window import GeturesWindow
+from ._ui.main_window_ui import Ui_MainWindow
+from ._utils import load_validate_json, serial_ports
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -42,8 +44,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ----------
     fs : int
         Sampling frequency.
-    queue_mem : int
+    wl : int
         Memory of the internal deques.
+    dummy : bool, default=False
+        Whether to use dummy signals.
 
     Attributes
     ----------
@@ -61,6 +65,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Dictionary representing the experiment configuration.
     _buf_count : int
         Counter for the plot buffer.
+    _dummy : bool
+        Whether to use dummy signals.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
     _gest_win : GeturesWindow
@@ -73,13 +79,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Initial state for the filter (one per channel).
     """
 
-    def __init__(self, fs: int, queue_mem: int):
+    def __init__(self, fs: int, wl: int, dummy: bool = False):
         super(MainWindow, self).__init__()
 
         self._fs = fs
-        self._x = deque(maxlen=queue_mem)
-        self._y = deque(maxlen=queue_mem)
+        self._x = deque(maxlen=wl)
+        self._y = deque(maxlen=wl)
         self._buf_count = 0
+        self._dummy = dummy
 
         self.setupUi(self)
 
@@ -104,20 +111,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._initialize_plot()
 
         # Experiments
-        self._gest_win = None
-        self._config = None
+        self._gest_win: GeturesWindow | None = None
+        self._config: dict | None = None
         self.browseJSONButton.clicked.connect(self._browse_json)
 
         # Acquisition
-        self._acq_controller = None
-        self.startAcquisitionButton.setEnabled(self._serial_port != "")
+        self._acq_controller: AcquisitionController = None
+        self.startAcquisitionButton.setEnabled(self._serial_port != "" or self._dummy)
         self.stopAcquisitionButton.setEnabled(False)
         self.startAcquisitionButton.clicked.connect(self._start_acquisition)
         self.stopAcquisitionButton.clicked.connect(self._stop_acquisition)
 
         # Filtering
         self._b, self._a = signal.iirfilter(
-            N=2, Wn=100, fs=fs, btype="low", ftype="butter"
+            N=2, Wn=20, fs=fs, btype="high", ftype="butter"
         )
         self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)]
 
@@ -189,8 +196,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.startAcquisitionButton.setEnabled(False)
         self.stopAcquisitionButton.setEnabled(True)
 
-        self._acq_controller = AcquisitionController(self._serial_port, n_ch=self._n_ch)
-        self._acq_controller.preprocess_worker.data_ready_sig.connect(self.grab_data)
+        self._acq_controller = (
+            DummyAcquisitionController(self._n_ch)
+            if self._dummy
+            else ESBAcquisitionController(self._serial_port, n_ch=self._n_ch)
+        )
+        self._acq_controller.connect_data_ready(self.grab_data)
         if self.experimentGroupBox.isChecked() and self._config is not None:
             # Output file
             exp_dir = os.path.dirname(self.JSONLabel.text())
@@ -243,7 +254,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         for samples in data:
             self._x.append(self._x[-1] + 1 / self._fs)
-            self._y.append(samples)
+            self._y.append(samples[: self._n_ch])
 
             if self._buf_count == 50:
                 xs = list(self._x)

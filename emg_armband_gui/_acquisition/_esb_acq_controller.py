@@ -58,6 +58,7 @@ class _SerialWorker(QObject):
 
     def __init__(self, serial_port: str, packet_size: int, baude_rate: int) -> None:
         super(_SerialWorker, self).__init__()
+
         self._ser = serial.Serial(serial_port, baude_rate)
         self._packet_size = packet_size
         self._trigger = 0
@@ -129,6 +130,7 @@ class _PreprocessWorker(QObject):
         v_scale_factor: int,
     ) -> None:
         super(_PreprocessWorker, self).__init__()
+
         self._n_ch = n_ch
         self._n_samp = n_samp
         self._gain_scale_factor = gain_scale_factor
@@ -202,6 +204,8 @@ class ESBAcquisitionController(AcquisitionController):
         gain_scale_factor: float = 2.38125854276502e-08,
         v_scale_factor: int = 1000000,
     ) -> None:
+        super(ESBAcquisitionController, self).__init__()
+
         # Create workers and threads
         self._serial_worker = _SerialWorker(serial_port, packet_size, baude_rate)
         self._preprocess_worker = _PreprocessWorker(

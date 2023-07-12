@@ -6,7 +6,7 @@ from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QWidget
 
-import emg_armband_gui.ui.resources
+from ._ui import resources
 
 
 class GeturesWindow(QWidget):

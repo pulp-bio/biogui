@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import numpy as np
 from PyQt6.QtCore import QObject, QThread, pyqtSlot
 
-from emg_armband_gui.acq_controller import AcquisitionController
+from ._acquisition._abc_acq_controller import AcquisitionController
 
 
 class _FileWorker(QObject):
-    """Worker that writes into a binary file the data it receives via a Qt signal.
+    """Worker that writes into a file the data it receives via a Qt signal.
 
     Parameters
     ----------
@@ -20,20 +21,20 @@ class _FileWorker(QObject):
     """
 
     def __init__(self, file_path: str) -> None:
-        super(QObject, self).__init__()
+        super(_FileWorker, self).__init__()
         self._f = open(file_path, "wb")
 
-    @pyqtSlot(bytearray)
-    def write(self, data: bytearray) -> None:
+    @pyqtSlot(np.ndarray)
+    def write(self, data: np.ndarray) -> None:
         """This method is called automatically when the associated signal is received,
         and it writes to the file the received data.
 
         Parameters
         ----------
-        data : bytearray
-            New binary data.
+        data : ndarray
+            Data to write.
         """
-        self._f.write(data)
+        self._f.write(data.tobytes())
 
     def close_file(self) -> None:
         """Close the file."""
@@ -53,9 +54,9 @@ class FileController(QObject):
 
     Attributes
     ----------
-    file_worker : _FileWorker
+    _file_worker : _FileWorker
         Worker for writing data to a binary file.
-    file_thread : QThread
+    _file_thread : QThread
         QThread associated to the file worker.
     acq_controller : AcquisitionController
         Controller for the acquisition.
@@ -69,23 +70,19 @@ class FileController(QObject):
         super(QObject, self).__init__()
 
         # Create worker and thread
-        self.file_worker = _FileWorker(file_path)
-        self.file_thread = QThread()
-        self.file_worker.moveToThread(self.file_thread)
+        self._file_worker = _FileWorker(file_path)
+        self._file_thread = QThread()
+        self._file_worker.moveToThread(self._file_thread)
         # Connect to acquisition controller
-        self.acq_controller = acq_controller
-        self.acq_controller.preprocess_worker.data_ready_sig.connect(
-            self.file_worker.write
-        )
-        self.file_thread.start()
+        self._acq_controller = acq_controller
+        self._acq_controller.connect_data_ready(self._file_worker.write)
+        self._file_thread.start()
 
     @pyqtSlot()
     def stop_file_writer(self) -> None:
         """This method is called automatically when the associated signal is received,
         and it stops the file writer worker."""
-        self.acq_controller.preprocess_worker.data_ready_sig.disconnect(
-            self.file_worker.write
-        )
-        self.file_worker.close_file()
-        self.file_thread.quit()
-        self.file_thread.wait()
+        self._acq_controller.disconnect_data_ready(self._file_worker.write)
+        self._file_worker.close_file()
+        self._file_thread.quit()
+        self._file_thread.wait()

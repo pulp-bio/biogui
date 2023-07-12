@@ -48,6 +48,7 @@ class _DataWorker(QObject):
 
     def __init__(self, n_ch: int, n_samp: int) -> None:
         super(_DataWorker, self).__init__()
+
         self._n_ch = n_ch
         self._n_samp = n_samp
         self._trigger = 0
@@ -64,7 +65,8 @@ class _DataWorker(QObject):
     def start_acquisition(self) -> None:
         """Generate random data indefinitely, and send it."""
         while not self._stop_acquisition:
-            data = 500 * np.random.randn(self._n_samp, self._n_ch)
+            data = 500 * np.random.randn(self._n_samp, self._n_ch + 1)
+            data[:, -1] = np.repeat(self._trigger, self._n_samp)
             self.data_ready_sig.emit(data)
             time.sleep(1e-3)
         print("Generator stopped")
@@ -93,6 +95,8 @@ class DummyAcquisitionController(AcquisitionController):
     """
 
     def __init__(self, n_ch: int, n_samp: int = 5) -> None:
+        super(DummyAcquisitionController, self).__init__()
+
         # Create worker and thread
         self.data_worker = _DataWorker(n_ch, n_samp)
         self.data_thread = QThread()
@@ -141,4 +145,4 @@ class DummyAcquisitionController(AcquisitionController):
         trigger : int
             New trigger value.
         """
-        self.serial_worker.trigger = trigger
+        self.data_worker.trigger = trigger

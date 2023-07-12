@@ -22,7 +22,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Callable
 
 import numpy as np
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, pyqtSlot
 
 
 class AcquisitionControllerMeta(type(QObject), ABCMeta):
@@ -58,6 +58,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
             Function to disconnect from the "data ready" signal.
         """
 
+    @pyqtSlot(int)
     @abstractmethod
     def update_trigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
