@@ -204,7 +204,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._acq_controller.connect_data_ready(self.grab_data)
         if self.experimentGroupBox.isChecked() and self._config is not None:
             # Output file
-            exp_dir = os.path.dirname(self.JSONLabel.text())
+            exp_dir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
+            os.mkdir(exp_dir)
             out_file_name = self.experimentTextField.text()
             if out_file_name == "":
                 out_file_name = (
@@ -256,7 +257,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._x.append(self._x[-1] + 1 / self._fs)
             self._y.append(samples[: self._n_ch])
 
-            if self._buf_count == 50:
+            if self._buf_count == 100:
                 xs = list(self._x)
                 ys = np.asarray(list(self._y)).T
                 for i in range(self._n_ch):
