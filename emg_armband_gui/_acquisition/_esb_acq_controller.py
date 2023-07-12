@@ -82,7 +82,7 @@ class _SerialWorker(QObject):
             self.data_ready_sig.emit(data)
         self._ser.write(b":")
         time.sleep(0.2)
-        self._ser.flush()
+        self._ser.reset_input_buffer()
         time.sleep(0.2)
         self._ser.close()
         print("Serial stopped")
@@ -153,8 +153,8 @@ class _PreprocessWorker(QObject):
             for i in range(self._n_ch):
                 data_ref[k, i] = (
                     data[k * 48 + (3 * i)] * 256 * 256 * 256
-                    + data[0 * k * 48 + (3 * i) + 1] * 256 * 256
-                    + data[0 * k * 48 + (3 * i) + 2] * 256
+                    + data[k * 48 + (3 * i) + 1] * 256 * 256
+                    + data[k * 48 + (3 * i) + 2] * 256
                 )
         data_ref = data_ref.view("int32").astype("float32")
         data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
