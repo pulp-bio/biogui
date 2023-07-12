@@ -147,7 +147,7 @@ class _PreprocessWorker(QObject):
             New binary data.
         """
         data_ref = np.zeros(shape=(self._n_samp, self._n_ch + 1), dtype="uint32")
-        data_ref[:, self._n_ch + 1] = [data[242]] * self._n_samp
+        data_ref[:, self._n_ch] = [data[242]] * self._n_samp
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._n_samp):
             for i in range(self._n_ch):

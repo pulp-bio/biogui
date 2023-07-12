@@ -249,7 +249,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         for i in range(self._n_ch):
             data[:, i], self._zi[i] = signal.lfilter(
-                self._b, self._a, data[:, i], zi=self._zi[i]
+                self._b, self._a, data[:, i], zi=self._zi[i], axis = 0
             )
 
         for samples in data:

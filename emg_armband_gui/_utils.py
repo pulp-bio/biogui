@@ -40,7 +40,7 @@ def serial_ports():
             On unsupported or unknown platforms.
     """
     if sys.platform.startswith("win"):
-        ports = ["COM%s" % (i + 1) for i in range(256)]
+        ports = ["COM%s" % (i + 1) for i in range(16)]
     elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
         ports = glob.glob("/dev/tty[A-Za-z]*")
     elif sys.platform.startswith("darwin"):
