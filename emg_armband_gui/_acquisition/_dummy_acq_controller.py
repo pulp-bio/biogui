@@ -88,9 +88,9 @@ class DummyAcquisitionController(AcquisitionController):
 
     Attributes
     ----------
-    data_worker : _DataWorker
+    _data_worker : _DataWorker
         Worker for generating data.
-    data_thread : QThread
+    _data_thread : QThread
         QThread associated to the data worker.
     """
 
@@ -98,22 +98,22 @@ class DummyAcquisitionController(AcquisitionController):
         super(DummyAcquisitionController, self).__init__()
 
         # Create worker and thread
-        self.data_worker = _DataWorker(n_ch, n_samp)
-        self.data_thread = QThread()
-        self.data_worker.moveToThread(self.data_thread)
+        self._data_worker = _DataWorker(n_ch, n_samp)
+        self._data_thread = QThread()
+        self._data_worker.moveToThread(self._data_thread)
 
         # Create connections
-        self.data_thread.started.connect(self.data_worker.start_acquisition)
+        self._data_thread.started.connect(self._data_worker.start_acquisition)
 
     def start_acquisition(self):
         """Start the thread."""
-        self.data_thread.start()
+        self._data_thread.start()
 
     def stop_acquisition(self) -> None:
         """Stop the acquisition."""
-        self.data_worker.stop_acquisition()
-        self.data_thread.quit()
-        self.data_thread.wait()
+        self._data_worker.stop_acquisition()
+        self._data_thread.quit()
+        self._data_thread.wait()
 
     def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
         """Connect the "data ready" signal with the given function.
@@ -123,7 +123,7 @@ class DummyAcquisitionController(AcquisitionController):
         fn : Callable
             Function to connect to the "data ready" signal.
         """
-        self.data_worker.data_ready_sig.connect(fn)
+        self._data_worker.data_ready_sig.connect(fn)
 
     def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
         """Disconnect the "data ready" signal from the given function.
@@ -133,7 +133,7 @@ class DummyAcquisitionController(AcquisitionController):
         fn : Callable
             Function to disconnect from the "data ready" signal.
         """
-        self.data_worker.data_ready_sig.disconnect(fn)
+        self._data_worker.data_ready_sig.disconnect(fn)
 
     @pyqtSlot(int)
     def update_trigger(self, trigger: int) -> None:
@@ -145,4 +145,4 @@ class DummyAcquisitionController(AcquisitionController):
         trigger : int
             New trigger value.
         """
-        self.data_worker.trigger = trigger
+        self._data_worker.trigger = trigger
