@@ -252,6 +252,7 @@ class ESBAcquisitionController(AcquisitionController):
         fn : Callable
             Function to disconnect from the "data ready" signal.
         """
+        self._preprocess_worker.data_ready_sig.disconnect(fn)
 
     @pyqtSlot(int)
     def update_trigger(self, trigger: int) -> None:
