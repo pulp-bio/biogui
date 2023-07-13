@@ -59,7 +59,7 @@ class _SerialWorker(QObject):
     def __init__(self, serial_port: str, packet_size: int, baude_rate: int) -> None:
         super(_SerialWorker, self).__init__()
 
-        self._ser = serial.Serial(serial_port, baude_rate)
+        self._ser = serial.Serial(serial_port, baude_rate, timeout=0)
         self._packet_size = packet_size
         self._trigger = 0
         self._stop_acquisition = False
@@ -77,9 +77,10 @@ class _SerialWorker(QObject):
         self._ser.write(b"=")
         while not self._stop_acquisition:
             data = self._ser.read(self._packet_size)
-            data = bytearray(data)
-            data[-1] = self._trigger
-            self.data_ready_sig.emit(data)
+            if data:
+                data = bytearray(data)
+                data[-1] = self._trigger
+                self.data_ready_sig.emit(data)
         self._ser.write(b":")
         time.sleep(0.2)
         self._ser.reset_input_buffer()
