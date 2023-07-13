@@ -40,6 +40,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
     def stop_acquisition(self) -> None:
         """Stop the acquisition."""
 
+    @abstractmethod
     def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
         """Connect the "data ready" signal with the given function.
 
@@ -49,6 +50,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
             Function to connect to the "data ready" signal.
         """
 
+    @abstractmethod
     def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
         """Disconnect the "data ready" signal from the given function.
 
