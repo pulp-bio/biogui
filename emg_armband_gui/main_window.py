@@ -87,6 +87,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._y = deque(maxlen=wl)
         self._buf_count = 0
         self._dummy = dummy
+        self.plot_spacing = 1000
+        self.plot_buffer = 200
 
         self.setupUi(self)
 
@@ -147,7 +149,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
-        self.graphWidget.setYRange(0, 2000 * (self._n_ch - 1))
+        self.graphWidget.setYRange(0, self.plot_spacing * (self._n_ch - 1))
         self.graphWidget.getPlotItem().hideAxis("bottom")
         self.graphWidget.getPlotItem().hideAxis("left")
         # Initialize deques
@@ -163,7 +165,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         y = np.asarray(self._y).T
         for i in range(self._n_ch):
             pen = pg.mkPen(color=colors[i])
-            self._plots.append(self.graphWidget.plot(self._x, y[i] + 2000 * i, pen=pen))
+            self._plots.append(self.graphWidget.plot(self._x, y[i] + self.plot_spacing * i, pen=pen))
 
     def _browse_json(self) -> None:
         """Browse to select the JSON file with the experiment configuration."""
@@ -263,10 +265,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._x.append(self._x[-1] + 1 / self._fs)
             self._y.append(samples[: self._n_ch])
 
-            if self._buf_count == 100:
+            if self._buf_count == self.plot_buffer:
                 xs = list(self._x)
                 ys = np.asarray(list(self._y)).T
                 for i in range(self._n_ch):
-                    self._plots[i].setData(xs, ys[i] + 2000 * i, skipFiniteCheck=True)
+                    self._plots[i].setData(xs, ys[i] + self.plot_spacing * i, skipFiniteCheck=True)
                 self._buf_count = 0
             self._buf_count += 1
