@@ -44,7 +44,7 @@ class _DataWorker(QObject):
         Whether to stop the acquisition.
     """
 
-    data_ready_sig = pyqtSignal(np.ndarray)
+    data_ready_sig = pyqtSignal(bytes)
 
     def __init__(self, n_ch: int, n_samp: int) -> None:
         super(_DataWorker, self).__init__()
@@ -65,9 +65,10 @@ class _DataWorker(QObject):
     def start_acquisition(self) -> None:
         """Generate random data indefinitely, and send it."""
         while not self._stop_acquisition:
-            data = 500 * np.random.randn(self._n_samp, self._n_ch + 1)
+            data = -10 * np.random.randn(self._n_samp, self._n_ch + 1) - 100
             data[:, -1] = np.repeat(self._trigger, self._n_samp)
-            self.data_ready_sig.emit(data)
+            data = data.astype("float32")
+            self.data_ready_sig.emit(data.tobytes())
             time.sleep(1e-3)
         print("Generator stopped")
 
