@@ -252,16 +252,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.startAcquisitionButton.setEnabled(True)
         self.stopAcquisitionButton.setEnabled(False)
 
-    @pyqtSlot(np.ndarray)
-    def grab_data(self, data: np.ndarray):
+    @pyqtSlot(bytes)
+    def grab_data(self, data: bytes):
         """This method is called automatically when the associated signal is received,
         it grabs data from the signal and plots it.
 
         Parameters
         ----------
-        data : ndarray
+        data : bytes
             Data to plot.
         """
+        data = np.frombuffer(bytearray(data), dtype="float32").reshape(
+            -1, self._n_ch + 1
+        )
+
         for i in range(self._n_ch):
             data[:, i], self._zi[i] = signal.lfilter(
                 self._b, self._a, data[:, i], axis=0, zi=self._zi[i]

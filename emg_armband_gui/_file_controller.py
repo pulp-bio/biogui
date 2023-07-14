@@ -24,17 +24,17 @@ class _FileWorker(QObject):
         super(_FileWorker, self).__init__()
         self._f = open(file_path, "wb")
 
-    @pyqtSlot(np.ndarray)
-    def write(self, data: np.ndarray) -> None:
+    @pyqtSlot(bytes)
+    def write(self, data: bytes) -> None:
         """This method is called automatically when the associated signal is received,
         and it writes to the file the received data.
 
         Parameters
         ----------
-        data : ndarray
+        data : bytes
             Data to write.
         """
-        self._f.write(data.tobytes())
+        self._f.write(data)
 
     def close_file(self) -> None:
         """Close the file."""

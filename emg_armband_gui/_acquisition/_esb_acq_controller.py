@@ -54,7 +54,7 @@ class _SerialWorker(QObject):
         Whether to stop the acquisition.
     """
 
-    data_ready_sig = pyqtSignal(bytearray)
+    data_ready_sig = pyqtSignal(bytes)
 
     def __init__(self, serial_port: str, packet_size: int, baude_rate: int) -> None:
         super(_SerialWorker, self).__init__()
@@ -80,7 +80,7 @@ class _SerialWorker(QObject):
             if data:
                 data = bytearray(data)
                 data[-1] = self._trigger
-                self.data_ready_sig.emit(data)
+                self.data_ready_sig.emit(bytes(data))
         self._ser.write(b":")
         time.sleep(0.2)
         self._ser.reset_input_buffer()
@@ -121,7 +121,7 @@ class _PreprocessWorker(QObject):
         Voltage scale factor.
     """
 
-    data_ready_sig = pyqtSignal(np.ndarray)
+    data_ready_sig = pyqtSignal(bytes)
 
     def __init__(
         self,
@@ -137,17 +137,18 @@ class _PreprocessWorker(QObject):
         self._gain_scale_factor = gain_scale_factor
         self._v_scale_factor = v_scale_factor
 
-    @pyqtSlot(bytearray)
-    def preprocess(self, data: bytearray) -> None:
+    @pyqtSlot(bytes)
+    def preprocess(self, data: bytes) -> None:
         """This method is called automatically when the associated signal is received,
         it preprocess the received packet and emits a signal with the preprocessed data (downsampled).
 
         Parameters
         ----------
-        data : bytearray
+        data : bytes
             New binary data.
         """
         data_ref = np.zeros(shape=(self._n_samp, self._n_ch + 1), dtype="uint32")
+        data = bytearray(data)
         data_ref[:, self._n_ch] = [data[242]] * self._n_samp
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._n_samp):
@@ -160,7 +161,7 @@ class _PreprocessWorker(QObject):
         data_ref = data_ref.view("int32").astype("float32")
         data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
 
-        self.data_ready_sig.emit(data_ref)
+        self.data_ready_sig.emit(data_ref.tobytes())
 
 
 class ESBAcquisitionController(AcquisitionController):
