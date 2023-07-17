@@ -238,7 +238,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._gestWin.show()
             self._gestWin.trigger_sig.connect(self._acqController.updateTrigger)
             self._fileController = FileController(outFilePath, self._acqController)
-            self._gestWin.stop_sig.connect(self._fileController.stop_file_writer)
+            self._gestWin.stop_sig.connect(self._fileController.stopFileWriter)
 
         self._acqController.startAcquisition()
 
