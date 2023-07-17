@@ -60,7 +60,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import resources_rc
+from . import rc_resources
 
 
 class Ui_MainWindow(object):
