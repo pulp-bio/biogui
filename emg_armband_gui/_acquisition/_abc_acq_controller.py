@@ -33,15 +33,15 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
     """Interface for acquisition controllers."""
 
     @abstractmethod
-    def start_acquisition(self):
+    def startAcquisition(self):
         """Start the acquisition."""
 
     @abstractmethod
-    def stop_acquisition(self) -> None:
+    def stopAcquisition(self) -> None:
         """Stop the acquisition."""
 
     @abstractmethod
-    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -51,7 +51,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
         """
 
     @abstractmethod
-    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -62,7 +62,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
 
     @pyqtSlot(int)
     @abstractmethod
-    def update_trigger(self, trigger: int) -> None:
+    def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
         and it update the trigger value.
 

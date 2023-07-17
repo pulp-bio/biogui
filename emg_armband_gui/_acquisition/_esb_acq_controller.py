@@ -23,7 +23,7 @@ from typing import Any, Callable
 
 import numpy as np
 import serial
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from ._abc_acq_controller import AcquisitionController
 
@@ -33,36 +33,36 @@ class _SerialWorker(QObject):
 
     Parameters
     ----------
-    serial_port : str
+    serialPort : str
         String representing the serial port.
-    packet_size : int
+    packetSize : int
         Size of each packet read from the serial port.
-    baude_rate : int
+    baudeRate : int
         Baude rate.
 
     Attributes
     ----------
-    data_ready_sig : pyqtSignal
+    dataReadySig : Signal
         Signal emitted when a new packet is read.
     _ser : Serial
         Serial port.
-    _packet_size : int
+    _packetSize : int
         Size of each packet read from the serial port.
     _trigger : int
         Trigger value to add to each packet.
-    _stop_acquisition : bool
+    _stopAcquisition : bool
         Whether to stop the acquisition.
     """
 
-    data_ready_sig = pyqtSignal(bytes)
+    dataReadySig = Signal(bytes)
 
-    def __init__(self, serial_port: str, packet_size: int, baude_rate: int) -> None:
+    def __init__(self, serialPort: str, packetSize: int, baudeRate: int) -> None:
         super(_SerialWorker, self).__init__()
 
-        self._ser = serial.Serial(serial_port, baude_rate, timeout=0)
-        self._packet_size = packet_size
+        self._ser = serial.Serial(serialPort, baudeRate, timeout=0)
+        self._packetSize = packetSize
         self._trigger = 0
-        self._stop_acquisition = False
+        self._stopAcquisition = False
 
     @property
     def trigger(self) -> int:
@@ -72,15 +72,15 @@ class _SerialWorker(QObject):
     def trigger(self, trigger: int) -> None:
         self._trigger = trigger
 
-    def start_acquisition(self) -> None:
+    def startAcquisition(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
         self._ser.write(b"=")
-        while not self._stop_acquisition:
-            data = self._ser.read(self._packet_size)
+        while not self._stopAcquisition:
+            data = self._ser.read(self._packetSize)
             if data:
                 data = bytearray(data)
                 data[-1] = self._trigger
-                self.data_ready_sig.emit(bytes(data))
+                self.dataReadySig.emit(bytes(data))
         self._ser.write(b":")
         time.sleep(0.2)
         self._ser.reset_input_buffer()
@@ -88,9 +88,9 @@ class _SerialWorker(QObject):
         self._ser.close()
         print("Serial stopped")
 
-    def stop_acquisition(self) -> None:
+    def stopAcquisition(self) -> None:
         """Stop the acquisition."""
-        self._stop_acquisition = True
+        self._stopAcquisition = True
 
 
 class _PreprocessWorker(QObject):
@@ -98,46 +98,46 @@ class _PreprocessWorker(QObject):
 
     Parameters
     ----------
-    n_ch : int
+    nCh : int
         Number of channels.
-    n_samp : int
+    nSamp : int
         Number of samples in each packet.
-    gain_scale_factor : float
+    gainScaleFactor : float
         Gain scaling factor.
-    v_scale_factor : int
+    vScaleFactor : int
         Voltage scale factor.
 
     Attributes
     ----------
-    data_ready_sig : pyqtSignal
+    data_ready_sig : Signal
         Signal emitted when data is ready.
-    _n_ch : int
+    _nCh : int
         Number of channels.
-    _n_samp : int
+    _nSamp : int
         Number of samples in each packet.
-    _gain_scale_factor : float
+    _gainScaleFactor : float
         Gain scaling factor.
-    _v_scale_factor : int
+    _vScaleFactor : int
         Voltage scale factor.
     """
 
-    data_ready_sig = pyqtSignal(bytes)
+    dataReadySig = Signal(bytes)
 
     def __init__(
         self,
-        n_ch: int,
-        n_samp: int,
-        gain_scale_factor: float,
-        v_scale_factor: int,
+        nCh: int,
+        nSamp: int,
+        gainScaleFactor: float,
+        vScaleFactor: int,
     ) -> None:
         super(_PreprocessWorker, self).__init__()
 
-        self._n_ch = n_ch
-        self._n_samp = n_samp
-        self._gain_scale_factor = gain_scale_factor
-        self._v_scale_factor = v_scale_factor
+        self._nCh = nCh
+        self._nSamp = nSamp
+        self._gainScaleFactor = gainScaleFactor
+        self._vScaleFactor = vScaleFactor
 
-    @pyqtSlot(bytes)
+    @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
         """This method is called automatically when the associated signal is received,
         it preprocess the received packet and emits a signal with the preprocessed data (downsampled).
@@ -147,21 +147,21 @@ class _PreprocessWorker(QObject):
         data : bytes
             New binary data.
         """
-        data_ref = np.zeros(shape=(self._n_samp, self._n_ch + 1), dtype="uint32")
+        dataRef = np.zeros(shape=(self._nSamp, self._nCh + 1), dtype="uint32")
         data = bytearray(data)
-        data_ref[:, self._n_ch] = [data[242]] * self._n_samp
+        dataRef[:, self._nCh] = [data[242]] * self._nSamp
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
-        for k in range(self._n_samp):
-            for i in range(self._n_ch):
-                data_ref[k, i] = (
+        for k in range(self._nSamp):
+            for i in range(self._nCh):
+                dataRef[k, i] = (
                     data[k * 48 + (3 * i)] * 256 * 256 * 256
                     + data[k * 48 + (3 * i) + 1] * 256 * 256
                     + data[k * 48 + (3 * i) + 2] * 256
                 )
-        data_ref = data_ref.view("int32").astype("float32")
-        data_ref = data_ref / 256 * self._gain_scale_factor * self._v_scale_factor
+        dataRef = dataRef.view("int32").astype("float32")
+        dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
 
-        self.data_ready_sig.emit(data_ref.tobytes())
+        self.dataReadySig.emit(dataRef.tobytes())
 
 
 class ESBAcquisitionController(AcquisitionController):
@@ -169,73 +169,73 @@ class ESBAcquisitionController(AcquisitionController):
 
     Parameters
     ----------
-    serial_port : str
+    serialPort : str
         String representing the serial port.
-    n_ch : int
+    nCh : int
         Number of channels.
-    n_samp : int, default=5
+    nSamp : int, default=5
         Number of samples in each packet.
-    packet_size : int, default=243
+    packetSize : int, default=243
         Size of each packet read from the serial port.
-    baude_rate : int, default=4000000
+    baudeRate : int, default=4000000
         Baude rate.
-    gain_scale_factor : float, default=2.38125854276502e-08
+    gainScaleFactor : float, default=2.38125854276502e-08
         Gain scaling factor.
-    v_scale_factor : int, default=1000000
+    vScaleFactor : int, default=1000000
         Voltage scale factor.
 
     Attributes
     ----------
-    _serial_worker : _SerialWorker
+    _serialWorker : _SerialWorker
         Worker for reading data from a serial port.
-    _preprocess_worker : _PreprocessWorker
+    _preprocessWorker : _PreprocessWorker
         Worker for preprocessing the data read by the serial worker.
-    _serial_thread : QThread
+    _serialThread : QThread
         QThread associated to the serial worker.
-    _preprocess_thread : QThread
+    _preprocessThread : QThread
         QThread associated to the preprocess worker.
     """
 
     def __init__(
         self,
-        serial_port: str,
-        n_ch: int,
-        n_samp: int = 5,
-        packet_size: int = 243,
-        baude_rate: int = 4000000,
-        gain_scale_factor: float = 2.38125854276502e-08,
-        v_scale_factor: int = 1000000,
+        serialPort: str,
+        nCh: int,
+        nSamp: int = 5,
+        packetSize: int = 243,
+        baudeRate: int = 4000000,
+        gainScaleFactor: float = 2.38125854276502e-08,
+        vScaleFactor: int = 1000000,
     ) -> None:
         super(ESBAcquisitionController, self).__init__()
 
         # Create workers and threads
-        self._serial_worker = _SerialWorker(serial_port, packet_size, baude_rate)
-        self._preprocess_worker = _PreprocessWorker(
-            n_ch, n_samp, gain_scale_factor, v_scale_factor
+        self._serialWorker = _SerialWorker(serialPort, packetSize, baudeRate)
+        self._preprocessWorker = _PreprocessWorker(
+            nCh, nSamp, gainScaleFactor, vScaleFactor
         )
-        self._serial_thread = QThread()
-        self._serial_worker.moveToThread(self._serial_thread)
-        self._preprocess_thread = QThread()
-        self._preprocess_worker.moveToThread(self._preprocess_thread)
+        self._serialThread = QThread()
+        self._serialWorker.moveToThread(self._serialThread)
+        self._preprocessThread = QThread()
+        self._preprocessWorker.moveToThread(self._preprocessThread)
 
         # Create connections
-        self._serial_thread.started.connect(self._serial_worker.start_acquisition)
-        self._serial_worker.data_ready_sig.connect(self._preprocess_worker.preprocess)
+        self._serialThread.started.connect(self._serialWorker.startAcquisition)
+        self._serialWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
 
-    def start_acquisition(self):
+    def startAcquisition(self):
         """Start the acquisition."""
-        self._preprocess_thread.start()
-        self._serial_thread.start()
+        self._preprocessThread.start()
+        self._serialThread.start()
 
-    def stop_acquisition(self) -> None:
+    def stopAcquisition(self) -> None:
         """Stop the acquisition."""
-        self._serial_worker.stop_acquisition()
-        self._serial_thread.quit()
-        self._serial_thread.wait()
-        self._preprocess_thread.quit()
-        self._preprocess_thread.wait()
+        self._serialWorker.stopAcquisition()
+        self._serialThread.quit()
+        self._serialThread.wait()
+        self._preprocessThread.quit()
+        self._preprocessThread.wait()
 
-    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -243,9 +243,9 @@ class ESBAcquisitionController(AcquisitionController):
         fn : Callable
             Function to connect to the "data ready" signal.
         """
-        self._preprocess_worker.data_ready_sig.connect(fn)
+        self._preprocessWorker.dataReadySig.connect(fn)
 
-    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -253,10 +253,10 @@ class ESBAcquisitionController(AcquisitionController):
         fn : Callable
             Function to disconnect from the "data ready" signal.
         """
-        self._preprocess_worker.data_ready_sig.disconnect(fn)
+        self._preprocessWorker.dataReadySig.disconnect(fn)
 
-    @pyqtSlot(int)
-    def update_trigger(self, trigger: int) -> None:
+    @Slot(int)
+    def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
         and it update the trigger value.
 
@@ -265,4 +265,4 @@ class ESBAcquisitionController(AcquisitionController):
         trigger : int
             New trigger value.
         """
-        self._serial_worker.trigger = trigger
+        self._serialWorker.trigger = trigger

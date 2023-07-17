@@ -75,14 +75,14 @@ class FileController(QObject):
         self._file_worker.moveToThread(self._file_thread)
         # Connect to acquisition controller
         self._acq_controller = acq_controller
-        self._acq_controller.connect_data_ready(self._file_worker.write)
+        self._acq_controller.connectDataReady(self._file_worker.write)
         self._file_thread.start()
 
     @pyqtSlot()
     def stop_file_writer(self) -> None:
         """This method is called automatically when the associated signal is received,
         and it stops the file writer worker."""
-        self._acq_controller.disconnect_data_ready(self._file_worker.write)
+        self._acq_controller.disconnectDataReady(self._file_worker.write)
         self._file_worker.close_file()
         self._file_thread.quit()
         self._file_thread.wait()

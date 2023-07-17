@@ -22,7 +22,7 @@ import time
 from typing import Any, Callable
 
 import numpy as np
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from ._abc_acq_controller import AcquisitionController
 
@@ -30,29 +30,36 @@ from ._abc_acq_controller import AcquisitionController
 class _DataWorker(QObject):
     """Worker that generates random data indefinitely, and sends it via a Qt signal.
 
+    Parameters
+    ----------
+    nCh : int
+        Number of channels.
+    nSamp : int
+        Number of samples.
+
     Attributes
     ----------
-    data_ready_sig : pyqtSignal
+    data_ready_sig : Signal
         Signal emitted when a new packet is read.
-    _ser : Serial
-        Serial port.
-    _packet_size : int
-        Size of each packet read from the serial port.
+    _nCh : int
+        Number of channels.
+    _nSamp : int
+        Number of samples.
     _trigger : int
         Trigger value to add to each packet.
-    _stop_acquisition : bool
+    _stopAcquisition : bool
         Whether to stop the acquisition.
     """
 
-    data_ready_sig = pyqtSignal(bytes)
+    dataReadySig = Signal(np.ndarray)
 
-    def __init__(self, n_ch: int, n_samp: int) -> None:
+    def __init__(self, nCh: int, nSamp: int) -> None:
         super(_DataWorker, self).__init__()
 
-        self._n_ch = n_ch
-        self._n_samp = n_samp
+        self._nCh = nCh
+        self._nSamp = nSamp
         self._trigger = 0
-        self._stop_acquisition = False
+        self._stopAcquisition = False
 
     @property
     def trigger(self) -> int:
@@ -62,19 +69,19 @@ class _DataWorker(QObject):
     def trigger(self, trigger: int) -> None:
         self._trigger = trigger
 
-    def start_acquisition(self) -> None:
+    def startAcquisition(self) -> None:
         """Generate random data indefinitely, and send it."""
-        while not self._stop_acquisition:
-            data = -10 * np.random.randn(self._n_samp, self._n_ch + 1) - 100
-            data[:, -1] = np.repeat(self._trigger, self._n_samp)
+        while not self._stopAcquisition:
+            data = -10 * np.random.randn(self._nSamp, self._nCh + 1) - 100
+            data[:, -1] = np.repeat(self._trigger, self._nSamp)
             data = data.astype("float32")
-            self.data_ready_sig.emit(data.tobytes())
+            self.dataReadySig.emit(data.tobytes())
             time.sleep(1e-3)
         print("Generator stopped")
 
-    def stop_acquisition(self) -> None:
+    def stopAcquisition(self) -> None:
         """Stop the acquisition."""
-        self._stop_acquisition = True
+        self._stopAcquisition = True
 
 
 class DummyAcquisitionController(AcquisitionController):
@@ -82,41 +89,41 @@ class DummyAcquisitionController(AcquisitionController):
 
     Parameters
     ----------
-    n_ch : int
+    nCh : int
         Number of channels.
-    n_samp : int, default=5
+    nSamp : int, default=5
         Number of samples in each packet.
 
     Attributes
     ----------
-    _data_worker : _DataWorker
+    _dataWorker : _DataWorker
         Worker for generating data.
-    _data_thread : QThread
+    _dataThread : QThread
         QThread associated to the data worker.
     """
 
-    def __init__(self, n_ch: int, n_samp: int = 5) -> None:
+    def __init__(self, nCh: int, nSamp: int = 5) -> None:
         super(DummyAcquisitionController, self).__init__()
 
         # Create worker and thread
-        self._data_worker = _DataWorker(n_ch, n_samp)
-        self._data_thread = QThread()
-        self._data_worker.moveToThread(self._data_thread)
+        self._dataWorker = _DataWorker(nCh, nSamp)
+        self._dataThread = QThread()
+        self._dataWorker.moveToThread(self._dataThread)
 
         # Create connections
-        self._data_thread.started.connect(self._data_worker.start_acquisition)
+        self._dataThread.started.connect(self._dataWorker.startAcquisition)
 
-    def start_acquisition(self):
+    def startAcquisition(self):
         """Start the thread."""
-        self._data_thread.start()
+        self._dataThread.start()
 
-    def stop_acquisition(self) -> None:
+    def stopAcquisition(self) -> None:
         """Stop the acquisition."""
-        self._data_worker.stop_acquisition()
-        self._data_thread.quit()
-        self._data_thread.wait()
+        self._dataWorker.stopAcquisition()
+        self._dataThread.quit()
+        self._dataThread.wait()
 
-    def connect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -124,9 +131,9 @@ class DummyAcquisitionController(AcquisitionController):
         fn : Callable
             Function to connect to the "data ready" signal.
         """
-        self._data_worker.data_ready_sig.connect(fn)
+        self._dataWorker.dataReadySig.connect(fn)
 
-    def disconnect_data_ready(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -134,10 +141,10 @@ class DummyAcquisitionController(AcquisitionController):
         fn : Callable
             Function to disconnect from the "data ready" signal.
         """
-        self._data_worker.data_ready_sig.disconnect(fn)
+        self._dataWorker.dataReadySig.disconnect(fn)
 
-    @pyqtSlot(int)
-    def update_trigger(self, trigger: int) -> None:
+    @Slot(int)
+    def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
         and it update the trigger value.
 
@@ -146,4 +153,4 @@ class DummyAcquisitionController(AcquisitionController):
         trigger : int
             New trigger value.
         """
-        self._data_worker.trigger = trigger
+        self._dataWorker.trigger = trigger
