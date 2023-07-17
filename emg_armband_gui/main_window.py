@@ -289,7 +289,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._bufCount += 1
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        self._acqController.stopAcquisition()
+        if self._acqController is not None:
+            self._acqController.stopAcquisition()
         if self._gestWin is not None:
             self._gestWin.close()
         event.accept()

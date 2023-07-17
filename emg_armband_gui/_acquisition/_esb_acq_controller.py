@@ -160,6 +160,7 @@ class _PreprocessWorker(QObject):
                 )
         dataRef = dataRef.view("int32").astype("float32")
         dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
+        dataRef = dataRef.astype("float32")
 
         self.dataReadySig.emit(dataRef.tobytes())
 
