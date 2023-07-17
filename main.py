@@ -19,7 +19,7 @@ limitations under the License.
 import argparse
 import sys
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from emg_armband_gui.main_window import MainWindow
 

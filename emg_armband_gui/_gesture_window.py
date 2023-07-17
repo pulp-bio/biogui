@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import os
 
-from PyQt6.QtCore import QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QWidget
+from PySide6.QtCore import QTimer, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel, QWidget
 
-from ._ui import resources
+from ._ui import rc_resources
 
 
 class GeturesWindow(QWidget):
@@ -43,8 +43,8 @@ class GeturesWindow(QWidget):
         Trial index.
     """
 
-    trigger_sig = pyqtSignal(int)
-    stop_sig = pyqtSignal()
+    trigger_sig = Signal(int)
+    stop_sig = Signal()
 
     def __init__(
         self,

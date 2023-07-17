@@ -24,8 +24,9 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
+from PySide6.QtCore import Slot
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
 from scipy import signal
 
 from ._acquisition._abc_acq_controller import AcquisitionController
@@ -33,7 +34,7 @@ from ._acquisition._dummy_acq_controller import DummyAcquisitionController
 from ._acquisition._esb_acq_controller import ESBAcquisitionController
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
-from ._ui.main_window_ui import Ui_MainWindow
+from ._ui.ui_main_window import Ui_MainWindow
 from ._utils import load_validate_json, serial_ports
 
 
@@ -55,26 +56,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Deque for X values.
     _y : deque
         Deque for Y values.
-    _n_ch : int
+    _nCh : int
         Number of channels.
     _fs : int
         Sampling frequency.
-    _serial_port : str
+    _serialPort : str
         Serial port.
     _config : dit
         Dictionary representing the experiment configuration.
-    _buf_count : int
+    _bufCount : int
         Counter for the plot buffer.
     _dummy : bool
         Whether to use dummy signals.
-    _plot_spacing : int
+    _plotSpacing : int
         Spacing between each channel in the plot.
-    _plot_buffer : int
+    _plotBuffer : int
         Size of the buffer for plotting samples.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
-    _gest_win : GeturesWindow
+    _gestWin : GeturesWindow
         Window for gesture visualization.
+    _acqController : AcquisitionController
+        Controller for the acquisition.
     _b : ndarray
         Numerator polynomials for the filter.
     _a : ndarray
@@ -89,119 +92,119 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._fs = fs
         self._x = deque(maxlen=wl)
         self._y = deque(maxlen=wl)
-        self._buf_count = 0
+        self._bufCount = 0
         self._dummy = dummy
-        self._plot_spacing = 1000
-        self._plot_buffer = 200
+        self._plotSpacing = 1000
+        self._plotBuffer = 200
 
         self.setupUi(self)
 
         # Serial ports
-        self._rescan_serial_ports()
-        self._serial_port = self.serialPortsComboBox.currentText()
-        self.serialPortsComboBox.currentTextChanged.connect(self._serial_port_change)
-        self.rescanSerialPortsButton.clicked.connect(self._rescan_serial_ports)
+        self._rescanSerialPorts()
+        self._serialPort = self.serialPortsComboBox.currentText()
+        self.serialPortsComboBox.currentTextChanged.connect(self._serialPortChange)
+        self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
 
         # Number of channels
-        ch_buttons = filter(
+        chButtons = filter(
             lambda elem: isinstance(elem, QRadioButton),
             self.channelsGroupBox.children(),
         )
-        for ch_button in ch_buttons:
-            ch_button.clicked.connect(self._update_channels)
-            if ch_button.isChecked():
-                self._n_ch = int(ch_button.text())  # set initial number of channels
+        for chButton in chButtons:
+            chButton.clicked.connect(self._updateChannels)
+            if chButton.isChecked():
+                self._nCh = int(chButton.text())  # set initial number of channels
 
         # Plot
         self._plots = []
-        self._initialize_plot()
+        self._initializePlot()
 
         # Experiments
-        self._gest_win: GeturesWindow | None = None
+        self._gestWin: GeturesWindow | None = None
         self._config: dict | None = None
-        self.browseJSONButton.clicked.connect(self._browse_json)
+        self.browseJSONButton.clicked.connect(self._browseJson)
 
         # Acquisition
-        self._acq_controller: AcquisitionController = None
-        self.startAcquisitionButton.setEnabled(self._serial_port != "" or self._dummy)
+        self._acqController: AcquisitionController = None
+        self.startAcquisitionButton.setEnabled(self._serialPort != "" or self._dummy)
         self.stopAcquisitionButton.setEnabled(False)
-        self.startAcquisitionButton.clicked.connect(self._start_acquisition)
-        self.stopAcquisitionButton.clicked.connect(self._stop_acquisition)
+        self.startAcquisitionButton.clicked.connect(self._startAcquisition)
+        self.stopAcquisitionButton.clicked.connect(self._stopAcquisition)
 
         # Filtering
         self._b, self._a = signal.iirfilter(
             N=2, Wn=20, fs=fs, btype="high", ftype="butter"
         )
-        self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)]
+        self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._nCh)]
 
         # TODO: temporarily disable 32 and 64 channels with real signals
         if not dummy:
             self.ch32RadioButton.setEnabled(False)
             self.ch64RadioButton.setEnabled(False)
 
-    def _rescan_serial_ports(self) -> None:
+    def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
         self.serialPortsComboBox.addItems(serial_ports())
 
-    def _serial_port_change(self) -> None:
+    def _serialPortChange(self) -> None:
         """Detect if the serial port has changed."""
-        self._serial_port = self.serialPortsComboBox.currentText()
-        self.startAcquisitionButton.setEnabled(self._serial_port != "")
+        self._serialPort = self.serialPortsComboBox.currentText()
+        self.startAcquisitionButton.setEnabled(self._serialPort != "")
 
-    def _initialize_plot(self) -> None:
+    def _initializePlot(self) -> None:
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
-        self.graphWidget.setYRange(0, self._plot_spacing * (self._n_ch - 1))
+        self.graphWidget.setYRange(0, self._plotSpacing * (self._nCh - 1))
         self.graphWidget.getPlotItem().hideAxis("bottom")
         self.graphWidget.getPlotItem().hideAxis("left")
         # Initialize deques
         for i in range(-self._x.maxlen, 0):
             self._x.append(i / self._fs)
-            self._y.append(np.zeros(self._n_ch))
+            self._y.append(np.zeros(self._nCh))
         # Get colormap
         cm = pg.colormap.get("CET-C1")
         cm.setMappingMode("diverging")
-        lut = cm.getLookupTable(nPts=self._n_ch, mode="qcolor")
-        colors = [lut[i] for i in range(self._n_ch)]
+        lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")
+        colors = [lut[i] for i in range(self._nCh)]
         # Plot placeholder data
         y = np.asarray(self._y).T
-        for i in range(self._n_ch):
+        for i in range(self._nCh):
             pen = pg.mkPen(color=colors[i])
             self._plots.append(
-                self.graphWidget.plot(self._x, y[i] + self._plot_spacing * i, pen=pen)
+                self.graphWidget.plot(self._x, y[i] + self._plotSpacing * i, pen=pen)
             )
 
-    def _browse_json(self) -> None:
+    def _browseJson(self) -> None:
         """Browse to select the JSON file with the experiment configuration."""
-        file_path, _ = QFileDialog.getOpenFileName(
+        filePath, _ = QFileDialog.getOpenFileName(
             self,
             "Load JSON configuration",
             filter="*.json",
         )
-        display_text = ""
-        if file_path:
-            self._config = load_validate_json(file_path)
-            display_text = "JSON config invalid!" if self._config is None else file_path
-        self.JSONLabel.setText(display_text)
+        displayText = ""
+        if filePath:
+            self._config = load_validate_json(filePath)
+            displayText = "JSON config invalid!" if self._config is None else filePath
+        self.JSONLabel.setText(displayText)
 
-    def _update_channels(self) -> None:
+    def _updateChannels(self) -> None:
         """Update the number of channels depending on user selection."""
-        ch_button = next(
+        chButton = next(
             filter(
                 lambda elem: isinstance(elem, QRadioButton) and elem.isChecked(),
                 self.channelsGroupBox.children(),
             )
         )
-        self._n_ch = int(ch_button.text())
+        self._nCh = int(chButton.text())
         self._plots = []
-        self._initialize_plot()  # redraw plot
+        self._initializePlot()  # redraw plot
         self._zi = [
-            signal.lfilter_zi(self._b, self._a) for _ in range(self._n_ch)
+            signal.lfilter_zi(self._b, self._a) for _ in range(self._nCh)
         ]  # re-initialize filter
 
-    def _start_acquisition(self) -> None:
+    def _startAcquisition(self) -> None:
         """Start the acquisition."""
         # Handle UI elements
         self.serialPortsGroupBox.setEnabled(False)
@@ -210,41 +213,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.startAcquisitionButton.setEnabled(False)
         self.stopAcquisitionButton.setEnabled(True)
 
-        self._acq_controller = (
-            DummyAcquisitionController(self._n_ch)
+        self._acqController = (
+            DummyAcquisitionController(self._nCh)
             if self._dummy
-            else ESBAcquisitionController(self._serial_port, n_ch=self._n_ch)
+            else ESBAcquisitionController(self._serialPort, nCh=self._nCh)
         )
-        self._acq_controller.connect_data_ready(self.grab_data)
+        self._acqController.connectDataReady(self.grabData)
         if self.experimentGroupBox.isChecked() and self._config is not None:
             # Output file
-            exp_dir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
-            os.makedirs(exp_dir, exist_ok=True)
-            out_file_name = self.experimentTextField.text()
-            if out_file_name == "":
-                out_file_name = (
+            expDir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
+            os.makedirs(expDir, exist_ok=True)
+            outFileName = self.experimentTextField.text()
+            if outFileName == "":
+                outFileName = (
                     f"acq_{datetime.datetime.now()}".replace(" ", "_")
                     .replace(":", "-")
                     .replace(".", "-")
                 )
-            out_file_name = f"{out_file_name}.bin"
-            out_file_path = os.path.join(exp_dir, out_file_name)
+            outFileName = f"{outFileName}.bin"
+            outFilePath = os.path.join(expDir, outFileName)
 
             # Create gesture window and file controller
-            self._gest_win = GeturesWindow(**self._config)
-            self._gest_win.show()
-            self._gest_win.trigger_sig.connect(self._acq_controller.update_trigger)
-            self._file_controller = FileController(out_file_path, self._acq_controller)
-            self._gest_win.stop_sig.connect(self._file_controller.stop_file_writer)
+            self._gestWin = GeturesWindow(**self._config)
+            self._gestWin.show()
+            self._gestWin.trigger_sig.connect(self._acqController.updateTrigger)
+            self._fileController = FileController(outFilePath, self._acqController)
+            self._gestWin.stop_sig.connect(self._fileController.stop_file_writer)
 
-        self._acq_controller.start_acquisition()
+        self._acqController.startAcquisition()
 
-    def _stop_acquisition(self) -> None:
+    def _stopAcquisition(self) -> None:
         """Stop the acquisition."""
-        self._acq_controller.stop_acquisition()
+        self._acqController.stopAcquisition()
 
-        if self._gest_win is not None:
-            self._gest_win.close()
+        if self._gestWin is not None:
+            self._gestWin.close()
         # Handle UI elements
         self.serialPortsGroupBox.setEnabled(True)
         self.channelsGroupBox.setEnabled(True)
@@ -252,8 +255,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.startAcquisitionButton.setEnabled(True)
         self.stopAcquisitionButton.setEnabled(False)
 
-    @pyqtSlot(bytes)
-    def grab_data(self, data: bytes):
+    @Slot(bytes)
+    def grabData(self, data: bytes):
         """This method is called automatically when the associated signal is received,
         it grabs data from the signal and plots it.
 
@@ -263,24 +266,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             Data to plot.
         """
         data = np.frombuffer(bytearray(data), dtype="float32").reshape(
-            -1, self._n_ch + 1
+            -1, self._nCh + 1
         )
 
-        for i in range(self._n_ch):
+        for i in range(self._nCh):
             data[:, i], self._zi[i] = signal.lfilter(
                 self._b, self._a, data[:, i], axis=0, zi=self._zi[i]
             )
 
         for samples in data:
             self._x.append(self._x[-1] + 1 / self._fs)
-            self._y.append(samples[: self._n_ch])
+            self._y.append(samples[: self._nCh])
 
-            if self._buf_count == self._plot_buffer:
+            if self._bufCount == self._plotBuffer:
                 xs = list(self._x)
                 ys = np.asarray(list(self._y)).T
-                for i in range(self._n_ch):
+                for i in range(self._nCh):
                     self._plots[i].setData(
-                        xs, ys[i] + self._plot_spacing * i, skipFiniteCheck=True
+                        xs, ys[i] + self._plotSpacing * i, skipFiniteCheck=True
                     )
-                self._buf_count = 0
-            self._buf_count += 1
+                self._bufCount = 0
+            self._bufCount += 1
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self._acqController.stopAcquisition()
+        if self._gestWin is not None:
+            self._gestWin.close()
+        event.accept()
