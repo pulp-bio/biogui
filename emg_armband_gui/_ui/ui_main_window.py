@@ -60,7 +60,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import rc_resources
+from . import resources_rc
 
 
 class Ui_MainWindow(object):
@@ -160,6 +160,64 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.JSONLabel)
 
         self.verticalLayout.addWidget(self.experimentGroupBox)
+
+        self.trainingGroupBox = QGroupBox(self.centralwidget)
+        self.trainingGroupBox.setObjectName("trainingGroupBox")
+        self.trainingGroupBox.setAlignment(Qt.AlignCenter)
+        self.trainingGroupBox.setCheckable(False)
+        self.trainingGroupBox.setChecked(False)
+        self.verticalLayout_4 = QVBoxLayout(self.trainingGroupBox)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        self.svmRadioButton = QRadioButton(self.trainingGroupBox)
+        self.svmRadioButton.setObjectName("svmRadioButton")
+        self.svmRadioButton.setChecked(True)
+
+        self.verticalLayout_4.addWidget(self.svmRadioButton)
+
+        self.bssRadioButton = QRadioButton(self.trainingGroupBox)
+        self.bssRadioButton.setObjectName("bssRadioButton")
+        self.bssRadioButton.setCheckable(False)
+
+        self.verticalLayout_4.addWidget(self.bssRadioButton)
+
+        self.gridLayout_2 = QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.trainingTextField = QLineEdit(self.trainingGroupBox)
+        self.trainingTextField.setObjectName("trainingTextField")
+
+        self.gridLayout_2.addWidget(self.trainingTextField, 0, 1, 1, 1)
+
+        self.label_3 = QLabel(self.trainingGroupBox)
+        self.label_3.setObjectName("label_3")
+
+        self.gridLayout_2.addWidget(self.label_3, 0, 0, 1, 1)
+
+        self.label_4 = QLabel(self.trainingGroupBox)
+        self.label_4.setObjectName("label_4")
+
+        self.gridLayout_2.addWidget(self.label_4, 1, 0, 1, 1)
+
+        self.browseTrainButton = QPushButton(self.trainingGroupBox)
+        self.browseTrainButton.setObjectName("browseTrainButton")
+
+        self.gridLayout_2.addWidget(self.browseTrainButton, 1, 1, 1, 1)
+
+        self.gridLayout_2.setColumnStretch(0, 2)
+        self.gridLayout_2.setColumnStretch(1, 1)
+
+        self.verticalLayout_4.addLayout(self.gridLayout_2)
+
+        self.trainLabel = QLabel(self.trainingGroupBox)
+        self.trainLabel.setObjectName("trainLabel")
+
+        self.verticalLayout_4.addWidget(self.trainLabel)
+
+        self.startTrainButton = QPushButton(self.trainingGroupBox)
+        self.startTrainButton.setObjectName("startTrainButton")
+
+        self.verticalLayout_4.addWidget(self.startTrainButton)
+
+        self.verticalLayout.addWidget(self.trainingGroupBox)
 
         self.verticalSpacer = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -262,6 +320,37 @@ class Ui_MainWindow(object):
             QCoreApplication.translate("MainWindow", "Browse", None)
         )
         self.JSONLabel.setText("")
+        self.trainingGroupBox.setTitle(
+            QCoreApplication.translate("MainWindow", "Configure model training", None)
+        )
+        self.svmRadioButton.setText(
+            QCoreApplication.translate("MainWindow", "SVM", None)
+        )
+        self.bssRadioButton.setText(
+            QCoreApplication.translate("MainWindow", "BSS", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.trainingTextField.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                "If no name is provided, one based on the timestamp will be used",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        self.label_3.setText(
+            QCoreApplication.translate("MainWindow", "Output file name:", None)
+        )
+        self.label_4.setText(
+            QCoreApplication.translate("MainWindow", "Training data:", None)
+        )
+        self.browseTrainButton.setText(
+            QCoreApplication.translate("MainWindow", "Browse", None)
+        )
+        self.trainLabel.setText("")
+        self.startTrainButton.setText(
+            QCoreApplication.translate("MainWindow", "Start training", None)
+        )
         self.startAcquisitionButton.setText(
             QCoreApplication.translate("MainWindow", "Start acquisition", None)
         )
