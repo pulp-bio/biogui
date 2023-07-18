@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import numpy as np
 
 import serial.tools.list_ports
 
@@ -67,3 +68,25 @@ def load_validate_json(file_path: str) -> dict | None:
             return None
 
     return config
+
+
+def load_validate_train_data(file_path: str) -> np.ndarray | None:
+    """Load and validate a .bin file containg 16 channels sEMG data and 1 label channel.
+
+    Parameters
+    ----------
+    file_path : str
+        Path the the .bin file.
+
+    Returns
+    -------
+    np.ndarray or None
+        numpy array (n_samples x (n_channels + label))
+    """
+    #open file and chek if it is reshapable
+    with open(file_path, "rb") as f:
+        try:
+            data = np.fromfile(f, dtype="float32").reshape(-1,17)
+        except ValueError:
+            return None
+    return data

@@ -35,7 +35,8 @@ from ._acquisition._esb_acq_controller import ESBAcquisitionController
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
 from ._ui.ui_main_window import Ui_MainWindow
-from ._utils import load_validate_json, serial_ports
+from ._utils import load_validate_json, load_validate_train_data, serial_ports
+from ._svm_train_window import SVMWindow
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -131,6 +132,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.startAcquisitionButton.clicked.connect(self._startAcquisition)
         self.stopAcquisitionButton.clicked.connect(self._stopAcquisition)
 
+        # Training SVM
+        self._SVMWin: SVMWindow | None = None
+        self._trainData: np.ndarray | None = None 
+
+        self.startTrainButton.clicked.connect(self._showSVM)
+        self.browseTrainButton.clicked.connect(self._browseTrainData)
+
         # Filtering
         self._b, self._a = signal.iirfilter(
             N=2, Wn=20, fs=fs, btype="high", ftype="butter"
@@ -141,6 +149,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not dummy:
             self.ch32RadioButton.setEnabled(False)
             self.ch64RadioButton.setEnabled(False)
+
+    def _showSVM(self):
+        
+        if self._trainData is not None:
+            # Output file
+            expDir = os.path.join(os.path.dirname(self.trainLabel.text()), "models")
+            os.makedirs(expDir, exist_ok=True)
+            outFileName = self.trainingTextField.text()
+            if outFileName == "":
+                outFileName = (
+                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
+                    .replace(":", "-")
+                    .replace(".", "-")
+                )
+            outFileName = f"{outFileName}.pkl"
+            outFilePath = os.path.join(expDir, outFileName)
+
+            # Create gesture window and file controller
+            self._SVMWin = SVMWindow(self._trainData, outFilePath)
+            self._SVMWin.show()
+
+
 
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
@@ -189,6 +219,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             displayText = "JSON config invalid!" if self._config is None else filePath
         self.JSONLabel.setText(displayText)
 
+    def _browseTrainData(self) -> None:
+        """Browse to select the training data file."""
+        filePath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load the training data",
+            filter="*.bin",
+        )
+        displayText = ""
+        if filePath:
+            self._trainData = load_validate_train_data(filePath)
+            displayText = "Train data not valid!" if self._trainData is None else filePath
+        self.trainLabel.setText(displayText)
+
     def _updateChannels(self) -> None:
         """Update the number of channels depending on user selection."""
         chButton = next(
@@ -211,6 +254,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.channelsGroupBox.setEnabled(False)
         self.experimentGroupBox.setEnabled(False)
         self.startAcquisitionButton.setEnabled(False)
+        self.trainingGroupBox.setEnabled(False)
         self.stopAcquisitionButton.setEnabled(True)
 
         self._acqController = (
