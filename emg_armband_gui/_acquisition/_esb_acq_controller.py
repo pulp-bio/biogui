@@ -148,8 +148,8 @@ class _PreprocessWorker(QObject):
             New binary data.
         """
         dataRef = np.zeros(shape=(self._nSamp, self._nCh + 1), dtype="uint32")
+        trigger = data[242]
         data = bytearray(data)
-        dataRef[:, self._nCh] = [data[242]] * self._nSamp
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._nSamp):
             for i in range(self._nCh):
@@ -160,6 +160,7 @@ class _PreprocessWorker(QObject):
                 )
         dataRef = dataRef.view("int32").astype("float32")
         dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
+        dataRef[:, self._nCh] = [trigger] * self._nSamp
         dataRef = dataRef.astype("float32")
 
         self.dataReadySig.emit(dataRef.tobytes())
