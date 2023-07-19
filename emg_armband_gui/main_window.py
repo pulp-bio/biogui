@@ -35,6 +35,7 @@ from ._acquisition._esb_acq_controller import ESBAcquisitionController
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
 from ._svm_controller import SVMController
+from ._tcp_controller import TcpServerController
 from ._ui.ui_main_window import Ui_MainWindow
 from ._utils import load_validate_json, load_validate_train_data, serial_ports
 from ._svm_train_window import SVMWindow
@@ -174,8 +175,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _SVMTestStart(self):
         self._svmController = SVMController(self._SVMWin._clf, self._acqController)
-        self._svmController._SVMWorker.inferenceSig.connect(self.inference)
         self._SVMWin.close()
+        self._tcpController = TcpServerController("127.0.0.1", 3333, 3334,self._svmController)
+
 
 
 
@@ -339,10 +341,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     )
                 self._bufCount = 0
             self._bufCount += 1
-
-    @Slot(int)
-    def inference(self, label: int):
-        self.trainLabel.setText(str(label))
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._acqController is not None:
