@@ -99,6 +99,12 @@ class Ui_SVMTrain(object):
 
         self.verticalLayout.addWidget(self.trainAcc)
 
+        self.testButton = QPushButton(SVMTrain)
+        self.testButton.setObjectName(u"testButton")
+        self.testButton.setEnabled(True)
+
+        self.verticalLayout.addWidget(self.testButton)
+
         self.verticalLayout.setStretch(0, 3)
         self.verticalLayout.setStretch(1, 1)
 
@@ -123,5 +129,6 @@ class Ui_SVMTrain(object):
         self.progressLabel.setText("")
         self.label_4.setText(QCoreApplication.translate("SVMTrain", u"Train accuracy:", None))
         self.trainAcc.setText("")
+        self.testButton.setText(QCoreApplication.translate("SVMTrain", u"Test it!", None))
     # retranslateUi
 

@@ -34,6 +34,7 @@ from ._acquisition._dummy_acq_controller import DummyAcquisitionController
 from ._acquisition._esb_acq_controller import ESBAcquisitionController
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
+from ._svm_controller import SVMController
 from ._ui.ui_main_window import Ui_MainWindow
 from ._utils import load_validate_json, load_validate_train_data, serial_ports
 from ._svm_train_window import SVMWindow
@@ -135,15 +136,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Training SVM
         self._SVMWin: SVMWindow | None = None
         self._trainData: np.ndarray | None = None 
-
         self.startTrainButton.clicked.connect(self._showSVM)
         self.browseTrainButton.clicked.connect(self._browseTrainData)
 
         # Filtering
-        self._b, self._a = signal.iirfilter(
-            N=2, Wn=20, fs=fs, btype="high", ftype="butter"
+        self._sos= signal.butter(
+            N=4, Wn=20, fs=4000, btype="high", output='sos'
         )
-        self._zi = [signal.lfilter_zi(self._b, self._a) for _ in range(self._nCh)]
+        self._zi = [signal.sosfilt_zi(self._sos) for _ in range(self._nCh)]
 
         # TODO: temporarily disable 32 and 64 channels with real signals
         if not dummy:
@@ -169,6 +169,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # Create gesture window and file controller
             self._SVMWin = SVMWindow(self._trainData, outFilePath)
             self._SVMWin.show()
+            self._SVMWin.testButton.clicked.connect(self._startAcquisition)
+            self._SVMWin.testButton.clicked.connect(self._SVMTestStart)
+
+    def _SVMTestStart(self):
+        self._svmController = SVMController(self._SVMWin._clf, self._acqController)
+        self._svmController._SVMWorker.inferenceSig.connect(self.inference)
+        self._SVMWin.close()
 
 
 
@@ -296,6 +303,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.serialPortsGroupBox.setEnabled(True)
         self.channelsGroupBox.setEnabled(True)
         self.experimentGroupBox.setEnabled(True)
+        self.trainingGroupBox.setEnabled(True)
         self.startAcquisitionButton.setEnabled(True)
         self.stopAcquisitionButton.setEnabled(False)
 
@@ -314,8 +322,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         for i in range(self._nCh):
-            data[:, i], self._zi[i] = signal.lfilter(
-                self._b, self._a, data[:, i], axis=0, zi=self._zi[i]
+            data[:, i], self._zi[i] = signal.sosfilt(
+                self._sos, data[:, i], axis=0, zi=self._zi[i]
             )
 
         for samples in data:
@@ -331,6 +339,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     )
                 self._bufCount = 0
             self._bufCount += 1
+
+    @Slot(int)
+    def inference(self, label: int):
+        self.trainLabel.setText(str(label))
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._acqController is not None:

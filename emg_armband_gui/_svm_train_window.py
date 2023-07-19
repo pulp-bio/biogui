@@ -3,10 +3,12 @@ from PySide6.QtGui import QMovie
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QLabel,QWidget
 import numpy as np
+import pickle
 from scipy import signal
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from ._utils import WaveformLength
 
 
 class SVMWindow(QWidget, Ui_SVMTrain):
@@ -16,6 +18,7 @@ class SVMWindow(QWidget, Ui_SVMTrain):
         self.setupUi(self)
         self._trainData = trainData
         self._outFilePath = outFilePath
+        self._clf: object
         self.startButton.clicked.connect(self._SVMtrain)
         self._sampleRate = 4e3
         self._WlWindowSize = int(60*(self._sampleRate/1000))
@@ -29,12 +32,7 @@ class SVMWindow(QWidget, Ui_SVMTrain):
         # self._pixmap.start()
 
 
-    def WaveformLength(self, w: np.ndarray,N: int) -> np.ndarray:
 
-        diff = np.abs(np.diff(w))
-        kernel = np.ones((N))
-        WL = signal.convolve(diff, kernel,mode = 'valid')
-        return WL
         
     def _SVMtrain(self):
         self.featureComboBox.setEnabled(False)
@@ -48,9 +46,8 @@ class SVMWindow(QWidget, Ui_SVMTrain):
         self._feature = self.featureComboBox.currentText()
         self._kernel = self.kernelComboBox.currentText()
         self._c = 1.0 if self.cTextField.text() == "" else self.cTextField.text()
-
         dataset = self._trainData[:,:16]
-        labels = self._trainData[:,16].astype('int')
+        labels = self._trainData[:,16]
 
         #  preprocessing 
         # self.progressLabel.setText("Preprocessing started..")
@@ -67,7 +64,7 @@ class SVMWindow(QWidget, Ui_SVMTrain):
         # TO DO add a check on the feature
         WL_signal = np.zeros((dataset_size-self._WlWindowSize, channel_count))
         for inx_channel in range(channel_count):
-            WL_signal[:, inx_channel] = self.WaveformLength(pre_proc_signal[:, inx_channel], self._WlWindowSize)
+            WL_signal[:, inx_channel] = WaveformLength(pre_proc_signal[:, inx_channel], self._WlWindowSize)
             # self.progressLabel.setText(f'WL processed on channel {inx_channel}')
         labels = labels[self._WlWindowSize:]
 
@@ -83,12 +80,15 @@ class SVMWindow(QWidget, Ui_SVMTrain):
 
 
 
-        clf = SVC(kernel=self._kernel, C=self._c)
-        clf.fit(X_train[::self._downsampleFactorSVM], y_train[::self._downsampleFactorSVM])
-        y_pred = clf.predict(X_test)
+        self._clf = SVC(kernel=self._kernel, C=self._c)
+        self._clf.fit(X_train[::self._downsampleFactorSVM], y_train[::self._downsampleFactorSVM])
+        y_pred = self._clf.predict(X_test)
         self.progressLabel.hide()
         self.trainAcc.setText(f'{accuracy_score(y_test,y_pred)}')
 
+        # save model
+        with open(self._outFilePath, 'wb') as file:
+                pickle.dump(self._clf, file)
 
         
 
