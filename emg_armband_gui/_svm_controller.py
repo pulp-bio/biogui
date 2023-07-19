@@ -101,7 +101,8 @@ class SVMController(QObject):
         # Connect to acquisition controller
         self._acqController = acqController
         self._acqController.connectDataReady(self._SVMWorker.predict)
-        self._SVMThread.start()
+
+
 
     # @Slot()
     # def stopFileWriter(self) -> None:
