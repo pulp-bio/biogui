@@ -79,8 +79,8 @@ class _TcpServerWorker(QObject):
         data : bytearray
             New binary data.
         """
-        self.client1_connection.sendall(bytes(self._movements.values()[data] ))
-        self.client2_connection.sendall(bytes(self._movements.values()[data] ))
+        self.client1_connection.sendall(bytes(list(self._movements.values())[data] ))
+        self.client2_connection.sendall(bytes(list(self._movements.values())[data] ))
 
 
 class TcpServerController(QObject):
