@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import numpy as np
+from scipy import signal
 
 import serial.tools.list_ports
 
@@ -90,3 +91,10 @@ def load_validate_train_data(file_path: str) -> np.ndarray | None:
         except ValueError:
             return None
     return data
+
+def WaveformLength(w: np.ndarray,N: int) -> np.ndarray:
+
+    diff = np.abs(np.diff(w))
+    kernel = np.ones((N))
+    WL = signal.convolve(diff, kernel,mode = 'valid')
+    return WL
