@@ -18,9 +18,11 @@ limitations under the License.
 
 from __future__ import annotations
 
-import numpy as np
 import socket
+
+import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
+
 from ._svm_controller import SVMController
 
 
@@ -38,7 +40,7 @@ class _TcpServerWorker(QObject):
 
     Attributes
     ----------
-   
+
     """
 
     def __init__(self, address: str, port1: int, port2: int) -> None:
@@ -52,26 +54,74 @@ class _TcpServerWorker(QObject):
         self.sock2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock2.bind((address, port2))
         self.sock2.listen(1)
-        self._movements =  {
-                                "open hand": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                                "fist (power grip)": [90,0,90,0,90,90,0,90,90,0,90,90,0,90,90],
-                                "index pointed": [90,0,90,0,0,0,0,90,90,0,90,90,0,90,90],
-                                "ok (thumb up)" : [0,0,20,0,90,90,0,90,90,0,90,90,0,90,90],
-                                "right flexion (wrist supination)" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                                "left flexion (wristpronation)" : [0,0,0,0,10,10,0,10,10,0,10,10,10,10,0],
-                                "horns" : [90,0,90,0,0,0,0,90,90,0,90,90,0,0,0],
-                                "shaka" : [0,0,45,0,90,90,0,90,90,0,90,90,0,0,0]
-                                }
+        self._movements = {
+            "rest": [0, 0, 45, 0, 90, 90, 0, 90, 90, 0, 90, 90, 0, 0, 0],
+            "open hand": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            "fist (power grip)": [
+                90,
+                0,
+                90,
+                0,
+                90,
+                90,
+                0,
+                90,
+                90,
+                0,
+                90,
+                90,
+                0,
+                90,
+                90,
+            ],
+            "index pointed": [90, 0, 90, 0, 0, 0, 0, 90, 90, 0, 90, 90, 0, 90, 90],
+            "ok (thumb up)": [0, 0, 20, 0, 90, 90, 0, 90, 90, 0, 90, 90, 0, 90, 90],
+            "right flexion (wrist supination)": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            "left flexion (wristpronation)": [
+                0,
+                0,
+                0,
+                0,
+                10,
+                10,
+                0,
+                10,
+                10,
+                0,
+                10,
+                10,
+                10,
+                10,
+                0,
+            ],
+            "horns": [90, 0, 90, 0, 0, 0, 0, 90, 90, 0, 90, 90, 0, 0, 0],
+            "shaka": [0, 0, 45, 0, 90, 90, 0, 90, 90, 0, 90, 90, 0, 0, 0],
+        }
 
     def accept_connection(self):
-        self.client1_connection, _ = self.sock1.accept(  )
+        self.client1_connection, _ = self.sock1.accept()
         print("Connected from", self.client1_connection)
-        self.client2_connection, _ = self.sock2.accept(  )
-        
+        self.client2_connection, _ = self.sock2.accept()
 
     @Slot(int)
     def send_movements1(self, data: int) -> None:
-        """This method is called automatically when the associated signal is received, and 
+        """This method is called automatically when the associated signal is received, and
         it sends the new hand position using the TCP socket
 
         Parameters
@@ -79,41 +129,46 @@ class _TcpServerWorker(QObject):
         data : bytearray
             New binary data.
         """
-        self.client1_connection.sendall(bytes(list(self._movements.values())[data] ))
-        self.client2_connection.sendall(bytes(list(self._movements.values())[data] ))
+        self.client1_connection.sendall(bytes(list(self._movements.values())[data]))
+        self.client2_connection.sendall(bytes(list(self._movements.values())[data]))
 
 
 class TcpServerController(QObject):
     """Controller for the TCP servers
 
-Parameters
-    ----------
-    address : str
-        Server address
-    port1 : str
-        port for the first socket connected to the virtual hand
-    port2 : str
-        port for the second socket connected to the target hand
+    Parameters
+        ----------
+        address : str
+            Server address
+        port1 : str
+            port for the first socket connected to the virtual hand
+        port2 : str
+            port for the second socket connected to the target hand
 
-    Attributes
-    ----------
-    data_worker : _DataWorker
-        Worker for generating data.
-    data_thread : QThread
-        QThread associated to the data worker.
+        Attributes
+        ----------
+        data_worker : _DataWorker
+            Worker for generating data.
+        data_thread : QThread
+            QThread associated to the data worker.
     """
 
-    def __init__(self, address: str, port1: int, port2: int, svmController: SVMController) -> None:
+    def __init__(
+        self, address: str, port1: int, port2: int, svmController: SVMController
+    ) -> None:
         super(TcpServerController, self).__init__()
 
         # Create worker and thread
         self._tcp_worker = _TcpServerWorker(address, port1, port2)
         self._tcp_thread = QThread()
         self._tcp_worker.moveToThread(self._tcp_thread)
+        self._tcp_thread.started.connect(self._tcp_worker.accept_connection)
         # Connect to svm controller
         self._svmController = svmController
-        self._svmController._SVMWorker.inferenceSig.connect(self._tcp_worker.send_movements1)
-     
+        self._svmController._SVMWorker.inferenceSig.connect(
+            self._tcp_worker.send_movements1
+        )
+
         self._tcp_thread.start()
         # # Connect to acquisition controller
         # self._acq_controller = acq_controller

@@ -59,7 +59,7 @@ class _SerialWorker(QObject):
     def __init__(self, serialPort: str, packetSize: int, baudeRate: int) -> None:
         super(_SerialWorker, self).__init__()
 
-        self._ser = serial.Serial(serialPort, baudeRate, timeout=0)
+        self._ser = serial.Serial(serialPort, baudeRate)  # , timeout=10)
         self._packetSize = packetSize
         self._trigger = 0
         self._stopAcquisition = False
@@ -148,7 +148,11 @@ class _PreprocessWorker(QObject):
             New binary data.
         """
         dataRef = np.zeros(shape=(self._nSamp, self._nCh + 1), dtype="uint32")
-        trigger = data[242]
+        try:
+            trigger = data[242]
+        except IndexError:
+            print(len(data))
+            raise
         data = bytearray(data)
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._nSamp):

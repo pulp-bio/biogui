@@ -8,39 +8,75 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QSizePolicy,
-    QSpacerItem, QVBoxLayout, QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    Qt,
+    QTime,
+    QUrl,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QVBoxLayout,
+    QWidget,
+)
+
 
 class Ui_SVMTrain(object):
     def setupUi(self, SVMTrain):
         if not SVMTrain.objectName():
-            SVMTrain.setObjectName(u"SVMTrain")
+            SVMTrain.setObjectName("SVMTrain")
         SVMTrain.resize(531, 488)
         self.verticalLayout = QVBoxLayout(SVMTrain)
-        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setObjectName("verticalLayout")
         self.gridLayout = QGridLayout()
-        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setObjectName("gridLayout")
         self.featureComboBox = QComboBox(SVMTrain)
         self.featureComboBox.addItem("")
-        self.featureComboBox.setObjectName(u"featureComboBox")
+        self.featureComboBox.setObjectName("featureComboBox")
 
         self.gridLayout.addWidget(self.featureComboBox, 0, 1, 1, 1)
 
         self.label = QLabel(SVMTrain)
-        self.label.setObjectName(u"label")
+        self.label.setObjectName("label")
 
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
         self.label_2 = QLabel(SVMTrain)
-        self.label_2.setObjectName(u"label_2")
+        self.label_2.setObjectName("label_2")
 
         self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
 
@@ -49,58 +85,60 @@ class Ui_SVMTrain(object):
         self.kernelComboBox.addItem("")
         self.kernelComboBox.addItem("")
         self.kernelComboBox.addItem("")
-        self.kernelComboBox.setObjectName(u"kernelComboBox")
+        self.kernelComboBox.setObjectName("kernelComboBox")
 
         self.gridLayout.addWidget(self.kernelComboBox, 1, 1, 1, 1)
 
         self.label_3 = QLabel(SVMTrain)
-        self.label_3.setObjectName(u"label_3")
+        self.label_3.setObjectName("label_3")
 
         self.gridLayout.addWidget(self.label_3, 2, 0, 1, 1)
 
         self.cTextField = QLineEdit(SVMTrain)
-        self.cTextField.setObjectName(u"cTextField")
+        self.cTextField.setObjectName("cTextField")
 
         self.gridLayout.addWidget(self.cTextField, 2, 1, 1, 1)
-
 
         self.verticalLayout.addLayout(self.gridLayout)
 
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.horizontalSpacer = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
         self.startButton = QPushButton(SVMTrain)
-        self.startButton.setObjectName(u"startButton")
+        self.startButton.setObjectName("startButton")
 
         self.horizontalLayout.addWidget(self.startButton)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
-
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.progressLabel = QLabel(SVMTrain)
-        self.progressLabel.setObjectName(u"progressLabel")
+        self.progressLabel.setObjectName("progressLabel")
 
         self.verticalLayout.addWidget(self.progressLabel)
 
         self.label_4 = QLabel(SVMTrain)
-        self.label_4.setObjectName(u"label_4")
+        self.label_4.setObjectName("label_4")
 
         self.verticalLayout.addWidget(self.label_4)
 
         self.trainAcc = QLabel(SVMTrain)
-        self.trainAcc.setObjectName(u"trainAcc")
+        self.trainAcc.setObjectName("trainAcc")
 
         self.verticalLayout.addWidget(self.trainAcc)
 
         self.testButton = QPushButton(SVMTrain)
-        self.testButton.setObjectName(u"testButton")
+        self.testButton.setObjectName("testButton")
         self.testButton.setEnabled(True)
 
         self.verticalLayout.addWidget(self.testButton)
@@ -111,24 +149,47 @@ class Ui_SVMTrain(object):
         self.retranslateUi(SVMTrain)
 
         QMetaObject.connectSlotsByName(SVMTrain)
+
     # setupUi
 
     def retranslateUi(self, SVMTrain):
-        SVMTrain.setWindowTitle(QCoreApplication.translate("SVMTrain", u"SVM training", None))
-        self.featureComboBox.setItemText(0, QCoreApplication.translate("SVMTrain", u"Waveform length", None))
+        SVMTrain.setWindowTitle(
+            QCoreApplication.translate("SVMTrain", "SVM training", None)
+        )
+        self.featureComboBox.setItemText(
+            0, QCoreApplication.translate("SVMTrain", "Waveform length", None)
+        )
 
-        self.label.setText(QCoreApplication.translate("SVMTrain", u"Feature selection:", None))
-        self.label_2.setText(QCoreApplication.translate("SVMTrain", u"Kernel selection:", None))
-        self.kernelComboBox.setItemText(0, QCoreApplication.translate("SVMTrain", u"rbf", None))
-        self.kernelComboBox.setItemText(1, QCoreApplication.translate("SVMTrain", u"linear", None))
-        self.kernelComboBox.setItemText(2, QCoreApplication.translate("SVMTrain", u"poly", None))
-        self.kernelComboBox.setItemText(3, QCoreApplication.translate("SVMTrain", u"sigmoid", None))
+        self.label.setText(
+            QCoreApplication.translate("SVMTrain", "Feature selection:", None)
+        )
+        self.label_2.setText(
+            QCoreApplication.translate("SVMTrain", "Kernel selection:", None)
+        )
+        self.kernelComboBox.setItemText(
+            0, QCoreApplication.translate("SVMTrain", "rbf", None)
+        )
+        self.kernelComboBox.setItemText(
+            1, QCoreApplication.translate("SVMTrain", "linear", None)
+        )
+        self.kernelComboBox.setItemText(
+            2, QCoreApplication.translate("SVMTrain", "poly", None)
+        )
+        self.kernelComboBox.setItemText(
+            3, QCoreApplication.translate("SVMTrain", "sigmoid", None)
+        )
 
-        self.label_3.setText(QCoreApplication.translate("SVMTrain", u"C selection:", None))
-        self.startButton.setText(QCoreApplication.translate("SVMTrain", u"Start", None))
+        self.label_3.setText(
+            QCoreApplication.translate("SVMTrain", "C selection:", None)
+        )
+        self.startButton.setText(QCoreApplication.translate("SVMTrain", "Start", None))
         self.progressLabel.setText("")
-        self.label_4.setText(QCoreApplication.translate("SVMTrain", u"Train accuracy:", None))
+        self.label_4.setText(
+            QCoreApplication.translate("SVMTrain", "Train accuracy:", None)
+        )
         self.trainAcc.setText("")
-        self.testButton.setText(QCoreApplication.translate("SVMTrain", u"Test it!", None))
-    # retranslateUi
+        self.testButton.setText(
+            QCoreApplication.translate("SVMTrain", "Test it!", None)
+        )
 
+    # retranslateUi

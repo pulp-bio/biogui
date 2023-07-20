@@ -20,10 +20,10 @@ from __future__ import annotations
 
 import json
 import os
-import numpy as np
-from scipy import signal
 
+import numpy as np
 import serial.tools.list_ports
+from scipy import signal
 
 
 def serial_ports():
@@ -84,17 +84,24 @@ def load_validate_train_data(file_path: str) -> np.ndarray | None:
     np.ndarray or None
         numpy array (n_samples x (n_channels + label))
     """
-    #open file and chek if it is reshapable
+    # open file and chek if it is reshapable
     with open(file_path, "rb") as f:
         try:
-            data = np.fromfile(f, dtype="float32").reshape(-1,17)
+            data = np.fromfile(f, dtype="float32").reshape(-1, 17)
         except ValueError:
             return None
     return data
 
-def WaveformLength(w: np.ndarray,N: int) -> np.ndarray:
 
+def WaveformLength(w: np.ndarray, N: int) -> np.ndarray:
     diff = np.abs(np.diff(w))
     kernel = np.ones((N))
-    WL = signal.convolve(diff, kernel,mode = 'valid')
+    WL = signal.convolve(diff, kernel, mode="valid")
     return WL
+
+
+def majority_voting(data: np.ndarray, winodw_size: int) -> np.ndarray:
+    y_maj = np.zeros(data.shape[0] - winodw_size)
+    for idx in range(data.shape[0] - winodw_size):
+        y_maj[idx] = np.argmax(np.bincount(data[idx : idx + winodw_size]))
+    return y_maj

@@ -35,10 +35,10 @@ from ._acquisition._esb_acq_controller import ESBAcquisitionController
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
 from ._svm_controller import SVMController
+from ._svm_train_window import SVMWindow
 from ._tcp_controller import TcpServerController
 from ._ui.ui_main_window import Ui_MainWindow
 from ._utils import load_validate_json, load_validate_train_data, serial_ports
-from ._svm_train_window import SVMWindow
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -136,14 +136,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Training SVM
         self._SVMWin: SVMWindow | None = None
-        self._trainData: np.ndarray | None = None 
+        self._trainData: np.ndarray | None = None
         self.startTrainButton.clicked.connect(self._showSVM)
         self.browseTrainButton.clicked.connect(self._browseTrainData)
 
         # Filtering
-        self._sos= signal.butter(
-            N=4, Wn=20, fs=4000, btype="high", output='sos'
-        )
+        self._sos = signal.butter(N=4, Wn=20, fs=4000, btype="high", output="sos")
         self._zi = [signal.sosfilt_zi(self._sos) for _ in range(self._nCh)]
 
         # TODO: temporarily disable 32 and 64 channels with real signals
@@ -152,7 +150,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.ch64RadioButton.setEnabled(False)
 
     def _showSVM(self):
-        
         if self._trainData is not None:
             # Output file
             expDir = os.path.join(os.path.dirname(self.trainLabel.text()), "models")
@@ -176,10 +173,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _SVMTestStart(self):
         self._svmController = SVMController(self._SVMWin._clf, self._acqController)
         self._SVMWin.close()
-        self._tcpController = TcpServerController("127.0.0.1", 3333, 3334,self._svmController)
-
-
-
+        self._tcpController = TcpServerController(
+            "192.168.1.105", 3333, 3334, self._svmController
+        )
 
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
@@ -238,7 +234,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         displayText = ""
         if filePath:
             self._trainData = load_validate_train_data(filePath)
-            displayText = "Train data not valid!" if self._trainData is None else filePath
+            displayText = (
+                "Train data not valid!" if self._trainData is None else filePath
+            )
         self.trainLabel.setText(displayText)
 
     def _updateChannels(self) -> None:
@@ -269,7 +267,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._acqController = (
             DummyAcquisitionController(self._nCh)
             if self._dummy
-            else ESBAcquisitionController(self._serialPort, nCh=self._nCh)
+            else ESBAcquisitionController(
+                self._serialPort, nCh=self._nCh, baudeRate=115200
+            )
         )
         self._acqController.connectDataReady(self.grabData)
         if self.experimentGroupBox.isChecked() and self._config is not None:
