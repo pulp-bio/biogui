@@ -36,7 +36,7 @@ def main():
     ap.add_argument(
         "-wl",
         required=False,
-        default=400,
+        default=1000,
         type=int,
         help="Window length for rendering (in ms)",
     )

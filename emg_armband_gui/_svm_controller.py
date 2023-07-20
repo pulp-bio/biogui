@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
+from scipy import signal
 
 from ._acquisition._abc_acq_controller import AcquisitionController
-
-import numpy as np
-from scipy import signal
-from ._utils import WaveformLength
+from ._utils import WaveformLength, majority_voting
 
 
 class _SVMWorker(QObject):
@@ -30,13 +29,13 @@ class _SVMWorker(QObject):
         self._model = model
         self._buf_index = 0
         self._nCh = 16
-        self._buffer = np.zeros((240,self._nCh))
-        self._WL_signal = np.zeros((1, self._nCh))
+        self._buffer = np.zeros((720, self._nCh))
+        self._WL_signal = np.zeros((480, self._nCh))
         # Filtering
-        self._sos= signal.butter(
-            N=4, Wn=20, fs=4000, btype="high", output='sos'
-        )
+        self._sos = signal.butter(N=4, Wn=20, fs=4000, btype="high", output="sos")
         self._zi = [signal.sosfilt_zi(self._sos) for _ in range(self._nCh)]
+
+        self._c = 0
 
     @Slot(bytes)
     def predict(self, data: bytes) -> None:
@@ -48,23 +47,27 @@ class _SVMWorker(QObject):
         data : bytes
             Data to write.
         """
-        data = np.frombuffer(bytearray(data), dtype="float32").reshape(
-            -1, 16 + 1
-        )
-        for i in range(self._nCh):
-            data[:, i], self._zi[i] = signal.sosfilt(
-                self._sos, data[:, i], axis=0, zi=self._zi[i]
-            )
-        data = data[:,:self._nCh]
-        if self._buf_index < 48:
-            self._buffer[(5*(self._buf_index)):(5*(self._buf_index+1)),:] = data
+        data = np.frombuffer(bytearray(data), dtype="float32").reshape(-1, 16 + 1)
+        if self._buf_index < 144:
+            self._buffer[
+                (5 * (self._buf_index)) : (5 * (self._buf_index + 1)), :
+            ] = data[:, : self._nCh]
             self._buf_index += 1
         else:
-            self._buf_index = 0
-            for inx_channel in range(16):
-                self._WL_signal[:, inx_channel] = WaveformLength(self._buffer[:, inx_channel], 239)
+            for i in range(self._nCh):
+                self._buffer[:, i], self._zi[i] = signal.sosfilt(
+                    self._sos, self._buffer[:, i], axis=0, zi=self._zi[i]
+                )
+                self._WL_signal[:, i] = WaveformLength(self._buffer[:, i], 240)
 
-            self.inferenceSig.emit(self._model.predict(self._WL_signal).item())
+            labels = self._model.predict(self._WL_signal).astype("int32")
+            label = majority_voting(labels, 479).item()
+
+            if self._c == 3:
+                self.inferenceSig.emit(label)
+                self._c = 0
+            self._buf_index = 0
+            self._c += 1
 
 
 class SVMController(QObject):
@@ -102,7 +105,7 @@ class SVMController(QObject):
         self._acqController = acqController
         self._acqController.connectDataReady(self._SVMWorker.predict)
 
-
+        self._SVMThread.start()
 
     # @Slot()
     # def stopFileWriter(self) -> None:
