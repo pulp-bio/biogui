@@ -26,7 +26,7 @@ import serial.tools.list_ports
 from scipy import signal
 
 
-def serial_ports():
+def serialPorts():
     """Lists serial port names
 
     Returns
@@ -37,7 +37,7 @@ def serial_ports():
     return [info[0] for info in serial.tools.list_ports.comports()]
 
 
-def load_validate_json(file_path: str) -> dict | None:
+def loadValidateJSON(file_path: str) -> dict | None:
     """Load and validate a JSON file representing the experiment configuration.
 
     Parameters
@@ -71,37 +71,67 @@ def load_validate_json(file_path: str) -> dict | None:
     return config
 
 
-def load_validate_train_data(file_path: str) -> np.ndarray | None:
+def loadValidateTrainData(filePath: str, nCh: int) -> np.ndarray | None:
     """Load and validate a .bin file containg 16 channels sEMG data and 1 label channel.
 
     Parameters
     ----------
-    file_path : str
+    filePath : str
         Path the the .bin file.
+    nCh : int
+        Expected number of channels.
 
     Returns
     -------
-    np.ndarray or None
-        numpy array (n_samples x (n_channels + label))
+    ndarray or None
+        Training data with shape (nSamp, nCh + 1) or None if the file is not valid.
     """
-    # open file and chek if it is reshapable
-    with open(file_path, "rb") as f:
-        try:
-            data = np.fromfile(f, dtype="float32").reshape(-1, 17)
-        except ValueError:
-            return None
-    return data
+    # Open file and check if it is reshapable
+    with open(filePath, "rb") as f:
+        data = np.fromfile(f, dtype="float32")
+    if data.shape % (nCh + 1) != 0:
+        return None
+
+    return data.reshape(-1, nCh + 1)
 
 
-def WaveformLength(w: np.ndarray, N: int) -> np.ndarray:
-    diff = np.abs(np.diff(w))
-    kernel = np.ones((N))
-    WL = signal.convolve(diff, kernel, mode="valid")
-    return WL
+def waveformLength(data: np.ndarray, kernelSize: int) -> np.ndarray:
+    """Compute the waveform length of a given signal.
+
+    Parameters
+    ----------
+    data : ndarray
+        Data with shape (nSamp,).
+    kernelSize : int
+        Size of the kernel.
+
+    Returns
+    -------
+    ndarray
+        Waveform length of the signal.
+    """
+    abs_diff = np.abs(np.diff(data))
+    kernel = np.ones(kernelSize)
+    wl = signal.convolve(abs_diff, kernel, mode="valid")
+    return wl
 
 
-def majority_voting(data: np.ndarray, winodw_size: int) -> np.ndarray:
-    y_maj = np.zeros(data.shape[0] - winodw_size)
-    for idx in range(data.shape[0] - winodw_size):
-        y_maj[idx] = np.argmax(np.bincount(data[idx : idx + winodw_size]))
-    return y_maj
+def majorityVoting(labels: np.ndarray, windowSize: int) -> np.ndarray:
+    """Apply majority voting on the labels predicted by a model.
+
+    Parameters
+    ----------
+    labels : ndarray
+        Labels to smooth with shape (nSamp,).
+    windowSize : int
+        Size of the window for majority voting.
+
+    Returns
+    -------
+    ndarray
+        Smoothed labels with shape (nSamp - windowSize,).
+    """
+    yMaj = np.zeros(labels.shape[0] - windowSize)
+    for idx in range(labels.shape[0] - windowSize):
+        yMaj[idx] = np.argmax(np.bincount(labels[idx : idx + windowSize]))
+    return yMaj
