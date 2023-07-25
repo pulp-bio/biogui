@@ -86,26 +86,24 @@ class _SerialWorker(QObject):
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self._closePort()
                 self.serialErrorSig.emit()
+                logging.error("Communication on serial port failed.")
                 break
 
             data = bytearray(data)
             data[-1] = self._trigger
             self.dataReadySig.emit(bytes(data))
+
         self._ser.write(b":")
-        self._closePort()
-        logging.info("Serial stopped")
-
-    def stopStreaming(self) -> None:
-        """Stop reading data from the serial port."""
-        self._stopAcquisition = True
-
-    def _closePort(self) -> None:
         time.sleep(0.2)
         self._ser.reset_input_buffer()
         time.sleep(0.2)
         self._ser.close()
+        logging.info("Serial worker stopped.")
+
+    def stopStreaming(self) -> None:
+        """Stop reading data from the serial port."""
+        self._stopAcquisition = True
 
 
 class _PreprocessWorker(QObject):
@@ -248,7 +246,7 @@ class ESBStreamingController(StreamingController):
         self._preprocessThread.quit()
         self._preprocessThread.wait()
 
-    def connectDataReady(self, fn: Callable[[bytes], Any]):
+    def connectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -258,7 +256,7 @@ class ESBStreamingController(StreamingController):
         """
         self._preprocessWorker.dataReadySig.connect(fn)
 
-    def disconnectDataReady(self, fn: Callable[[bytes], Any]):
+    def disconnectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -268,7 +266,7 @@ class ESBStreamingController(StreamingController):
         """
         self._preprocessWorker.dataReadySig.disconnect(fn)
 
-    def connectSerialError(self, fn: Callable[[], Any]):
+    def connectSerialError(self, fn: Callable[[], Any]) -> None:
         """Connect the "serial error" signal with the given function.
 
         Parameters

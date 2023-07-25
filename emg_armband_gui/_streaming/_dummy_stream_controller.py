@@ -131,7 +131,7 @@ class DummyStreamingController(StreamingController):
         self._dataThread.quit()
         self._dataThread.wait()
 
-    def connectDataReady(self, fn: Callable[[bytes], Any]):
+    def connectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -141,7 +141,7 @@ class DummyStreamingController(StreamingController):
         """
         self._dataWorker.dataReadySig.connect(fn)
 
-    def disconnectDataReady(self, fn: Callable[[bytes], Any]):
+    def disconnectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -151,7 +151,7 @@ class DummyStreamingController(StreamingController):
         """
         self._dataWorker.dataReadySig.disconnect(fn)
 
-    def connectSerialError(self, fn: Callable[[], Any]):
+    def connectSerialError(self, fn: Callable[[], Any]) -> None:
         """Connect the "serial error" signal with the given function.
 
         Parameters

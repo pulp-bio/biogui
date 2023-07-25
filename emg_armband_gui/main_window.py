@@ -19,6 +19,7 @@ limitations under the License.
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 from collections import deque
 
@@ -26,77 +27,74 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QRadioButton
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QRadioButton, QMessageBox
 from scipy import signal
 
-from ._acquisition._abc_acq_controller import AcquisitionController
-from ._acquisition._dummy_acq_controller import DummyAcquisitionController
-from ._acquisition._esb_acq_controller import ESBAcquisitionController
+from emg_armband_gui._streaming import StreamingController, streamControllerFactory
 from ._file_controller import FileController
 from ._gesture_window import GeturesWindow
 from ._svm_controller import SVMController
 from ._svm_train_window import SVMWindow
 from ._tcp_controller import TcpServerController
 from ._ui.ui_main_window import Ui_MainWindow
-from ._utils import load_validate_json, load_validate_train_data, serial_ports
+from ._utils import loadValidateJSON, loadValidateTrainData, serialPorts
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    """Main window showing the real time plot.
+    """Main window showing the real-time plot.
 
     Parameters
     ----------
-    fs : int
+    streamControllerType : str
+        String representing StreamingController type.
+    sampFreq : int
         Sampling frequency.
-    wl : int
-        Memory of the internal deques.
-    dummy : bool, default=False
-        Whether to use dummy signals.
+    renderLength : int
+        Memory of the internal queues.
 
     Attributes
     ----------
-    _x : deque
-        Deque for X values.
-    _y : deque
-        Deque for Y values.
-    _nCh : int
-        Number of channels.
-    _fs : int
+    _streamControllerType : str
+        String representing StreamingController type.
+    _streamController : StreamingController or None
+        Actual StreamingController instance.
+    _sampFreq : int
         Sampling frequency.
-    _serialPort : str
-        Serial port.
-    _config : dit
-        Dictionary representing the experiment configuration.
+    _xQueue : deque
+        Queue for X values.
+    _yQueue : deque
+        Queue for Y values.
     _bufCount : int
         Counter for the plot buffer.
-    _dummy : bool
-        Whether to use dummy signals.
     _plotSpacing : int
         Spacing between each channel in the plot.
     _plotBuffer : int
         Size of the buffer for plotting samples.
+    _serialPort : str
+        Serial port.
+    _nCh : int
+        Number of channels.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
-    _gestWin : GeturesWindow
-        Window for gesture visualization.
-    _acqController : AcquisitionController
-        Controller for the acquisition.
-    _b : ndarray
-        Numerator polynomials for the filter.
-    _a : ndarray
-        Denominator polynomials for the filter.
+    _sos : ndarray
+        Filter SOS coefficients.
     _zi : list of ndarrays
         Initial state for the filter (one per channel).
+    _config : dict
+        Dictionary representing the experiment configuration.
+    _gestWin : GesturesWindow
+        Window for gesture visualization.
     """
 
-    def __init__(self, fs: int, wl: int, dummy: bool = False):
+    def __init__(self, streamControllerType: str, sampFreq: int, renderLength: int) -> None:
         super(MainWindow, self).__init__()
 
-        self._fs = fs
-        self._x = deque(maxlen=wl)
-        self._y = deque(maxlen=wl)
+        self._streamControllerType = streamControllerType
+        self._streamController: StreamingController | None = None
+        self._sampFreq = sampFreq
+        self._xQueue = deque(maxlen=renderLength)
+        self._yQueue = deque(maxlen=renderLength)
         self._bufCount = 0
-        self._dummy = dummy
         self._plotSpacing = 1000
         self._plotBuffer = 200
 
@@ -127,12 +125,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._config: dict | None = None
         self.browseJSONButton.clicked.connect(self._browseJson)
 
-        # Acquisition
-        self._acqController: AcquisitionController = None
-        self.startAcquisitionButton.setEnabled(self._serialPort != "" or self._dummy)
-        self.stopAcquisitionButton.setEnabled(False)
-        self.startAcquisitionButton.clicked.connect(self._startAcquisition)
-        self.stopAcquisitionButton.clicked.connect(self._stopAcquisition)
+        # Streaming
+        self.startStreamingButton.setEnabled(self._serialPort != "" or self._streamControllerType == "Dummy")
+        self.stopStreamingButton.setEnabled(False)
+        self.startStreamingButton.clicked.connect(self._startStreaming)
+        self.stopStreamingButton.clicked.connect(self._stopStreaming)
 
         # Training SVM
         self._SVMWin: SVMWindow | None = None
@@ -144,10 +141,131 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._sos = signal.butter(N=4, Wn=20, fs=4000, btype="high", output="sos")
         self._zi = [signal.sosfilt_zi(self._sos) for _ in range(self._nCh)]
 
-        # TODO: temporarily disable 32 and 64 channels with real signals
-        if not dummy:
-            self.ch32RadioButton.setEnabled(False)
-            self.ch64RadioButton.setEnabled(False)
+    def _rescanSerialPorts(self) -> None:
+        """Rescan the serial ports to update the combo box."""
+        self.serialPortsComboBox.clear()
+        self.serialPortsComboBox.addItems(serialPorts())
+
+    def _serialPortChange(self) -> None:
+        """Detect if the serial port has changed."""
+        self._serialPort = self.serialPortsComboBox.currentText()
+        self.startStreamingButton.setEnabled(self._serialPort != "")
+
+    def _initializePlot(self) -> None:
+        """Render the initial plot."""
+        # Reset graph
+        self.graphWidget.clear()
+        self.graphWidget.setYRange(0, self._plotSpacing * (self._nCh - 1))
+        self.graphWidget.getPlotItem().hideAxis("bottom")
+        self.graphWidget.getPlotItem().hideAxis("left")
+        # Initialize queues
+        for i in range(-self._xQueue.maxlen, 0):
+            self._xQueue.append(i / self._sampFreq)
+            self._yQueue.append(np.zeros(self._nCh))
+        # Get colormap
+        cm = pg.colormap.get("CET-C1")
+        cm.setMappingMode("diverging")
+        lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")
+        colors = [lut[i] for i in range(self._nCh)]
+        # Plot placeholder data
+        y = np.asarray(self._yQueue).T
+        for i in range(self._nCh):
+            pen = pg.mkPen(color=colors[i])
+            self._plots.append(
+                self.graphWidget.plot(self._xQueue, y[i] + self._plotSpacing * i, pen=pen)
+            )
+
+    def _browseJson(self) -> None:
+        """Browse to select the JSON file with the experiment configuration."""
+        filePath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load JSON configuration",
+            filter="*.json",
+        )
+        displayText = ""
+        if filePath:
+            self._config = loadValidateJSON(filePath)
+            displayText = "JSON config invalid!" if self._config is None else filePath
+        self.JSONLabel.setText(displayText)
+
+    def _updateChannels(self) -> None:
+        """Update the number of channels depending on user selection."""
+        chButton = next(
+            filter(
+                lambda elem: isinstance(elem, QRadioButton) and elem.isChecked(),
+                self.channelsGroupBox.children(),
+            )
+        )
+        self._nCh = int(chButton.text())
+        self._plots = []
+        self._initializePlot()  # redraw plot
+        self._zi = [
+            signal.lfilter_zi(self._b, self._a) for _ in range(self._nCh)
+        ]  # re-initialize filter
+
+    def _startStreaming(self) -> None:
+        """Start streaming."""
+        # Attempt to create streaming controller
+        self._streamController = streamControllerFactory(self._streamControllerType, self._serialPort, self._nCh)
+        self._streamController.connectDataReady(self.grabData)
+        self._streamController.connectSerialError(self._alertSerialError)
+
+        # Handle UI elements
+        self.serialPortsGroupBox.setEnabled(False)
+        self.channelsGroupBox.setEnabled(False)
+        self.acquisitionGroupBox.setEnabled(False)
+        self.startStreamingButton.setEnabled(False)
+        self.modelGroupBox.setEnabled(False)
+        self.stopStreamingButton.setEnabled(True)
+
+        # Configure acquisition
+        if self.acquisitionGroupBox.isChecked() and self._config is not None:
+            # Output file
+            expDir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
+            os.makedirs(expDir, exist_ok=True)
+            outFileName = self.experimentTextField.text()
+            if outFileName == "":
+                outFileName = (
+                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
+                    .replace(":", "-")
+                    .replace(".", "-")
+                )
+            outFileName = f"{outFileName}.bin"
+            outFilePath = os.path.join(expDir, outFileName)
+
+            # Create gesture window and file controller
+            self._gestWin = GeturesWindow(**self._config)
+            self._gestWin.show()
+            self._gestWin.trigger_sig.connect(self._streamController.updateTrigger)
+            self._fileController = FileController(outFilePath, self._streamController)
+            self._gestWin.stop_sig.connect(self._fileController.stopFileWriter)
+
+        self._streamController.startStreaming()
+
+    def _stopStreaming(self) -> None:
+        """Stop streaming."""
+        self._streamController.stopStreaming()
+
+        if self._gestWin is not None:
+            self._gestWin.close()
+        # Handle UI elements
+        self.serialPortsGroupBox.setEnabled(True)
+        self.channelsGroupBox.setEnabled(True)
+        self.acquisitionGroupBox.setEnabled(True)
+        self.modelGroupBox.setEnabled(True)
+        self.startStreamingButton.setEnabled(True)
+        self.stopStreamingButton.setEnabled(False)
+
+    def _alertSerialError(self) -> None:
+        """Alert message displayed when serial communication fails."""
+        self._alert = QMessageBox.critical(
+            self,
+            "Serial communication failed",
+            "Could not communicate with the device: try changing the serial port.",
+            buttons=QMessageBox.Retry,
+            defaultButton=QMessageBox.Retry,
+        )
+        self._stopStreaming()
 
     def _showSVM(self):
         if self._trainData is not None:
@@ -167,62 +285,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # Create gesture window and file controller
             self._SVMWin = SVMWindow(self._trainData, outFilePath)
             self._SVMWin.show()
-            self._SVMWin.testButton.clicked.connect(self._startAcquisition)
+            self._SVMWin.testButton.clicked.connect(self._startStreaming)
             self._SVMWin.testButton.clicked.connect(self._SVMTestStart)
 
     def _SVMTestStart(self):
-        self._svmController = SVMController(self._SVMWin._clf, self._acqController)
+        self._svmController = SVMController(self._SVMWin._clf, self._streamControllerCls)
         self._SVMWin.close()
         self._tcpController = TcpServerController(
             "192.168.1.105", 3333, 3334, self._svmController
         )
-
-    def _rescanSerialPorts(self) -> None:
-        """Rescan the serial ports to update the combo box."""
-        self.serialPortsComboBox.clear()
-        self.serialPortsComboBox.addItems(serial_ports())
-
-    def _serialPortChange(self) -> None:
-        """Detect if the serial port has changed."""
-        self._serialPort = self.serialPortsComboBox.currentText()
-        self.startAcquisitionButton.setEnabled(self._serialPort != "")
-
-    def _initializePlot(self) -> None:
-        """Render the initial plot."""
-        # Reset graph
-        self.graphWidget.clear()
-        self.graphWidget.setYRange(0, self._plotSpacing * (self._nCh - 1))
-        self.graphWidget.getPlotItem().hideAxis("bottom")
-        self.graphWidget.getPlotItem().hideAxis("left")
-        # Initialize deques
-        for i in range(-self._x.maxlen, 0):
-            self._x.append(i / self._fs)
-            self._y.append(np.zeros(self._nCh))
-        # Get colormap
-        cm = pg.colormap.get("CET-C1")
-        cm.setMappingMode("diverging")
-        lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")
-        colors = [lut[i] for i in range(self._nCh)]
-        # Plot placeholder data
-        y = np.asarray(self._y).T
-        for i in range(self._nCh):
-            pen = pg.mkPen(color=colors[i])
-            self._plots.append(
-                self.graphWidget.plot(self._x, y[i] + self._plotSpacing * i, pen=pen)
-            )
-
-    def _browseJson(self) -> None:
-        """Browse to select the JSON file with the experiment configuration."""
-        filePath, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load JSON configuration",
-            filter="*.json",
-        )
-        displayText = ""
-        if filePath:
-            self._config = load_validate_json(filePath)
-            displayText = "JSON config invalid!" if self._config is None else filePath
-        self.JSONLabel.setText(displayText)
 
     def _browseTrainData(self) -> None:
         """Browse to select the training data file."""
@@ -233,81 +304,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         displayText = ""
         if filePath:
-            self._trainData = load_validate_train_data(filePath)
+            self._trainData = loadValidateTrainData(filePath)
             displayText = (
                 "Train data not valid!" if self._trainData is None else filePath
             )
         self.trainLabel.setText(displayText)
-
-    def _updateChannels(self) -> None:
-        """Update the number of channels depending on user selection."""
-        chButton = next(
-            filter(
-                lambda elem: isinstance(elem, QRadioButton) and elem.isChecked(),
-                self.channelsGroupBox.children(),
-            )
-        )
-        self._nCh = int(chButton.text())
-        self._plots = []
-        self._initializePlot()  # redraw plot
-        self._zi = [
-            signal.lfilter_zi(self._b, self._a) for _ in range(self._nCh)
-        ]  # re-initialize filter
-
-    def _startAcquisition(self) -> None:
-        """Start the acquisition."""
-        # Handle UI elements
-        self.serialPortsGroupBox.setEnabled(False)
-        self.channelsGroupBox.setEnabled(False)
-        self.experimentGroupBox.setEnabled(False)
-        self.startAcquisitionButton.setEnabled(False)
-        self.trainingGroupBox.setEnabled(False)
-        self.stopAcquisitionButton.setEnabled(True)
-
-        self._acqController = (
-            DummyAcquisitionController(self._nCh)
-            if self._dummy
-            else ESBAcquisitionController(
-                self._serialPort, nCh=self._nCh, baudeRate=115200
-            )
-        )
-        self._acqController.connectDataReady(self.grabData)
-        if self.experimentGroupBox.isChecked() and self._config is not None:
-            # Output file
-            expDir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
-            os.makedirs(expDir, exist_ok=True)
-            outFileName = self.experimentTextField.text()
-            if outFileName == "":
-                outFileName = (
-                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
-                    .replace(":", "-")
-                    .replace(".", "-")
-                )
-            outFileName = f"{outFileName}.bin"
-            outFilePath = os.path.join(expDir, outFileName)
-
-            # Create gesture window and file controller
-            self._gestWin = GeturesWindow(**self._config)
-            self._gestWin.show()
-            self._gestWin.trigger_sig.connect(self._acqController.updateTrigger)
-            self._fileController = FileController(outFilePath, self._acqController)
-            self._gestWin.stop_sig.connect(self._fileController.stopFileWriter)
-
-        self._acqController.startAcquisition()
-
-    def _stopAcquisition(self) -> None:
-        """Stop the acquisition."""
-        self._acqController.stopAcquisition()
-
-        if self._gestWin is not None:
-            self._gestWin.close()
-        # Handle UI elements
-        self.serialPortsGroupBox.setEnabled(True)
-        self.channelsGroupBox.setEnabled(True)
-        self.experimentGroupBox.setEnabled(True)
-        self.trainingGroupBox.setEnabled(True)
-        self.startAcquisitionButton.setEnabled(True)
-        self.stopAcquisitionButton.setEnabled(False)
 
     @Slot(bytes)
     def grabData(self, data: bytes):
@@ -329,12 +330,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
 
         for samples in data:
-            self._x.append(self._x[-1] + 1 / self._fs)
-            self._y.append(samples[: self._nCh])
+            self._xQueue.append(self._xQueue[-1] + 1 / self._sampFreq)
+            self._yQueue.append(samples[: self._nCh])
 
             if self._bufCount == self._plotBuffer:
-                xs = list(self._x)
-                ys = np.asarray(list(self._y)).T
+                xs = list(self._xQueue)
+                ys = np.asarray(list(self._yQueue)).T
                 for i in range(self._nCh):
                     self._plots[i].setData(
                         xs, ys[i] + self._plotSpacing * i, skipFiniteCheck=True
@@ -343,8 +344,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._bufCount += 1
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._acqController is not None:
-            self._acqController.stopAcquisition()
+        if self._streamController is not None:
+            self._streamController.stopStreaming()
         if self._gestWin is not None:
             self._gestWin.close()
         event.accept()
