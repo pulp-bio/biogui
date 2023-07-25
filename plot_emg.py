@@ -8,20 +8,26 @@ from scipy import signal
 
 
 def main():
-    file_path = sys.argv[1]
-    with open(file_path, "rb") as f:
+    if len(sys.argv) != 3:
+        sys.exit("Usage: python3 plot_emg filePath sampFreq")
+
+    filePath = sys.argv[1]
+    fs = int(sys.argv[2])
+
+    # Read data
+    with open(filePath, "rb") as f:
         b_sig = bytes(f.read())
     sig = np.frombuffer(b_sig, dtype="float32").reshape(-1, 17)
     trigger = sig[:, -1]
     sig = sig[:, :-1].T
-
-    fs = 4000
     n_ch, n_samp = sig.shape
     t = np.arange(n_samp) / fs
 
+    # High-pass filter
     sos = signal.butter(4, 20, "high", output="sos", fs=fs)
     sig = signal.sosfiltfilt(sos, sig)
 
+    # Plot
     _, axes = plt.subplots(
         nrows=n_ch + 1, sharex="all", figsize=(16, 20), layout="constrained"
     )
