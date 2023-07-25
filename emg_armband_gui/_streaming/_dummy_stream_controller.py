@@ -1,4 +1,4 @@
-"""Class implementing the a dummy streaming controller.
+"""Class implementing a dummy streaming controller.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa

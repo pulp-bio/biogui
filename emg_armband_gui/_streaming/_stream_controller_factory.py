@@ -1,4 +1,4 @@
-"""Class implementing the a dummy streaming controller.
+"""Function implementing a factory for streaming controllers.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
