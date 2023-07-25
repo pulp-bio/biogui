@@ -60,7 +60,7 @@ class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
         """
 
     @abstractmethod
-    def connectSerialError(self, fn: Callable[[], Any]):
+    def connectSerialError(self, fn: Callable[[], Any]) -> None:
         """Connect the "serial error" signal with the given function.
 
         Parameters

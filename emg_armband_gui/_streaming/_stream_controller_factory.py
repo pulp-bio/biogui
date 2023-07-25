@@ -25,7 +25,7 @@ from ._esb_stream_controller import ESBStreamingController
 
 def streamControllerFactory(
     controllerType: str, serialPort: str, nCh: int
-) -> StreamingController | None:
+) -> StreamingController:
     """Factory for StreamingController objects.
 
     Parameters
@@ -39,13 +39,16 @@ def streamControllerFactory(
 
     Returns
     -------
-    StreamingController or None
+    StreamingController
         Instance of StreamingController.
+
+    Raises
+    ------
+    InvalidSerialPortError
+        Error raised when th serial port is not valid.
     """
     match controllerType:
         case "ESB":
             return ESBStreamingController(serialPort, nCh)
         case "Dummy":
             return DummyStreamingController(nCh)
-        case _:
-            return None
