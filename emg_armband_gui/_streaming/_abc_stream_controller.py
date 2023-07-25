@@ -21,12 +21,11 @@ from __future__ import annotations
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Callable
 
-import numpy as np
 from PySide6.QtCore import QObject, Slot
 
 
 class StreamingControllerMeta(type(QObject), ABCMeta):
-    """Meta-class for streaming controller."""
+    """Meta-class for the streaming controller interface."""
 
 
 class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
@@ -58,6 +57,16 @@ class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
         ----------
         fn : Callable
             Function to disconnect from the "data ready" signal.
+        """
+
+    @abstractmethod
+    def connectSerialError(self, fn: Callable[[], Any]):
+        """Connect the "serial error" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "serial error" signal.
         """
 
     @Slot(int)

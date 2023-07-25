@@ -18,6 +18,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Callable
 
@@ -45,6 +46,8 @@ class _DataWorker(QObject):
         Number of samples.
     _trigger : int
         Trigger value to add to each packet.
+    _mean : float
+        Current mean of the generated data.
     _stopAcquisition : bool
         Whether to stop the acquisition.
 
@@ -62,6 +65,7 @@ class _DataWorker(QObject):
         self._nCh = nCh
         self._nSamp = nSamp
         self._trigger = 0
+        self._mean = 0.0
         self._stopAcquisition = False
 
     @property
@@ -75,12 +79,13 @@ class _DataWorker(QObject):
     def startStreaming(self) -> None:
         """Generate random data indefinitely, and send it."""
         while not self._stopAcquisition:
-            data = -10 * np.random.randn(self._nSamp, self._nCh + 1) - 100
+            data = self._mean + 100 * np.random.randn(self._nSamp, self._nCh + 1)
             data[:, -1] = np.repeat(self._trigger, self._nSamp)
             data = data.astype("float32")
             self.dataReadySig.emit(data.tobytes())
+            self._mean += 20 * np.random.randn()
             time.sleep(1e-3)
-        print("Generator stopped")
+        logging.info("Generator stopped")
 
     def stopStreaming(self) -> None:
         """Stop the generation of new data."""
@@ -145,6 +150,15 @@ class DummyStreamingController(StreamingController):
             Function to disconnect from the "data ready" signal.
         """
         self._dataWorker.dataReadySig.disconnect(fn)
+
+    def connectSerialError(self, fn: Callable[[], Any]):
+        """Connect the "serial error" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "serial error" signal.
+        """
 
     @Slot(int)
     def updateTrigger(self, trigger: int) -> None:

@@ -25,28 +25,45 @@ from emg_armband_gui.main_window import MainWindow
 
 
 def main():
+    # Input
     ap = argparse.ArgumentParser()
     ap.add_argument(
+        "-sc",
+        "--streamController",
+        required=False,
+        default="ESB",
+        type=str,
+        choices=("ESB", "Dummy"),
+        help='Streaming controller (either "ESB" or "Dummy")',
+    )
+    ap.add_argument(
         "-fs",
+        "--sampFreq",
         required=False,
         default=4000,
         type=int,
         help="Sampling frequency (in sps)",
     )
     ap.add_argument(
-        "-wl",
+        "-rl",
+        "--renderLength",
         required=False,
         default=1000,
         type=int,
-        help="Window length for rendering (in ms)",
+        help="Length of the rendering window in the plot (in ms)",
     )
-    ap.add_argument("--dummy", action="store_true")
     args = vars(ap.parse_args())
-    args["wl"] = args["wl"] * args["fs"] // 1000  # convert to samples
 
+    streamControllerType = args["streamController"]
+    sampFreq = args["sampFreq"]
+    renderLength = args["renderLength"] * sampFreq // 1000  # convert to samples
+
+    # Setup application and main window
     app = QApplication(sys.argv)
-    window = MainWindow(**args)
-    window.show()
+    main_win = MainWindow(streamControllerType, sampFreq, renderLength)
+    main_win.show()
+
+    # Run event loop
     sys.exit(app.exec())
 
 

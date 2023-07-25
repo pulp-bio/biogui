@@ -18,6 +18,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Callable
 
@@ -58,11 +59,13 @@ class _SerialWorker(QObject):
     """
 
     dataReadySig = Signal(bytes)
+    serialErrorSig = Signal()
 
     def __init__(self, serialPort: str, packetSize: int, baudeRate: int) -> None:
         super(_SerialWorker, self).__init__()
 
-        self._ser = serial.Serial(serialPort, baudeRate)
+        # Open serial port
+        self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
         self._packetSize = packetSize
         self._trigger = 0
         self._stopAcquisition = False
@@ -80,19 +83,29 @@ class _SerialWorker(QObject):
         self._ser.write(b"=")
         while not self._stopAcquisition:
             data = self._ser.read(self._packetSize)
+
+            # Check number of bytes read
+            if len(data) != self._packetSize:
+                self._closePort()
+                self.serialErrorSig.emit()
+                break
+
             data = bytearray(data)
             data[-1] = self._trigger
             self.dataReadySig.emit(bytes(data))
         self._ser.write(b":")
-        time.sleep(0.2)
-        self._ser.reset_input_buffer()
-        time.sleep(0.2)
-        self._ser.close()
-        print("Serial stopped")
+        self._closePort()
+        logging.info("Serial stopped")
 
     def stopStreaming(self) -> None:
         """Stop reading data from the serial port."""
         self._stopAcquisition = True
+
+    def _closePort(self) -> None:
+        time.sleep(0.2)
+        self._ser.reset_input_buffer()
+        time.sleep(0.2)
+        self._ser.close()
 
 
 class _PreprocessWorker(QObject):
@@ -153,11 +166,7 @@ class _PreprocessWorker(QObject):
             New binary data.
         """
         dataRef = np.zeros(shape=(self._nSamp, self._nCh + 1), dtype="uint32")
-        try:
-            trigger = data[242]
-        except IndexError:
-            print(len(data))
-            raise
+        trigger = data[242]
         data = bytearray(data)
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._nSamp):
@@ -207,22 +216,15 @@ class ESBStreamingController(StreamingController):
         The QThread associated to the preprocess worker.
     """
 
-    def __init__(
-        self,
-        serialPort: str,
-        nCh: int,
-        nSamp: int = 5,
-        packetSize: int = 243,
-        baudeRate: int = 4000000,
-        gainScaleFactor: float = 2.38125854276502e-08,
-        vScaleFactor: int = 1000000,
-    ) -> None:
+    def __init__(self, serialPort: str, nCh: int) -> None:
         super(ESBStreamingController, self).__init__()
 
         # Create workers and threads
-        self._serialWorker = _SerialWorker(serialPort, packetSize, baudeRate)
+        self._serialWorker = _SerialWorker(
+            serialPort, packetSize=243, baudeRate=4000000
+        )
         self._preprocessWorker = _PreprocessWorker(
-            nCh, nSamp, gainScaleFactor, vScaleFactor
+            nCh, nSamp=5, gainScaleFactor=2.38125854276502e-08, vScaleFactor=1000000
         )
         self._serialThread = QThread()
         self._serialWorker.moveToThread(self._serialThread)
@@ -265,6 +267,16 @@ class ESBStreamingController(StreamingController):
             Function to disconnect from the "data ready" signal.
         """
         self._preprocessWorker.dataReadySig.disconnect(fn)
+
+    def connectSerialError(self, fn: Callable[[], Any]):
+        """Connect the "serial error" signal with the given function.
+
+        Parameters
+        ----------
+        fn : Callable
+            Function to connect to the "serial error" signal.
+        """
+        self._serialWorker.serialErrorSig.connect(fn)
 
     @Slot(int)
     def updateTrigger(self, trigger: int) -> None:
