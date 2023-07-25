@@ -1,7 +1,7 @@
-"""Class implementing the ESB acquisition controller.
+"""Class implementing the ESB streaming controller.
 
 
-Copyright 2023 Mattia Orlandi
+Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import numpy as np
 import serial
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
-from ._abc_acq_controller import AcquisitionController
+from ._abc_stream_controller import StreamingController
 
 
 class _SerialWorker(QObject):
@@ -42,16 +42,19 @@ class _SerialWorker(QObject):
 
     Attributes
     ----------
-    dataReadySig : Signal
-        Signal emitted when a new packet is read.
     _ser : Serial
-        Serial port.
+        The serial port.
     _packetSize : int
         Size of each packet read from the serial port.
     _trigger : int
         Trigger value to add to each packet.
     _stopAcquisition : bool
         Whether to stop the acquisition.
+
+    Class Attributes
+    ----------
+    dataReadySig : Signal
+        Signal emitted when a new packet is generated.
     """
 
     dataReadySig = Signal(bytes)
@@ -59,7 +62,7 @@ class _SerialWorker(QObject):
     def __init__(self, serialPort: str, packetSize: int, baudeRate: int) -> None:
         super(_SerialWorker, self).__init__()
 
-        self._ser = serial.Serial(serialPort, baudeRate)  # , timeout=10)
+        self._ser = serial.Serial(serialPort, baudeRate)
         self._packetSize = packetSize
         self._trigger = 0
         self._stopAcquisition = False
@@ -72,15 +75,14 @@ class _SerialWorker(QObject):
     def trigger(self, trigger: int) -> None:
         self._trigger = trigger
 
-    def startAcquisition(self) -> None:
+    def startStreaming(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
         self._ser.write(b"=")
         while not self._stopAcquisition:
             data = self._ser.read(self._packetSize)
-            if data:
-                data = bytearray(data)
-                data[-1] = self._trigger
-                self.dataReadySig.emit(bytes(data))
+            data = bytearray(data)
+            data[-1] = self._trigger
+            self.dataReadySig.emit(bytes(data))
         self._ser.write(b":")
         time.sleep(0.2)
         self._ser.reset_input_buffer()
@@ -88,8 +90,8 @@ class _SerialWorker(QObject):
         self._ser.close()
         print("Serial stopped")
 
-    def stopAcquisition(self) -> None:
-        """Stop the acquisition."""
+    def stopStreaming(self) -> None:
+        """Stop reading data from the serial port."""
         self._stopAcquisition = True
 
 
@@ -109,8 +111,6 @@ class _PreprocessWorker(QObject):
 
     Attributes
     ----------
-    data_ready_sig : Signal
-        Signal emitted when data is ready.
     _nCh : int
         Number of channels.
     _nSamp : int
@@ -119,6 +119,11 @@ class _PreprocessWorker(QObject):
         Gain scaling factor.
     _vScaleFactor : int
         Voltage scale factor.
+
+    Class Attributes
+    ----------
+    dataReadySig : Signal
+        Signal emitted when a new packet is generated.
     """
 
     dataReadySig = Signal(bytes)
@@ -140,7 +145,7 @@ class _PreprocessWorker(QObject):
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
         """This method is called automatically when the associated signal is received,
-        it preprocess the received packet and emits a signal with the preprocessed data (downsampled).
+        it preprocesses the received packet and emits a signal with the preprocessed data.
 
         Parameters
         ----------
@@ -170,8 +175,8 @@ class _PreprocessWorker(QObject):
         self.dataReadySig.emit(dataRef.tobytes())
 
 
-class ESBAcquisitionController(AcquisitionController):
-    """Controller for the acquisition from the serial port using the ESB protocol.
+class ESBStreamingController(StreamingController):
+    """Controller for the streaming from the serial port using the ESB protocol.
 
     Parameters
     ----------
@@ -197,9 +202,9 @@ class ESBAcquisitionController(AcquisitionController):
     _preprocessWorker : _PreprocessWorker
         Worker for preprocessing the data read by the serial worker.
     _serialThread : QThread
-        QThread associated to the serial worker.
+        The QThread associated to the serial worker.
     _preprocessThread : QThread
-        QThread associated to the preprocess worker.
+        The QThread associated to the preprocess worker.
     """
 
     def __init__(
@@ -212,7 +217,7 @@ class ESBAcquisitionController(AcquisitionController):
         gainScaleFactor: float = 2.38125854276502e-08,
         vScaleFactor: int = 1000000,
     ) -> None:
-        super(ESBAcquisitionController, self).__init__()
+        super(ESBStreamingController, self).__init__()
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(serialPort, packetSize, baudeRate)
@@ -225,23 +230,23 @@ class ESBAcquisitionController(AcquisitionController):
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
         # Create connections
-        self._serialThread.started.connect(self._serialWorker.startAcquisition)
+        self._serialThread.started.connect(self._serialWorker.startStreaming)
         self._serialWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
 
-    def startAcquisition(self):
-        """Start the acquisition."""
+    def startStreaming(self) -> None:
+        """Start streaming."""
         self._preprocessThread.start()
         self._serialThread.start()
 
-    def stopAcquisition(self) -> None:
-        """Stop the acquisition."""
-        self._serialWorker.stopAcquisition()
+    def stopStreaming(self) -> None:
+        """Stop streaming."""
+        self._serialWorker.stopStreaming()
         self._serialThread.quit()
         self._serialThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
 
-    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def connectDataReady(self, fn: Callable[[bytes], Any]):
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -251,7 +256,7 @@ class ESBAcquisitionController(AcquisitionController):
         """
         self._preprocessWorker.dataReadySig.connect(fn)
 
-    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[bytes], Any]):
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -264,7 +269,7 @@ class ESBAcquisitionController(AcquisitionController):
     @Slot(int)
     def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
-        and it update the trigger value.
+        and it updates the trigger value.
 
         Parameters
         ----------

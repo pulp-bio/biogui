@@ -1,7 +1,7 @@
-"""Interface for acquisition controllers.
+"""Interface for streaming controllers.
 
 
-Copyright 2023 Mattia Orlandi
+Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,23 +25,23 @@ import numpy as np
 from PySide6.QtCore import QObject, Slot
 
 
-class AcquisitionControllerMeta(type(QObject), ABCMeta):
-    """Meta-class for acquisition controller."""
+class StreamingControllerMeta(type(QObject), ABCMeta):
+    """Meta-class for streaming controller."""
 
 
-class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
-    """Interface for acquisition controllers."""
-
-    @abstractmethod
-    def startAcquisition(self):
-        """Start the acquisition."""
+class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
+    """Interface for streaming controllers."""
 
     @abstractmethod
-    def stopAcquisition(self) -> None:
-        """Stop the acquisition."""
+    def startStreaming(self) -> None:
+        """Start streaming."""
 
     @abstractmethod
-    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def stopStreaming(self) -> None:
+        """Stop streaming."""
+
+    @abstractmethod
+    def connectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -51,7 +51,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
         """
 
     @abstractmethod
-    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[bytes], Any]) -> None:
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -64,7 +64,7 @@ class AcquisitionController(ABC, QObject, metaclass=AcquisitionControllerMeta):
     @abstractmethod
     def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
-        and it update the trigger value.
+        and it updates the trigger value.
 
         Parameters
         ----------
