@@ -1,7 +1,7 @@
-"""Class implementing the a dummy acquisition controller.
+"""Class implementing the a dummy streaming controller.
 
 
-Copyright 2023 Mattia Orlandi
+Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from typing import Any, Callable
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
-from ._abc_acq_controller import AcquisitionController
+from ._abc_stream_controller import StreamingController
 
 
 class _DataWorker(QObject):
@@ -39,8 +39,6 @@ class _DataWorker(QObject):
 
     Attributes
     ----------
-    data_ready_sig : Signal
-        Signal emitted when a new packet is read.
     _nCh : int
         Number of channels.
     _nSamp : int
@@ -49,6 +47,11 @@ class _DataWorker(QObject):
         Trigger value to add to each packet.
     _stopAcquisition : bool
         Whether to stop the acquisition.
+
+    Class Attributes
+    ----------
+    dataReadySig : Signal
+        Signal emitted when a new packet is generated.
     """
 
     dataReadySig = Signal(np.ndarray)
@@ -69,7 +72,7 @@ class _DataWorker(QObject):
     def trigger(self, trigger: int) -> None:
         self._trigger = trigger
 
-    def startAcquisition(self) -> None:
+    def startStreaming(self) -> None:
         """Generate random data indefinitely, and send it."""
         while not self._stopAcquisition:
             data = -10 * np.random.randn(self._nSamp, self._nCh + 1) - 100
@@ -79,13 +82,13 @@ class _DataWorker(QObject):
             time.sleep(1e-3)
         print("Generator stopped")
 
-    def stopAcquisition(self) -> None:
-        """Stop the acquisition."""
+    def stopStreaming(self) -> None:
+        """Stop the generation of new data."""
         self._stopAcquisition = True
 
 
-class DummyAcquisitionController(AcquisitionController):
-    """Controller for the acquisition from the serial port using the ESB protocol.
+class DummyStreamingController(StreamingController):
+    """Controller for the streaming of dummy data.
 
     Parameters
     ----------
@@ -99,11 +102,11 @@ class DummyAcquisitionController(AcquisitionController):
     _dataWorker : _DataWorker
         Worker for generating data.
     _dataThread : QThread
-        QThread associated to the data worker.
+        The QThread associated to the data worker.
     """
 
     def __init__(self, nCh: int, nSamp: int = 5) -> None:
-        super(DummyAcquisitionController, self).__init__()
+        super(DummyStreamingController, self).__init__()
 
         # Create worker and thread
         self._dataWorker = _DataWorker(nCh, nSamp)
@@ -111,19 +114,19 @@ class DummyAcquisitionController(AcquisitionController):
         self._dataWorker.moveToThread(self._dataThread)
 
         # Create connections
-        self._dataThread.started.connect(self._dataWorker.startAcquisition)
+        self._dataThread.started.connect(self._dataWorker.startStreaming)
 
-    def startAcquisition(self):
-        """Start the thread."""
+    def startStreaming(self) -> None:
+        """Start streaming."""
         self._dataThread.start()
 
-    def stopAcquisition(self) -> None:
-        """Stop the acquisition."""
-        self._dataWorker.stopAcquisition()
+    def stopStreaming(self) -> None:
+        """Stop streaming."""
+        self._dataWorker.stopStreaming()
         self._dataThread.quit()
         self._dataThread.wait()
 
-    def connectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def connectDataReady(self, fn: Callable[[bytes], Any]):
         """Connect the "data ready" signal with the given function.
 
         Parameters
@@ -133,7 +136,7 @@ class DummyAcquisitionController(AcquisitionController):
         """
         self._dataWorker.dataReadySig.connect(fn)
 
-    def disconnectDataReady(self, fn: Callable[[np.ndarray], Any]):
+    def disconnectDataReady(self, fn: Callable[[bytes], Any]):
         """Disconnect the "data ready" signal from the given function.
 
         Parameters
@@ -146,7 +149,7 @@ class DummyAcquisitionController(AcquisitionController):
     @Slot(int)
     def updateTrigger(self, trigger: int) -> None:
         """This method is called automatically when the associated signal is received,
-        and it update the trigger value.
+        and it updates the trigger value.
 
         Parameters
         ----------
