@@ -47,8 +47,6 @@ class _SerialWorker(QObject):
         The serial port.
     _packetSize : int
         Size of each packet read from the serial port.
-    _trigger : int
-        Trigger value to add to each packet.
     _stopAcquisition : bool
         Whether to stop the acquisition.
 
@@ -67,16 +65,7 @@ class _SerialWorker(QObject):
         # Open serial port
         self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
         self._packetSize = packetSize
-        self._trigger = 0
         self._stopAcquisition = False
-
-    @property
-    def trigger(self) -> int:
-        return self._trigger
-
-    @trigger.setter
-    def trigger(self, trigger: int) -> None:
-        self._trigger = trigger
 
     def startStreaming(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
@@ -90,9 +79,7 @@ class _SerialWorker(QObject):
                 logging.error("Communication on serial port failed.")
                 break
 
-            data = bytearray(data)
-            data[-1] = self._trigger
-            self.dataReadySig.emit(bytes(data))
+            self.dataReadySig.emit(data)
 
         self._ser.write(b":")
         time.sleep(0.2)
@@ -163,8 +150,7 @@ class _PreprocessWorker(QObject):
         data : bytes
             New binary data.
         """
-        dataRef = np.zeros(shape=(self._nSamp, self._nCh + 1), dtype="uint32")
-        trigger = data[242]
+        dataRef = np.zeros(shape=(self._nSamp, self._nCh), dtype="uint32")
         data = bytearray(data)
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
         for k in range(self._nSamp):
@@ -176,7 +162,6 @@ class _PreprocessWorker(QObject):
                 )
         dataRef = dataRef.view("int32").astype("float32")
         dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
-        dataRef[:, self._nCh] = [trigger] * self._nSamp
         dataRef = dataRef.astype("float32")
 
         self.dataReadySig.emit(dataRef.tobytes())
@@ -275,15 +260,3 @@ class ESBStreamingController(StreamingController):
             Function to connect to the "serial error" signal.
         """
         self._serialWorker.serialErrorSig.connect(fn)
-
-    @Slot(int)
-    def updateTrigger(self, trigger: int) -> None:
-        """This method is called automatically when the associated signal is received,
-        and it updates the trigger value.
-
-        Parameters
-        ----------
-        trigger : int
-            New trigger value.
-        """
-        self._serialWorker.trigger = trigger

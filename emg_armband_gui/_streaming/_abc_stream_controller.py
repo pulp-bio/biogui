@@ -68,15 +68,3 @@ class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
         fn : Callable
             Function to connect to the "serial error" signal.
         """
-
-    @Slot(int)
-    @abstractmethod
-    def updateTrigger(self, trigger: int) -> None:
-        """This method is called automatically when the associated signal is received,
-        and it updates the trigger value.
-
-        Parameters
-        ----------
-        trigger : int
-            New trigger value.
-        """
