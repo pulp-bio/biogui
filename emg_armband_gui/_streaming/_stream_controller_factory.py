@@ -43,11 +43,6 @@ def streamControllerFactory(
     -------
     StreamingController
         Instance of StreamingController.
-
-    Raises
-    ------
-    InvalidSerialPortError
-        Error raised when th serial port is not valid.
     """
     match controllerType:
         case "ESB":
