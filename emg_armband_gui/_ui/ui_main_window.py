@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.1
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -121,6 +121,7 @@ class Ui_MainWindow(object):
 
         self.channelsComboBox = QComboBox(self.streamConfGroupBox)
         self.channelsComboBox.addItem("")
+        self.channelsComboBox.addItem("")
         self.channelsComboBox.setObjectName("channelsComboBox")
 
         self.gridLayout.addWidget(self.channelsComboBox, 1, 1, 1, 1)
@@ -193,6 +194,9 @@ class Ui_MainWindow(object):
         )
         self.channelsComboBox.setItemText(
             0, QCoreApplication.translate("MainWindow", "16", None)
+        )
+        self.channelsComboBox.setItemText(
+            1, QCoreApplication.translate("MainWindow", "32", None)
         )
 
     # retranslateUi
