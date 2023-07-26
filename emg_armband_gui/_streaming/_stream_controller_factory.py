@@ -24,7 +24,7 @@ from ._esb_stream_controller import ESBStreamingController
 
 
 def streamControllerFactory(
-    controllerType: str, serialPort: str, nCh: int
+    controllerType: str, serialPort: str, nCh: int, sampFreq: int
 ) -> StreamingController:
     """Factory for StreamingController objects.
 
@@ -36,6 +36,8 @@ def streamControllerFactory(
         Serial port.
     nCh : int
         Number of channels.
+    sampFreq : int
+        Sampling frequency.
 
     Returns
     -------
@@ -49,6 +51,6 @@ def streamControllerFactory(
     """
     match controllerType:
         case "ESB":
-            return ESBStreamingController(serialPort, nCh)
+            return ESBStreamingController(serialPort, nCh, sampFreq)
         case "Dummy":
-            return DummyStreamingController(nCh)
+            return DummyStreamingController(nCh, sampFreq)

@@ -20,17 +20,17 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable
 
 import numpy as np
 import serial
 from PySide6.QtCore import QObject, QThread, Signal, Slot
+from scipy import signal
 
 from ._abc_stream_controller import StreamingController
 
 
 class _SerialWorker(QObject):
-    """Worker that reads data from a serial port indefinitely, and sends it via a Qt signal.
+    """Worker that reads data from a serial port indefinitely.
 
     Parameters
     ----------
@@ -47,13 +47,15 @@ class _SerialWorker(QObject):
         The serial port.
     _packetSize : int
         Size of each packet read from the serial port.
-    _stopAcquisition : bool
-        Whether to stop the acquisition.
+    _stopReading : bool
+        Whether to stop reading data.
 
-    Class Attributes
-    ----------
+    Class attributes
+    ----------------
     dataReadySig : Signal
-        Signal emitted when a new packet is generated.
+        Signal emitted when new data is read.
+    serialErrorSig : Signal
+        Signal emitted when an error with the serial transmission occurred.
     """
 
     dataReadySig = Signal(bytes)
@@ -65,12 +67,12 @@ class _SerialWorker(QObject):
         # Open serial port
         self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
         self._packetSize = packetSize
-        self._stopAcquisition = False
+        self._stopReading = False
 
-    def startStreaming(self) -> None:
+    def startReading(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
         self._ser.write(b"=")
-        while not self._stopAcquisition:
+        while not self._stopReading:
             data = self._ser.read(self._packetSize)
 
             # Check number of bytes read
@@ -88,18 +90,20 @@ class _SerialWorker(QObject):
         self._ser.close()
         logging.info("Serial worker stopped.")
 
-    def stopStreaming(self) -> None:
+    def stopReading(self) -> None:
         """Stop reading data from the serial port."""
-        self._stopAcquisition = True
+        self._stopReading = True
 
 
 class _PreprocessWorker(QObject):
-    """Worker that preprocess the binary data it receives via a Qt signal.
+    """Worker that preprocess the binary data it receives.
 
     Parameters
     ----------
     nCh : int
         Number of channels.
+    sampFreq : int
+        Sampling frequency.
     nSamp : int
         Number of samples in each packet.
     gainScaleFactor : float
@@ -117,18 +121,26 @@ class _PreprocessWorker(QObject):
         Gain scaling factor.
     _vScaleFactor : int
         Voltage scale factor.
+    _sos : ndarray
+        Filter SOS coefficients.
+    _zi : list of ndarrays
+        Initial state for the filter (one per channel).
 
-    Class Attributes
-    ----------
+    Class attributes
+    ----------------
     dataReadySig : Signal
-        Signal emitted when a new packet is generated.
+        Signal emitted when new data is available.
+    dataReadyFltSig : Signal
+        Signal emitted when new filtered data is available.
     """
 
     dataReadySig = Signal(bytes)
+    dataReadyFltSig = Signal(bytes)
 
     def __init__(
         self,
         nCh: int,
+        sampFreq: int,
         nSamp: int,
         gainScaleFactor: float,
         vScaleFactor: int,
@@ -140,6 +152,10 @@ class _PreprocessWorker(QObject):
         self._gainScaleFactor = gainScaleFactor
         self._vScaleFactor = vScaleFactor
 
+        # Filtering
+        self._sos = signal.butter(N=4, Wn=20, fs=sampFreq, btype="high", output="sos")
+        self._zi = np.zeros((self._sos.shape[0], 2, self._nCh))
+
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
         """This method is called automatically when the associated signal is received,
@@ -150,6 +166,7 @@ class _PreprocessWorker(QObject):
         data : bytes
             New binary data.
         """
+        # Bytes to floats
         dataRef = np.zeros(shape=(self._nSamp, self._nCh), dtype="uint32")
         data = bytearray(data)
         data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
@@ -160,11 +177,14 @@ class _PreprocessWorker(QObject):
                     + data[k * 48 + (3 * i) + 1] * 256 * 256
                     + data[k * 48 + (3 * i) + 2] * 256
                 )
-        dataRef = dataRef.view("int32").astype("float32")
         dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
         dataRef = dataRef.astype("float32")
-
         self.dataReadySig.emit(dataRef.tobytes())
+
+        # Filter
+        dataRef, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
+        dataRef = dataRef.astype("float32")
+        self.dataReadyFltSig.emit(dataRef.tobytes())
 
 
 class ESBStreamingController(StreamingController):
@@ -176,16 +196,8 @@ class ESBStreamingController(StreamingController):
         String representing the serial port.
     nCh : int
         Number of channels.
-    nSamp : int, default=5
-        Number of samples in each packet.
-    packetSize : int, default=243
-        Size of each packet read from the serial port.
-    baudeRate : int, default=4000000
-        Baude rate.
-    gainScaleFactor : float, default=2.38125854276502e-08
-        Gain scaling factor.
-    vScaleFactor : int, default=1000000
-        Voltage scale factor.
+    sampFreq : int
+        Sampling frequency.
 
     Attributes
     ----------
@@ -197,9 +209,22 @@ class ESBStreamingController(StreamingController):
         The QThread associated to the serial worker.
     _preprocessThread : QThread
         The QThread associated to the preprocess worker.
+
+    Class attributes
+    ----------------
+    dataReadySig : Signal
+        Signal emitted when new data is available.
+    dataReadyFltSig : Signal
+        Signal emitted when new filtered data is available.
+    serialErrorSig : Signal
+        Signal emitted when an error with the serial transmission occurred.
     """
 
-    def __init__(self, serialPort: str, nCh: int) -> None:
+    dataReadySig = Signal(bytes)
+    dataReadyFltSig = Signal(bytes)
+    serialErrorSig = Signal()
+
+    def __init__(self, serialPort: str, nCh: int, sampFreq: int) -> None:
         super(ESBStreamingController, self).__init__()
 
         # Create workers and threads
@@ -207,16 +232,27 @@ class ESBStreamingController(StreamingController):
             serialPort, packetSize=243, baudeRate=4000000
         )
         self._preprocessWorker = _PreprocessWorker(
-            nCh, nSamp=5, gainScaleFactor=2.38125854276502e-08, vScaleFactor=1000000
+            nCh,
+            sampFreq,
+            nSamp=5,
+            gainScaleFactor=2.38125854276502e-08,
+            vScaleFactor=1000000,
         )
         self._serialThread = QThread()
         self._serialWorker.moveToThread(self._serialThread)
         self._preprocessThread = QThread()
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
-        # Create connections
-        self._serialThread.started.connect(self._serialWorker.startStreaming)
+        # Create internal connections
+        self._serialThread.started.connect(self._serialWorker.startReading)
         self._serialWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
+
+        # Forward relevant signals
+        self._preprocessWorker.dataReadySig.connect(lambda d: self.dataReadySig.emit(d))
+        self._preprocessWorker.dataReadyFltSig.connect(
+            lambda d: self.dataReadyFltSig.emit(d)
+        )
+        self._serialWorker.serialErrorSig.connect(lambda: self.serialErrorSig.emit())
 
     def startStreaming(self) -> None:
         """Start streaming."""
@@ -225,38 +261,8 @@ class ESBStreamingController(StreamingController):
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
-        self._serialWorker.stopStreaming()
+        self._serialWorker.stopReading()
         self._serialThread.quit()
         self._serialThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
-
-    def connectDataReady(self, fn: Callable[[bytes], Any]) -> None:
-        """Connect the "data ready" signal with the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to connect to the "data ready" signal.
-        """
-        self._preprocessWorker.dataReadySig.connect(fn)
-
-    def disconnectDataReady(self, fn: Callable[[bytes], Any]) -> None:
-        """Disconnect the "data ready" signal from the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to disconnect from the "data ready" signal.
-        """
-        self._preprocessWorker.dataReadySig.disconnect(fn)
-
-    def connectSerialError(self, fn: Callable[[], Any]) -> None:
-        """Connect the "serial error" signal with the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to connect to the "serial error" signal.
-        """
-        self._serialWorker.serialErrorSig.connect(fn)

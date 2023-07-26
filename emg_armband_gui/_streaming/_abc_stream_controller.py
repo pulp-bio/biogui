@@ -19,9 +19,8 @@ limitations under the License.
 from __future__ import annotations
 
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Callable
 
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Signal
 
 
 class StreamingControllerMeta(type(QObject), ABCMeta):
@@ -29,7 +28,21 @@ class StreamingControllerMeta(type(QObject), ABCMeta):
 
 
 class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
-    """Interface for streaming controllers."""
+    """Interface for streaming controllers.
+
+    Class attributes
+    ----------------
+    dataReadySig : Signal
+        Signal emitted when new data is available.
+    dataReadyFltSig : Signal
+        Signal emitted when new filtered data is available.
+    serialErrorSig : Signal
+        Signal emitted when an error with the serial transmission occurred.
+    """
+
+    dataReadySig: Signal
+    dataReadyFltSig: Signal
+    serialErrorSig: Signal
 
     @abstractmethod
     def startStreaming(self) -> None:
@@ -38,33 +51,3 @@ class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
     @abstractmethod
     def stopStreaming(self) -> None:
         """Stop streaming."""
-
-    @abstractmethod
-    def connectDataReady(self, fn: Callable[[bytes], Any]) -> None:
-        """Connect the "data ready" signal with the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to connect to the "data ready" signal.
-        """
-
-    @abstractmethod
-    def disconnectDataReady(self, fn: Callable[[bytes], Any]) -> None:
-        """Disconnect the "data ready" signal from the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to disconnect from the "data ready" signal.
-        """
-
-    @abstractmethod
-    def connectSerialError(self, fn: Callable[[], Any]) -> None:
-        """Connect the "serial error" signal with the given function.
-
-        Parameters
-        ----------
-        fn : Callable
-            Function to connect to the "serial error" signal.
-        """
