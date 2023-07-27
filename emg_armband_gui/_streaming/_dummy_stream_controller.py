@@ -64,15 +64,19 @@ class _DataWorker(QObject):
         self._nSamp = nSamp
         self._mean = 0.0
         self._stopGenerating = False
+        self._prng = np.random.default_rng(seed=42)
 
     def startGenerating(self) -> None:
         """Generate random data indefinitely, and send it."""
+        logging.info("Generator started.")
         while not self._stopGenerating:
-            data = self._mean + 100 * np.random.randn(self._nSamp, self._nCh)
-            self.dataReadySig.emit(data.tobytes())
-            self._mean += 20 * np.random.randn()
+            data = self._prng.normal(
+                loc=self._mean, scale=100, size=(self._nSamp, self._nCh)
+            ).astype("float32")
+            self.dataReadySig.emit(data)
+            self._mean += self._prng.normal(scale=20)
             time.sleep(1e-3)
-        logging.info("Generator stopped")
+        logging.info("Generator stopped.")
 
     def stopGenerating(self) -> None:
         """Stop the generation of new data."""
@@ -110,8 +114,8 @@ class _PreprocessWorker(QObject):
         Signal emitted when new filtered data is available.
     """
 
-    dataReadySig = Signal(bytes)
-    dataReadyFltSig = Signal(bytes)
+    dataReadySig = Signal(np.ndarray)
+    dataReadyFltSig = Signal(np.ndarray)
 
     def __init__(
         self,
@@ -128,26 +132,22 @@ class _PreprocessWorker(QObject):
         self._sos = signal.butter(N=4, Wn=20, fs=sampFreq, btype="high", output="sos")
         self._zi = np.zeros((self._sos.shape[0], 2, self._nCh))
 
-    @Slot(bytes)
-    def preprocess(self, data: bytes) -> None:
+    @Slot(np.ndarray)
+    def preprocess(self, data: np.ndarray) -> None:
         """This method is called automatically when the associated signal is received,
         it preprocesses the received packet and emits a signal with the preprocessed data.
 
         Parameters
         ----------
-        data : bytes
-            New binary data.
+        data : ndarray
+            New data.
         """
-        # Bytes to floats
-        dataRef = (
-            np.frombuffer(bytearray(data)).reshape(-1, self._nCh).astype("float32")
-        )
-        self.dataReadySig.emit(dataRef.tobytes())
+        self.dataReadySig.emit(data)
 
         # Filter
-        dataRef, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
-        dataRef = dataRef.astype("float32")
-        self.dataReadyFltSig.emit(dataRef.tobytes())
+        data, self._zi = signal.sosfilt(self._sos, data, axis=0, zi=self._zi)
+        data = data.astype("float32")
+        self.dataReadyFltSig.emit(data)
 
 
 class DummyStreamingController(StreamingController):
@@ -181,8 +181,8 @@ class DummyStreamingController(StreamingController):
         Signal emitted when an error with the serial transmission occurred.
     """
 
-    dataReadySig = Signal(bytes)
-    dataReadyFltSig = Signal(bytes)
+    dataReadySig = Signal(np.ndarray)
+    dataReadyFltSig = Signal(np.ndarray)
     serialErrorSig = Signal()
 
     def __init__(self, nCh: int, sampFreq: int) -> None:

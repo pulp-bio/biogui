@@ -17,17 +17,21 @@ limitations under the License.
 """
 
 import argparse
+import logging
 import sys
 
 from PySide6.QtWidgets import QApplication
 
 from emg_armband_gui.main_window import MainWindow
+from emg_armband_gui.modules import AcquisitionController
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
+
     # Input
-    ap = argparse.ArgumentParser()
-    ap.add_argument(
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         "-sc",
         "--streamController",
         required=False,
@@ -36,7 +40,7 @@ def main():
         choices=("ESB", "Dummy"),
         help='Streaming controller (either "ESB" or "Dummy")',
     )
-    ap.add_argument(
+    parser.add_argument(
         "-fs",
         "--sampFreq",
         required=False,
@@ -44,7 +48,7 @@ def main():
         type=int,
         help="Sampling frequency (in sps)",
     )
-    ap.add_argument(
+    parser.add_argument(
         "-rl",
         "--renderLength",
         required=False,
@@ -52,16 +56,27 @@ def main():
         type=int,
         help="Length of the rendering window in the plot (in ms)",
     )
-    args = vars(ap.parse_args())
-
-    streamControllerType = args["streamController"]
-    sampFreq = args["sampFreq"]
-    renderLength = args["renderLength"] * sampFreq // 1000  # convert to samples
+    parser.add_argument(
+        "-ac",
+        "--acqConf",
+        action="store_true",
+        help="Whether to provide configuration for acquisition",
+    )
+    args = vars(parser.parse_args())
 
     # Setup application and main window
     app = QApplication(sys.argv)
-    main_win = MainWindow(streamControllerType, sampFreq, renderLength)
-    main_win.show()
+    mainWin = MainWindow(
+        streamControllerType=args["streamController"],
+        sampFreq=args["sampFreq"],
+        renderLength=args["renderLength"] * args["sampFreq"] // 1000,
+    )
+    mainWin.show()
+
+    # Add widgets
+    if args["acqConf"]:
+        acqController = AcquisitionController()
+        acqController.subscribe(mainWin)
 
     # Run event loop
     sys.exit(app.exec())
