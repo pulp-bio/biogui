@@ -65,12 +65,13 @@ class _SerialWorker(QObject):
         super(_SerialWorker, self).__init__()
 
         # Open serial port
-        self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
+        self._ser = serial.Serial(serialPort, baudeRate)  # , timeout=5)
         self._packetSize = packetSize
         self._stopReading = False
 
     def startReading(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
+        logging.info("Serial communication started.")
         self._ser.write(b"=")
         while not self._stopReading:
             data = self._ser.read(self._packetSize)
@@ -78,7 +79,7 @@ class _SerialWorker(QObject):
             # Check number of bytes read
             if len(data) != self._packetSize:
                 self.serialErrorSig.emit()
-                logging.error("Communication on serial port failed.")
+                logging.error("Serial communication failed.")
                 break
 
             self.dataReadySig.emit(data)
@@ -88,7 +89,7 @@ class _SerialWorker(QObject):
         self._ser.reset_input_buffer()
         time.sleep(0.2)
         self._ser.close()
-        logging.info("Serial worker stopped.")
+        logging.info("Serial communication stopped.")
 
     def stopReading(self) -> None:
         """Stop reading data from the serial port."""
@@ -134,8 +135,8 @@ class _PreprocessWorker(QObject):
         Signal emitted when new filtered data is available.
     """
 
-    dataReadySig = Signal(bytes)
-    dataReadyFltSig = Signal(bytes)
+    dataReadySig = Signal(np.ndarray)
+    dataReadyFltSig = Signal(np.ndarray)
 
     def __init__(
         self,
@@ -173,18 +174,19 @@ class _PreprocessWorker(QObject):
         for k in range(self._nSamp):
             for i in range(self._nCh):
                 dataRef[k, i] = (
-                    data[k * 48 + (3 * i)] * 256 * 256 * 256
-                    + data[k * 48 + (3 * i) + 1] * 256 * 256
+                    data[k * 48 + (3 * i)] * 256**3
+                    + data[k * 48 + (3 * i) + 1] * 256**2
                     + data[k * 48 + (3 * i) + 2] * 256
                 )
+        dataRef = dataRef.view("int32").astype("float32")
         dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
         dataRef = dataRef.astype("float32")
-        self.dataReadySig.emit(dataRef.tobytes())
+        self.dataReadySig.emit(dataRef)
 
         # Filter
         dataRef, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
         dataRef = dataRef.astype("float32")
-        self.dataReadyFltSig.emit(dataRef.tobytes())
+        self.dataReadyFltSig.emit(dataRef)
 
 
 class ESBStreamingController(StreamingController):

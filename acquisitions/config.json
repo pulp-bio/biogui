@@ -7,16 +7,9 @@
         "right flexion (wrist supination)": "5.png",
         "left flexion (wrist pronation)": "6.png",
         "horns": "7.png",
-        "shaka": "8.png",
-        "not ok (thumb down)": "9.png",
-        "fingers crossed": "10.png",
-        "gun": "11.png",
-        "a bit": "12.png",
-        "pinch": "13.png",
-        "what": "14.png",
-        "victory": "15.png"
+        "shaka": "8.png"
     },
-    "n_reps": 3,
-    "duration_ms": 5000,
-    "image_folder": "acquisitions/hand_mov"
+    "nReps": 3,
+    "durationMs": 5000,
+    "imageFolder": "acquisitions/hand_mov"
 }
