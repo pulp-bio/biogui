@@ -18,6 +18,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import logging
 from collections import deque
 
 import numpy as np
@@ -93,6 +94,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Signal emitted when streaming starts.
     stopStreamingSig : Signal
         Signal emitted when streaming stops.
+    closeSig : Signal
+        Signal emitted when the application is closed.
     dataReadySig : Signal
         Signal emitted when new data is available.
     dataReadyFltSig : Signal
@@ -101,6 +104,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     startStreamingSig = Signal()
     stopStreamingSig = Signal()
+    closeSig = Signal()
     dataReadySig = Signal(np.ndarray)
     dataReadyFltSig = Signal(np.ndarray)
 
@@ -149,6 +153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._streamController is not None:
             self._streamController.stopStreaming()
+        self.closeSig.emit()
         event.accept()
 
     def addWidget(self, widget: QWidget) -> None:
@@ -240,6 +245,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _startStreaming(self) -> None:
         """Start streaming."""
+        logging.info("MainWindow: streaming started.")
+
         # Attempt to create streaming controller
         self._streamController = streamControllerFactory(
             self._streamControllerType, self._serialPort, self._nCh, self._sampFreq
@@ -291,6 +298,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.modelGroupBox.setEnabled(True)
         self.startStreamingButton.setEnabled(True)
         self.stopStreamingButton.setEnabled(False)
+
+        logging.info("MainWindow: streaming stopped.")
 
     # def _showSVM(self):
     #     if self._trainData is not None:
