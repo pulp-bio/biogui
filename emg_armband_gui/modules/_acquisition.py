@@ -38,7 +38,7 @@ def _loadValidateJSON(filePath: str) -> dict | None:
 
     Parameters
     ----------
-    file_path : str
+    filePath : str
         Path the the JSON file.
 
     Returns
@@ -115,96 +115,78 @@ class _FileWriterWorker(QObject):
         logging.info("File closed")
 
 
-class _GesturesWindow(QWidget):
+class _GesturesWidget(QWidget):
     """Widget showing the gestures to perform.
-
-    Parameters
-    ----------
-    gestures : dict of {str : str
-        Dictionary containing pairs of gesture labels and paths to images.
-    nReps : int
-        Number of repetitions for each gesture.
-    imageFolder : str
-        Path to the image folder containing the images.
 
     Attributes
     ----------
-    _gestureDict : dict of {str : str}
-        Dictionary containing pairs of gesture labels and paths to images.
-    _gesturesId : dict of {str : int}
-        Dictionary containing pairs of gesture labels and integer indexes.
-    _gesturesLabels : list of str
-        List of gesture labels accounting for the number of repetitions.
-    _label : QLabel
-        Label containing the image widget.
+    _imageFolder : str
+        Path to the folder containing the images for the gestures.
     _pixmap : QPixmap
         Image widget.
-    _repIdx : int
-        Repetition index.
-    _restFlag : bool
-        Flag for rest vs gesture.
+    _label : QLabel
+        Label containing the image widget.
+
+    Class attributes
+    ----------------
+    closeSig : Signal
+        Signal emitted when the widget is closed.
     """
 
-    triggerSig = Signal(int)
-    closeWinSig = Signal()
+    closeSig = Signal()
 
-    def __init__(
-        self,
-        gestures: list[str],
-        nReps: str,
-        imageFolder: str,
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
-        self._gestureDict = gestures
-        self._gesturesId = {k: i + 1 for i, k in enumerate(gestures.keys())}
-        self._gesturesLabels = []
-        for k in gestures.keys():
-            self._gesturesLabels.extend([k] * nReps)
-        self._image_folder = imageFolder
 
         self.setWindowTitle("Gesture Viewer")
         self.resize(480, 480)
 
-        self._label = QLabel(self)
+        self._imageFolder = ""
         self._pixmap = QPixmap(":/images/start.png")
         self._pixmap = self._pixmap.scaled(self.width(), self.height())
+        self._label = QLabel(self)
         self._label.setPixmap(self._pixmap)
 
-        self._repIdx = 0
-        self._restFlag = True
+    @property
+    def imageFolder(self) -> str:
+        return self._imageFolder
 
-    def renderImage(self) -> None:
-        """Render the image for the current gesture."""
-        if self._repIdx == len(self._gesturesLabels):
-            self.close()
-        elif self._restFlag:
-            image_path = os.path.join(
-                self._image_folder,
-                self._gestureDict[self._gesturesLabels[self._repIdx]],
-            )
-            self._pixmap = QPixmap(image_path)
-            self._pixmap = self._pixmap.scaled(self.width(), self.height())
-            self._label.setPixmap(self._pixmap)
+    @imageFolder.setter
+    def imageFolder(self, imageFolder: str) -> None:
+        self._imageFolder = imageFolder
 
-            self._restFlag = False
-            self.triggerSig.emit(self._gesturesId[self._gesturesLabels[self._repIdx]])
-            self._repIdx += 1
+    @Slot(str)
+    def renderImage(self, image: str) -> None:
+        """Render the image for the current gesture.
+
+        Parameters
+        ----------
+        image : str
+            Name of the image file.
+        """
+        if image == "start":
+            imagePath = ":/images/start.png"
+        elif image == "stop":
+            imagePath = ":/images/stop.png"
         else:
-            self._pixmap = QPixmap(":/images/stop.png")
-            self._pixmap = self._pixmap.scaled(self.width(), self.height())
-            self._label.setPixmap(self._pixmap)
+            imagePath = os.path.join(self._imageFolder, image)
 
-            self._restFlag = True
-            self.triggerSig.emit(0)
+        pixmap = QPixmap(imagePath).scaled(self.width(), self.height())
+        self._label.setPixmap(pixmap)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        self.closeWinSig.emit()
+        self.closeSig.emit()
         event.accept()
 
 
 class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
-    """Widget providing configuration options for the acquisition."""
+    """Widget providing configuration options for the acquisition.
+
+    Attributes
+    ----------
+    config : dict
+        Dictionary representing the configuration of the acquisition.
+    """
 
     def __init__(self) -> None:
         super(_AcquisitionConfigWidget, self).__init__()
@@ -235,24 +217,51 @@ class AcquisitionController(QObject):
     ----------
     confWidget : _AcquisitionConfigWidget
         Instance of _AcquisitionConfigWidget.
-    _gestWin : _GesturesWindow or None
-        Instance of _GesturesWindow.
+    _gestWidget : _GesturesWidget
+        Instance of _GesturesWidget.
     _fileWriterWorker : _FileWriterWorker or None
         Instance of _FileWriterWorker.
     _timer : QTimer
         Timer.
+    _gesturesId : dict of {str : int}
+        Dictionary containing pairs of gesture labels and integer indexes.
+    _gesturesLabels : list of str
+        List of gesture labels accounting for the number of repetitions.
+    _gestCounter : int
+        Counter for the gesture.
+    _restFlag : bool
+        Flag for rest vs gesture.
+
+    Class attributes
+    ----------------
+    _dataReadySig : Signal
+        Signal that forwards the dataReadySig signal from MainWindow.
+    _updateTriggerSig : Signal
+        Signal for updating the trigger.
+    _renderImageSig : Signal
+        Signal for updating the image to render.
     """
 
     _dataReadySig = Signal(np.ndarray)
+    _updateTriggerSig = Signal(int)
+    _renderImageSig = Signal(str)
 
     def __init__(self) -> None:
         super(AcquisitionController, self).__init__()
 
         self.confWidget = _AcquisitionConfigWidget()
-        self._gestWin: _GesturesWindow | None = None
+
+        self._gestWidget: _GesturesWidget = _GesturesWidget()
+        self._renderImageSig.connect(self._gestWidget.renderImage)
+        self._gestWidget.closeSig.connect(self._actualStopAcquisition)
+
         self._fileWriterWorker: _FileWriterWorker | None = None
 
         self._timer = QTimer(self)
+        self._timer.timeout.connect(self._updateTriggerAndImage)
+
+        self._gestCounter = 0
+        self._restFlag = False
 
     def subscribe(self, mainWin: MainWindow) -> None:
         """Subscribe to instance of MainWindow.
@@ -263,20 +272,50 @@ class AcquisitionController(QObject):
             Instance of MainWindow.
         """
         mainWin.addWidget(self.confWidget)
-        mainWin.startStreamingSig.connect(self.startAcquisition)
-        mainWin.stopStreamingSig.connect(self.stopAcquisition)
+        mainWin.startStreamingSig.connect(self._startAcquisition)
+        mainWin.stopStreamingSig.connect(self._stopAcquisition)
+        mainWin.closeSig.connect(self._stopAcquisition)
         mainWin.dataReadySig.connect(lambda d: self._dataReadySig.emit(d))
 
-    def startAcquisition(self) -> None:
+    def _updateTriggerAndImage(self) -> None:
+        """"""
+        if self._gestCounter == len(self._gesturesLabels):
+            self._stopAcquisition()
+        elif self._restFlag:  # rest
+            self._updateTriggerSig.emit(0)
+            self._renderImageSig.emit("stop")
+
+            self._restFlag = False
+        else:  # gesture
+            gestureLabel = self._gesturesLabels[self._gestCounter]
+            self._updateTriggerSig.emit(self._gesturesId[gestureLabel])
+            self._renderImageSig.emit(self.confWidget.config["gestures"][gestureLabel])
+
+            self._gestCounter += 1
+
+            self._restFlag = True
+
+    def _startAcquisition(self) -> None:
         """Start the acquisition."""
         if (
             self.confWidget.acquisitionGroupBox.isChecked()
             and self.confWidget.config is not None
         ):
-            logging.info("Acquisition started.")
+            logging.info("AcquisitionController: acquisition started.")
+            self.confWidget.acquisitionGroupBox.setEnabled(False)
 
-            config = self.confWidget.config.copy()
-            durationMs = config.pop("durationMs")
+            self._gestCounter = 0
+            self._restFlag = False
+
+            # Gestures
+            self._gesturesId, self._gesturesLabels = {}, []
+            for i, k in enumerate(self.confWidget.config["gestures"].keys()):
+                self._gesturesId[k] = i + 1
+                self._gesturesLabels.extend([k] * self.confWidget.config["nReps"])
+
+            self._gestWidget.imageFolder = self.confWidget.config["imageFolder"]
+            self._gestWidget.renderImage("start")
+            self._gestWidget.show()
 
             # Output file
             expDir = os.path.join(
@@ -298,26 +337,23 @@ class AcquisitionController(QObject):
             self._fileWriterThread = QThread()
             self._fileWriterWorker.moveToThread(self._fileWriterThread)
             self._dataReadySig.connect(self._fileWriterWorker.write)
-
-            # Gesture window
-            self._gestWin = _GesturesWindow(**config)
-            self._gestWin.show()
-            self._gestWin.triggerSig.connect(self._fileWriterWorker.updateTrigger)
-            self._gestWin.closeWinSig.connect(self.stopAcquisition)
-            self._timer.timeout.connect(self._gestWin.renderImage)
-
+            self._updateTriggerSig.connect(self._fileWriterWorker.updateTrigger)
             self._fileWriterThread.start()
-            self._timer.start(durationMs)
 
-    def stopAcquisition(self) -> None:
+            self._timer.start(self.confWidget.config["durationMs"])
+
+    def _stopAcquisition(self) -> None:
+        """Stop the acquisition by exploiting GestureWidget close event."""
+        self._gestWidget.close()  # the close event calls the actual stopAcquisition
+
+    def _actualStopAcquisition(self) -> None:
         """Stop the acquisition."""
-        if self._gestWin is not None:
-            self._timer.stop()
-            self._gestWin.close()
         if self._fileWriterWorker is not None:
+            self._timer.stop()
             self._fileWriterWorker.closeFile()
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
-            self._gestWin = None
             self._fileWriterWorker = None
-        logging.info("Acquisition stopped.")
+
+            logging.info("AcquisitionController: acquisition stopped.")
+            self.confWidget.acquisitionGroupBox.setEnabled(True)
