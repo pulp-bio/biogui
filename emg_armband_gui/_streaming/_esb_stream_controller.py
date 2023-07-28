@@ -71,7 +71,8 @@ class _SerialWorker(QObject):
 
     def startReading(self) -> None:
         """Read data indefinitely from the serial port, and send it."""
-        logging.info("Serial communication started.")
+        logging.info("Worker: serial communication started.")
+
         self._ser.write(b"=")
         while not self._stopReading:
             data = self._ser.read(self._packetSize)
@@ -79,7 +80,7 @@ class _SerialWorker(QObject):
             # Check number of bytes read
             if len(data) != self._packetSize:
                 self.serialErrorSig.emit()
-                logging.error("Serial communication failed.")
+                logging.error("Worker: serial communication failed.")
                 break
 
             self.dataReadySig.emit(data)
@@ -89,7 +90,8 @@ class _SerialWorker(QObject):
         self._ser.reset_input_buffer()
         time.sleep(0.2)
         self._ser.close()
-        logging.info("Serial communication stopped.")
+
+        logging.info("Worker: serial communication stopped.")
 
     def stopReading(self) -> None:
         """Stop reading data from the serial port."""
@@ -261,6 +263,8 @@ class ESBStreamingController(StreamingController):
         self._preprocessThread.start()
         self._serialThread.start()
 
+        logging.info("StreamingController: threads started.")
+
     def stopStreaming(self) -> None:
         """Stop streaming."""
         self._serialWorker.stopReading()
@@ -268,3 +272,5 @@ class ESBStreamingController(StreamingController):
         self._serialThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
+
+        logging.info("StreamingController: threads stopped.")

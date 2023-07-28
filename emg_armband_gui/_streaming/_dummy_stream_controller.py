@@ -68,7 +68,7 @@ class _DataWorker(QObject):
 
     def startGenerating(self) -> None:
         """Generate random data indefinitely, and send it."""
-        logging.info("Generator started.")
+        logging.info("Worker: data generation started.")
         while not self._stopGenerating:
             data = self._prng.normal(
                 loc=self._mean, scale=100, size=(self._nSamp, self._nCh)
@@ -76,7 +76,7 @@ class _DataWorker(QObject):
             self.dataReadySig.emit(data)
             self._mean += self._prng.normal(scale=20)
             time.sleep(1e-3)
-        logging.info("Generator stopped.")
+        logging.info("Worker: data generation stopped.")
 
     def stopGenerating(self) -> None:
         """Stop the generation of new data."""
@@ -211,6 +211,8 @@ class DummyStreamingController(StreamingController):
         self._preprocessThread.start()
         self._dataThread.start()
 
+        logging.info("StreamingController: threads started.")
+
     def stopStreaming(self) -> None:
         """Stop streaming."""
         self._dataWorker.stopGenerating()
@@ -218,3 +220,5 @@ class DummyStreamingController(StreamingController):
         self._dataThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
+
+        logging.info("StreamingController: threads stopped.")
