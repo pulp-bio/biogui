@@ -65,7 +65,7 @@ class _SerialWorker(QObject):
         super(_SerialWorker, self).__init__()
 
         # Open serial port
-        self._ser = serial.Serial(serialPort, baudeRate)  # , timeout=5)
+        self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
         self._packetSize = packetSize
         self._stopReading = False
 
