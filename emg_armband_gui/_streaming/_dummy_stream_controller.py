@@ -19,10 +19,9 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-import time
 
 import numpy as np
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from scipy import signal
 
 from ._abc_stream_controller import StreamingController
@@ -46,8 +45,8 @@ class _DataWorker(QObject):
         Number of samples.
     _mean : float
         Current mean of the generated data.
-    _stopGenerating : bool
-        Whether to stop generating data.
+    _timer : QTimer
+        Timer.
 
     Class Attributes
     ----------
@@ -63,24 +62,28 @@ class _DataWorker(QObject):
         self._nCh = nCh
         self._nSamp = nSamp
         self._mean = 0.0
-        self._stopGenerating = False
         self._prng = np.random.default_rng(seed=42)
 
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._generate)
+
+    def _generate(self) -> None:
+        """Generate random data, and send it."""
+        data = self._prng.normal(
+            loc=self._mean, scale=100, size=(self._nSamp, self._nCh)
+        ).astype("float32")
+        self.dataReadySig.emit(data)
+        self._mean += self._prng.normal(scale=20)
+
     def startGenerating(self) -> None:
-        """Generate random data indefinitely, and send it."""
+        """Start the generation of new data."""
+        self._timer.start(1)
         logging.info("Worker: data generation started.")
-        while not self._stopGenerating:
-            data = self._prng.normal(
-                loc=self._mean, scale=100, size=(self._nSamp, self._nCh)
-            ).astype("float32")
-            self.dataReadySig.emit(data)
-            self._mean += self._prng.normal(scale=20)
-            time.sleep(1e-3)
-        logging.info("Worker: data generation stopped.")
 
     def stopGenerating(self) -> None:
         """Stop the generation of new data."""
-        self._stopGenerating = True
+        self._timer.stop()
+        logging.info("Worker: data generation stopped.")
 
 
 class _PreprocessWorker(QObject):
@@ -166,8 +169,6 @@ class DummyStreamingController(StreamingController):
         Worker for generating data.
     _preprocessWorker : _PreprocessWorker
         Worker for preprocessing the data read by the serial worker.
-    _dataThread : QThread
-        The QThread associated to the data worker.
     _preprocessThread : QThread
         The QThread associated to the preprocess worker.
 
@@ -191,13 +192,10 @@ class DummyStreamingController(StreamingController):
         # Create workers and threads
         self._dataWorker = _DataWorker(nCh, nSamp=5)
         self._preprocessWorker = _PreprocessWorker(nCh, sampFreq, nSamp=5)
-        self._dataThread = QThread()
-        self._dataWorker.moveToThread(self._dataThread)
         self._preprocessThread = QThread()
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
         # Create internal connections
-        self._dataThread.started.connect(self._dataWorker.startGenerating)
         self._dataWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
 
         # Forward relevant signals
@@ -209,15 +207,13 @@ class DummyStreamingController(StreamingController):
     def startStreaming(self) -> None:
         """Start streaming."""
         self._preprocessThread.start()
-        self._dataThread.start()
+        self._dataWorker.startGenerating()
 
         logging.info("StreamingController: threads started.")
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
         self._dataWorker.stopGenerating()
-        self._dataThread.quit()
-        self._dataThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
 
