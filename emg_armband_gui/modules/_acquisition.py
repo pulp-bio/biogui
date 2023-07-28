@@ -278,7 +278,7 @@ class AcquisitionController(QObject):
         mainWin.dataReadySig.connect(lambda d: self._dataReadySig.emit(d))
 
     def _updateTriggerAndImage(self) -> None:
-        """"""
+        """Update the trigger for _FileWriterWorker and the image for the _GestureWidget"""
         if self._gestCounter == len(self._gesturesLabels):
             self._stopAcquisition()
         elif self._restFlag:  # rest
