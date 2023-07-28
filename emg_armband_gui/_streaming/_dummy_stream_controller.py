@@ -169,6 +169,8 @@ class DummyStreamingController(StreamingController):
         Worker for generating data.
     _preprocessWorker : _PreprocessWorker
         Worker for preprocessing the data read by the serial worker.
+    _dataThread : QThread
+        The QThread associated to the data worker.
     _preprocessThread : QThread
         The QThread associated to the preprocess worker.
 
@@ -192,10 +194,14 @@ class DummyStreamingController(StreamingController):
         # Create workers and threads
         self._dataWorker = _DataWorker(nCh, nSamp=5)
         self._preprocessWorker = _PreprocessWorker(nCh, sampFreq, nSamp=5)
+        self._dataThread = QThread()
+        self._dataWorker.moveToThread(self._dataThread)
         self._preprocessThread = QThread()
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
         # Create internal connections
+        self._dataThread.started.connect(self._dataWorker.startGenerating)
+        self._dataThread.finished.connect(self._dataWorker.stopGenerating)
         self._dataWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
 
         # Forward relevant signals
@@ -207,13 +213,14 @@ class DummyStreamingController(StreamingController):
     def startStreaming(self) -> None:
         """Start streaming."""
         self._preprocessThread.start()
-        self._dataWorker.startGenerating()
+        self._dataThread.start()
 
         logging.info("StreamingController: threads started.")
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
-        self._dataWorker.stopGenerating()
+        self._dataThread.quit()
+        self._dataThread.wait()
         self._preprocessThread.quit()
         self._preprocessThread.wait()
 
