@@ -44,8 +44,8 @@ def streamControllerFactory(
     StreamingController
         Instance of StreamingController.
     """
-    match controllerType:
-        case "ESB":
-            return ESBStreamingController(serialPort, nCh, sampFreq)
-        case "Dummy":
-            return DummyStreamingController(nCh, sampFreq)
+    if controllerType == "ESB":
+        return ESBStreamingController(serialPort, nCh, sampFreq)
+
+    if controllerType == "Dummy":
+        return DummyStreamingController(nCh, sampFreq)

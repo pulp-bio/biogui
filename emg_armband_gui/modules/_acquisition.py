@@ -70,28 +70,36 @@ def _loadValidateJSON(filePath: str) -> dict | None:
 class _FileWriterWorker(QObject):
     """Worker that writes into a file the data it receives via a Qt signal.
 
-    Parameters
-    ----------
-    filePath : str
-        Path to the file.
-
     Attributes
     ----------
-    _f : BinaryIO
+    _filePath : str
+        Path to the output file.
+    _f : BinaryIO or None
         File object.
     _trigger : int
         Trigger value to save together with the data.
     """
 
-    def __init__(self, filePath: str) -> None:
+    def __init__(self) -> None:
         super(_FileWriterWorker, self).__init__()
-        self._f = open(filePath, "wb")
+        self._filePath = ""
+        self._f = None
         self._trigger = 0
 
-    @Slot(int)
-    def updateTrigger(self, trigger: int) -> None:
-        """"""
-        logging.info(f"Trigger updated: {self._trigger} -> {trigger}")
+    @property
+    def filePath(self) -> str:
+        return self._filePath
+
+    @filePath.setter
+    def filePath(self, filePath: str) -> None:
+        self._filePath = filePath
+
+    @property
+    def trigger(self) -> int:
+        return self._trigger
+
+    @trigger.setter
+    def trigger(self, trigger: int) -> None:
         self._trigger = trigger
 
     @Slot(np.ndarray)
@@ -109,10 +117,15 @@ class _FileWriterWorker(QObject):
         ).astype("float32")
         self._f.write(data.tobytes())
 
+    def openFile(self) -> None:
+        """Open the file."""
+        self._f = open(self._filePath, "wb")
+        logging.info("File opened.")
+
     def closeFile(self) -> None:
         """Close the file."""
         self._f.close()
-        logging.info("File closed")
+        logging.info("File closed.")
 
 
 class _GesturesWidget(QWidget):
@@ -155,7 +168,6 @@ class _GesturesWidget(QWidget):
     def imageFolder(self, imageFolder: str) -> None:
         self._imageFolder = imageFolder
 
-    @Slot(str)
     def renderImage(self, image: str) -> None:
         """Render the image for the current gesture.
 
@@ -219,8 +231,10 @@ class AcquisitionController(QObject):
         Instance of _AcquisitionConfigWidget.
     _gestWidget : _GesturesWidget
         Instance of _GesturesWidget.
-    _fileWriterWorker : _FileWriterWorker or None
+    _fileWriterWorker : _FileWriterWorker
         Instance of _FileWriterWorker.
+    _fileWriterThread : QThread
+        The QThread associated to the file writer worker.
     _timer : QTimer
         Timer.
     _gesturesId : dict of {str : int}
@@ -236,26 +250,23 @@ class AcquisitionController(QObject):
     ----------------
     _dataReadySig : Signal
         Signal that forwards the dataReadySig signal from MainWindow.
-    _updateTriggerSig : Signal
-        Signal for updating the trigger.
-    _renderImageSig : Signal
-        Signal for updating the image to render.
     """
 
     _dataReadySig = Signal(np.ndarray)
-    _updateTriggerSig = Signal(int)
-    _renderImageSig = Signal(str)
 
     def __init__(self) -> None:
         super(AcquisitionController, self).__init__()
 
         self.confWidget = _AcquisitionConfigWidget()
 
-        self._gestWidget: _GesturesWidget = _GesturesWidget()
-        self._renderImageSig.connect(self._gestWidget.renderImage)
+        self._gestWidget = _GesturesWidget()
         self._gestWidget.closeSig.connect(self._actualStopAcquisition)
 
-        self._fileWriterWorker: _FileWriterWorker | None = None
+        self._fileWriterWorker = _FileWriterWorker()
+        self._fileWriterThread = QThread()
+        self._fileWriterWorker.moveToThread(self._fileWriterThread)
+        self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
+        self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._updateTriggerAndImage)
@@ -281,19 +292,26 @@ class AcquisitionController(QObject):
         """Update the trigger for _FileWriterWorker and the image for the _GestureWidget"""
         if self._gestCounter == len(self._gesturesLabels):
             self._stopAcquisition()
-        elif self._restFlag:  # rest
-            self._updateTriggerSig.emit(0)
-            self._renderImageSig.emit("stop")
+            return
+
+        if self._restFlag:  # rest
+            old_trigger = self._fileWriterWorker.trigger
+            new_trigger = 0
+            image = "stop"
 
             self._restFlag = False
         else:  # gesture
             gestureLabel = self._gesturesLabels[self._gestCounter]
-            self._updateTriggerSig.emit(self._gesturesId[gestureLabel])
-            self._renderImageSig.emit(self.confWidget.config["gestures"][gestureLabel])
+            old_trigger = self._fileWriterWorker.trigger
+            new_trigger = self._gesturesId[gestureLabel]
+            image = self.confWidget.config["gestures"][gestureLabel]
 
             self._gestCounter += 1
-
             self._restFlag = True
+
+        self._fileWriterWorker.trigger = new_trigger
+        self._gestWidget.renderImage(image)
+        logging.info(f"Trigger updated: {old_trigger} -> {new_trigger}.")
 
     def _startAcquisition(self) -> None:
         """Start the acquisition."""
@@ -332,12 +350,10 @@ class AcquisitionController(QObject):
             outFileName = f"{outFileName}.bin"
             outFilePath = os.path.join(expDir, outFileName)
 
-            # File writer worker and thread
-            self._fileWriterWorker = _FileWriterWorker(outFilePath)
-            self._fileWriterThread = QThread()
-            self._fileWriterWorker.moveToThread(self._fileWriterThread)
+            # File writing
+            self._fileWriterWorker.filePath = outFilePath
+            self._fileWriterWorker.trigger = 0
             self._dataReadySig.connect(self._fileWriterWorker.write)
-            self._updateTriggerSig.connect(self._fileWriterWorker.updateTrigger)
             self._fileWriterThread.start()
 
             self._timer.start(self.confWidget.config["durationMs"])
@@ -348,12 +364,12 @@ class AcquisitionController(QObject):
 
     def _actualStopAcquisition(self) -> None:
         """Stop the acquisition."""
-        if self._fileWriterWorker is not None:
+        if self._fileWriterThread.isRunning():
             self._timer.stop()
-            self._fileWriterWorker.closeFile()
+            self._dataReadySig.disconnect(self._fileWriterWorker.write)
+            # self._fileWriterWorker.closeFile()
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
-            self._fileWriterWorker = None
 
             logging.info("AcquisitionController: acquisition stopped.")
             self.confWidget.acquisitionGroupBox.setEnabled(True)
