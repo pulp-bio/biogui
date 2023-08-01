@@ -22,8 +22,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from emg_armband_gui.main_window import MainWindow
-from emg_armband_gui.modules import AcquisitionController
+from emg_armband_gui import MainWindow, modules
 
 
 def main():
@@ -75,7 +74,7 @@ def main():
 
     # Add widgets
     if args["acqConf"]:
-        acqController = AcquisitionController()
+        acqController = modules.AcquisitionController()
         acqController.subscribe(mainWin)
 
     # Run event loop
