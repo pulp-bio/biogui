@@ -367,7 +367,6 @@ class AcquisitionController(QObject):
         if self._fileWriterThread.isRunning():
             self._timer.stop()
             self._dataReadySig.disconnect(self._fileWriterWorker.write)
-            # self._fileWriterWorker.closeFile()
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
 
