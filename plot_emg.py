@@ -31,7 +31,7 @@ def main():
 
     # Plot
     _, axes = plt.subplots(
-        nrows=nCh + 1, sharex="all", figsize=(16, 20), layout="constrained"
+        nrows=nChAndTrigger, sharex="all", figsize=(16, 20), layout="constrained"
     )
     for i in range(nCh):
         axes[i].plot(t, sig[i])
