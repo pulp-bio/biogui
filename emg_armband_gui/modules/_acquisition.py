@@ -1,4 +1,4 @@
-"""This module contains the acquisition module.
+"""This module contains the acquisition controller and widgets.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -22,6 +22,7 @@ import datetime
 import json
 import logging
 import os
+import struct
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
@@ -78,6 +79,8 @@ class _FileWriterWorker(QObject):
         File object.
     _trigger : int
         Trigger value to save together with the data.
+    _firstWrite : bool
+        Whether it's the first time the worker receives data.
     """
 
     def __init__(self) -> None:
@@ -85,6 +88,7 @@ class _FileWriterWorker(QObject):
         self._filePath = ""
         self._f = None
         self._trigger = 0
+        self._firstWrite = True
 
     @property
     def filePath(self) -> str:
@@ -112,6 +116,9 @@ class _FileWriterWorker(QObject):
         data : ndarray
             Data to write.
         """
+        if self._firstWrite:  # write number of channels
+            self._f.write(struct.pack("<I", data.shape[1] + 1))
+            self._firstWrite = False
         data = np.concatenate(
             (data, np.repeat(self._trigger, data.shape[0]).reshape(-1, 1)), axis=1
         ).astype("float32")
@@ -120,12 +127,13 @@ class _FileWriterWorker(QObject):
     def openFile(self) -> None:
         """Open the file."""
         self._f = open(self._filePath, "wb")
-        logging.info("File opened.")
+        self._firstWrite = True
+        logging.info("FileWriterWorker: file opened.")
 
     def closeFile(self) -> None:
         """Close the file."""
         self._f.close()
-        logging.info("File closed.")
+        logging.info("FileWriterWorker: file closed.")
 
 
 class _GesturesWidget(QWidget):
