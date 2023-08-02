@@ -1,5 +1,6 @@
 #!/bin/python
 
+import struct
 import sys
 
 import numpy as np
@@ -16,12 +17,13 @@ def main():
 
     # Read data
     with open(filePath, "rb") as f:
-        b_sig = bytes(f.read())
-    sig = np.frombuffer(b_sig, dtype="float32").reshape(-1, 17)
+        nChAndTrigger = struct.unpack("<I", f.read(4))[0]
+        bSig = bytes(f.read())
+    sig = np.frombuffer(bSig, dtype="float32").reshape(-1, nChAndTrigger)
     trigger = sig[:, -1]
     sig = sig[:, :-1].T
-    n_ch, n_samp = sig.shape
-    t = np.arange(n_samp) / fs
+    nCh, nSamp = sig.shape
+    t = np.arange(nSamp) / fs
 
     # High-pass filter
     sos = signal.butter(4, 20, "high", output="sos", fs=fs)
@@ -29,9 +31,9 @@ def main():
 
     # Plot
     _, axes = plt.subplots(
-        nrows=n_ch + 1, sharex="all", figsize=(16, 20), layout="constrained"
+        nrows=nCh + 1, sharex="all", figsize=(16, 20), layout="constrained"
     )
-    for i in range(n_ch):
+    for i in range(nCh):
         axes[i].plot(t, sig[i])
     axes[-1].set_title("Trigger")
     axes[-1].plot(t, trigger)
