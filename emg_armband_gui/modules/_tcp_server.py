@@ -148,7 +148,7 @@ class TCPServerController(QObject):
     def __init__(
         self, address: str, port1: int, port2: int, gestureMap: dict[int, list[int]]
     ) -> None:
-        super(_TCPServerWorker, self).__init__()
+        super(TCPServerController, self).__init__()
 
         # Create worker and thread
         self._tcpServerWorker = _TCPServerWorker(address, port1, port2, gestureMap)
