@@ -214,9 +214,9 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
         self.setupUi(self)
 
         self.config = None
-        self.browseJSONButton.clicked.connect(self._browseJson)
+        self.browseJSONButton.clicked.connect(self._browseJSON)
 
-    def _browseJson(self) -> None:
+    def _browseJSON(self) -> None:
         """Browse to select the JSON file with the experiment configuration."""
         filePath, _ = QFileDialog.getOpenFileName(
             self,
