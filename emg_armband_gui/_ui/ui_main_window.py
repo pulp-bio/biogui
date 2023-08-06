@@ -51,6 +51,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenuBar,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpacerItem,
     QStatusBar,
@@ -87,17 +88,23 @@ class Ui_MainWindow(object):
 
         self.confLayout.addLayout(self.horizontalLayout_5)
 
-        self.verticalSpacer = QSpacerItem(
-            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
-        )
-
-        self.confLayout.addItem(self.verticalSpacer)
-
         self.streamConfGroupBox = QGroupBox(self.centralwidget)
         self.streamConfGroupBox.setObjectName("streamConfGroupBox")
         self.streamConfGroupBox.setAlignment(Qt.AlignCenter)
         self.gridLayout = QGridLayout(self.streamConfGroupBox)
         self.gridLayout.setObjectName("gridLayout")
+        self.channelsComboBox = QComboBox(self.streamConfGroupBox)
+        self.channelsComboBox.addItem("")
+        self.channelsComboBox.addItem("")
+        self.channelsComboBox.setObjectName("channelsComboBox")
+
+        self.gridLayout.addWidget(self.channelsComboBox, 1, 1, 1, 1)
+
+        self.label_2 = QLabel(self.streamConfGroupBox)
+        self.label_2.setObjectName("label_2")
+
+        self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
+
         self.serialPortsComboBox = QComboBox(self.streamConfGroupBox)
         self.serialPortsComboBox.setObjectName("serialPortsComboBox")
 
@@ -114,23 +121,27 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
-        self.label_2 = QLabel(self.streamConfGroupBox)
-        self.label_2.setObjectName("label_2")
-
-        self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
-
-        self.channelsComboBox = QComboBox(self.streamConfGroupBox)
-        self.channelsComboBox.addItem("")
-        self.channelsComboBox.addItem("")
-        self.channelsComboBox.setObjectName("channelsComboBox")
-
-        self.gridLayout.addWidget(self.channelsComboBox, 1, 1, 1, 1)
-
         self.gridLayout.setColumnStretch(0, 3)
-        self.gridLayout.setColumnStretch(1, 3)
-        self.gridLayout.setColumnStretch(2, 1)
 
         self.confLayout.addWidget(self.streamConfGroupBox)
+
+        self.scrollArea = QScrollArea(self.centralwidget)
+        self.scrollArea.setObjectName("scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.moduleContainer = QWidget()
+        self.moduleContainer.setObjectName("moduleContainer")
+        self.moduleContainer.setGeometry(QRect(0, 0, 470, 847))
+        self.verticalLayout_2 = QVBoxLayout(self.moduleContainer)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.verticalSpacer = QSpacerItem(
+            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
+
+        self.verticalLayout_2.addItem(self.verticalSpacer)
+
+        self.scrollArea.setWidget(self.moduleContainer)
+
+        self.confLayout.addWidget(self.scrollArea)
 
         self.horizontalLayout.addLayout(self.confLayout)
 
@@ -139,8 +150,8 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.graphWidget)
 
-        self.horizontalLayout.setStretch(0, 1)
-        self.horizontalLayout.setStretch(1, 4)
+        self.horizontalLayout.setStretch(0, 2)
+        self.horizontalLayout.setStretch(1, 6)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName("menubar")
@@ -169,6 +180,16 @@ class Ui_MainWindow(object):
         self.streamConfGroupBox.setTitle(
             QCoreApplication.translate("MainWindow", "Configuration", None)
         )
+        self.channelsComboBox.setItemText(
+            0, QCoreApplication.translate("MainWindow", "16", None)
+        )
+        self.channelsComboBox.setItemText(
+            1, QCoreApplication.translate("MainWindow", "32", None)
+        )
+
+        self.label_2.setText(
+            QCoreApplication.translate("MainWindow", "Number of channels:", None)
+        )
         # if QT_CONFIG(tooltip)
         self.serialPortsComboBox.setToolTip(
             QCoreApplication.translate(
@@ -188,15 +209,6 @@ class Ui_MainWindow(object):
         )
         self.label.setText(
             QCoreApplication.translate("MainWindow", "Serial port:", None)
-        )
-        self.label_2.setText(
-            QCoreApplication.translate("MainWindow", "Number of channels:", None)
-        )
-        self.channelsComboBox.setItemText(
-            0, QCoreApplication.translate("MainWindow", "16", None)
-        )
-        self.channelsComboBox.setItemText(
-            1, QCoreApplication.translate("MainWindow", "32", None)
         )
 
     # retranslateUi

@@ -37,10 +37,31 @@ def waveformLength(data: np.ndarray, kernelSize: int) -> np.ndarray:
     ndarray
         Waveform length of the signal.
     """
-    abs_diff = np.abs(np.diff(data))
+    absDiff = np.abs(np.diff(data, prepend=0))
     kernel = np.ones(kernelSize)
-    wl = signal.convolve(abs_diff, kernel, mode="valid")
+    wl = signal.convolve(absDiff, kernel, mode="valid")
     return wl
+
+
+def rootMeanSquared(data: np.ndarray, kernelSize: int) -> np.ndarray:
+    """Compute the RMS of a given signal.
+
+    Parameters
+    ----------
+    data : ndarray
+        Data with shape (nSamp,).
+    kernelSize : int
+        Size of the kernel.
+
+    Returns
+    -------
+    ndarray
+        RMS of the signal.
+    """
+    sqData = data**2
+    kernel = np.ones(kernelSize) / kernelSize
+    rms = np.sqrt(signal.convolve(sqData, kernel, mode="valid"))
+    return rms
 
 
 def majorityVoting(labels: np.ndarray, windowSize: int) -> np.ndarray:
