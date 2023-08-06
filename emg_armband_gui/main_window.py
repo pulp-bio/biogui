@@ -32,13 +32,6 @@ from emg_armband_gui._streaming import StreamingController, streamControllerFact
 
 from ._ui.ui_main_window import Ui_MainWindow
 
-# from ._file_controller import FileController
-# from ._gesture_window import GeturesWindow
-# from ._svm_controller import SVMController
-# from ._svm_train_window import SVMWindow
-# from ._tcp_controller import TcpServerController
-# from ._utils import loadValidateTrainData, serialPorts
-
 
 def serialPorts():
     """Lists serial port names
@@ -164,7 +157,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         widget : QWidget
             Widget to add.
         """
-        self.confLayout.addWidget(widget)
+        self.moduleContainer.layout().addWidget(widget)
 
     def _initializePlot(self) -> None:
         """Render the initial plot."""
@@ -263,28 +256,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopStreamingButton.setEnabled(True)
         self.streamConfGroupBox.setEnabled(False)
 
-        # Configure acquisition
-        # if self.acquisitionGroupBox.isChecked() and self._config is not None:
-        #     # Output file
-        #     expDir = os.path.join(os.path.dirname(self.JSONLabel.text()), "data")
-        #     os.makedirs(expDir, exist_ok=True)
-        #     outFileName = self.experimentTextField.text()
-        #     if outFileName == "":
-        #         outFileName = (
-        #             f"acq_{datetime.datetime.now()}".replace(" ", "_")
-        #             .replace(":", "-")
-        #             .replace(".", "-")
-        #         )
-        #     outFileName = f"{outFileName}.bin"
-        #     outFilePath = os.path.join(expDir, outFileName)
-
-        #     # Create gesture window and file controller
-        #     self._gestWin = GeturesWindow(**self._config)
-        #     self._gestWin.show()
-        #     self._gestWin.trigger_sig.connect(self._streamController.updateTrigger)
-        #     self._fileController = FileController(outFilePath, self._streamController)
-        #     self._gestWin.stop_sig.connect(self._fileController.stopFileWriter)
-
         self.startStreamingSig.emit()
         self._streamController.startStreaming()
 
@@ -295,7 +266,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Handle UI elements
         self.streamConfGroupBox.setEnabled(True)
-        # self.modelGroupBox.setEnabled(True)
         self.startStreamingButton.setEnabled(True)
         self.stopStreamingButton.setEnabled(False)
 
