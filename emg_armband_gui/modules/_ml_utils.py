@@ -35,7 +35,7 @@ def waveformLength(data: np.ndarray, kernelSize: int) -> np.ndarray:
     Returns
     -------
     ndarray
-        Waveform length of the signal.
+        Waveform length of the signal with shape (nSamp - kernelSize + 1,).
     """
     absDiff = np.abs(np.diff(data, prepend=0))
     kernel = np.ones(kernelSize)
@@ -56,7 +56,7 @@ def rootMeanSquared(data: np.ndarray, kernelSize: int) -> np.ndarray:
     Returns
     -------
     ndarray
-        RMS of the signal.
+        RMS of the signal with shape (nSamp - kernelSize + 1,).
     """
     sqData = data**2
     kernel = np.ones(kernelSize) / kernelSize
