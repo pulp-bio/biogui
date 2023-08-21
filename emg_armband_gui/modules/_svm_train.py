@@ -21,7 +21,6 @@ from __future__ import annotations
 import datetime
 import logging
 import os
-import pickle
 import struct
 
 import numpy as np
@@ -32,6 +31,7 @@ from scipy import signal
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+from skops.io import dump
 
 from emg_armband_gui._ui import resources_rc
 from emg_armband_gui._ui.ui_svm_train_config import Ui_SVMTrainConfig
@@ -315,8 +315,6 @@ class SVMTrainController(QObject):
                 .replace(":", "-")
                 .replace(".", "-")
             )
-        outFileName = f"{outFileName}.pkl"
+        outFileName = f"{outFileName}.skops"
         outFilePath = os.path.join(expDir, outFileName)
-
-        with open(outFilePath, "wb") as f:
-            pickle.dump(self._svmTrainWorker.model, f)
+        dump(self._svmTrainWorker.model, outFilePath)
