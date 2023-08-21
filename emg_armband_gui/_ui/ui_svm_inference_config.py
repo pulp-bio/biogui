@@ -66,22 +66,19 @@ class Ui_SVMInferenceConfig(object):
         self.svmGroupBox.setAlignment(Qt.AlignCenter)
         self.svmGroupBox.setCheckable(False)
         self.svmGroupBox.setChecked(False)
-        self.gridLayout = QGridLayout(self.svmGroupBox)
+        self.verticalLayout_2 = QVBoxLayout(self.svmGroupBox)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName("gridLayout")
-        self.label6 = QLabel(self.svmGroupBox)
-        self.label6.setObjectName("label6")
-
-        self.gridLayout.addWidget(self.label6, 2, 0, 1, 1)
-
-        self.label2 = QLabel(self.svmGroupBox)
-        self.label2.setObjectName("label2")
-
-        self.gridLayout.addWidget(self.label2, 1, 0, 1, 1)
-
         self.winTextField = QLineEdit(self.svmGroupBox)
         self.winTextField.setObjectName("winTextField")
 
         self.gridLayout.addWidget(self.winTextField, 1, 1, 1, 1)
+
+        self.label1 = QLabel(self.svmGroupBox)
+        self.label1.setObjectName("label1")
+
+        self.gridLayout.addWidget(self.label1, 0, 0, 1, 1)
 
         self.featureComboBox = QComboBox(self.svmGroupBox)
         self.featureComboBox.addItem("")
@@ -90,18 +87,27 @@ class Ui_SVMInferenceConfig(object):
 
         self.gridLayout.addWidget(self.featureComboBox, 0, 1, 1, 1)
 
-        self.label1 = QLabel(self.svmGroupBox)
-        self.label1.setObjectName("label1")
+        self.label2 = QLabel(self.svmGroupBox)
+        self.label2.setObjectName("label2")
 
-        self.gridLayout.addWidget(self.label1, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.label2, 1, 0, 1, 1)
 
         self.browseModelButton = QPushButton(self.svmGroupBox)
         self.browseModelButton.setObjectName("browseModelButton")
 
         self.gridLayout.addWidget(self.browseModelButton, 2, 1, 1, 1)
 
-        self.gridLayout.setColumnStretch(0, 2)
-        self.gridLayout.setColumnStretch(1, 1)
+        self.label6 = QLabel(self.svmGroupBox)
+        self.label6.setObjectName("label6")
+
+        self.gridLayout.addWidget(self.label6, 2, 0, 1, 1)
+
+        self.verticalLayout_2.addLayout(self.gridLayout)
+
+        self.svmLabel = QLabel(self.svmGroupBox)
+        self.svmLabel.setObjectName("svmLabel")
+
+        self.verticalLayout_2.addWidget(self.svmLabel)
 
         self.verticalLayout.addWidget(self.svmGroupBox)
 
@@ -120,12 +126,6 @@ class Ui_SVMInferenceConfig(object):
         self.svmGroupBox.setTitle(
             QCoreApplication.translate("SVMInferenceConfig", "SVM Inference", None)
         )
-        self.label6.setText(
-            QCoreApplication.translate("SVMInferenceConfig", "SVM pickle:", None)
-        )
-        self.label2.setText(
-            QCoreApplication.translate("SVMInferenceConfig", "Window size (ms):", None)
-        )
         # if QT_CONFIG(tooltip)
         self.winTextField.setToolTip(
             QCoreApplication.translate(
@@ -138,6 +138,9 @@ class Ui_SVMInferenceConfig(object):
         self.winTextField.setPlaceholderText(
             QCoreApplication.translate("SVMInferenceConfig", "100", None)
         )
+        self.label1.setText(
+            QCoreApplication.translate("SVMInferenceConfig", "Feature selection:", None)
+        )
         self.featureComboBox.setItemText(
             0, QCoreApplication.translate("SVMInferenceConfig", "Waveform length", None)
         )
@@ -145,11 +148,15 @@ class Ui_SVMInferenceConfig(object):
             1, QCoreApplication.translate("SVMInferenceConfig", "RMS", None)
         )
 
-        self.label1.setText(
-            QCoreApplication.translate("SVMInferenceConfig", "Feature selection:", None)
+        self.label2.setText(
+            QCoreApplication.translate("SVMInferenceConfig", "Window size (ms):", None)
         )
         self.browseModelButton.setText(
             QCoreApplication.translate("SVMInferenceConfig", "Browse", None)
         )
+        self.label6.setText(
+            QCoreApplication.translate("SVMInferenceConfig", "SVM model:", None)
+        )
+        self.svmLabel.setText("")
 
     # retranslateUi
