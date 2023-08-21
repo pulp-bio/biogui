@@ -204,7 +204,7 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
 
     Attributes
     ----------
-    config : dict
+    config : dict or None
         Dictionary representing the configuration of the acquisition.
     """
 
