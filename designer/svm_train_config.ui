@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="svmGroupBox">
      <property name="title">
-      <string>SVM</string>
+      <string>SVM Training</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

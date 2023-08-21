@@ -161,5 +161,6 @@ cython_debug/
 
 *.bin
 *.pkl
+*.skops
 .vscode
 .idea

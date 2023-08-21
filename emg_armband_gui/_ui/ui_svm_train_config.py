@@ -60,7 +60,7 @@ class Ui_SVMTrainConfig(object):
     def setupUi(self, SVMTrainConfig):
         if not SVMTrainConfig.objectName():
             SVMTrainConfig.setObjectName("SVMTrainConfig")
-        SVMTrainConfig.resize(500, 600)
+        SVMTrainConfig.resize(400, 398)
         self.verticalLayout = QVBoxLayout(SVMTrainConfig)
         self.verticalLayout.setObjectName("verticalLayout")
         self.svmGroupBox = QGroupBox(SVMTrainConfig)
@@ -150,7 +150,7 @@ class Ui_SVMTrainConfig(object):
 
         self.progressLabel = QLabel(self.svmGroupBox)
         self.progressLabel.setObjectName("progressLabel")
-        self.progressLabel.setMinimumSize(QSize(400, 200))
+        self.progressLabel.setMinimumSize(QSize(0, 0))
         self.progressLabel.setMaximumSize(QSize(400, 200))
         self.progressLabel.setAlignment(Qt.AlignCenter)
 
@@ -191,7 +191,7 @@ class Ui_SVMTrainConfig(object):
             QCoreApplication.translate("SVMTrainConfig", "SVM Widget", None)
         )
         self.svmGroupBox.setTitle(
-            QCoreApplication.translate("SVMTrainConfig", "SVM", None)
+            QCoreApplication.translate("SVMTrainConfig", "SVM Training", None)
         )
         self.label1.setText(
             QCoreApplication.translate("SVMTrainConfig", "Feature selection:", None)
