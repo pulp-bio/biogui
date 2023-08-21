@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 import argparse
+import json
 import logging
 import sys
 
@@ -31,7 +32,6 @@ def main():
     # Input
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-sc",
         "--streamController",
         required=False,
         default="ESB",
@@ -40,7 +40,6 @@ def main():
         help='Streaming controller (either "ESB" or "Dummy")',
     )
     parser.add_argument(
-        "-fs",
         "--sampFreq",
         required=False,
         default=4000,
@@ -48,7 +47,6 @@ def main():
         help="Sampling frequency (in sps)",
     )
     parser.add_argument(
-        "-rl",
         "--renderLength",
         required=False,
         default=1000,
@@ -56,12 +54,58 @@ def main():
         help="Length of the rendering window in the plot (in ms)",
     )
     parser.add_argument(
-        "-ac",
-        "--acqConf",
+        "--acq",
         action="store_true",
-        help="Whether to provide configuration for acquisition",
+        help="Whether to add the acquisition module",
+    )
+    parser.add_argument(
+        "--svmTrain",
+        action="store_true",
+        help="Whether to add the SVM training module",
+    )
+    parser.add_argument(
+        "--svmInference",
+        action="store_true",
+        help="Whether to add the SVM inference module",
+    )
+    parser.add_argument(
+        "--virtHand",
+        action="store_true",
+        help="Whether to add the module for communicating with the virtual hand",
+    )
+    parser.add_argument(
+        "--tcpAddress",
+        required=False,
+        default="127.0.0.1",
+        type=str,
+        help="Address of the virtual hand server",
+    )
+    parser.add_argument(
+        "--tcpPort1",
+        required=False,
+        default=3333,
+        type=int,
+        help="Port for the first virtual hand",
+    )
+    parser.add_argument(
+        "--tcpPort2",
+        required=False,
+        default=3334,
+        type=int,
+        help="Port for the second virtual hand",
+    )
+    parser.add_argument(
+        "--gestureMapping",
+        required=False,
+        default="",
+        type=str,
+        help="Path to a JSON specifying the mapping between gesture labels and joint angles",
     )
     args = vars(parser.parse_args())
+
+    argConstraint = sum([bool(args["virtHand"]), bool(args["gestureMapping"])])
+    if argConstraint != 0 and argConstraint != 2:
+        parser.error("--virtHand and --gestureMapping must be given together")
 
     # Setup application and main window
     app = QApplication(sys.argv)
@@ -73,9 +117,26 @@ def main():
     mainWin.show()
 
     # Add widgets
-    if args["acqConf"]:
+    if args["acq"]:
         acqController = modules.AcquisitionController()
         acqController.subscribe(mainWin)
+    if args["svmTrain"]:
+        svmTrainController = modules.SVMTrainController(args["sampFreq"])
+        svmTrainController.subscribe(mainWin)
+    if args["svmInference"]:
+        svmInferenceController = modules.SVMInferenceController()
+        svmInferenceController.subscribe(mainWin)
+
+        with open(args["gestureMapping"]) as f:
+            gestureMapping = json.load(f)
+            gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
+
+        svmInferenceController.tcpServerController = modules.TCPServerController(
+            address=args["tcpAddress"],
+            port1=args["tcpPort1"],
+            port2=args["tcpPort2"],
+            gestureMap=gestureMapping,
+        )
 
     # Run event loop
     sys.exit(app.exec())

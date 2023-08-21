@@ -70,7 +70,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Queue for Y values.
     _bufferCount : int
         Counter for the plot buffer.
-    _plotBuffer : int
+    _bufferSize : int
         Size of the buffer for plotting samples.
     _plotSpacing : int
         Spacing between each channel in the plot.
@@ -112,7 +112,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._xQueue = deque(maxlen=renderLength)
         self._yQueue = deque(maxlen=renderLength)
         self._bufferCount = 0
-        self._plotBuffer = 200
+        self._bufferSize = 200
         self._plotSpacing = 1000
 
         self.setupUi(self)
@@ -136,12 +136,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopStreamingButton.setEnabled(False)
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
-
-        # Training SVM
-        # self._SVMWin: SVMWindow | None = None
-        # self._trainData: np.ndarray | None = None
-        # self.startTrainButton.clicked.connect(self._showSVM)
-        # self.browseTrainButton.clicked.connect(self._browseTrainData)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._streamController is not None:
@@ -225,16 +219,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for samples in data:
             self._xQueue.append(self._xQueue[-1] + 1 / self._sampFreq)
             self._yQueue.append(samples)
+        self._bufferCount += data.shape[0]
 
-        if self._bufferCount == self._plotBuffer:
+        if self._bufferCount >= self._bufferSize:
             ys = np.asarray(self._yQueue).T
             for i in range(self._nCh):
                 self._plots[i].setData(
                     self._xQueue, ys[i] + self._plotSpacing * i, skipFiniteCheck=True
                 )
             self._bufferCount = 0
-
-        self._bufferCount += data.shape[0]
 
     def _startStreaming(self) -> None:
         """Start streaming."""
@@ -300,18 +293,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #     self._tcpController = TcpServerController(
     #         "192.168.1.105", 3333, 3334, self._svmController
     #     )
-
-    # def _browseTrainData(self) -> None:
-    #     """Browse to select the training data file."""
-    #     filePath, _ = QFileDialog.getOpenFileName(
-    #         self,
-    #         "Load the training data",
-    #         filter="*.bin",
-    #     )
-    #     displayText = ""
-    #     if filePath:
-    #         self._trainData = loadValidateTrainData(filePath)
-    #         displayText = (
-    #             "Train data not valid!" if self._trainData is None else filePath
-    #         )
-    #     self.trainLabel.setText(displayText)

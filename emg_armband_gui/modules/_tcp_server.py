@@ -167,11 +167,11 @@ class TCPServerController(QObject):
         """
         sig.connect(self._tcpServerWorker.sendMovements)
 
-    def _startTransmission(self) -> None:
+    def startTransmission(self) -> None:
         """Start the transmission to TCP clients."""
         self._tcpServerThread.start()
 
-    def _stopTransmission(self) -> None:
+    def stopTransmission(self) -> None:
         """Stop the transmission to TCP clients."""
         self._tcpServerThread.quit()
         self._tcpServerThread.wait()
