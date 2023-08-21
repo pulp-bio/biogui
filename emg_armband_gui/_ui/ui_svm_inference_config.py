@@ -64,7 +64,7 @@ class Ui_SVMInferenceConfig(object):
         self.svmGroupBox = QGroupBox(SVMInferenceConfig)
         self.svmGroupBox.setObjectName("svmGroupBox")
         self.svmGroupBox.setAlignment(Qt.AlignCenter)
-        self.svmGroupBox.setCheckable(False)
+        self.svmGroupBox.setCheckable(True)
         self.svmGroupBox.setChecked(False)
         self.verticalLayout_2 = QVBoxLayout(self.svmGroupBox)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
@@ -124,7 +124,7 @@ class Ui_SVMInferenceConfig(object):
             )
         )
         self.svmGroupBox.setTitle(
-            QCoreApplication.translate("SVMInferenceConfig", "SVM Inference", None)
+            QCoreApplication.translate("SVMInferenceConfig", "SVM inference", None)
         )
         # if QT_CONFIG(tooltip)
         self.winTextField.setToolTip(

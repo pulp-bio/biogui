@@ -191,7 +191,7 @@ class Ui_SVMTrainConfig(object):
             QCoreApplication.translate("SVMTrainConfig", "SVM Widget", None)
         )
         self.svmGroupBox.setTitle(
-            QCoreApplication.translate("SVMTrainConfig", "SVM Training", None)
+            QCoreApplication.translate("SVMTrainConfig", "SVM training", None)
         )
         self.label1.setText(
             QCoreApplication.translate("SVMTrainConfig", "Feature selection:", None)

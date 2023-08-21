@@ -81,7 +81,7 @@ class _SVMTrainWorker(QObject):
         Array with shape (nSamp, nCh + 1) with the training data.
     _feature : str or None
         Feature to use to train the model.
-    _windowSize : int or None
+    _windowSizeMs : int or None
         Size of the window for the feature extraction.
 
     Class attributes
@@ -131,8 +131,8 @@ class _SVMTrainWorker(QObject):
         return self._windowSizeMs
 
     @windowSizeMs.setter
-    def windowSizeMs(self, windowSize: int) -> None:
-        self._windowSizeMs = windowSize
+    def windowSizeMs(self, windowSizeMs: int) -> None:
+        self._windowSizeMs = windowSizeMs
 
     def train(self) -> None:
         # Preprocessing
