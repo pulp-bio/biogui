@@ -75,14 +75,6 @@ class _SVMTrainWorker(QObject):
     ----------
     _sampFreq : int
         Sampling frequency.
-    _model : SVC or None
-        Instance of the model.
-    _trainData : ndarray or None
-        Array with shape (nSamp, nCh + 1) with the training data.
-    _feature : str or None
-        Feature to use to train the model.
-    _windowSizeMs : int or None
-        Size of the window for the feature extraction.
 
     Class attributes
     ----------------
@@ -97,13 +89,35 @@ class _SVMTrainWorker(QObject):
 
         self._sampFreq = sampFreq
 
+        self._feature = "Waveform length"
+        self._windowSize = int(200 * sampFreq / 1000)
         self._model = None
         self._trainData = None
-        self._feature = None
-        self._windowSizeMs = None
+
+    @property
+    def feature(self) -> str:
+        """str: Property representing the feature to be computed."""
+        return self._feature
+
+    @feature.setter
+    def feature(self, feature: str) -> None:
+        self._feature = feature
+
+    @property
+    def windowSize(self) -> int:
+        """int: Property representing the window size for feature computation.
+
+        The setter accepts the size in milliseconds and automatically converts it to samples.
+        """
+        return self._windowSize
+
+    @windowSize.setter
+    def windowSize(self, windowSizeMs: int) -> None:
+        self._windowSize = int(windowSizeMs * self._sampFreq / 1000)
 
     @property
     def model(self) -> SVC:
+        """SVC: Property representing the SVM model."""
         return self._model
 
     @model.setter
@@ -112,27 +126,12 @@ class _SVMTrainWorker(QObject):
 
     @property
     def trainData(self) -> np.ndarray:
+        """ndarray: Property representing the training data as an array with shape (nSamp, nCh + 1)."""
         return self._trainData
 
     @trainData.setter
     def trainData(self, trainData: np.ndarray) -> None:
         self._trainData = trainData
-
-    @property
-    def feature(self) -> str:
-        return self._feature
-
-    @feature.setter
-    def feature(self, feature: str) -> None:
-        self._feature = feature
-
-    @property
-    def windowSizeMs(self) -> int:
-        return self._windowSizeMs
-
-    @windowSizeMs.setter
-    def windowSizeMs(self, windowSizeMs: int) -> None:
-        self._windowSizeMs = windowSizeMs
 
     def train(self) -> None:
         # Preprocessing
@@ -143,14 +142,15 @@ class _SVMTrainWorker(QObject):
         labels = self._trainData[:, -1].astype("int32")
 
         # Feature extraction
-        logging.info("SVMTrainWorker: feature extraction...")
-        windowSize = int(self._windowSizeMs * self._sampFreq / 1000)
+        logging.info(
+            f"SVMTrainWorker: feature extraction (feature: {self._feature}, window size: {self._windowSize})..."
+        )
         featureDict = {"Waveform length": waveformLength, "RMS": rootMeanSquared}
         featureFun = featureDict[self._feature]
-        dataFeat = np.zeros((nSamp - windowSize + 1, nCh))
+        dataFeat = np.zeros((nSamp - self._windowSize + 1, nCh))
         for i in range(nCh):
-            dataFeat[:, i] = featureFun(dataFlt[:, i], windowSize)
-        labels = labels[windowSize - 1 :]
+            dataFeat[:, i] = featureFun(dataFlt[:, i], self._windowSize)
+        labels = labels[self._windowSize - 1 :]
 
         test_split = 0.5
         seed = 42
@@ -239,8 +239,6 @@ class SVMTrainController(QObject):
     ----------
     confWidget : _SVMTrainConfigWidget
         Instance of _SVMTrainConfigWidget.
-    _progressWidget : _ProgressWidget
-        Instance of _ProgressWidget.
     _svmTrainWorker : _SVMTrainWorker or None
         Instance of _SVMTrainWorker
     _svmTrainThread : QThread
@@ -285,10 +283,10 @@ class SVMTrainController(QObject):
         self.confWidget.mov.start()
         self.confWidget.setEnabled(False)
 
+        self._svmTrainWorker.feature = feature
+        self._svmTrainWorker.windowSize = windowSizeMs
         self._svmTrainWorker.model = SVC(C=C, kernel=kernel)
         self._svmTrainWorker.trainData = self.confWidget.trainData
-        self._svmTrainWorker.feature = feature
-        self._svmTrainWorker.windowSizeMs = windowSizeMs
         self._svmTrainThread.start()
 
     @Slot(float)

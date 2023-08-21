@@ -73,25 +73,23 @@ class _FileWriterWorker(QObject):
 
     Attributes
     ----------
-    _filePath : str
-        Path to the output file.
     _f : BinaryIO or None
         File object.
-    _trigger : int
-        Trigger value to save together with the data.
     _firstWrite : bool
         Whether it's the first time the worker receives data.
     """
 
     def __init__(self) -> None:
         super(_FileWriterWorker, self).__init__()
-        self._filePath = ""
         self._f = None
-        self._trigger = 0
         self._firstWrite = True
+
+        self._filePath = ""
+        self._trigger = 0
 
     @property
     def filePath(self) -> str:
+        """str: Property representing the path to the file."""
         return self._filePath
 
     @filePath.setter
@@ -100,6 +98,7 @@ class _FileWriterWorker(QObject):
 
     @property
     def trigger(self) -> int:
+        """int: Property representing the trigger, namely the gesture label."""
         return self._trigger
 
     @trigger.setter
@@ -141,8 +140,6 @@ class _GesturesWidget(QWidget):
 
     Attributes
     ----------
-    _imageFolder : str
-        Path to the folder containing the images for the gestures.
     _pixmap : QPixmap
         Image widget.
     _label : QLabel
@@ -170,6 +167,9 @@ class _GesturesWidget(QWidget):
 
     @property
     def imageFolder(self) -> str:
+        """str: Property representing the path to the folder containing
+        the images for the gestures.
+        """
         return self._imageFolder
 
     @imageFolder.setter
