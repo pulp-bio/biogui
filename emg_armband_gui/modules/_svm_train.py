@@ -85,7 +85,7 @@ class _SVMTrainWorker(QObject):
     trainStopSig = Signal(float)
 
     def __init__(self, sampFreq: int) -> None:
-        super(_SVMTrainWorker, self).__init__()
+        super().__init__()
 
         self._sampFreq = sampFreq
 
@@ -134,6 +134,7 @@ class _SVMTrainWorker(QObject):
         self._trainData = trainData
 
     def train(self) -> None:
+        """Train the model."""
         # Preprocessing
         logging.info("SVMTrainWorker: preprocessing...")
         sos = signal.butter(4, 20, "high", output="sos", fs=self._sampFreq)
@@ -196,7 +197,7 @@ class _SVMTrainConfigWidget(QWidget, Ui_SVMTrainConfig):
     """
 
     def __init__(self) -> None:
-        super(_SVMTrainConfigWidget, self).__init__()
+        super().__init__()
 
         self.setupUi(self)
 
@@ -246,7 +247,7 @@ class SVMTrainController(QObject):
     """
 
     def __init__(self, sampFreq: int) -> None:
-        super(SVMTrainController, self).__init__()
+        super().__init__()
 
         self.confWidget = _SVMTrainConfigWidget()
         self.confWidget.startTrainButton.clicked.connect(self._startTraining)
@@ -291,7 +292,14 @@ class SVMTrainController(QObject):
 
     @Slot(float)
     def _stopTraining(self, acc: float) -> None:
-        """Stop the SVM training."""
+        """This method is called automatically when the associated signal is received,
+        and it stops the SVM training.
+
+        Parameters
+        ----------
+        acc : float
+            Accuracy on the test set.
+        """
         self._svmTrainThread.quit()
         self._svmTrainThread.wait()
 

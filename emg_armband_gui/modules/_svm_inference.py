@@ -65,7 +65,7 @@ class _SVMWorker(QObject):
     inferenceSig = Signal(int)
 
     def __init__(self, sampFreq: int) -> None:
-        super(_SVMWorker, self).__init__()
+        super().__init__()
 
         self._sampFreq = sampFreq
         self._bufferCount = 0
@@ -151,7 +151,7 @@ class _SVMInferenceConfigWidget(QWidget, Ui_SVMInferenceConfig):
     """
 
     def __init__(self) -> None:
-        super(_SVMInferenceConfigWidget, self).__init__()
+        super().__init__()
 
         self.setupUi(self)
 
@@ -192,7 +192,7 @@ class SVMInferenceController(QObject):
     _dataReadySig = Signal(np.ndarray)
 
     def __init__(self) -> None:
-        super(SVMInferenceController, self).__init__()
+        super().__init__()
 
         self.confWidget = _SVMInferenceConfigWidget()
 

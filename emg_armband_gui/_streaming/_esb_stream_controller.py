@@ -62,7 +62,7 @@ class _SerialWorker(QObject):
     serialErrorSig = Signal()
 
     def __init__(self, serialPort: str, packetSize: int, baudeRate: int) -> None:
-        super(_SerialWorker, self).__init__()
+        super().__init__()
 
         # Open serial port
         self._ser = serial.Serial(serialPort, baudeRate, timeout=5)
@@ -148,7 +148,7 @@ class _PreprocessWorker(QObject):
         gainScaleFactor: float,
         vScaleFactor: int,
     ) -> None:
-        super(_PreprocessWorker, self).__init__()
+        super().__init__()
 
         self._nCh = nCh
         self._nSamp = nSamp
@@ -229,7 +229,7 @@ class ESBStreamingController(StreamingController):
     serialErrorSig = Signal()
 
     def __init__(self, serialPort: str, nCh: int, sampFreq: int) -> None:
-        super(ESBStreamingController, self).__init__()
+        super().__init__()
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(

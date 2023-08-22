@@ -80,7 +80,7 @@ class _FileWriterWorker(QObject):
     """
 
     def __init__(self) -> None:
-        super(_FileWriterWorker, self).__init__()
+        super().__init__()
         self._f = None
         self._firstWrite = True
 
@@ -159,11 +159,12 @@ class _GesturesWidget(QWidget):
         self.setWindowTitle("Gesture Viewer")
         self.resize(480, 480)
 
-        self._imageFolder = ""
         self._pixmap = QPixmap(":/images/start.png")
         self._pixmap = self._pixmap.scaled(self.width(), self.height())
         self._label = QLabel(self)
         self._label.setPixmap(self._pixmap)
+
+        self._imageFolder = ""
 
     @property
     def imageFolder(self) -> str:
@@ -209,7 +210,7 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
     """
 
     def __init__(self) -> None:
-        super(_AcquisitionConfigWidget, self).__init__()
+        super().__init__()
 
         self.setupUi(self)
 
@@ -263,7 +264,7 @@ class AcquisitionController(QObject):
     _dataReadySig = Signal(np.ndarray)
 
     def __init__(self) -> None:
-        super(AcquisitionController, self).__init__()
+        super().__init__()
 
         self.confWidget = _AcquisitionConfigWidget()
 

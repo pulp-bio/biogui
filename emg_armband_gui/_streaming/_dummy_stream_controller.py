@@ -57,7 +57,7 @@ class _DataWorker(QObject):
     dataReadySig = Signal(np.ndarray)
 
     def __init__(self, nCh: int, nSamp: int) -> None:
-        super(_DataWorker, self).__init__()
+        super().__init__()
 
         self._nCh = nCh
         self._nSamp = nSamp
@@ -126,7 +126,7 @@ class _PreprocessWorker(QObject):
         sampFreq: int,
         nSamp: int,
     ) -> None:
-        super(_PreprocessWorker, self).__init__()
+        super().__init__()
 
         self._nCh = nCh
         self._nSamp = nSamp
@@ -189,7 +189,7 @@ class DummyStreamingController(StreamingController):
     serialErrorSig = Signal()
 
     def __init__(self, nCh: int, sampFreq: int) -> None:
-        super(DummyStreamingController, self).__init__()
+        super().__init__()
 
         # Create workers and threads
         self._dataWorker = _DataWorker(nCh, nSamp=5)
