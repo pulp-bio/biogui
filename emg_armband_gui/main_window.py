@@ -104,7 +104,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(
         self, streamControllerType: str, sampFreq: int, renderLength: int
     ) -> None:
-        super(MainWindow, self).__init__()
+        super().__init__()
 
         self._streamControllerType = streamControllerType
         self._streamController: StreamingController | None = None
@@ -263,33 +263,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopStreamingButton.setEnabled(False)
 
         logging.info("MainWindow: streaming stopped.")
-
-    # def _showSVM(self):
-    #     if self._trainData is not None:
-    #         # Output file
-    #         expDir = os.path.join(os.path.dirname(self.trainLabel.text()), "models")
-    #         os.makedirs(expDir, exist_ok=True)
-    #         outFileName = self.trainingTextField.text()
-    #         if outFileName == "":
-    #             outFileName = (
-    #                 f"acq_{datetime.datetime.now()}".replace(" ", "_")
-    #                 .replace(":", "-")
-    #                 .replace(".", "-")
-    #             )
-    #         outFileName = f"{outFileName}.pkl"
-    #         outFilePath = os.path.join(expDir, outFileName)
-
-    #         # Create gesture window and file controller
-    #         self._SVMWin = SVMWindow(self._trainData, outFilePath)
-    #         self._SVMWin.show()
-    #         self._SVMWin.testButton.clicked.connect(self._startStreaming)
-    #         self._SVMWin.testButton.clicked.connect(self._SVMTestStart)
-
-    # def _SVMTestStart(self):
-    #     self._svmController = SVMController(
-    #         self._SVMWin._clf, self._streamControllerCls
-    #     )
-    #     self._SVMWin.close()
-    #     self._tcpController = TcpServerController(
-    #         "192.168.1.105", 3333, 3334, self._svmController
-    #     )
