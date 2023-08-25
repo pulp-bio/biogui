@@ -25,16 +25,14 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 
 class _TCPServerWorker(QObject):
-    """Worker that creates two TCP sockets to control the virtual hands in Simulink.
+    """Worker that creates a TCP socket to control the virtual hand in Simulink.
 
     Parameters
     ----------
     address : str
         Server address
-    port1 : str
-        Port for the first socket connected to the virtual hand.
-    port2 : str
-        Port for the second socket connected to the target hand.
+    port : str
+        Server port.
     gestureMap : dict of {int : list of int}
         Mapping between gesture label and joint angles.
 
@@ -42,85 +40,79 @@ class _TCPServerWorker(QObject):
     ----------
     _address : str
         Server address
-    _port1 : str
-        Port for the first socket connected to the virtual hand.
-    _port2 : str
-        Port for the second socket connected to the target hand.
-    _sock1 : socket or None
-        The socket for the virtual hand.
-    _sock2 : socket or None
-        The socket for the target hand.
-    _conn1 : socket or None
+    _port : str
+        Server port.
+    _sock : socket or None
+        TCP socket.
+    _conn : socket or None
         Connection to the virtual hand.
-    _conn2 : socket or None
-        Connection to the target hand.
     _gestureMap : dict of {int : list of int}
         Mapping between gesture label and joint angles.
     """
 
     def __init__(
-        self, address: str, port1: int, port2: int, gestureMap: dict[int, list[int]]
+        self, address: str, port: int, gestureMap: dict[int, list[int]]
     ) -> None:
         super(_TCPServerWorker, self).__init__()
 
         self._address = address
-        self._port1 = port1
-        self._port2 = port2
-
-        self._sock1 = None
-        self._sock2 = None
-        self._conn1 = None
-        self._conn2 = None
-
+        self._port = port
         self._gestureMap = gestureMap
 
+        self._sock = None
+        self._conn = None
+        self._forceExit = False
+
+    @property
+    def forceExit(self) -> bool:
+        """bool: Property for forcing exit from socket accept."""
+        return self._forceExit
+
+    @forceExit.setter
+    def forceExit(self, forceExit: bool) -> None:
+        self._forceExit = forceExit
+
     def openConnection(self) -> None:
-        """Open the connection for the Simulink TCP clients."""
-        self._sock1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock1.bind((self._address, self._port1))
-        self._sock1.listen(1)
-        logging.info(f"TCPServerWorker: waiting for connection on port {self._port1}.")
+        """Open the connection for the Simulink TCP client."""
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.settimeout(1.0)
+        self._sock.bind((self._address, self._port))
+        self._sock.listen(1)
+        logging.info(f"TCPServerWorker: waiting for connection on port {self._port}.")
 
-        self._sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock2.bind((self._address, self._port2))
-        self._sock2.listen(1)
-        logging.info(f"TCPServerWorker: waiting for connection on port {self._port2}.")
-
-        self._conn1, _ = self._sock1.accept()
-        logging.info(
-            f"TCPServerWorker: connection on port {self._port1} from {self._conn1}."
-        )
-
-        self._conn2, _ = self._sock2.accept()
-        logging.info(
-            f"TCPServerWorker: connection on port {self._port2}  from {self._conn2}."
-        )
+        while True:
+            try:
+                if self._forceExit:
+                    break
+                self._conn, _ = self._sock.accept()
+                logging.info(
+                    f"TCPServerWorker: connection on port {self._port} from {self._conn}."
+                )
+                break
+            except socket.timeout:
+                pass
 
     def closeConnection(self) -> None:
         """Close the connection."""
-        self._conn1.shutdown(socket.SHUT_RDWR)
-        self._conn1.close()
-        self._conn2.shutdown(socket.SHUT_RDWR)
-        self._conn2.close()
-        self._sock1.shutdown(socket.SHUT_RDWR)
-        self._sock1.close()
-        self._sock2.shutdown(socket.SHUT_RDWR)
-        self._sock2.close()
+        if self._conn is not None:
+            self._conn.shutdown(socket.SHUT_RDWR)
+            self._conn.close()
+        self._sock.shutdown(socket.SHUT_RDWR)
+        self._sock.close()
 
     @Slot(int)
     def sendMovements(self, data: int) -> None:
         """This method is called automatically when the associated signal is received, and
-        it sends the new hand position using the TCP socket
+        it sends the new hand position using the TCP socket.
 
         Parameters
         ----------
         data : int
             Gesture label.
         """
-        self._conn1.sendall(bytes(self._gestureMap[data]))
-        self._conn2.sendall(bytes(self._gestureMap[data]))
+        if self._conn is not None:
+            self._conn.sendall(bytes(self._gestureMap[data]))
 
 
 class TCPServerController(QObject):
@@ -139,9 +131,13 @@ class TCPServerController(QObject):
 
     Attributes
     ----------
-    _tcpServerWorker : _TCPServerWorker
+    _tcpServerWorker1 : _TCPServerWorker
         Instance of _TCPServerWorker.
-    _tcpServerThread : QThread
+    _tcpServerThread1 : QThread
+        The QThread associated to the TCP server worker.
+    _tcpServerWorker2 : _TCPServerWorker
+        Instance of _TCPServerWorker.
+    _tcpServerThread2 : QThread
         The QThread associated to the TCP server worker.
     """
 
@@ -150,12 +146,18 @@ class TCPServerController(QObject):
     ) -> None:
         super(TCPServerController, self).__init__()
 
-        # Create worker and thread
-        self._tcpServerWorker = _TCPServerWorker(address, port1, port2, gestureMap)
-        self._tcpServerThread = QThread()
-        self._tcpServerWorker.moveToThread(self._tcpServerThread)
-        self._tcpServerThread.started.connect(self._tcpServerWorker.openConnection)
-        self._tcpServerThread.finished.connect(self._tcpServerWorker.closeConnection)
+        # Create workers and threads
+        self._tcpServerWorker1 = _TCPServerWorker(address, port1, gestureMap)
+        self._tcpServerThread1 = QThread()
+        self._tcpServerWorker1.moveToThread(self._tcpServerThread1)
+        self._tcpServerThread1.started.connect(self._tcpServerWorker1.openConnection)
+        self._tcpServerThread1.finished.connect(self._tcpServerWorker1.closeConnection)
+
+        self._tcpServerWorker2 = _TCPServerWorker(address, port2, gestureMap)
+        self._tcpServerThread2 = QThread()
+        self._tcpServerWorker2.moveToThread(self._tcpServerThread2)
+        self._tcpServerThread2.started.connect(self._tcpServerWorker2.openConnection)
+        self._tcpServerThread2.finished.connect(self._tcpServerWorker2.closeConnection)
 
     def signalConnect(self, sig: Signal) -> None:
         """Connect a given signal to the TCPServerWorker send method.
@@ -165,13 +167,19 @@ class TCPServerController(QObject):
         sig : Signal
             Signal to connect to the TCPServerWorker send method.
         """
-        sig.connect(self._tcpServerWorker.sendMovements)
+        sig.connect(self._tcpServerWorker1.sendMovements)
+        sig.connect(self._tcpServerWorker2.sendMovements)
 
     def startTransmission(self) -> None:
         """Start the transmission to TCP clients."""
-        self._tcpServerThread.start()
+        self._tcpServerThread1.start()
+        self._tcpServerThread2.start()
 
     def stopTransmission(self) -> None:
         """Stop the transmission to TCP clients."""
-        self._tcpServerThread.quit()
-        self._tcpServerThread.wait()
+        self._tcpServerWorker1.forceExit = True
+        self._tcpServerWorker2.forceExit = True
+        self._tcpServerThread1.quit()
+        self._tcpServerThread2.quit()
+        self._tcpServerThread1.wait()
+        self._tcpServerThread2.wait()

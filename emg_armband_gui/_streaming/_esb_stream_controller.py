@@ -233,14 +233,14 @@ class ESBStreamingController(StreamingController):
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(
-            serialPort, packetSize=243, baudeRate=4000000
+            serialPort, packetSize=243, baudeRate=4_000_000
         )
         self._preprocessWorker = _PreprocessWorker(
             nCh,
             sampFreq,
             nSamp=5,
             gainScaleFactor=2.38125854276502e-08,
-            vScaleFactor=1000000,
+            vScaleFactor=1_000_000,
         )
         self._serialThread = QThread()
         self._serialWorker.moveToThread(self._serialThread)
