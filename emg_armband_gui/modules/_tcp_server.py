@@ -81,6 +81,7 @@ class _TCPServerWorker(QObject):
         self._sock.listen(1)
         logging.info(f"TCPServerWorker: waiting for connection on port {self._port}.")
 
+        # Non-blocking accept
         while True:
             try:
                 if self._forceExit:
@@ -146,13 +147,13 @@ class TCPServerController(QObject):
     ) -> None:
         super(TCPServerController, self).__init__()
 
-        # Create workers and threads
+        # Create worker and thread for first connection
         self._tcpServerWorker1 = _TCPServerWorker(address, port1, gestureMap)
         self._tcpServerThread1 = QThread()
         self._tcpServerWorker1.moveToThread(self._tcpServerThread1)
         self._tcpServerThread1.started.connect(self._tcpServerWorker1.openConnection)
         self._tcpServerThread1.finished.connect(self._tcpServerWorker1.closeConnection)
-
+        # Create worker and thread for second connection
         self._tcpServerWorker2 = _TCPServerWorker(address, port2, gestureMap)
         self._tcpServerThread2 = QThread()
         self._tcpServerWorker2.moveToThread(self._tcpServerThread2)
