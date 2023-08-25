@@ -1,4 +1,4 @@
-"""This module containes the TCP server controller.
+"""This module contains the TCP server controller.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -166,7 +166,7 @@ class TCPServerController(QObject):
         Parameters
         ----------
         sig : Signal
-            Signal to connect to the TCPServerWorker send method.
+            Qt signal to connect to the TCPServerWorker send method.
         """
         sig.connect(self._tcpServerWorker1.sendMovements)
         sig.connect(self._tcpServerWorker2.sendMovements)

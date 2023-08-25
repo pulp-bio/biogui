@@ -1,4 +1,4 @@
-"""This module containes the controller for SVM inference.
+"""This module contains the controller for SVM inference.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -33,26 +33,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from skops.io import dump
 
-from emg_armband_gui._ui import resources_rc
-from emg_armband_gui._ui.ui_svm_train_config import Ui_SVMTrainConfig
-from emg_armband_gui.main_window import MainWindow
-from emg_armband_gui.modules._ml_utils import rootMeanSquared, waveformLength
+from .._ui import resources_rc
+from .._ui.ui_svm_train_config import Ui_SVMTrainConfig
+from ..main_window import MainWindow
+from ._ml_utils import rootMeanSquared, waveformLength
 
 
 def _loadValidateTrainData(filePath: str) -> np.ndarray | None:
-    """Load and validate a .bin file containg the training data.
+    """Load and validate a .bin file containing the training data.
 
     Parameters
     ----------
     filePath : str
-        Path the the .bin file.
+        Path to the .bin file.
 
     Returns
     -------
     ndarray or None
         Training data with shape (nSamp, nCh + 1) or None if the file is not valid.
     """
-    # Open file and check if it is reshapable
+    # Open file and check if it is resizable
     with open(filePath, "rb") as f:
         nChAndTrigger = struct.unpack("<I", f.read(4))[0]
         bSig = bytes(f.read())
@@ -64,7 +64,7 @@ def _loadValidateTrainData(filePath: str) -> np.ndarray | None:
 
 
 class _SVMTrainWorker(QObject):
-    """Worker that performs training of a SVM.
+    """Worker that trains an SVM.
 
     Parameters
     ----------
@@ -79,7 +79,7 @@ class _SVMTrainWorker(QObject):
     Class attributes
     ----------------
     trainStopSig : Signal
-        Signal emitted when the training is finished.
+        Qt signal emitted when the training is finished.
     """
 
     trainStopSig = Signal(float)
@@ -155,6 +155,8 @@ class _SVMTrainWorker(QObject):
 
         test_split = 0.5
         seed = 42
+        xTrain, yTrain, xTest, yTest = None, None, None, None
+        xTrainRest, yTrainRest, xTestRest, yTestRest = None, None, None, None
         for label in np.unique(labels):
             if label == 0:  # rest
                 xTrainRest, xTestRest, yTrainRest, yTestRest = train_test_split(
@@ -243,7 +245,7 @@ class SVMTrainController(QObject):
     _svmTrainWorker : _SVMTrainWorker or None
         Instance of _SVMTrainWorker
     _svmTrainThread : QThread
-        QThread associated to the SVM train worker.
+        The QThread associated to the SVM train worker.
     """
 
     def __init__(self, sampFreq: int) -> None:
