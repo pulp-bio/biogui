@@ -23,7 +23,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from emg_armband_gui import MainWindow, modules
+from gui_semg_acquisition import MainWindow, modules
 
 
 def main():

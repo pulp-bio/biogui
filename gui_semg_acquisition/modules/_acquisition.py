@@ -29,9 +29,9 @@ from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QWidget
 
-from emg_armband_gui._ui import resources_rc
-from emg_armband_gui._ui.ui_acquisition_config import Ui_AcquisitionConfig
-from emg_armband_gui.main_window import MainWindow
+from .._ui import resources_rc
+from .._ui.ui_acquisition_config import Ui_AcquisitionConfig
+from ..main_window import MainWindow
 
 
 def _loadValidateJSON(filePath: str) -> dict | None:
@@ -40,7 +40,7 @@ def _loadValidateJSON(filePath: str) -> dict | None:
     Parameters
     ----------
     filePath : str
-        Path the the JSON file.
+        Path to the JSON file.
 
     Returns
     -------
@@ -51,7 +51,7 @@ def _loadValidateJSON(filePath: str) -> dict | None:
         config = json.load(f)
     # Check keys
     providedKeys = set(config.keys())
-    validKeys = set(("gestures", "nReps", "durationMs", "imageFolder"))
+    validKeys = {"gestures", "nReps", "durationMs", "imageFolder"}
     if providedKeys != validKeys:
         return None
     # Check paths
@@ -148,7 +148,7 @@ class _GesturesWidget(QWidget):
     Class attributes
     ----------------
     closeSig : Signal
-        Signal emitted when the widget is closed.
+        Qt signal emitted when the widget is closed.
     """
 
     closeSig = Signal()
@@ -258,7 +258,7 @@ class AcquisitionController(QObject):
     Class attributes
     ----------------
     _dataReadySig : Signal
-        Signal that forwards the dataReadySig signal from MainWindow.
+        Qt signal that forwards the dataReadySig signal from MainWindow.
     """
 
     _dataReadySig = Signal(np.ndarray)

@@ -1,4 +1,4 @@
-"""This module containes the controller for SVM inference.
+"""This module contains the controller for SVM inference.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,14 +27,10 @@ from PySide6.QtWidgets import QFileDialog, QWidget
 from sklearn.svm import SVC
 from skops.io import get_untrusted_types, load
 
-from emg_armband_gui._ui.ui_svm_inference_config import Ui_SVMInferenceConfig
-from emg_armband_gui.main_window import MainWindow
-from emg_armband_gui.modules._ml_utils import (
-    majorityVoting,
-    rootMeanSquared,
-    waveformLength,
-)
-from emg_armband_gui.modules._tcp_server import TCPServerController
+from .._ui.ui_svm_inference_config import Ui_SVMInferenceConfig
+from ..main_window import MainWindow
+from ._ml_utils import majorityVoting, rootMeanSquared, waveformLength
+from ._tcp_server import TCPServerController
 
 
 class _SVMWorker(QObject):
@@ -51,15 +47,13 @@ class _SVMWorker(QObject):
         Sampling frequency.
     _bufferCount : int
         Counter for the inference buffer.
-    _bufferSize : int
-        Size of the buffer for performing inference.
     _queue : deque
         Buffer for performing inference.
 
     Class attributes
     ----------------
     inferenceSig : Signal
-        Signal emitted when inference is performed.
+        Qt signal emitted when inference is performed.
     """
 
     inferenceSig = Signal(int)
@@ -181,12 +175,12 @@ class SVMInferenceController(QObject):
     _svmWorker : _SVMWorker
         Worker for performing SVM inference.
     _svmThread : QThread
-        QThread associated to the SVM worker.
+        The QThread associated to the SVM worker.
 
     Class attributes
     ----------------
     _dataReadySig : Signal
-        Signal emitted when data is received.
+        Qt signal emitted when data is received.
     """
 
     _dataReadySig = Signal(np.ndarray)

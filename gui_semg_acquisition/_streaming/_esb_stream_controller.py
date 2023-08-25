@@ -53,9 +53,9 @@ class _SerialWorker(QObject):
     Class attributes
     ----------------
     dataReadySig : Signal
-        Signal emitted when new data is read.
+        Qt signal emitted when new data is read.
     serialErrorSig : Signal
-        Signal emitted when an error with the serial transmission occurred.
+        Qt signal emitted when an error with the serial transmission occurred.
     """
 
     dataReadySig = Signal(bytes)
@@ -132,9 +132,9 @@ class _PreprocessWorker(QObject):
     Class attributes
     ----------------
     dataReadySig : Signal
-        Signal emitted when new data is available.
+        Qt signal emitted when new data is available.
     dataReadyFltSig : Signal
-        Signal emitted when new filtered data is available.
+        Qt signal emitted when new filtered data is available.
     """
 
     dataReadySig = Signal(np.ndarray)
@@ -217,11 +217,11 @@ class ESBStreamingController(StreamingController):
     Class attributes
     ----------------
     dataReadySig : Signal
-        Signal emitted when new data is available.
+        Qt signal emitted when new data is available.
     dataReadyFltSig : Signal
-        Signal emitted when new filtered data is available.
+        Qt signal emitted when new filtered data is available.
     serialErrorSig : Signal
-        Signal emitted when an error with the serial transmission occurred.
+        Qt signal emitted when an error with the serial transmission occurred.
     """
 
     dataReadySig = Signal(bytes)

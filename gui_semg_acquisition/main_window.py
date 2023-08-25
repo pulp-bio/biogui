@@ -28,8 +28,7 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QWidget
 
-from emg_armband_gui._streaming import StreamingController, streamControllerFactory
-
+from ._streaming import StreamingController, streamControllerFactory
 from ._ui.ui_main_window import Ui_MainWindow
 
 
@@ -84,15 +83,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     Class attributes
     ----------------
     startStreamingSig : Signal
-        Signal emitted when streaming starts.
+        Qt signal emitted when streaming starts.
     stopStreamingSig : Signal
-        Signal emitted when streaming stops.
+        Qt signal emitted when streaming stops.
     closeSig : Signal
-        Signal emitted when the application is closed.
+        Qt signal emitted when the application is closed.
     dataReadySig : Signal
-        Signal emitted when new data is available.
+        Qt signal emitted when new data is available.
     dataReadyFltSig : Signal
-        Signal emitted when new filtered data is available.
+        Qt signal emitted when new filtered data is available.
     """
 
     startStreamingSig = Signal()

@@ -24,7 +24,7 @@ from PySide6.QtCore import QObject, Signal
 
 
 class StreamingControllerMeta(type(QObject), ABCMeta):
-    """Meta-class for the streaming controller interface."""
+    """Metaclass for the streaming controller interface."""
 
 
 class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
@@ -33,11 +33,11 @@ class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
     Class attributes
     ----------------
     dataReadySig : Signal
-        Signal emitted when new data is available.
+        Qt signal emitted when new data is available.
     dataReadyFltSig : Signal
-        Signal emitted when new filtered data is available.
+        Qt signal emitted when new filtered data is available.
     serialErrorSig : Signal
-        Signal emitted when an error with the serial transmission occurred.
+        Qt signal emitted when an error with the serial transmission occurred.
     """
 
     dataReadySig: Signal
