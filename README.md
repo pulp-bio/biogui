@@ -1,2 +1,2 @@
-# emg-armband-gui
-PyQt GUI for sEMG acquisition with armband
+# GUI for sEMG acquisition
+Modular PySide6 GUI for acquiring and visualizing sEMG data from serial ports.
