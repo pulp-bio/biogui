@@ -186,9 +186,9 @@ class _PreprocessWorker(QObject):
         self.dataReadySig.emit(dataRef)
 
         # Filter
-        dataRef, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
-        dataRef = dataRef.astype("float32")
-        self.dataReadyFltSig.emit(dataRef)
+        dataFlt, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
+        dataFlt = dataFlt.astype("float32")
+        self.dataReadyFltSig.emit(dataFlt)
 
 
 class ESBStreamingController(StreamingController):

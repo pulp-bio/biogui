@@ -75,6 +75,8 @@ class _SVMTrainWorker(QObject):
     ----------
     _sampFreq : int
         Sampling frequency.
+    _downsamplingFactor : int
+        Downsampling factor.
 
     Class attributes
     ----------------
@@ -88,6 +90,7 @@ class _SVMTrainWorker(QObject):
         super().__init__()
 
         self._sampFreq = sampFreq
+        self._downsampFactor = int(round(200 * sampFreq / 1000))
 
         self._feature = "Waveform length"
         self._windowSize = int(200 * sampFreq / 1000)
@@ -155,33 +158,27 @@ class _SVMTrainWorker(QObject):
 
         test_split = 0.5
         seed = 42
-        xTrain, yTrain, xTest, yTest = None, None, None, None
-        xTrainRest, yTrainRest, xTestRest, yTestRest = None, None, None, None
+        xTrain = np.zeros(shape=(0, nCh))
+        yTrain = np.zeros(shape=(0,), dtype="int32")
+        xTest = np.zeros(shape=(0, nCh))
+        yTest = np.zeros(shape=(0,), dtype="int32")
         for label in np.unique(labels):
-            if label == 0:  # rest
-                xTrainRest, xTestRest, yTrainRest, yTestRest = train_test_split(
-                    dataFeat[labels == label],
-                    labels[labels == label],
-                    test_size=test_split,
-                    random_state=seed,
-                )
-            else:
-                xTrainContr, xTestContr, yTrainContr, yTestContr = train_test_split(
-                    dataFeat[labels == label],
-                    labels[labels == label],
-                    test_size=test_split,
-                    random_state=seed,
-                )
-                xTrain = np.concatenate((xTrainRest, xTrainContr))
-                xTest = np.concatenate((xTestRest, xTestContr))
-                yTrain = np.append(yTrainRest, yTrainContr)
-                yTest = np.append(yTestRest, yTestContr)
+            xTrainTmp, xTestTmp, yTrainTmp, yTestTmp = train_test_split(
+                dataFeat[labels == label],
+                labels[labels == label],
+                test_size=test_split,
+                random_state=seed,
+            )
+            xTrain = np.concatenate((xTrain, xTrainTmp))
+            yTrain = np.append(yTrain, yTrainTmp)
+            xTest = np.concatenate((xTest, xTestTmp))
+            yTest = np.append(yTest, yTestTmp)
 
         # Training
         logging.info(
             f"SVMTrainWorker: training... (training set size: {xTrain.shape}, test set size: {xTest.shape})"
         )
-        self._model.fit(xTrain, yTrain)
+        self._model.fit(xTrain[::self._downsampFactor], yTrain[::self._downsampFactor])
         yPred = self._model.predict(xTest)
 
         logging.info(f"SVMTrainWorker: training ended.")
