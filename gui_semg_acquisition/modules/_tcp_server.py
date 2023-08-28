@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import socket
+import struct
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
@@ -113,7 +114,9 @@ class _TCPServerWorker(QObject):
             Gesture label.
         """
         if self._conn is not None:
-            self._conn.sendall(bytes(self._gestureMap[data]))
+            mov = self._gestureMap[data]
+            logging.info(mov)
+            self._conn.sendall(struct.pack(f"{len(mov)}i", *mov))
 
 
 class TCPServerController(QObject):
