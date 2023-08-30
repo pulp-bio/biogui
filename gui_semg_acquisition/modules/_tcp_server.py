@@ -115,7 +115,6 @@ class _TCPServerWorker(QObject):
         """
         if self._conn is not None:
             mov = self._gestureMap[data]
-            logging.info(mov)
             self._conn.sendall(struct.pack(f"{len(mov)}i", *mov))
 
 
