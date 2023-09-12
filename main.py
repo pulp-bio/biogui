@@ -101,6 +101,11 @@ def main():
         type=str,
         help="Path to a JSON specifying the mapping between gesture labels and joint angles",
     )
+    parser.add_argument(
+        "--muDecomp",
+        action="store_true",
+        help="Whether to add the MU decomposition module",
+    )
     args = vars(parser.parse_args())
 
     argConstraint = sum([bool(args["virtHand"]), bool(args["gestureMapping"])])
@@ -138,6 +143,9 @@ def main():
                 port2=args["tcpPort2"],
                 gestureMap=gestureMapping,
             )
+    if args["muDecomp"]:
+        decompositionController = modules.DecompositionController()
+        decompositionController.subscribe(mainWin)
 
     # Run event loop
     sys.exit(app.exec())
