@@ -141,7 +141,7 @@ class _SVMInferenceConfigWidget(QWidget, Ui_SVMInferenceConfig):
     Attributes
     ----------
     model : SVC or None
-        Dictionary representing the configuration of the acquisition.
+        SVC model.
     """
 
     def __init__(self) -> None:
