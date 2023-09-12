@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 from ._acquisition import AcquisitionController
+from ._decomposition import DecompositionController
 from ._svm_inference import SVMInferenceController
 from ._svm_train import SVMTrainController
 from ._tcp_server import TCPServerController
