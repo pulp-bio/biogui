@@ -24,7 +24,7 @@
     <item>
      <layout class="QVBoxLayout" name="confLayout" stretch="0,0,0">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <layout class="QHBoxLayout" name="horizontalLayout1">
         <item>
          <widget class="QPushButton" name="startStreamingButton">
           <property name="text">
@@ -65,7 +65,7 @@
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QLabel" name="label_2">
+          <widget class="QLabel" name="label2">
            <property name="text">
             <string>Number of channels:</string>
            </property>
@@ -89,7 +89,7 @@
           </widget>
          </item>
          <item row="0" column="0">
-          <widget class="QLabel" name="label">
+          <widget class="QLabel" name="label1">
            <property name="text">
             <string>Serial port:</string>
            </property>
