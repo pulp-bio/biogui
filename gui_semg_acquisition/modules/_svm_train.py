@@ -90,7 +90,7 @@ class _SVMTrainWorker(QObject):
         super().__init__()
 
         self._sampFreq = sampFreq
-        self._downsampFactor = int(round(200 * sampFreq / 1000))
+        self._downsampFactor = int(round(20 * sampFreq / 1000))
 
         self._feature = "Waveform length"
         self._windowSize = int(200 * sampFreq / 1000)
@@ -178,7 +178,9 @@ class _SVMTrainWorker(QObject):
         logging.info(
             f"SVMTrainWorker: training... (training set size: {xTrain.shape}, test set size: {xTest.shape})"
         )
-        self._model.fit(xTrain[::self._downsampFactor], yTrain[::self._downsampFactor])
+        self._model.fit(
+            xTrain[:: self._downsampFactor], yTrain[:: self._downsampFactor]
+        )
         yPred = self._model.predict(xTest)
 
         logging.info(f"SVMTrainWorker: training ended.")
