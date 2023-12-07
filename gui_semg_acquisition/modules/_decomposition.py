@@ -80,9 +80,9 @@ class ORICAWorker(QObject):
         super().__init__()
 
         self._n = 1
-        self._approx = True
+        self._approx = False
 
-        self._f_ext = 62  # TODO
+        self._f_ext = 32  # TODO
         self._bufferSize = 512  # TODO: 128ms @ 4ksps
         self._bufferCount = 0
         self._queue = deque()
@@ -146,7 +146,7 @@ class ORICAWorker(QObject):
             eigVals, eigVecs = np.linalg.eigh(w_ @ w_.T)
 
             # Improve numerical stability
-            eigVals = np.clip(eigVals, min=np.finfo(w_.dtype).tiny)
+            # eigVals = np.clip(eigVals, min=np.finfo(w_.dtype).tiny)
 
             dMtx = np.diag(1.0 / np.sqrt(eigVals))
             return eigVecs @ dMtx @ eigVecs.T @ w_
@@ -183,7 +183,6 @@ class ORICAWorker(QObject):
                 1 / (1 - lambda_n) * (whiteMtxOld - covMtx / normFactor @ whiteMtxOld)
             )
             v = self._whiteMtx @ x
-            wDiff = np.abs(self._whiteMtx - whiteMtxOld).mean().item()
 
             # Separation
             sepMtxOld = self._sepMtx
@@ -198,7 +197,7 @@ class ORICAWorker(QObject):
                 symOrthApprox(self._sepMtx) if self._approx else symOrth(self._sepMtx)
             )
             y = self._sepMtx @ v
-            sDiff = np.abs(self._sepMtx - sepMtxOld).mean().item()
+
             self._n += 1  # n_samp
 
             self.decompSig.emit(y.T)
@@ -244,12 +243,12 @@ class _MUPlotWidget(QWidget, Ui_MUPlot):
         self.setupUi(self)
 
         self._nMu = nMu
-        renderLength = 2000
+        renderLength = 3000
         self._xQueue = deque(maxlen=renderLength)
         self._yQueue = deque(maxlen=renderLength)
         self._bufferCount = 0
         self._bufferSize = 200
-        self._plotSpacing = 1000
+        self._plotSpacing = 100
 
         # Plot
         self._plots = []
