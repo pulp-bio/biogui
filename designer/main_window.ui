@@ -20,13 +20,16 @@
    <string>sEMG Acquisition GUI</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,6">
+   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
     <item>
-     <layout class="QVBoxLayout" name="confLayout" stretch="0,0,0">
+     <layout class="QVBoxLayout" name="confLayout" stretch="0,2,8">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout1">
+       <layout class="QHBoxLayout" name="horizontalLayout2">
         <item>
          <widget class="QPushButton" name="startStreamingButton">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="text">
            <string>Start streaming</string>
           </property>
@@ -34,6 +37,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="stopStreamingButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Stop streaming</string>
           </property>
@@ -49,52 +55,112 @@
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
-        <layout class="QGridLayout" name="gridLayout" columnstretch="3,0,0">
-         <item row="1" column="1">
-          <widget class="QComboBox" name="channelsComboBox">
+        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0,0">
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="3,1">
            <item>
-            <property name="text">
-             <string>16</string>
-            </property>
+            <widget class="QLabel" name="label1">
+             <property name="text">
+              <string>Source:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+            </widget>
            </item>
            <item>
-            <property name="text">
-             <string>32</string>
-            </property>
+            <widget class="QComboBox" name="sourceComboBox">
+             <property name="toolTip">
+              <string>List of available serial ports</string>
+             </property>
+             <item>
+              <property name="text">
+               <string>Serial port</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Socket</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Dummy</string>
+              </property>
+             </item>
+            </widget>
            </item>
-          </widget>
+          </layout>
          </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label2">
-           <property name="text">
-            <string>Number of channels:</string>
-           </property>
-          </widget>
+         <item>
+          <layout class="QVBoxLayout" name="sourceConfContainer"/>
          </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="serialPortsComboBox">
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="7,1,1,1">
+           <item>
+            <widget class="QPushButton" name="addSignalButton">
+             <property name="toolTip">
+              <string>The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller</string>
+             </property>
+             <property name="text">
+              <string>Add signal</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="deleteSignalButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="user-trash">
+               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveUpButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-up">
+               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveDownButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-down">
+               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QListWidget" name="signalList">
            <property name="toolTip">
-            <string>List of available serial ports</string>
+            <string>The order of the signals must match the one provided by the streaming controller</string>
            </property>
-          </widget>
-         </item>
-         <item row="0" column="2">
-          <widget class="QPushButton" name="rescanSerialPortsButton">
-           <property name="toolTip">
-            <string>Refresh list of available serial ports</string>
+           <property name="autoFillBackground">
+            <bool>false</bool>
            </property>
-           <property name="text">
-            <string>Rescan</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label1">
-           <property name="text">
-            <string>Serial port:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           <property name="resizeMode">
+            <enum>QListView::Adjust</enum>
            </property>
           </widget>
          </item>
@@ -102,7 +168,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QScrollArea" name="scrollArea">
+       <widget class="QScrollArea" name="scrollArea1">
         <property name="widgetResizable">
          <bool>true</bool>
         </property>
@@ -111,11 +177,11 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>470</width>
-           <height>847</height>
+           <width>374</width>
+           <height>742</height>
           </rect>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout3">
           <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
@@ -136,7 +202,7 @@
      </layout>
     </item>
     <item>
-     <widget class="PlotWidget" name="graphWidget" native="true"/>
+     <layout class="QVBoxLayout" name="plotsLayout"/>
     </item>
    </layout>
   </widget>
@@ -152,14 +218,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QWidget</extends>
-   <header>pyqtgraph</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="resources.qrc"/>
  </resources>

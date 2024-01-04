@@ -1,4 +1,4 @@
-"""This module runs the app.
+"""This package contains the UI modules.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -15,26 +15,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import logging
-import sys
-
-from PySide6.QtWidgets import QApplication
-
-from biosignal_acquisition_gui import MainWindow
-
-
-def main():
-    logging.basicConfig(level=logging.INFO)
-
-    # Setup application and main window
-    app = QApplication(sys.argv)
-    mainWin = MainWindow()
-    mainWin.show()
-
-    # Run event loop
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
