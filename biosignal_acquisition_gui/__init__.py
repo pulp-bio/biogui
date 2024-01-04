@@ -1,4 +1,4 @@
-"""This module runs the app.
+"""This package consists in a GUI app for handling the acquisition of sEMG signals.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,25 +16,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
-import sys
-
-from PySide6.QtWidgets import QApplication
-
-from biosignal_acquisition_gui import MainWindow
-
-
-def main():
-    logging.basicConfig(level=logging.INFO)
-
-    # Setup application and main window
-    app = QApplication(sys.argv)
-    mainWin = MainWindow()
-    mainWin.show()
-
-    # Run event loop
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
+from .main_window import MainWindow
