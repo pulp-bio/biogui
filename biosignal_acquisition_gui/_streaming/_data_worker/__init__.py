@@ -1,4 +1,4 @@
-"""This package contains the UI modules.
+"""This package contains the data collection workers.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -15,3 +15,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from ._abc_data_worker import DataWorker
+from ._dummy_data_worker import DummyDataWorker
+from ._serial_data_worker import SerialDataWorker
+from ._socket_data_worker import SocketDataWorker, SocketProtocol
+
+__all__ = [
+    "DataWorker",
+    "DummyDataWorker",
+    "SerialDataWorker",
+    "SocketDataWorker",
+    "SocketProtocol",
+]
