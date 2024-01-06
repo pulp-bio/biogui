@@ -13,23 +13,44 @@
   <property name="windowTitle">
    <string>Serial Configuration Widget</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,2,1">
-   <item>
-    <widget class="QLabel" name="label">
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label1">
      <property name="text">
       <string>Serial port:</string>
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QComboBox" name="serialPortsComboBox"/>
+   <item row="0" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
+     <item>
+      <widget class="QComboBox" name="serialPortsComboBox"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="rescanSerialPortsButton">
+       <property name="toolTip">
+        <string>Rescan serial ports</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="view-refresh">
+         <normaloff>.</normaloff>.</iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
-   <item>
-    <widget class="QPushButton" name="rescanSerialPortsButton">
+   <item row="1" column="0">
+    <widget class="QLabel" name="label2">
      <property name="text">
-      <string>Rescan</string>
+      <string>Baud rate:</string>
      </property>
     </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="baudRateTextField"/>
    </item>
   </layout>
  </widget>

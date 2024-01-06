@@ -112,6 +112,9 @@
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="toolTip">
+              <string>Delete selected signal</string>
+             </property>
              <property name="text">
               <string/>
              </property>
@@ -126,6 +129,9 @@
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="toolTip">
+              <string>Move up selected signal</string>
+             </property>
              <property name="text">
               <string/>
              </property>
@@ -139,6 +145,9 @@
             <widget class="QPushButton" name="moveDownButton">
              <property name="enabled">
               <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Move down selected signal</string>
              </property>
              <property name="text">
               <string/>

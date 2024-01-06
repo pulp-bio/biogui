@@ -1,4 +1,4 @@
-"""Interface for streaming controllers.
+"""Interface for data collection workers.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,38 +16,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from __future__ import annotations
-
 from abc import ABC, ABCMeta, abstractmethod
 
 from PySide6.QtCore import QObject, Signal
 
 
-class StreamingControllerMeta(type(QObject), ABCMeta):
-    """Metaclass for the streaming controller interface."""
+class DataWorkerMeta(type(QObject), ABCMeta):
+    """Metaclass for the data worker interface."""
 
 
-class StreamingController(ABC, QObject, metaclass=StreamingControllerMeta):
-    """Interface for streaming controllers.
+class DataWorker(ABC, QObject, metaclass=DataWorkerMeta):
+    """Interface for data collection workers.
 
     Class attributes
     ----------------
     dataReadySig : Signal
-        Qt signal emitted when new data is available.
-    dataReadyFltSig : Signal
-        Qt signal emitted when new filtered data is available.
-    serialErrorSig : Signal
-        Qt signal emitted when an error with the serial transmission occurred.
+        Qt Signal emitted when new data is collected.
+    commErrorSig : Signal
+        Qt Signal emitted when a communication error occurs.
     """
 
-    dataReadySig: Signal
-    dataReadyFltSig: Signal
-    serialErrorSig: Signal
+    dataReadySig = Signal(bytes)
+    commErrorSig = Signal()
 
     @abstractmethod
-    def startStreaming(self) -> None:
-        """Start streaming."""
+    def startCollecting(self) -> None:
+        """Collect data from the configured source."""
 
     @abstractmethod
-    def stopStreaming(self) -> None:
-        """Stop streaming."""
+    def stopCollecting(self) -> None:
+        """Stop data collection."""
