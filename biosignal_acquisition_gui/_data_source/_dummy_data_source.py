@@ -1,4 +1,4 @@
-"""Class implementing the data collection worker for dummy generation.
+"""Classes for the dummy data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -21,9 +21,37 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from PySide6.QtCore import QObject, QTimer
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QWidget
 
-from ._abc_data_worker import DataWorker
+from ._abc_data_source import ConfigResult, DataConfWidget, DataWorker
+
+
+class DummyConfWidget(DataConfWidget):
+    """Empty widget for the dummy source.
+
+    Parameters
+    ----------
+    parent : QWidget or None, default=None
+        Parent QWidget.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+
+    def validateConfig(self) -> ConfigResult:
+        """Validate the configuration.
+
+        Returns
+        -------
+        ConfigResult
+            Named tuple containing:
+            - whether the configuration is valid;
+            - dictionary representing the configuration (if it is valid);
+            - error message (if the configuration is not valid);
+            - a source name to display (if the configuration is valid).
+        """
+        return ConfigResult(isValid=True, config={}, errMessage="", configName="Dummy")
 
 
 class DummyDataWorker(DataWorker):
@@ -31,8 +59,7 @@ class DummyDataWorker(DataWorker):
 
     Parameters
     ----------
-    parent : QObject or None, default=None
-        Parent QObject.
+
 
     Attributes
     ----------
@@ -55,27 +82,27 @@ class DummyDataWorker(DataWorker):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, parent: QObject | None = None) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
 
-        self._nCh = 0
-        self._nSamp = 0
+        self._nChList = []
+        self._nSamp = -1
         self._mean = 0.0
         self._std1 = 100.0
-        self._std2 = 100.0
+        self._std2 = 20.0
         self._prng = np.random.default_rng(seed=42)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._generate)
 
     @property
-    def nCh(self) -> int:
-        """int: Property representing the number of channels."""
-        return self._nCh
+    def nChList(self) -> list[int]:
+        """list of int: Property representing the number of channels for each signal."""
+        return self._nChList
 
-    @nCh.setter
-    def nCh(self, nCh: int) -> None:
-        self._nCh = nCh
+    @nChList.setter
+    def nChList(self, nChList: list[int]) -> None:
+        self._nChList = nChList
 
     @property
     def nSamp(self) -> int:
@@ -88,13 +115,13 @@ class DummyDataWorker(DataWorker):
 
     def _generate(self) -> None:
         """Generate random data."""
-        if self._nCh == 0 or self._nSamp == 0:
+        if len(self._nChList) == 0 or self._nSamp == 0:
             self.commErrorSig.emit()
             logging.error("DataWorker: dummy generation not configured properly.")
             self._timer.stop()
 
         data = self._prng.normal(
-            loc=self._mean, scale=self._std1, size=(self._nSamp, self._nCh)
+            loc=self._mean, scale=self._std1, size=(self._nSamp, sum(self._nChList))
         ).astype("float32")
         self.dataReadySig.emit(data)
         self._mean += self._prng.normal(scale=self._std2)
@@ -104,7 +131,7 @@ class DummyDataWorker(DataWorker):
         self._timer.start(1)
         logging.info("DataWorker: data generation started.")
 
-    def stopReading(self) -> None:
+    def stopCollecting(self) -> None:
         """Stop data collection."""
         self._timer.stop()
         logging.info("DataWorker: data generation stopped.")

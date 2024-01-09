@@ -1,4 +1,4 @@
-"""This package consists in a GUI app for handling the acquisition of sEMG signals.
+"""This package contains a GUI app for the acquisition of bio-signals.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,4 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from . import modules
 from .main_window import MainWindow
+
+__all__ = ["MainWindow", "modules"]

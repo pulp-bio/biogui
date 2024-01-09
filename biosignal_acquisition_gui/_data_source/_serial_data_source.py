@@ -1,4 +1,4 @@
-"""Class implementing the data collection worker for serial ports.
+"""Classes for the serial data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -22,8 +22,88 @@ import logging
 import time
 
 import serial
+import serial.tools.list_ports
+from PySide6.QtGui import QIntValidator
+from PySide6.QtWidgets import QWidget
 
-from ._abc_data_worker import DataWorker
+from .._ui.ui_serial_conf_widget import Ui_SerialConfWidget
+from ._abc_data_source import ConfigResult, DataConfWidget, DataWorker
+
+
+def _serialPorts() -> list[str]:
+    """Lists serial port names.
+
+    Returns
+    -------
+    list of str
+        A list of the serial ports available on the system.
+    """
+    return [info[0] for info in serial.tools.list_ports.comports()]
+
+
+class SerialConfWidget(DataConfWidget, Ui_SerialConfWidget):
+    """Widget to configure the serial source.
+
+    Parameters
+    ----------
+    parent : QWidget or None, default=None
+        Parent QWidget.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+
+        self.setupUi(self)
+
+        self._rescanSerialPorts()
+        self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
+
+        baudRateValidator = QIntValidator(bottom=1, top=4_000_000)
+        self.baudRateTextField.setValidator(baudRateValidator)
+
+    def validateConfig(self) -> ConfigResult:
+        """Validate the configuration.
+
+        Returns
+        -------
+        ConfigResult
+            Named tuple containing:
+            - whether the configuration is valid;
+            - dictionary representing the configuration (if it is valid);
+            - error message (if the configuration is not valid);
+            - a source name to display (if the configuration is valid).
+        """
+        if self.serialPortsComboBox.currentText() == "":
+            return ConfigResult(
+                isValid=False,
+                config={},
+                errMessage='The "serial port" field is empty.',
+                configName="",
+            )
+
+        if not self.baudRateTextField.hasAcceptableInput():
+            return ConfigResult(
+                isValid=False,
+                config={},
+                errMessage='The "baud rate" field is invalid.',
+                configName="",
+            )
+
+        serialPort = self.serialPortsComboBox.currentText()
+        return ConfigResult(
+            isValid=True,
+            config={
+                "serialPort": serialPort,
+                "baudRate": int(self.baudRateTextField.text()),
+            },
+            errMessage="",
+            configName=f"Serial port - {serialPort}",
+        )
+
+    def _rescanSerialPorts(self) -> None:
+        """Rescan the serial ports to update the combo box."""
+        self.serialPortsComboBox.clear()
+        self.serialPortsComboBox.addItems(_serialPorts())
 
 
 class SerialDataWorker(DataWorker):

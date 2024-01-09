@@ -23,60 +23,15 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-import serial.tools.list_ports
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import QDialog, QMainWindow, QMessageBox, QWidget
 
-from ._streaming import StreamingController
+from ._data_worker import DummyConfWidget, SerialConfWidget, SocketConfWidget
+from ._stream_controller import StreamingController
 from ._ui.ui_add_signal_dialog import Ui_AddSignalDialog
 from ._ui.ui_main_window import Ui_MainWindow
-from ._ui.ui_serial_conf_widget import Ui_SerialConfWidget
 from ._ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
-from ._ui.ui_socket_conf_widget import Ui_SocketConfWidget
-
-
-def _serialPorts() -> list[str]:
-    """Lists serial port names.
-
-    Returns
-    -------
-    list of str
-        A list of the serial ports available on the system.
-    """
-    return [info[0] for info in serial.tools.list_ports.comports()]
-
-
-class _SerialConfWidget(QWidget, Ui_SerialConfWidget):
-    """Widget to configure the serial source."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-
-        self.setupUi(self)
-
-        self._rescanSerialPorts()
-        self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
-
-    def _rescanSerialPorts(self) -> None:
-        """Rescan the serial ports to update the combo box."""
-        self.serialPortsComboBox.clear()
-        self.serialPortsComboBox.addItems(_serialPorts())
-
-
-class _SocketConfWidget(QWidget, Ui_SocketConfWidget):
-    """Widget to configure the socket source."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-
-        self.setupUi(self)
-
-        # Validation rules
-        minPort, maxPort = 1024, 49151
-        self.portTextField.setToolTip(f"Integer between {minPort} and {maxPort}")
-        portValidator = QIntValidator(bottom=minPort, top=maxPort)
-        self.portTextField.setValidator(portValidator)
 
 
 class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
@@ -344,34 +299,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     Class attributes
     ----------------
     startStreamingSig : Signal
-        Qt signal emitted when streaming starts.
+        Qt Signal emitted when streaming starts.
     stopStreamingSig : Signal
-        Qt signal emitted when streaming stops.
+        Qt Signal emitted when streaming stops.
     closeSig : Signal
-        Qt signal emitted when the application is closed.
-    dataReadySig : Signal
-        Qt signal emitted when new data is available.
+        Qt Signal emitted when the application is closed.
+    dataReadyRawSig : Signal
+        Qt Signal emitted when new raw data is available.
     dataReadyFltSig : Signal
-        Qt signal emitted when new filtered data is available.
+        Qt Signal emitted when new filtered data is available.
     """
 
     startStreamingSig = Signal()
     stopStreamingSig = Signal()
     closeSig = Signal()
-    dataReadySig = Signal(np.ndarray)
+    dataReadyRawSig = Signal(np.ndarray)
     dataReadyFltSig = Signal(np.ndarray)
 
-    def __init__(self) -> None:
+    def __init__(self, packetSize: int, nSamp: int) -> None:
+        assert packetSize > 0, 'The "packetSize" argument must be positive.'
+        assert nSamp > 0, 'The "nSamp" argument must be positive.'
+
         super().__init__()
 
         self.setupUi(self)
 
-        # Handle source type
+        # Source type
         self.sourceComboBox.currentTextChanged.connect(self._onSourceChange)
-        self._sourceConfWidget = _SerialConfWidget(self)  # default is serial port
+        self._sourceConfWidget = SerialConfWidget(self)  # default is serial port
         self.sourceConfContainer.addWidget(self._sourceConfWidget)
 
-        # Handle signal addition/removal/move
+        # Signal addition/removal/moving
         self.addSignalButton.clicked.connect(self._addSignal)
         self.deleteSignalButton.clicked.connect(self._deleteSignal)
         self.signalList.itemClicked.connect(
@@ -381,19 +339,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.moveDownButton.clicked.connect(lambda: self._moveSignal(up=False))
         self.signalList.itemClicked.connect(self._enableMoveButtons)
 
-        # Handle start/stop streaming
+        # Streaming
+        self._streamController = StreamingController(packetSize, nSamp, self)
+        self._streamController.dataReadySig.connect(
+            lambda d: self.dataReadyRawSig.emit(d)
+        )  # forward Qt Signal for raw data
+        self._streamController.dataReadyFltSig.connect(self._handleData)
+        self._streamController.commErrorSig.connect(self._handleCommunicationError)
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
 
-        # Streaming controller
-        self._streamController = StreamingController(nCh=19, sampFreq=4000)
-        self._streamController.commErrorSig.connect(self._displayAlert)
-        self._streamController.dataReadyFltSig.connect(self._handleData)
-        self._streamController.dataReadySig.connect(
-            lambda d: self.dataReadySig.emit(d)
-        )  # forward Qt Signal for raw data
-
         self._plotWidgets = []
+
+    def addConfWidget(self, widget: QWidget) -> None:
+        """Add a widget for module configuration to the GUI.
+
+        Parameters
+        ----------
+        widget : QWidget
+            Widget to display.
+        """
+        self.moduleContainer.layout().addWidget(widget)
 
     def _onSourceChange(self) -> None:
         """Detect if source type has changed."""
@@ -403,9 +369,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Add new widget
         sourceConfWidgetDict = {
-            "Serial port": _SerialConfWidget,
-            "Socket": _SocketConfWidget,
-            "Dummy": QWidget,
+            "Serial port": SerialConfWidget,
+            "Socket": SocketConfWidget,
+            "Dummy": DummyConfWidget,
         }
         self._sourceConfWidget = sourceConfWidgetDict[
             self.sourceComboBox.currentText()
@@ -497,7 +463,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Start streaming."""
         logging.info("MainWindow: streaming started.")
 
-        # Attempt to create streaming controller
+        # Validate settings
+        if self.signalList.count() == 0:
+            QMessageBox.critical(
+                self,
+                "Invalid configuration",
+                "There are no configured signals.",
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
+            return
+        args = self._sourceConfWidget.validateBeforeStreaming()
+        if "error" in args.keys():
+            QMessageBox.critical(
+                self,
+                "Invalid configuration",
+                args["error"],
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
+            return
 
         # Handle UI elements
         self.startStreamingButton.setEnabled(False)
@@ -519,11 +504,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         logging.info("MainWindow: streaming stopped.")
 
-    def _displayAlert(self) -> None:
-        """Alert message displayed when communication fails."""
-        self._alert = QMessageBox.critical(
+    def _handleCommunicationError(self) -> None:
+        """When communication fails, display an alert and stop streaming."""
+        QMessageBox.critical(
             self,
-            "Communication failed",
+            "Communication failes",
             "Could not communicate with the device.",
             buttons=QMessageBox.Retry,  # type: ignore
             defaultButton=QMessageBox.Retry,  # type: ignore

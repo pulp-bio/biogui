@@ -1,4 +1,4 @@
-"""Interface for data collection workers.
+"""Interfaces for data sources.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,9 +16,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from __future__ import annotations
+
 from abc import ABC, ABCMeta, abstractmethod
+from collections import namedtuple
 
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QWidget
+
+ConfigResult = namedtuple("Config", ("isValid", "config", "errMessage", "configName"))
+
+
+class DataConfWidgetMeta(type(QObject), ABCMeta):
+    """Metaclass for the data configuration widget interface."""
+
+
+class DataConfWidget(ABC, QWidget, metaclass=DataConfWidgetMeta):
+    """Interface for the configuration widgets of data sources."""
+
+    @abstractmethod
+    def validateConfig(self) -> ConfigResult:
+        """Validate the configuration.
+
+        Returns
+        -------
+        ConfigResult
+            Named tuple containing:
+            - whether the configuration is valid;
+            - dictionary representing the configuration (if it is valid);
+            - error message (if the configuration is not valid);
+            - a source name to display (if the configuration is valid).
+        """
 
 
 class DataWorkerMeta(type(QObject), ABCMeta):
