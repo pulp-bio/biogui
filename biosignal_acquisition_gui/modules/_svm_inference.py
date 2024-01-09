@@ -215,7 +215,7 @@ class SVMInferenceController(QObject):
         mainWin : MainWindow
             Instance of MainWindow.
         """
-        mainWin.addWidget(self.confWidget)
+        mainWin.addConfWidget(self.confWidget)
         mainWin.startStreamingSig.connect(self._startInference)
         mainWin.stopStreamingSig.connect(self._stopInference)
         mainWin.closeSig.connect(self._stopInference)
