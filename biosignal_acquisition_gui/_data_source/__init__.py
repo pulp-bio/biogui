@@ -1,4 +1,4 @@
-"""This package contains the data collection workers.
+"""This package contains the code for managing data sources.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,15 +16,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from ._abc_data_worker import DataWorker
-from ._dummy_data_worker import DummyDataWorker
-from ._serial_data_worker import SerialDataWorker
-from ._socket_data_worker import SocketDataWorker, SocketProtocol
+from enum import Enum
+
+from ._abc_data_source import DataWorker
+from ._dummy_data_source import DummyConfWidget, DummyDataWorker
+from ._serial_data_source import SerialConfWidget, SerialDataWorker
+from ._socket_data_source import SocketConfWidget, SocketDataWorker
+
+DataWorkerType = Enum("DataWorkerType", ["Serial", "Socket", "Dummy"])
 
 __all__ = [
     "DataWorker",
+    "DataWorkerType",
+    "DummyConfWidget",
     "DummyDataWorker",
+    "SerialConfWidget",
     "SerialDataWorker",
+    "SocketConfWidget",
     "SocketDataWorker",
-    "SocketProtocol",
 ]

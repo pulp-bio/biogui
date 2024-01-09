@@ -15,11 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox, QHBoxLayout,
-    QLabel, QListView, QListWidget, QListWidgetItem,
-    QMainWindow, QMenuBar, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QStatusBar, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QListView,
+    QListWidget, QListWidgetItem, QMainWindow, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QStatusBar, QVBoxLayout, QWidget)
 from . import resources_rc
 
 class Ui_MainWindow(object):
@@ -28,21 +27,21 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1920, 1080)
         MainWindow.setMinimumSize(QSize(1080, 720))
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.horizontalLayout1 = QHBoxLayout(self.centralwidget)
+        self.centralWidget = QWidget(MainWindow)
+        self.centralWidget.setObjectName(u"centralWidget")
+        self.horizontalLayout1 = QHBoxLayout(self.centralWidget)
         self.horizontalLayout1.setObjectName(u"horizontalLayout1")
         self.confLayout = QVBoxLayout()
         self.confLayout.setObjectName(u"confLayout")
         self.horizontalLayout2 = QHBoxLayout()
         self.horizontalLayout2.setObjectName(u"horizontalLayout2")
-        self.startStreamingButton = QPushButton(self.centralwidget)
+        self.startStreamingButton = QPushButton(self.centralWidget)
         self.startStreamingButton.setObjectName(u"startStreamingButton")
         self.startStreamingButton.setEnabled(True)
 
         self.horizontalLayout2.addWidget(self.startStreamingButton)
 
-        self.stopStreamingButton = QPushButton(self.centralwidget)
+        self.stopStreamingButton = QPushButton(self.centralWidget)
         self.stopStreamingButton.setObjectName(u"stopStreamingButton")
         self.stopStreamingButton.setEnabled(False)
 
@@ -51,83 +50,92 @@ class Ui_MainWindow(object):
 
         self.confLayout.addLayout(self.horizontalLayout2)
 
-        self.streamConfGroupBox = QGroupBox(self.centralwidget)
+        self.streamConfGroupBox = QGroupBox(self.centralWidget)
         self.streamConfGroupBox.setObjectName(u"streamConfGroupBox")
         self.streamConfGroupBox.setAlignment(Qt.AlignCenter)
         self.verticalLayout1 = QVBoxLayout(self.streamConfGroupBox)
         self.verticalLayout1.setObjectName(u"verticalLayout1")
         self.horizontalLayout3 = QHBoxLayout()
         self.horizontalLayout3.setObjectName(u"horizontalLayout3")
-        self.label1 = QLabel(self.streamConfGroupBox)
-        self.label1.setObjectName(u"label1")
-        self.label1.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.addSourceButton = QPushButton(self.streamConfGroupBox)
+        self.addSourceButton.setObjectName(u"addSourceButton")
 
-        self.horizontalLayout3.addWidget(self.label1)
+        self.horizontalLayout3.addWidget(self.addSourceButton)
 
-        self.sourceComboBox = QComboBox(self.streamConfGroupBox)
-        self.sourceComboBox.addItem("")
-        self.sourceComboBox.addItem("")
-        self.sourceComboBox.addItem("")
-        self.sourceComboBox.setObjectName(u"sourceComboBox")
-
-        self.horizontalLayout3.addWidget(self.sourceComboBox)
-
-        self.horizontalLayout3.setStretch(0, 3)
-        self.horizontalLayout3.setStretch(1, 1)
-
-        self.verticalLayout1.addLayout(self.horizontalLayout3)
-
-        self.sourceConfContainer = QVBoxLayout()
-        self.sourceConfContainer.setObjectName(u"sourceConfContainer")
-
-        self.verticalLayout1.addLayout(self.sourceConfContainer)
-
-        self.horizontalLayout4 = QHBoxLayout()
-        self.horizontalLayout4.setObjectName(u"horizontalLayout4")
-        self.addSignalButton = QPushButton(self.streamConfGroupBox)
-        self.addSignalButton.setObjectName(u"addSignalButton")
-
-        self.horizontalLayout4.addWidget(self.addSignalButton)
-
-        self.deleteSignalButton = QPushButton(self.streamConfGroupBox)
-        self.deleteSignalButton.setObjectName(u"deleteSignalButton")
-        self.deleteSignalButton.setEnabled(False)
+        self.deleteSourceButton = QPushButton(self.streamConfGroupBox)
+        self.deleteSourceButton.setObjectName(u"deleteSourceButton")
         icon = QIcon()
         iconThemeName = u"user-trash"
         if QIcon.hasThemeIcon(iconThemeName):
             icon = QIcon.fromTheme(iconThemeName)
         else:
-            icon.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.deleteSignalButton.setIcon(icon)
+        self.deleteSourceButton.setIcon(icon)
 
-        self.horizontalLayout4.addWidget(self.deleteSignalButton)
+        self.horizontalLayout3.addWidget(self.deleteSourceButton)
 
-        self.moveUpButton = QPushButton(self.streamConfGroupBox)
-        self.moveUpButton.setObjectName(u"moveUpButton")
-        self.moveUpButton.setEnabled(False)
+        self.horizontalLayout3.setStretch(0, 9)
+        self.horizontalLayout3.setStretch(1, 1)
+
+        self.verticalLayout1.addLayout(self.horizontalLayout3)
+
+        self.sourceList = QListWidget(self.streamConfGroupBox)
+        self.sourceList.setObjectName(u"sourceList")
+
+        self.verticalLayout1.addWidget(self.sourceList)
+
+        self.signalsGroupBox = QGroupBox(self.streamConfGroupBox)
+        self.signalsGroupBox.setObjectName(u"signalsGroupBox")
+        self.signalsGroupBox.setEnabled(False)
+        self.verticalLayout2 = QVBoxLayout(self.signalsGroupBox)
+        self.verticalLayout2.setObjectName(u"verticalLayout2")
+        self.horizontalLayout4 = QHBoxLayout()
+        self.horizontalLayout4.setObjectName(u"horizontalLayout4")
+        self.addSignalButton = QPushButton(self.signalsGroupBox)
+        self.addSignalButton.setObjectName(u"addSignalButton")
+
+        self.horizontalLayout4.addWidget(self.addSignalButton)
+
+        self.deleteSignalButton = QPushButton(self.signalsGroupBox)
+        self.deleteSignalButton.setObjectName(u"deleteSignalButton")
+        self.deleteSignalButton.setEnabled(False)
         icon1 = QIcon()
-        iconThemeName = u"arrow-up"
+        iconThemeName = u"user-trash"
         if QIcon.hasThemeIcon(iconThemeName):
             icon1 = QIcon.fromTheme(iconThemeName)
         else:
             icon1.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.moveUpButton.setIcon(icon1)
+        self.deleteSignalButton.setIcon(icon1)
 
-        self.horizontalLayout4.addWidget(self.moveUpButton)
+        self.horizontalLayout4.addWidget(self.deleteSignalButton)
 
-        self.moveDownButton = QPushButton(self.streamConfGroupBox)
-        self.moveDownButton.setObjectName(u"moveDownButton")
-        self.moveDownButton.setEnabled(False)
+        self.moveUpButton = QPushButton(self.signalsGroupBox)
+        self.moveUpButton.setObjectName(u"moveUpButton")
+        self.moveUpButton.setEnabled(False)
         icon2 = QIcon()
-        iconThemeName = u"arrow-down"
+        iconThemeName = u"arrow-up"
         if QIcon.hasThemeIcon(iconThemeName):
             icon2 = QIcon.fromTheme(iconThemeName)
         else:
             icon2.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
-        self.moveDownButton.setIcon(icon2)
+        self.moveUpButton.setIcon(icon2)
+
+        self.horizontalLayout4.addWidget(self.moveUpButton)
+
+        self.moveDownButton = QPushButton(self.signalsGroupBox)
+        self.moveDownButton.setObjectName(u"moveDownButton")
+        self.moveDownButton.setEnabled(False)
+        icon3 = QIcon()
+        iconThemeName = u"arrow-down"
+        if QIcon.hasThemeIcon(iconThemeName):
+            icon3 = QIcon.fromTheme(iconThemeName)
+        else:
+            icon3.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+
+        self.moveDownButton.setIcon(icon3)
 
         self.horizontalLayout4.addWidget(self.moveDownButton)
 
@@ -136,36 +144,42 @@ class Ui_MainWindow(object):
         self.horizontalLayout4.setStretch(2, 1)
         self.horizontalLayout4.setStretch(3, 1)
 
-        self.verticalLayout1.addLayout(self.horizontalLayout4)
+        self.verticalLayout2.addLayout(self.horizontalLayout4)
 
-        self.signalList = QListWidget(self.streamConfGroupBox)
+        self.signalList = QListWidget(self.signalsGroupBox)
         self.signalList.setObjectName(u"signalList")
         self.signalList.setAutoFillBackground(False)
         self.signalList.setResizeMode(QListView.Adjust)
 
-        self.verticalLayout1.addWidget(self.signalList)
+        self.verticalLayout2.addWidget(self.signalList)
 
+        self.verticalLayout2.setStretch(1, 1)
+
+        self.verticalLayout1.addWidget(self.signalsGroupBox)
+
+        self.verticalLayout1.setStretch(1, 1)
+        self.verticalLayout1.setStretch(2, 1)
 
         self.confLayout.addWidget(self.streamConfGroupBox)
 
-        self.scrollArea1 = QScrollArea(self.centralwidget)
-        self.scrollArea1.setObjectName(u"scrollArea1")
-        self.scrollArea1.setWidgetResizable(True)
+        self.scrollArea2 = QScrollArea(self.centralWidget)
+        self.scrollArea2.setObjectName(u"scrollArea2")
+        self.scrollArea2.setWidgetResizable(True)
         self.moduleContainer = QWidget()
         self.moduleContainer.setObjectName(u"moduleContainer")
-        self.moduleContainer.setGeometry(QRect(0, 0, 374, 742))
+        self.moduleContainer.setGeometry(QRect(0, 0, 284, 478))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout3.addItem(self.verticalSpacer)
 
-        self.scrollArea1.setWidget(self.moduleContainer)
+        self.scrollArea2.setWidget(self.moduleContainer)
 
-        self.confLayout.addWidget(self.scrollArea1)
+        self.confLayout.addWidget(self.scrollArea2)
 
-        self.confLayout.setStretch(1, 2)
-        self.confLayout.setStretch(2, 8)
+        self.confLayout.setStretch(1, 1)
+        self.confLayout.setStretch(2, 1)
 
         self.horizontalLayout1.addLayout(self.confLayout)
 
@@ -174,9 +188,8 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout1.addLayout(self.plotsLayout)
 
-        self.horizontalLayout1.setStretch(0, 2)
         self.horizontalLayout1.setStretch(1, 8)
-        MainWindow.setCentralWidget(self.centralwidget)
+        MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 1920, 30))
@@ -195,20 +208,24 @@ class Ui_MainWindow(object):
         self.startStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Start streaming", None))
         self.stopStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Stop streaming", None))
         self.streamConfGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Configuration", None))
-        self.label1.setText(QCoreApplication.translate("MainWindow", u"Source:", None))
-        self.sourceComboBox.setItemText(0, QCoreApplication.translate("MainWindow", u"Serial port", None))
-        self.sourceComboBox.setItemText(1, QCoreApplication.translate("MainWindow", u"Socket", None))
-        self.sourceComboBox.setItemText(2, QCoreApplication.translate("MainWindow", u"Dummy", None))
-
-#if QT_CONFIG(tooltip)
-        self.sourceComboBox.setToolTip(QCoreApplication.translate("MainWindow", u"List of available serial ports", None))
-#endif // QT_CONFIG(tooltip)
+        self.addSourceButton.setText(QCoreApplication.translate("MainWindow", u"Add source", None))
+        self.deleteSourceButton.setText("")
+        self.signalsGroupBox.setTitle("")
 #if QT_CONFIG(tooltip)
         self.addSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller", None))
 #endif // QT_CONFIG(tooltip)
         self.addSignalButton.setText(QCoreApplication.translate("MainWindow", u"Add signal", None))
+#if QT_CONFIG(tooltip)
+        self.deleteSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"Delete selected signal", None))
+#endif // QT_CONFIG(tooltip)
         self.deleteSignalButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.moveUpButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move up selected signal", None))
+#endif // QT_CONFIG(tooltip)
         self.moveUpButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.moveDownButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move down selected signal", None))
+#endif // QT_CONFIG(tooltip)
         self.moveDownButton.setText("")
 #if QT_CONFIG(tooltip)
         self.signalList.setToolTip(QCoreApplication.translate("MainWindow", u"The order of the signals must match the one provided by the streaming controller", None))

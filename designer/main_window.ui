@@ -19,10 +19,10 @@
   <property name="windowTitle">
    <string>sEMG Acquisition GUI</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="0,8">
     <item>
-     <layout class="QVBoxLayout" name="confLayout" stretch="0,2,8">
+     <layout class="QVBoxLayout" name="confLayout" stretch="0,1,1">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout2">
         <item>
@@ -55,129 +55,127 @@
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0,0">
+        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,1,1">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="3,1">
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,1">
            <item>
-            <widget class="QLabel" name="label1">
+            <widget class="QPushButton" name="addSourceButton">
              <property name="text">
-              <string>Source:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              <string>Add source</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="sourceComboBox">
-             <property name="toolTip">
-              <string>List of available serial ports</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Serial port</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Socket</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Dummy</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="sourceConfContainer"/>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="7,1,1,1">
-           <item>
-            <widget class="QPushButton" name="addSignalButton">
-             <property name="toolTip">
-              <string>The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller</string>
-             </property>
-             <property name="text">
-              <string>Add signal</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="deleteSignalButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Delete selected signal</string>
-             </property>
+            <widget class="QPushButton" name="deleteSourceButton">
              <property name="text">
               <string/>
              </property>
              <property name="icon">
               <iconset theme="user-trash">
-               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveUpButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move up selected signal</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-up">
-               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveDownButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move down selected signal</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-down">
-               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
           </layout>
          </item>
          <item>
-          <widget class="QListWidget" name="signalList">
-           <property name="toolTip">
-            <string>The order of the signals must match the one provided by the streaming controller</string>
-           </property>
-           <property name="autoFillBackground">
+          <widget class="QListWidget" name="sourceList"/>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="signalsGroupBox">
+           <property name="enabled">
             <bool>false</bool>
            </property>
-           <property name="resizeMode">
-            <enum>QListView::Adjust</enum>
+           <property name="title">
+            <string/>
            </property>
+           <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,1">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout4" stretch="7,1,1,1">
+              <item>
+               <widget class="QPushButton" name="addSignalButton">
+                <property name="toolTip">
+                 <string>The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller</string>
+                </property>
+                <property name="text">
+                 <string>Add signal</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="deleteSignalButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string>Delete selected signal</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="user-trash">
+                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="moveUpButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string>Move up selected signal</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="arrow-up">
+                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="moveDownButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="toolTip">
+                 <string>Move down selected signal</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="arrow-down">
+                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QListWidget" name="signalList">
+              <property name="toolTip">
+               <string>The order of the signals must match the one provided by the streaming controller</string>
+              </property>
+              <property name="autoFillBackground">
+               <bool>false</bool>
+              </property>
+              <property name="resizeMode">
+               <enum>QListView::Adjust</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QScrollArea" name="scrollArea1">
+       <widget class="QScrollArea" name="scrollArea2">
         <property name="widgetResizable">
          <bool>true</bool>
         </property>
@@ -186,8 +184,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>374</width>
-           <height>742</height>
+           <width>284</width>
+           <height>478</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout3">
