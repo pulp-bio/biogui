@@ -267,7 +267,7 @@ class SVMTrainController(QObject):
         mainWin : MainWindow
             Instance of MainWindow.
         """
-        mainWin.addWidget(self.confWidget)
+        mainWin.addConfWidget(self.confWidget)
 
     def _startTraining(self) -> None:
         """Start the SVM training."""

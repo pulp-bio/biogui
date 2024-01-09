@@ -377,7 +377,7 @@ class DecompositionController(QObject):
         mainWin : MainWindow
             Instance of MainWindow.
         """
-        mainWin.addWidget(self.confWidget)
+        mainWin.addConfWidget(self.confWidget)
         mainWin.startStreamingSig.connect(self._startDecomposition)
         mainWin.stopStreamingSig.connect(self._stopDecomposition)
         mainWin.closeSig.connect(self._stopDecomposition)
