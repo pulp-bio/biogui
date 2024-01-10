@@ -35,9 +35,6 @@ class Ui_AddSourceDialog(object):
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
 
         self.sourceComboBox = QComboBox(AddSourceDialog)
-        self.sourceComboBox.addItem("")
-        self.sourceComboBox.addItem("")
-        self.sourceComboBox.addItem("")
         self.sourceComboBox.setObjectName(u"sourceComboBox")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.sourceComboBox)
@@ -45,10 +42,10 @@ class Ui_AddSourceDialog(object):
 
         self.verticalLayout.addLayout(self.formLayout)
 
-        self.sourceConfContainer = QVBoxLayout()
-        self.sourceConfContainer.setObjectName(u"sourceConfContainer")
+        self.sourceConfigContainer = QVBoxLayout()
+        self.sourceConfigContainer.setObjectName(u"sourceConfigContainer")
 
-        self.verticalLayout.addLayout(self.sourceConfContainer)
+        self.verticalLayout.addLayout(self.sourceConfigContainer)
 
         self.buttonBox = QDialogButtonBox(AddSourceDialog)
         self.buttonBox.setObjectName(u"buttonBox")
@@ -69,10 +66,6 @@ class Ui_AddSourceDialog(object):
     def retranslateUi(self, AddSourceDialog):
         AddSourceDialog.setWindowTitle(QCoreApplication.translate("AddSourceDialog", u"Add source", None))
         self.label1.setText(QCoreApplication.translate("AddSourceDialog", u"Source:", None))
-        self.sourceComboBox.setItemText(0, QCoreApplication.translate("AddSourceDialog", u"Serial port", None))
-        self.sourceComboBox.setItemText(1, QCoreApplication.translate("AddSourceDialog", u"Socket", None))
-        self.sourceComboBox.setItemText(2, QCoreApplication.translate("AddSourceDialog", u"Dummy", None))
-
 #if QT_CONFIG(tooltip)
         self.sourceComboBox.setToolTip(QCoreApplication.translate("AddSourceDialog", u"List of available serial ports", None))
 #endif // QT_CONFIG(tooltip)

@@ -67,6 +67,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="deleteSourceButton">
+             <property name="toolTip">
+              <string>Delete selected source</string>
+             </property>
              <property name="text">
               <string/>
              </property>
@@ -85,6 +88,9 @@
           <widget class="QGroupBox" name="signalsGroupBox">
            <property name="enabled">
             <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string>Configure a source first</string>
            </property>
            <property name="title">
             <string/>

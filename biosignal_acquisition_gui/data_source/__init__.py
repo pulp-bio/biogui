@@ -16,22 +16,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from enum import Enum
+from ._abc_data_source import DataSource, DataSourceType
+from ._dummy_data_source import DummyConfigWidget, DummyDataWorker
+from ._serial_data_source import SerialConfigWidget, SerialDataSource
+from ._socket_data_source import SocketConfigWidget, SocketDataSource
 
-from ._abc_data_source import DataWorker
-from ._dummy_data_source import DummyConfWidget, DummyDataWorker
-from ._serial_data_source import SerialConfWidget, SerialDataWorker
-from ._socket_data_source import SocketConfWidget, SocketDataWorker
 
-DataWorkerType = Enum("DataWorkerType", ["Serial", "Socket", "Dummy"])
+dataSourceFactory = {
+    DataSourceType.SERIAL: SerialDataSource,
+    DataSourceType.SOCKET: SocketDataSource,
+    DataSourceType.DUMMY: DummyDataWorker,
+}
 
 __all__ = [
-    "DataWorker",
-    "DataWorkerType",
-    "DummyConfWidget",
+    "dataSourceFactory",
+    "DataSource",
+    "DataSourceType",
+    "DummyConfigWidget",
     "DummyDataWorker",
-    "SerialConfWidget",
-    "SerialDataWorker",
-    "SocketConfWidget",
-    "SocketDataWorker",
+    "SerialConfigWidget",
+    "SerialDataSource",
+    "SocketConfigWidget",
+    "SocketDataSource",
 ]

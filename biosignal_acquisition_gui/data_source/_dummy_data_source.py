@@ -24,10 +24,10 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import ConfigResult, DataConfWidget, DataWorker
+from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
 
 
-class DummyConfWidget(DataConfWidget):
+class DummyConfigWidget(DataConfigWidget):
     """Empty widget for the dummy source.
 
     Parameters
@@ -45,16 +45,17 @@ class DummyConfWidget(DataConfWidget):
         Returns
         -------
         ConfigResult
-            Named tuple containing:
-            - whether the configuration is valid;
-            - dictionary representing the configuration (if it is valid);
-            - error message (if the configuration is not valid);
-            - a source name to display (if the configuration is valid).
+            Configuration result.
         """
-        return ConfigResult(isValid=True, config={}, errMessage="", configName="Dummy")
+        return ConfigResult(
+            dataSourceType=DataSourceType.DUMMY,
+            dataSourceConfig={},
+            isValid=True,
+            errMessage="",
+        )
 
 
-class DummyDataWorker(DataWorker):
+class DummyDataWorker(DataSource):
     """Concrete worker that collects data by generating it randomly.
 
     Parameters
@@ -94,6 +95,9 @@ class DummyDataWorker(DataWorker):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._generate)
+
+    def __str__(self):
+        return "Dummy"
 
     @property
     def nChList(self) -> list[int]:

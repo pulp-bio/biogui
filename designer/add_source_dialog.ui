@@ -31,27 +31,12 @@
        <property name="toolTip">
         <string>List of available serial ports</string>
        </property>
-       <item>
-        <property name="text">
-         <string>Serial port</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Socket</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Dummy</string>
-        </property>
-       </item>
       </widget>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="sourceConfContainer"/>
+    <layout class="QVBoxLayout" name="sourceConfigContainer"/>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">

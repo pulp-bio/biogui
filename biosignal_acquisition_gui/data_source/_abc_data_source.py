@@ -19,20 +19,49 @@ limitations under the License.
 from __future__ import annotations
 
 from abc import ABC, ABCMeta, abstractmethod
-from collections import namedtuple
+from dataclasses import dataclass
+from enum import Enum
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QWidget
 
-ConfigResult = namedtuple("Config", ("isValid", "config", "errMessage", "configName"))
+
+class DataSourceType(Enum):
+    """Enum representing the data source type."""
+
+    SERIAL = 1
+    SOCKET = 2
+    DUMMY = 3
 
 
-class DataConfWidgetMeta(type(QObject), ABCMeta):
-    """Metaclass for the data configuration widget interface."""
+@dataclass
+class ConfigResult:
+    """Dataclass representing the result configuration.
+
+    Attributes
+    ----------
+    dataSourceType : DataSourceType
+        Type of data source.
+    dataSourceConfig : dict
+        Dictionary representing the data source configuration (if it's valid).
+    isValid : bool
+        Whether the data source configuration is valid.
+    errMessage : str
+        Error message (if the data source configuration is not valid).
+    """
+
+    dataSourceType: DataSourceType
+    dataSourceConfig: dict
+    isValid: bool
+    errMessage: str
 
 
-class DataConfWidget(ABC, QWidget, metaclass=DataConfWidgetMeta):
-    """Interface for the configuration widgets of data sources."""
+class DataSourceConfigWidgetMeta(type(QObject), ABCMeta):
+    """Metaclass for the interface of data source configuration widgets."""
+
+
+class DataConfigWidget(ABC, QWidget, metaclass=DataSourceConfigWidgetMeta):
+    """Interface for data source configuration widgets."""
 
     @abstractmethod
     def validateConfig(self) -> ConfigResult:
@@ -41,20 +70,16 @@ class DataConfWidget(ABC, QWidget, metaclass=DataConfWidgetMeta):
         Returns
         -------
         ConfigResult
-            Named tuple containing:
-            - whether the configuration is valid;
-            - dictionary representing the configuration (if it is valid);
-            - error message (if the configuration is not valid);
-            - a source name to display (if the configuration is valid).
+            Configuration result.
         """
 
 
 class DataWorkerMeta(type(QObject), ABCMeta):
-    """Metaclass for the data worker interface."""
+    """Metaclass for the interface of data sources."""
 
 
-class DataWorker(ABC, QObject, metaclass=DataWorkerMeta):
-    """Interface for data collection workers.
+class DataSource(ABC, QObject, metaclass=DataWorkerMeta):
+    """Interface for data sources.
 
     Class attributes
     ----------------
