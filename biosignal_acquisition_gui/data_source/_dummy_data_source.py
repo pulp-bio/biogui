@@ -24,10 +24,15 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
+from ._abc_data_source import (
+    ConfigResult,
+    ConfigWidget,
+    DataSource,
+    DataSourceType,
+)
 
 
-class DummyConfigWidget(DataConfigWidget):
+class _DummyConfigWidget(ConfigWidget):
     """Empty widget for the dummy source.
 
     Parameters
@@ -55,15 +60,18 @@ class DummyConfigWidget(DataConfigWidget):
         )
 
 
-class DummyDataWorker(DataSource):
+class _DummyDataSource(DataSource):
     """Concrete worker that collects data by generating it randomly.
 
     Parameters
     ----------
-
+    packetSize : int
+        Number of bytes in the packet.
 
     Attributes
     ----------
+    _packetSize : int
+        Number of bytes in the packet.
     _mean : float
         Current mean of the generated data.
     _std1 : float
@@ -83,9 +91,10 @@ class DummyDataWorker(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, packetSize: int) -> None:
         super().__init__()
 
+        self._packetSize = packetSize
         self._nChList = []
         self._nSamp = -1
         self._mean = 0.0

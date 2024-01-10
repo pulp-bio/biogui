@@ -29,9 +29,9 @@ from PySide6.QtWidgets import QWidget
 class DataSourceType(Enum):
     """Enum representing the data source type."""
 
-    SERIAL = 1
-    SOCKET = 2
-    DUMMY = 3
+    SERIAL = "Serial port"
+    SOCKET = "Socket"
+    DUMMY = "Dummy"
 
 
 @dataclass
@@ -56,11 +56,11 @@ class ConfigResult:
     errMessage: str
 
 
-class DataSourceConfigWidgetMeta(type(QObject), ABCMeta):
+class ConfigWidgetMeta(type(QObject), ABCMeta):
     """Metaclass for the interface of data source configuration widgets."""
 
 
-class DataConfigWidget(ABC, QWidget, metaclass=DataSourceConfigWidgetMeta):
+class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
     """Interface for data source configuration widgets."""
 
     @abstractmethod
