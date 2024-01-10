@@ -26,8 +26,13 @@ import serial.tools.list_ports
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from .._ui.ui_serial_config_widget import Ui_SerialConfigWidget
-from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
+from ..ui.ui_serial_config_widget import Ui_SerialConfigWidget
+from ._abc_data_source import (
+    ConfigResult,
+    ConfigWidget,
+    DataSource,
+    DataSourceType,
+)
 
 
 def _serialPorts() -> list[str]:
@@ -41,7 +46,7 @@ def _serialPorts() -> list[str]:
     return [info[0] for info in serial.tools.list_ports.comports()]
 
 
-class SerialConfigWidget(DataConfigWidget, Ui_SerialConfigWidget):
+class _SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
     """Widget to configure the serial source.
 
     Parameters
@@ -102,7 +107,7 @@ class SerialConfigWidget(DataConfigWidget, Ui_SerialConfigWidget):
         self.serialPortsComboBox.addItems(_serialPorts())
 
 
-class SerialDataSource(DataSource):
+class _SerialDataSource(DataSource):
     """Concrete worker that collects data from a serial port.
 
     Parameters

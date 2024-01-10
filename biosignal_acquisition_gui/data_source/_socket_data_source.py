@@ -24,11 +24,16 @@ import socket
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from .._ui.ui_socket_config_widget import Ui_SocketConfigWidget
-from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
+from ..ui.ui_socket_config_widget import Ui_SocketConfigWidget
+from ._abc_data_source import (
+    ConfigResult,
+    ConfigWidget,
+    DataSource,
+    DataSourceType,
+)
 
 
-class SocketConfigWidget(DataConfigWidget, Ui_SocketConfigWidget):
+class _SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
     """Widget to configure the socket source.
 
     Parameters
@@ -73,7 +78,7 @@ class SocketConfigWidget(DataConfigWidget, Ui_SocketConfigWidget):
         )
 
 
-class SocketDataSource(DataSource):
+class _SocketDataSource(DataSource):
     """Concrete worker that collects data from a TCP socket.
 
     Parameters
