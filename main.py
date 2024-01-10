@@ -33,16 +33,12 @@ def main():
     parser.add_argument(
         "--packetSize", required=True, type=int, help="Number of bytes in the packet"
     )
-    parser.add_argument(
-        "--nSamp", required=True, type=int, help="Number of samples in each packet"
-    )
     args = vars(parser.parse_args())
     packetSize = args["packetSize"]
-    nSamp = args["nSamp"]
 
     # Setup application and main window
     app = QApplication(sys.argv)
-    mainWin = MainWindow(packetSize, nSamp)
+    mainWin = MainWindow(packetSize)
     mainWin.show()
 
     # Run event loop

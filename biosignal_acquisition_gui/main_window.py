@@ -27,20 +27,27 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import QDialog, QMainWindow, QMessageBox, QWidget
 
-from ._data_worker import DummyConfWidget, SerialConfWidget, SocketConfWidget
+from . import data_source
 from ._stream_controller import StreamingController
-from ._ui.ui_add_signal_dialog import Ui_AddSignalDialog
-from ._ui.ui_main_window import Ui_MainWindow
-from ._ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
+from .data_source import DataSourceType
+from .ui.ui_add_signal_dialog import Ui_AddSignalDialog
+from .ui.ui_add_source_dialog import Ui_AddSourceDialog
+from .ui.ui_main_window import Ui_MainWindow
+from .ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
 
 
-class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
-    """Dialog for adding a new signal to plot.
+class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
+    """Dialog for adding a new source.
 
     Parameters
     ----------
     parent : QWidget or None, default=None
         Parent widget.
+
+    Attributes
+    ----------
+    _configWidget : ConfigWidget
+        Widget for data source configuration.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -48,9 +55,88 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         self.setupUi(self)
 
-        self.buttonBox.accepted.connect(self._parseValidateForm)
+        self.buttonBox.accepted.connect(self._addSourceHandler)
+        self.buttonBox.rejected.connect(self.close)
+
+        self.sourceComboBox.addItems(
+            list(map(lambda sourceType: sourceType.value, DataSourceType))
+        )
+        self.sourceComboBox.currentTextChanged.connect(self._onSourceChange)
+
+        # Source type (default is serial port)
+        self._configWidget = data_source.getConfigWidget(DataSourceType.SERIAL, self)
+        self.sourceConfigContainer.addWidget(self._configWidget)
+        self._dataSourceType = DataSourceType.SERIAL
+        self._dataSourceConfig = {}
+        self._isValid = False
+        self._errMessage = ""
+
+    @property
+    def dataSourceType(self) -> DataSourceType:
+        """DataSourceType: Property for getting the data source type."""
+        return self._dataSourceType
+
+    @property
+    def dataSourceConfig(self) -> dict:
+        """dict: Property for getting the data source configuration."""
+        return self._dataSourceConfig
+
+    @property
+    def isValid(self) -> bool:
+        """bool: Property representing whether the form is valid."""
+        return self._isValid
+
+    @property
+    def errMessage(self) -> str:
+        """str: Property for getting the error message if the form is not valid."""
+        return self._errMessage
+
+    def _onSourceChange(self) -> None:
+        """Detect if source type has changed."""
+        # Clear container
+        self.sourceConfigContainer.removeWidget(self._configWidget)
+        self._configWidget.deleteLater()
+
+        # Add new widget
+        self._configWidget = data_source.getConfigWidget(
+            DataSourceType(self.sourceComboBox.currentText()), self
+        )
+        self.sourceConfigContainer.addWidget(self._configWidget)
+
+    def _addSourceHandler(self) -> None:
+        """Validate user input in the form."""
+
+        configResult = self._configWidget.validateConfig()
+        if not configResult.isValid:
+            self._isValid = False
+            self._errMessage = configResult.errMessage
+        else:
+            self._dataSourceType = configResult.dataSourceType
+            self._dataSourceConfig = configResult.dataSourceConfig
+            self._isValid = True
+
+
+class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
+    """Dialog for adding a new signal to plot.
+
+    Parameters
+    ----------
+    sourceList : list of str
+        List of the sources.
+    parent : QWidget or None, default=None
+        Parent widget.
+    """
+
+    def __init__(self, sourceList: list[str], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+
+        self.setupUi(self)
+
+        self.buttonBox.accepted.connect(self._formValidationHandler)
         self.buttonBox.rejected.connect(self.close)
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
+
+        self.sourceComboBox.addItems(sourceList)
 
         # Validation rules
         minCh, maxCh = 1, 64
@@ -82,19 +168,19 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         orderValidator = QIntValidator(bottom=minOrd, top=maxOrd)
         self.filtOrderTextField.setValidator(orderValidator)
 
-        self._signalSettings = {}
         self._isValid = False
+        self._signalConfig = {}
         self._errMessage = ""
-
-    @property
-    def signalSettings(self) -> dict:
-        """dict: Property for getting the dictionary of the signal settings."""
-        return self._signalSettings
 
     @property
     def isValid(self) -> bool:
         """bool: Property representing whether the form is valid."""
         return self._isValid
+
+    @property
+    def signalConfig(self) -> dict:
+        """dict: Property for getting the dictionary with the signal configuration."""
+        return self._signalConfig
 
     @property
     def errMessage(self) -> str:
@@ -111,31 +197,36 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         else:
             self.freq2TextField.setEnabled(True)
 
-    def _parseValidateForm(self) -> None:
+    def _formValidationHandler(self) -> None:
         """Validate user input in the form."""
         # Check basic settings
+        if self.sourceComboBox.currentText() == "":
+            self._isValid = False
+            self._errMessage = 'The "source" field is empty.'
+        self._signalConfig["source"] = self.sourceComboBox.currentText()
+
         if not self.sigNameTextField.hasAcceptableInput():
             self._isValid = False
             self._errMessage = 'The "signal name" field is empty.'
             return
-        self._signalSettings["sigName"] = self.sigNameTextField.text()
+        self._signalConfig["sigName"] = self.sigNameTextField.text()
 
         if not self.nChTextField.hasAcceptableInput():
             self._isValid = False
             self._errMessage = 'The "number of channels" field is invalid.'
             return
-        self._signalSettings["nCh"] = int(self.nChTextField.text())
+        self._signalConfig["nCh"] = int(self.nChTextField.text())
 
         if not self.fsTextField.hasAcceptableInput():
             self._isValid = False
             self._errMessage = 'The "sampling frequency" field is invalid.'
             return
-        self._signalSettings["fs"] = float(self.fsTextField.text())
-        nyq_fs = self._signalSettings["fs"] // 2
+        self._signalConfig["fs"] = float(self.fsTextField.text())
+        nyq_fs = self._signalConfig["fs"] // 2
 
         # Check filtering settings
         if self.filteringGroupBox.isChecked():
-            self._signalSettings["filtType"] = self.filtTypeComboBox.currentText()
+            self._signalConfig["filtType"] = self.filtTypeComboBox.currentText()
 
             if not self.freq1TextField.hasAcceptableInput():
                 self._isValid = False
@@ -147,7 +238,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 self._isValid = False
                 self._errMessage = "The 1st critical frequency cannot be higher than Nyquist frequency."
                 return
-            self._signalSettings["freqs"] = [freq1]
+            self._signalConfig["freqs"] = [freq1]
 
             if self.freq2TextField.isEnabled():
                 if not self.freq2TextField.hasAcceptableInput():
@@ -164,13 +255,13 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                     self._isValid = False
                     self._errMessage = "The 2nd critical frequency cannot be lower than the 1st critical frequency."
                     return
-                self._signalSettings["freqs"].append(float(self.freq2TextField.text()))
+                self._signalConfig["freqs"].append(float(self.freq2TextField.text()))
 
             if not self.filtOrderTextField.hasAcceptableInput():
                 self._isValid = False
                 self._errMessage = 'The "filter order" field is invalid.'
                 return
-            self._signalSettings["filtOrder"] = int(self.filtOrderTextField.text())
+            self._signalConfig["filtOrder"] = int(self.filtOrderTextField.text())
 
         self._isValid = True
 
@@ -227,7 +318,7 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
 
     @property
     def nCh(self) -> int:
-        """int: Propertu for getting the number of channels."""
+        """int: Property for getting the number of channels."""
         return self._nCh
 
     def _initializePlots(self) -> None:
@@ -287,12 +378,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     Parameters
     ----------
-
+    packetSize : int
+        Number of bytes in the packet.
 
     Attributes
     ----------
-    _sourceConfWidget : QWidget
-        Widget for configuring the source (serial port or socket).
+    _packetSize : int
+        Number of bytes in the packet.
+    _sources : list of DataSource
+        List of DataSource objects.
     _plotWidgets : list of _SignalPlots
         List of _SignalPlots objects.
 
@@ -316,22 +410,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     dataReadyRawSig = Signal(np.ndarray)
     dataReadyFltSig = Signal(np.ndarray)
 
-    def __init__(self, packetSize: int, nSamp: int) -> None:
+    def __init__(self, packetSize: int) -> None:
         assert packetSize > 0, 'The "packetSize" argument must be positive.'
-        assert nSamp > 0, 'The "nSamp" argument must be positive.'
 
         super().__init__()
 
         self.setupUi(self)
 
-        # Source type
-        self.sourceComboBox.currentTextChanged.connect(self._onSourceChange)
-        self._sourceConfWidget = SerialConfWidget(self)  # default is serial port
-        self.sourceConfContainer.addWidget(self._sourceConfWidget)
+        self._packetSize = packetSize
+        self._sources = []
+        self._plotWidgets = []
+
+        # Source addition/removal
+        self.addSourceButton.clicked.connect(self._addSourceHandler)
+        self.deleteSourceButton.clicked.connect(self._deleteSourceHandler)
 
         # Signal addition/removal/moving
-        self.addSignalButton.clicked.connect(self._addSignal)
-        self.deleteSignalButton.clicked.connect(self._deleteSignal)
+        self.addSignalButton.clicked.connect(self._addSignalHandler)
+        self.deleteSignalButton.clicked.connect(self._deleteSignalHandler)
         self.signalList.itemClicked.connect(
             lambda: self.deleteSignalButton.setEnabled(True)
         )
@@ -340,7 +436,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signalList.itemClicked.connect(self._enableMoveButtons)
 
         # Streaming
-        self._streamController = StreamingController(packetSize, nSamp, self)
+        self._streamController = StreamingController(self)
         self._streamController.dataReadySig.connect(
             lambda d: self.dataReadyRawSig.emit(d)
         )  # forward Qt Signal for raw data
@@ -348,8 +444,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._streamController.commErrorSig.connect(self._handleCommunicationError)
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
-
-        self._plotWidgets = []
 
     def addConfWidget(self, widget: QWidget) -> None:
         """Add a widget for module configuration to the GUI.
@@ -361,32 +455,56 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         self.moduleContainer.layout().addWidget(widget)
 
-    def _onSourceChange(self) -> None:
-        """Detect if source type has changed."""
-        # Clear container
-        self.sourceConfContainer.removeWidget(self._sourceConfWidget)
-        self._sourceConfWidget.deleteLater()
+    def _addSourceHandler(self) -> None:
+        """Handler to add a new source."""
+        # Open the dialog
+        self._openAddSourceDialog()
 
-        # Add new widget
-        sourceConfWidgetDict = {
-            "Serial port": SerialConfWidget,
-            "Socket": SocketConfWidget,
-            "Dummy": DummyConfWidget,
-        }
-        self._sourceConfWidget = sourceConfWidgetDict[
-            self.sourceComboBox.currentText()
-        ](self)
-        self.sourceConfContainer.addWidget(self._sourceConfWidget)
+    def _openAddSourceDialog(self, addSourceDialog: _AddSourceDialog | None = None):
+        """Open the dialog for adding sources."""
+        if addSourceDialog is None:
+            addSourceDialog = _AddSourceDialog(self)
 
-    def _addSignal(self) -> None:
-        """Add a new signal."""
+        accepted = addSourceDialog.exec()
+        if accepted:
+            # Check if input is valid
+            if not addSourceDialog.isValid:
+                QMessageBox.critical(
+                    self,
+                    "Invalid source",
+                    addSourceDialog.errMessage,
+                    buttons=QMessageBox.Retry,  # type: ignore
+                    defaultButton=QMessageBox.Retry,  # type: ignore
+                )
+                self._openAddSourceDialog(addSourceDialog)  # re-open dialog
+                return
+
+            # Create data source
+            dataSource = data_source.getDataSource(
+                addSourceDialog.dataSourceType,
+                self._packetSize,
+                **addSourceDialog.dataSourceConfig,
+            )
+            self.sourceList.addItem(str(dataSource))
+            self._sources.append(dataSource)
+
+            # Enable signal configuration
+            if not self.signalsGroupBox.isEnabled():
+                self.signalsGroupBox.setEnabled(True)
+
+    def _deleteSourceHandler(self) -> None:
+        """Handler to remove the selected source."""
+        raise NotImplementedError("TODO")  # TODO
+
+    def _addSignalHandler(self) -> None:
+        """Handler to add a new signal."""
         # Open the dialog
         self._openAddSignalDialog()
 
     def _openAddSignalDialog(self, addSignalDialog: _AddSignalDialog | None = None):
         """Open the dialog for adding signals."""
         if addSignalDialog is None:
-            addSignalDialog = _AddSignalDialog(self)
+            addSignalDialog = _AddSignalDialog(list(map(str, self._sources)), self)
 
         accepted = addSignalDialog.exec()
         if accepted:
@@ -403,9 +521,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return
 
             # Display signal information
-            sigName = addSignalDialog.signalSettings["sigName"]
-            nCh = addSignalDialog.signalSettings["nCh"]
-            fs = addSignalDialog.signalSettings["fs"]
+            sigName = addSignalDialog.signalConfig["sigName"]
+            nCh = addSignalDialog.signalConfig["nCh"]
+            fs = addSignalDialog.signalConfig["fs"]
             self.signalList.addItem(f"{sigName} - {nCh} channels @ {fs}sps")
 
             # Create plot widget
@@ -416,8 +534,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for i, plotWidget_ in enumerate(self._plotWidgets):
                 self.plotsLayout.setStretch(i, plotWidget_.nCh)
 
-    def _deleteSignal(self) -> None:
-        """Delete the selected signal."""
+    def _deleteSignalHandler(self) -> None:
+        """Handler to remove the selected signal."""
         # Remove list item and plot widget
         idxToRemove = self.signalList.currentRow()
         self.signalList.takeItem(idxToRemove)
@@ -473,16 +591,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 defaultButton=QMessageBox.Retry,  # type: ignore
             )
             return
-        args = self._sourceConfWidget.validateBeforeStreaming()
-        if "error" in args.keys():
-            QMessageBox.critical(
-                self,
-                "Invalid configuration",
-                args["error"],
-                buttons=QMessageBox.Retry,  # type: ignore
-                defaultButton=QMessageBox.Retry,  # type: ignore
-            )
-            return
 
         # Handle UI elements
         self.startStreamingButton.setEnabled(False)
@@ -508,7 +616,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """When communication fails, display an alert and stop streaming."""
         QMessageBox.critical(
             self,
-            "Communication failes",
+            "Communication error",
             "Could not communicate with the device.",
             buttons=QMessageBox.Retry,  # type: ignore
             defaultButton=QMessageBox.Retry,  # type: ignore

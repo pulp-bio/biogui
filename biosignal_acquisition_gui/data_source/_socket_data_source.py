@@ -24,11 +24,11 @@ import socket
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from .._ui.ui_socket_conf_widget import Ui_SocketConfWidget
-from ._abc_data_source import ConfigResult, DataConfWidget, DataWorker
+from .._ui.ui_socket_config_widget import Ui_SocketConfigWidget
+from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
 
 
-class SocketConfWidget(DataConfWidget, Ui_SocketConfWidget):
+class SocketConfigWidget(DataConfigWidget, Ui_SocketConfigWidget):
     """Widget to configure the socket source.
 
     Parameters
@@ -54,30 +54,26 @@ class SocketConfWidget(DataConfWidget, Ui_SocketConfWidget):
         Returns
         -------
         ConfigResult
-            Named tuple containing:
-            - whether the configuration is valid;
-            - dictionary representing the configuration (if it is valid);
-            - error message (if the configuration is not valid);
-            - a source name to display (if the configuration is valid).
+            Configuration result.
         """
         if not self.portTextField.hasAcceptableInput():
             return ConfigResult(
+                dataSourceType=DataSourceType.SOCKET,
+                dataSourceConfig={},
                 isValid=False,
-                config={},
                 errMessage='The "port" field is invalid.',
-                configName="",
             )
 
         socketPort = int(self.portTextField.text())
         return ConfigResult(
+            dataSourceType=DataSourceType.SOCKET,
+            dataSourceConfig={"socketPort": socketPort},
             isValid=True,
-            config={"socketPort": socketPort},
             errMessage="",
-            configName=f"TCP socket - port {socketPort}",
         )
 
 
-class SocketDataWorker(DataWorker):
+class SocketDataSource(DataSource):
     """Concrete worker that collects data from a TCP socket.
 
     Parameters
@@ -91,13 +87,15 @@ class SocketDataWorker(DataWorker):
     ----------
     _packetSize : int
         Size of each packet read from the socket.
+    _socketPort: int
+        Socket port.
     _stopReadingFlag : bool
         Flag indicating to stop reading data.
-    _forceExit : bool
+    _exitAcceptLoopFlag : bool
         Flag indicating to exit the non-blocking accept loop.
-    _socket : socket
+    _socket : socket or None
         TCP socket.
-    _conn : socket
+    _conn : socket or None
         Connection object.
 
     Class attributes
@@ -112,19 +110,33 @@ class SocketDataWorker(DataWorker):
         super().__init__()
 
         self._packetSize = packetSize
+        self._socketPort = socketPort
         self._stopReadingFlag = False
-        self._forceExit = False
+        self._exitAcceptLoopFlag = False
+        self._socket = None
+        self._conn = None
+
+    def __str__(self):
+        return f"TCP socket - port {self._socketPort}"
+
+    def _openSocket(self):
+        self._exitAcceptLoopFlag = False
+
+        # Open socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.settimeout(1.0)
-        self._socket.bind(("127.0.0.1", socketPort))
+        self._socket.bind(("", self._socketPort))
         self._socket.listen(1)
-        logging.info(f"DataWorker: waiting for TCP connection on port {socketPort}.")
+
+        logging.info(
+            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
+        )
 
         # Non-blocking accept
         while True:
             try:
-                if self._forceExit:
+                if self._exitAcceptLoopFlag:
                     break
                 self._conn, _ = self._socket.accept()
                 logging.info(f"DataWorker: TCP connection from {self._conn}.")
@@ -132,11 +144,14 @@ class SocketDataWorker(DataWorker):
             except socket.timeout:
                 pass
 
-    def forceExit(self) -> None:
-        self._forceExit = True
+    def exitAcceptLoop(self) -> None:
+        """Exit the non-blocking accept loop."""
+        self._exitAcceptLoopFlag = True
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
+        self._openSocket()
+
         logging.info("DataWorker: TCP communication started.")
 
         # self._conn.sendall(b"=")
@@ -160,6 +175,6 @@ class SocketDataWorker(DataWorker):
 
         logging.info("DataWorker: TCP communication stopped.")
 
-    def stopReading(self) -> None:
+    def stopCollecting(self) -> None:
         """Stop data collection."""
         self._stopReadingFlag = True

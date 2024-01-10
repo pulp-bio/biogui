@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QFileDialog, QWidget
 from sklearn.svm import SVC
 from skops.io import get_untrusted_types, load
 
-from .._ui.ui_svm_inference_config import Ui_SVMInferenceConfig
+from ..ui.ui_svm_inference_config import Ui_SVMInferenceConfig
 from ..main_window import MainWindow
 from ._ml_utils import majorityVoting, rootMeanSquared, waveformLength
 from ._tcp_server import TCPServerController

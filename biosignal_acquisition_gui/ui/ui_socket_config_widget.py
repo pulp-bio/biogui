@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'socket_conf_widget.ui'
+## Form generated from reading UI file 'socket_config_widget.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.1
 ##
@@ -18,31 +18,31 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFormLayout, QLabel, QLineEdit,
     QSizePolicy, QWidget)
 
-class Ui_SocketConfWidget(object):
-    def setupUi(self, SocketConfWidget):
-        if not SocketConfWidget.objectName():
-            SocketConfWidget.setObjectName(u"SocketConfWidget")
-        SocketConfWidget.resize(400, 300)
-        self.formLayout = QFormLayout(SocketConfWidget)
+class Ui_SocketConfigWidget(object):
+    def setupUi(self, SocketConfigWidget):
+        if not SocketConfigWidget.objectName():
+            SocketConfigWidget.setObjectName(u"SocketConfigWidget")
+        SocketConfigWidget.resize(400, 300)
+        self.formLayout = QFormLayout(SocketConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
-        self.label3 = QLabel(SocketConfWidget)
+        self.label3 = QLabel(SocketConfigWidget)
         self.label3.setObjectName(u"label3")
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label3)
 
-        self.portTextField = QLineEdit(SocketConfWidget)
+        self.portTextField = QLineEdit(SocketConfigWidget)
         self.portTextField.setObjectName(u"portTextField")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.portTextField)
 
 
-        self.retranslateUi(SocketConfWidget)
+        self.retranslateUi(SocketConfigWidget)
 
-        QMetaObject.connectSlotsByName(SocketConfWidget)
+        QMetaObject.connectSlotsByName(SocketConfigWidget)
     # setupUi
 
-    def retranslateUi(self, SocketConfWidget):
-        SocketConfWidget.setWindowTitle(QCoreApplication.translate("SocketConfWidget", u"Socket Configuration Widget", None))
-        self.label3.setText(QCoreApplication.translate("SocketConfWidget", u"Port:", None))
+    def retranslateUi(self, SocketConfigWidget):
+        SocketConfigWidget.setWindowTitle(QCoreApplication.translate("SocketConfigWidget", u"Socket Configuration Widget", None))
+        self.label3.setText(QCoreApplication.translate("SocketConfigWidget", u"Port:", None))
     # retranslateUi
 

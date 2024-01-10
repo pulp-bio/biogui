@@ -26,8 +26,8 @@ import serial.tools.list_ports
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from .._ui.ui_serial_conf_widget import Ui_SerialConfWidget
-from ._abc_data_source import ConfigResult, DataConfWidget, DataWorker
+from .._ui.ui_serial_config_widget import Ui_SerialConfigWidget
+from ._abc_data_source import ConfigResult, DataConfigWidget, DataSource, DataSourceType
 
 
 def _serialPorts() -> list[str]:
@@ -41,7 +41,7 @@ def _serialPorts() -> list[str]:
     return [info[0] for info in serial.tools.list_ports.comports()]
 
 
-class SerialConfWidget(DataConfWidget, Ui_SerialConfWidget):
+class SerialConfigWidget(DataConfigWidget, Ui_SerialConfigWidget):
     """Widget to configure the serial source.
 
     Parameters
@@ -67,37 +67,33 @@ class SerialConfWidget(DataConfWidget, Ui_SerialConfWidget):
         Returns
         -------
         ConfigResult
-            Named tuple containing:
-            - whether the configuration is valid;
-            - dictionary representing the configuration (if it is valid);
-            - error message (if the configuration is not valid);
-            - a source name to display (if the configuration is valid).
+            Configuration result.
         """
         if self.serialPortsComboBox.currentText() == "":
             return ConfigResult(
+                dataSourceType=DataSourceType.SERIAL,
+                dataSourceConfig={},
                 isValid=False,
-                config={},
                 errMessage='The "serial port" field is empty.',
-                configName="",
             )
 
         if not self.baudRateTextField.hasAcceptableInput():
             return ConfigResult(
+                dataSourceType=DataSourceType.SERIAL,
+                dataSourceConfig={},
                 isValid=False,
-                config={},
                 errMessage='The "baud rate" field is invalid.',
-                configName="",
             )
 
         serialPort = self.serialPortsComboBox.currentText()
         return ConfigResult(
-            isValid=True,
-            config={
+            dataSourceType=DataSourceType.SERIAL,
+            dataSourceConfig={
                 "serialPort": serialPort,
                 "baudRate": int(self.baudRateTextField.text()),
             },
+            isValid=True,
             errMessage="",
-            configName=f"Serial port - {serialPort}",
         )
 
     def _rescanSerialPorts(self) -> None:
@@ -106,7 +102,7 @@ class SerialConfWidget(DataConfWidget, Ui_SerialConfWidget):
         self.serialPortsComboBox.addItems(_serialPorts())
 
 
-class SerialDataWorker(DataWorker):
+class SerialDataSource(DataSource):
     """Concrete worker that collects data from a serial port.
 
     Parameters
@@ -122,9 +118,13 @@ class SerialDataWorker(DataWorker):
     ----------
     _packetSize : int
         Size of each packet read from the serial port.
+    _serialPort : str
+        String representing the serial port.
+    _baudRate : int
+        Baud rate.
     _stopReadingFlag : bool
         Flag indicating to stop reading data.
-    _ser : Serial
+    _ser : Serial or None
         Object representing the serial port.
 
     Class attributes
@@ -139,13 +139,21 @@ class SerialDataWorker(DataWorker):
         super().__init__()
 
         self._packetSize = packetSize
+        self._serialPort = serialPort
+        self._baudRate = baudRate
         self._stopReadingFlag = False
+        self._ser = None
 
-        # Open serial port
-        self._ser = serial.Serial(serialPort, baudRate, timeout=5)
+    def __str__(self):
+        return f"Serial port - {self._serialPort}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
+        self._stopReadingFlag = False
+
+        # Open serial port
+        self._ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
+
         logging.info("DataWorker: serial communication started.")
 
         self._ser.write(b"=")  # start code

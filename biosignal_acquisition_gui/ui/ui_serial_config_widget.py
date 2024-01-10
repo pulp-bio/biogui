@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'serial_conf_widget.ui'
+## Form generated from reading UI file 'serial_config_widget.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.6.1
 ##
@@ -19,26 +19,26 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QHBoxLayout
     QLabel, QLineEdit, QPushButton, QSizePolicy,
     QWidget)
 
-class Ui_SerialConfWidget(object):
-    def setupUi(self, SerialConfWidget):
-        if not SerialConfWidget.objectName():
-            SerialConfWidget.setObjectName(u"SerialConfWidget")
-        SerialConfWidget.resize(400, 300)
-        self.formLayout = QFormLayout(SerialConfWidget)
+class Ui_SerialConfigWidget(object):
+    def setupUi(self, SerialConfigWidget):
+        if not SerialConfigWidget.objectName():
+            SerialConfigWidget.setObjectName(u"SerialConfigWidget")
+        SerialConfigWidget.resize(400, 300)
+        self.formLayout = QFormLayout(SerialConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
-        self.label1 = QLabel(SerialConfWidget)
+        self.label1 = QLabel(SerialConfigWidget)
         self.label1.setObjectName(u"label1")
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.serialPortsComboBox = QComboBox(SerialConfWidget)
+        self.serialPortsComboBox = QComboBox(SerialConfigWidget)
         self.serialPortsComboBox.setObjectName(u"serialPortsComboBox")
 
         self.horizontalLayout.addWidget(self.serialPortsComboBox)
 
-        self.rescanSerialPortsButton = QPushButton(SerialConfWidget)
+        self.rescanSerialPortsButton = QPushButton(SerialConfigWidget)
         self.rescanSerialPortsButton.setObjectName(u"rescanSerialPortsButton")
         icon = QIcon()
         iconThemeName = u"view-refresh"
@@ -56,29 +56,29 @@ class Ui_SerialConfWidget(object):
 
         self.formLayout.setLayout(0, QFormLayout.FieldRole, self.horizontalLayout)
 
-        self.label2 = QLabel(SerialConfWidget)
+        self.label2 = QLabel(SerialConfigWidget)
         self.label2.setObjectName(u"label2")
 
         self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label2)
 
-        self.baudRateTextField = QLineEdit(SerialConfWidget)
+        self.baudRateTextField = QLineEdit(SerialConfigWidget)
         self.baudRateTextField.setObjectName(u"baudRateTextField")
 
         self.formLayout.setWidget(1, QFormLayout.FieldRole, self.baudRateTextField)
 
 
-        self.retranslateUi(SerialConfWidget)
+        self.retranslateUi(SerialConfigWidget)
 
-        QMetaObject.connectSlotsByName(SerialConfWidget)
+        QMetaObject.connectSlotsByName(SerialConfigWidget)
     # setupUi
 
-    def retranslateUi(self, SerialConfWidget):
-        SerialConfWidget.setWindowTitle(QCoreApplication.translate("SerialConfWidget", u"Serial Configuration Widget", None))
-        self.label1.setText(QCoreApplication.translate("SerialConfWidget", u"Serial port:", None))
+    def retranslateUi(self, SerialConfigWidget):
+        SerialConfigWidget.setWindowTitle(QCoreApplication.translate("SerialConfigWidget", u"Serial Configuration Widget", None))
+        self.label1.setText(QCoreApplication.translate("SerialConfigWidget", u"Serial port:", None))
 #if QT_CONFIG(tooltip)
-        self.rescanSerialPortsButton.setToolTip(QCoreApplication.translate("SerialConfWidget", u"Rescan serial ports", None))
+        self.rescanSerialPortsButton.setToolTip(QCoreApplication.translate("SerialConfigWidget", u"Rescan serial ports", None))
 #endif // QT_CONFIG(tooltip)
         self.rescanSerialPortsButton.setText("")
-        self.label2.setText(QCoreApplication.translate("SerialConfWidget", u"Baud rate:", None))
+        self.label2.setText(QCoreApplication.translate("SerialConfigWidget", u"Baud rate:", None))
     # retranslateUi
 

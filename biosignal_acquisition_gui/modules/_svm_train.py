@@ -33,8 +33,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from skops.io import dump
 
-from .._ui import resources_rc
-from .._ui.ui_svm_train_config import Ui_SVMTrainConfig
+from ..ui import resources_rc
+from ..ui.ui_svm_train_config import Ui_SVMTrainConfig
 from ..main_window import MainWindow
 from ._ml_utils import rootMeanSquared, waveformLength
 

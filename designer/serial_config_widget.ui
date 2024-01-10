@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SerialConfWidget</class>
- <widget class="QWidget" name="SerialConfWidget">
+ <class>SerialConfigWidget</class>
+ <widget class="QWidget" name="SerialConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>

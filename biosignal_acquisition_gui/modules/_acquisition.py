@@ -29,8 +29,8 @@ from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QWidget
 
-from .._ui import resources_rc
-from .._ui.ui_acquisition_config import Ui_AcquisitionConfig
+from ..ui import resources_rc
+from ..ui.ui_acquisition_config import Ui_AcquisitionConfig
 from ..main_window import MainWindow
 
 
