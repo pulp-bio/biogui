@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import argparse
 import logging
 import sys
 
@@ -28,17 +27,9 @@ from biosignal_acquisition_gui import MainWindow
 def main():
     logging.basicConfig(level=logging.INFO)
 
-    # Input
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--packetSize", required=True, type=int, help="Number of bytes in the packet"
-    )
-    args = vars(parser.parse_args())
-    packetSize = args["packetSize"]
-
     # Setup application and main window
     app = QApplication(sys.argv)
-    mainWin = MainWindow(packetSize)
+    mainWin = MainWindow()
     mainWin.show()
 
     # Run event loop
