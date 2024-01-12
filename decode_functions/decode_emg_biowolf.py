@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 
+import struct
 from collections.abc import Sequence
 
 import numpy as np
@@ -37,23 +38,27 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     """
     nSamp = 5
     nCh = 16
-    gainScaleFactor = 2.38125854276502e-08
-    vScaleFactor = 1_000_000
 
-    # Bytes to floats
-    dataRef = np.zeros(shape=(nSamp, nCh), dtype="uint32")
-    dataTmp = [
-        x for i, x in enumerate(data) if i not in (0, 1, 242)
-    ]  # discard header and footer
-    for k in range(nSamp):
-        for i in range(nCh):
-            dataRef[k, i] = (
-                dataTmp[k * 48 + (3 * i)] * 256**3
-                + dataTmp[k * 48 + (3 * i) + 1] * 256**2
-                + dataTmp[k * 48 + (3 * i) + 2] * 256
-            )
-    dataRef = dataRef.view("int32").astype("float32")
-    dataRef = dataRef / 256 * gainScaleFactor * vScaleFactor
+    # ADC parameters
+    vRefADC = 2.5
+    gainADC = 6.0
+
+    dataTmp = bytearray(
+        [x for i, x in enumerate(data) if i not in (0, 1, 242)]
+    )  # discard header and footer
+
+    # Convert 24-bit to 32-bit integer
+    pos = 0
+    for _ in range(len(dataTmp) // 3):
+        preFix = 255 if dataTmp[pos] > 127 else 0
+        dataTmp.insert(pos, preFix)
+        pos += 4
+    dataRef = np.asarray(struct.unpack(f">{pos}i", dataTmp), dtype=np.int32)
+
+    # Reshape and convert ADC readings to uV
+    dataRef = dataRef.reshape(nSamp, nCh)
+    dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
+    dataRef *= 1_000_000  # uV
     dataRef = dataRef.astype("float32")
 
     return [dataRef]
