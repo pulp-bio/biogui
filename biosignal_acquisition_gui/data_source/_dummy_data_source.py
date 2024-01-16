@@ -24,15 +24,10 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import (
-    ConfigResult,
-    ConfigWidget,
-    DataSource,
-    DataSourceType,
-)
+from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
 
 
-class _DummyConfigWidget(ConfigWidget):
+class DummyConfigWidget(ConfigWidget):
     """Empty widget for the dummy source.
 
     Parameters
@@ -60,7 +55,7 @@ class _DummyConfigWidget(ConfigWidget):
         )
 
 
-class _DummyDataSource(DataSource):
+class DummyDataSource(DataSource):
     """Concrete worker that collects data by generating it randomly.
 
     Parameters
@@ -71,7 +66,7 @@ class _DummyDataSource(DataSource):
     Attributes
     ----------
     _packetSize : int
-        Number of bytes in the packet.
+        Number of bytes in the packet (for compatibility with other data sources).
     _mean : float
         Current mean of the generated data.
     _std1 : float
@@ -95,53 +90,29 @@ class _DummyDataSource(DataSource):
         super().__init__()
 
         self._packetSize = packetSize
-        self._nChList = []
-        self._nSamp = -1
         self._mean = 0.0
         self._std1 = 100.0
         self._std2 = 20.0
         self._prng = np.random.default_rng(seed=42)
 
         self._timer = QTimer(self)
-        self._timer.timeout.connect(self._generate)
+        self._timer.timeout.connect(self._generate)  # type: ignore
 
     def __str__(self):
         return "Dummy"
 
-    @property
-    def nChList(self) -> list[int]:
-        """list of int: Property representing the number of channels for each signal."""
-        return self._nChList
-
-    @nChList.setter
-    def nChList(self, nChList: list[int]) -> None:
-        self._nChList = nChList
-
-    @property
-    def nSamp(self) -> int:
-        """int: Property representing the number of samples in each packet."""
-        return self._nSamp
-
-    @nSamp.setter
-    def nSamp(self, nSamp: int) -> None:
-        self._nSamp = nSamp
-
     def _generate(self) -> None:
         """Generate random data."""
-        if len(self._nChList) == 0 or self._nSamp == 0:
-            self.commErrorSig.emit()
-            logging.error("DataWorker: dummy generation not configured properly.")
-            self._timer.stop()
-
+        # Channels 1-16
         data = self._prng.normal(
-            loc=self._mean, scale=self._std1, size=(self._nSamp, sum(self._nChList))
+            loc=self._mean, scale=self._std1, size=(self._nSamp, self._nCh)
         ).astype("float32")
         self.dataReadySig.emit(data)
         self._mean += self._prng.normal(scale=self._std2)
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._timer.start(1)
+        self._timer.start(int(round(self._nSamp / self._fsMax * 1000)))
         logging.info("DataWorker: data generation started.")
 
     def stopCollecting(self) -> None:
