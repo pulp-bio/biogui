@@ -90,7 +90,7 @@ class DataSource(ABC, QObject, metaclass=DataWorkerMeta):
     """
 
     dataReadySig = Signal(bytes)
-    commErrorSig = Signal(str)
+    errorSig = Signal(str)
 
     @abstractmethod
     def startCollecting(self) -> None:

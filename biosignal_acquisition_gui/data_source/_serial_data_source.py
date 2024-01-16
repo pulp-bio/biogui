@@ -129,7 +129,7 @@ class SerialDataSource(DataSource):
     ----------------
     dataReadySig : Signal
         Qt Signal emitted when new data is collected.
-    commErrorSig : Signal
+    errorSig : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -159,7 +159,7 @@ class SerialDataSource(DataSource):
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self.commErrorSig.emit("Serial communication failed.")
+                self.errorSig.emit("Serial communication failed.")
                 logging.error("DataWorker: serial communication failed.")
                 break
 

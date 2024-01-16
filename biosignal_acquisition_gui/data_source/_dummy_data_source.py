@@ -19,9 +19,9 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import time
 
 import numpy as np
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
 from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
@@ -75,14 +75,14 @@ class DummyDataSource(DataSource):
         Standard deviation characterizing the drifting of the mean.
     _prng : Generator
         Pseudo-random number generator.
-    _timer : QTimer
-        Timer.
+    _stopGeneratingFlag : bool
+        Flag indicating to stop reading data.
 
     Class attributes
     ----------------
     dataReadySig : Signal
         Qt Signal emitted when new data is collected.
-    commErrorSig : Signal
+    errorSig : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -95,27 +95,28 @@ class DummyDataSource(DataSource):
         self._std2 = 20.0
         self._prng = np.random.default_rng(seed=42)
 
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._generate)  # type: ignore
+        self._stopGeneratingFlag = False
 
     def __str__(self):
         return "Dummy"
 
-    def _generate(self) -> None:
-        """Generate random data."""
-        # Channels 1-16
-        data = self._prng.normal(
-            loc=self._mean, scale=self._std1, size=(self._nSamp, self._nCh)
-        ).astype("float32")
-        self.dataReadySig.emit(data)
-        self._mean += self._prng.normal(scale=self._std2)
-
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._timer.start(int(round(self._nSamp / self._fsMax * 1000)))
+        self._stopGeneratingFlag = False
+
         logging.info("DataWorker: data generation started.")
+
+        while not self._stopGeneratingFlag:
+            data = self._prng.normal(
+                loc=self._mean, scale=self._std1, size=(5, 16)
+            ).astype("float32")
+            self.dataReadySig.emit(data.tobytes())
+            self._mean += self._prng.normal(scale=self._std2)
+
+            time.sleep(5 / 4000)
+
+        logging.info("DataWorker: data generation stopped.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._timer.stop()
-        logging.info("DataWorker: data generation stopped.")
+        self._stopGeneratingFlag = True
