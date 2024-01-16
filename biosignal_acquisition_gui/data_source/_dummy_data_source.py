@@ -123,7 +123,7 @@ class DummyDataSource(DataSource):
             # Update mean
             self._mean += self._prng.normal(scale=self._std2)
 
-            time.sleep(0.001)  # 1ms <-> 1ksps
+            time.sleep(0.01)  # 10ms <-> 100ksps
 
         logging.info("DataWorker: data generation stopped.")
 
