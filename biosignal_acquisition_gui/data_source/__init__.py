@@ -20,10 +20,10 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import DataSource, DataSourceType, ConfigWidget
-from ._dummy_data_source import _DummyConfigWidget, _DummyDataSource
-from ._serial_data_source import _SerialConfigWidget, _SerialDataSource
-from ._socket_data_source import _SocketConfigWidget, _SocketDataSource
+from ._abc_data_source import ConfigWidget, DataSource, DataSourceType
+from ._dummy_data_source import DummyConfigWidget, DummyDataSource
+from ._serial_data_source import SerialConfigWidget, SerialDataSource
+from ._socket_data_source import SocketConfigWidget, SocketDataSource
 
 
 def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
@@ -42,9 +42,9 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
         The corresponding DataSourceConfigWidget object.
     """
     configWidgetDict = {
-        DataSourceType.SERIAL: _SerialConfigWidget,
-        DataSourceType.SOCKET: _SocketConfigWidget,
-        DataSourceType.DUMMY: _DummyConfigWidget,
+        DataSourceType.SERIAL: SerialConfigWidget,
+        DataSourceType.SOCKET: SocketConfigWidget,
+        DataSourceType.DUMMY: DummyConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
 
@@ -69,9 +69,9 @@ def getDataSource(
         Corresponding DataSource object.
     """
     dataSourceDict = {
-        DataSourceType.SERIAL: _SerialDataSource,
-        DataSourceType.SOCKET: _SocketDataSource,
-        DataSourceType.DUMMY: _DummyDataSource,
+        DataSourceType.SERIAL: SerialDataSource,
+        DataSourceType.SOCKET: SocketDataSource,
+        DataSourceType.DUMMY: DummyDataSource,
     }
     return dataSourceDict[dataSourceType](packetSize, **kwargs)
 

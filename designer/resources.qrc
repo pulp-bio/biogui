@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="images">
-    <file alias="stop">images/stop.png</file>
     <file alias="start">images/start.png</file>
+    <file alias="stop">images/stop.png</file>
+    <file alias="waiting">images/waiting.gif</file>
   </qresource>
 </RCC>

@@ -27,12 +27,7 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_serial_config_widget import Ui_SerialConfigWidget
-from ._abc_data_source import (
-    ConfigResult,
-    ConfigWidget,
-    DataSource,
-    DataSourceType,
-)
+from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
 
 
 def _serialPorts() -> list[str]:
@@ -46,7 +41,7 @@ def _serialPorts() -> list[str]:
     return [info[0] for info in serial.tools.list_ports.comports()]
 
 
-class _SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
+class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
     """Widget to configure the serial source.
 
     Parameters
@@ -107,7 +102,7 @@ class _SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
         self.serialPortsComboBox.addItems(_serialPorts())
 
 
-class _SerialDataSource(DataSource):
+class SerialDataSource(DataSource):
     """Concrete worker that collects data from a serial port.
 
     Parameters
@@ -129,8 +124,6 @@ class _SerialDataSource(DataSource):
         Baud rate.
     _stopReadingFlag : bool
         Flag indicating to stop reading data.
-    _ser : Serial or None
-        Object representing the serial port.
 
     Class attributes
     ----------------
@@ -147,7 +140,6 @@ class _SerialDataSource(DataSource):
         self._serialPort = serialPort
         self._baudRate = baudRate
         self._stopReadingFlag = False
-        self._ser = None
 
     def __str__(self):
         return f"Serial port - {self._serialPort}"
@@ -157,28 +149,28 @@ class _SerialDataSource(DataSource):
         self._stopReadingFlag = False
 
         # Open serial port
-        self._ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
+        ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
 
         logging.info("DataWorker: serial communication started.")
 
-        self._ser.write(b"=")  # start code
+        ser.write(b"=")  # start code
         while not self._stopReadingFlag:
-            data = self._ser.read(self._packetSize)
+            data = ser.read(self._packetSize)
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self.commErrorSig.emit()
+                self.commErrorSig.emit("Serial communication failed.")
                 logging.error("DataWorker: serial communication failed.")
                 break
 
             self.dataReadySig.emit(data)
-        self._ser.write(b":")  # stop code
+        ser.write(b":")  # stop code
 
         # Close port
         time.sleep(0.2)
-        self._ser.reset_input_buffer()
+        ser.reset_input_buffer()
         time.sleep(0.2)
-        self._ser.close()
+        ser.close()
 
         logging.info("DataWorker: serial communication stopped.")
 

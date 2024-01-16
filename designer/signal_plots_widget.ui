@@ -13,17 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,9">
-   <item>
-    <widget class="QLabel" name="sigNameLabel">
-     <property name="text">
-      <string>Signal name</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0">
    <item>
     <widget class="PlotWidget" name="graphWidget" native="true"/>
    </item>

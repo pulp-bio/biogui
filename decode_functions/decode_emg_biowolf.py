@@ -53,7 +53,7 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
         preFix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, preFix)
         pos += 4
-    dataRef = np.asarray(struct.unpack(f">{pos}i", dataTmp), dtype=np.int32)
+    dataRef = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32)
 
     # Reshape and convert ADC readings to uV
     dataRef = dataRef.reshape(nSamp, nCh)

@@ -25,15 +25,10 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_socket_config_widget import Ui_SocketConfigWidget
-from ._abc_data_source import (
-    ConfigResult,
-    ConfigWidget,
-    DataSource,
-    DataSourceType,
-)
+from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
 
 
-class _SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
+class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
     """Widget to configure the socket source.
 
     Parameters
@@ -78,7 +73,7 @@ class _SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
         )
 
 
-class _SocketDataSource(DataSource):
+class SocketDataSource(DataSource):
     """Concrete worker that collects data from a TCP socket.
 
     Parameters
@@ -98,10 +93,6 @@ class _SocketDataSource(DataSource):
         Flag indicating to stop reading data.
     _exitAcceptLoopFlag : bool
         Flag indicating to exit the non-blocking accept loop.
-    _socket : socket or None
-        TCP socket.
-    _conn : socket or None
-        Connection object.
 
     Class attributes
     ----------------
@@ -118,21 +109,25 @@ class _SocketDataSource(DataSource):
         self._socketPort = socketPort
         self._stopReadingFlag = False
         self._exitAcceptLoopFlag = False
-        self._socket = None
-        self._conn = None
 
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"
 
-    def _openSocket(self):
+    def exitAcceptLoop(self) -> None:
+        """Exit the non-blocking accept loop."""
+        self._exitAcceptLoopFlag = True
+
+    def startCollecting(self) -> None:
+        """Collect data from the configured source."""
+        self._stopReadingFlag = False
         self._exitAcceptLoopFlag = False
 
         # Open socket
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.settimeout(1.0)
-        self._socket.bind(("", self._socketPort))
-        self._socket.listen(1)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.settimeout(1.0)
+        sock.bind(("", self._socketPort))
+        sock.listen(1)
 
         logging.info(
             f"DataWorker: waiting for TCP connection on port {self._socketPort}."
@@ -143,42 +138,36 @@ class _SocketDataSource(DataSource):
             try:
                 if self._exitAcceptLoopFlag:
                     break
-                self._conn, _ = self._socket.accept()
-                logging.info(f"DataWorker: TCP connection from {self._conn}.")
+                conn, _ = sock.accept()
+
+                logging.info(
+                    f"DataWorker: TCP connection from {conn}, communication started."
+                )
+
+                # conn.sendall(b"=")
+                while not self._stopReadingFlag:
+                    data = conn.recv(self._packetSize)
+
+                    # Check number of bytes read
+                    if len(data) != self._packetSize:
+                        self.commErrorSig.emit("TCP communication failed.")
+                        logging.error("DataWorker: TCP communication failed.")
+                        break
+
+                    self.dataReadySig.emit(data)
+                # conn.sendall(b":")
+
+                # Close connection and socket
+                conn.shutdown(socket.SHUT_RDWR)
+                conn.close()
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
+
+                logging.info("DataWorker: TCP communication stopped.")
+
                 break
             except socket.timeout:
                 pass
-
-    def exitAcceptLoop(self) -> None:
-        """Exit the non-blocking accept loop."""
-        self._exitAcceptLoopFlag = True
-
-    def startCollecting(self) -> None:
-        """Collect data from the configured source."""
-        self._openSocket()
-
-        logging.info("DataWorker: TCP communication started.")
-
-        # self._conn.sendall(b"=")
-        while not self._stopReadingFlag:
-            data = self._conn.recv(self._packetSize)
-
-            # Check number of bytes read
-            if len(data) != self._packetSize:
-                self.commErrorSig.emit()
-                logging.error("DataWorker: TCP communication failed.")
-                break
-
-            self.dataReadySig.emit(data)
-        self._conn.sendall(b":")
-
-        # Close connection and socket
-        self._conn.shutdown(socket.SHUT_RDWR)
-        self._conn.close()
-        self._socket.shutdown(socket.SHUT_RDWR)
-        self._socket.close()
-
-        logging.info("DataWorker: TCP communication stopped.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
