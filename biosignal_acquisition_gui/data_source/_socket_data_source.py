@@ -98,7 +98,7 @@ class SocketDataSource(DataSource):
     ----------------
     dataReadySig : Signal
         Qt Signal emitted when new data is collected.
-    commErrorSig : Signal
+    errorSig : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -113,10 +113,6 @@ class SocketDataSource(DataSource):
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"
 
-    def exitAcceptLoop(self) -> None:
-        """Exit the non-blocking accept loop."""
-        self._exitAcceptLoopFlag = True
-
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
         self._stopReadingFlag = False
@@ -125,19 +121,17 @@ class SocketDataSource(DataSource):
         # Open socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(1.0)
+        sock.settimeout(0.5)
         sock.bind(("", self._socketPort))
-        sock.listen(1)
+        sock.listen()
 
         logging.info(
             f"DataWorker: waiting for TCP connection on port {self._socketPort}."
         )
 
         # Non-blocking accept
-        while True:
+        while not self._exitAcceptLoopFlag:
             try:
-                if self._exitAcceptLoopFlag:
-                    break
                 conn, _ = sock.accept()
 
                 logging.info(
@@ -150,7 +144,7 @@ class SocketDataSource(DataSource):
 
                     # Check number of bytes read
                     if len(data) != self._packetSize:
-                        self.commErrorSig.emit("TCP communication failed.")
+                        self.errorSig.emit("TCP communication failed.")
                         logging.error("DataWorker: TCP communication failed.")
                         break
 
@@ -171,4 +165,5 @@ class SocketDataSource(DataSource):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        self._exitAcceptLoopFlag = True
         self._stopReadingFlag = True
