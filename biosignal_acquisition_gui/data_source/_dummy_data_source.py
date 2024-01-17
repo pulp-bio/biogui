@@ -107,13 +107,13 @@ class DummyDataSource(DataSource):
         logging.info("DataWorker: data generation started.")
 
         while not self._stopGeneratingFlag:
-            # 1st signal: 4 channels, 10 samples
+            # 1st signal: 4 channels, 10 samples, 128sps
             data1 = self._prng.normal(
                 loc=self._mean, scale=self._std1, size=(10, 4)
             ).astype("float32")
-            # 2nd signal: 2 channel, 5 samples
+            # 2nd signal: 2 channel, 4 samples, 51.2sps
             data2 = self._prng.normal(
-                loc=self._mean, scale=self._std1, size=(5, 2)
+                loc=self._mean, scale=self._std1, size=(4, 2)
             ).astype("float32")
 
             # Concatenate and emit bytes
@@ -123,7 +123,7 @@ class DummyDataSource(DataSource):
             # Update mean
             self._mean += self._prng.normal(scale=self._std2)
 
-            time.sleep(0.01)  # 10ms <-> 100ksps
+            time.sleep(0.078)  # 78ms <-> 12.8sps
 
         logging.info("DataWorker: data generation stopped.")
 
