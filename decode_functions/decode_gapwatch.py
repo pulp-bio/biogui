@@ -62,10 +62,27 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
         ecgBytes2.append(struct.unpack(">i", ecgByte)[0])
 
         pos += 4
+    ppg = np.asarray(struct.unpack(">10i", ppgBytes), dtype="int32")
+    ecg = np.asarray(ecgBytes2, dtype="int32")
+    acc = np.asarray(struct.unpack("<3h", accelBytes), dtype="int32")
 
-    # Reshape
-    ppg = np.asarray(struct.unpack(">10i", ppgBytes)).reshape(-1, 1).astype("float32")
-    ecg = np.asarray(ecgBytes2).reshape(-1, 1).astype("float32")
-    acc = np.asarray(struct.unpack("<3h", accelBytes)).reshape(-1, 3).astype("float32")
+    # ADC parameters
+    vRefECG = 1.0
+    gainECG = 160.0
+    nBitECG = 17
+    accConvFactor = 0.061
+
+    # Reshape PPG
+    ppg = ppg.reshape(-1, 1)  # 1 channel
+    ppg = ppg.astype("float32")
+    # Reshape ECG and convert it to mV
+    ecg = ecg.reshape(-1, 1)  # 1 channel
+    ecg = ecg * (vRefECG / gainECG / 2**nBitECG)  # V
+    ecg *= 1000  # mV
+    ecg = ecg.astype("float32")
+    # Reshape accelerometer and convert it to mg
+    acc = acc.reshape(-1, 3)  # 3 channels
+    acc = acc * accConvFactor  # mg
+    acc = acc.astype("float32")
 
     return ppg, ecg, acc
