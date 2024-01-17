@@ -40,8 +40,9 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     nCh = 16
 
     # ADC parameters
-    vRefADC = 2.5
-    gainADC = 6.0
+    vRef = 2.5
+    gain = 6.0
+    nBit = 24
 
     dataTmp = bytearray(
         [x for i, x in enumerate(data) if i not in (0, 1, 242)]
@@ -53,11 +54,11 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
         preFix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, preFix)
         pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32)
+    emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype="int32")
 
     # Reshape and convert ADC readings to uV
     emg = emg.reshape(nSamp, nCh)
-    emg = emg * (vRefADC / gainADC / 2**24)  # V
+    emg = emg * (vRef / gain / 2**nBit)  # V
     emg *= 1_000_000  # uV
     emg = emg.astype("float32")
 
