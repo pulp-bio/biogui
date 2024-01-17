@@ -38,7 +38,7 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     """
     dataTmp = np.frombuffer(data, dtype="float32")
     nSamp1, nCh1 = 10, 4
-    nSamp2, nCh2 = 5, 2
+    nSamp2, nCh2 = 4, 2
     sig1 = dataTmp[: nSamp1 * nCh1].reshape(nSamp1, nCh1)
     sig2 = dataTmp[nSamp1 * nCh1 :].reshape(nSamp2, nCh2)
 
