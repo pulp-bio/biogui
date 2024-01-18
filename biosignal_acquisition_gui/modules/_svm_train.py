@@ -33,9 +33,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from skops.io import dump
 
-from ..ui import resources_rc
-from ..ui.ui_svm_train_config import Ui_SVMTrainConfig
 from ..main_window import MainWindow
+from ..ui.ui_svm_train_config import Ui_SVMTrainConfig
 from ._ml_utils import rootMeanSquared, waveformLength
 
 
@@ -207,7 +206,7 @@ class _SVMTrainConfigWidget(QWidget, Ui_SVMTrainConfig):
         self.startTrainButton.setEnabled(False)
 
         gifSize = 64
-        self.mov = QMovie(":/images/waiting.gif")
+        self.mov = QMovie(":/images/waiting")
         size = QSize(gifSize, gifSize)
         self.mov.setScaledSize(size)
         self.progressLabel.setFixedHeight(gifSize)

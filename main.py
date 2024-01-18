@@ -16,21 +16,52 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import argparse
 import logging
 import sys
 
 from PySide6.QtWidgets import QApplication
 
-from biosignal_acquisition_gui import MainWindow
+from biosignal_acquisition_gui import MainWindow, modules
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
+    # Input
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--acq",
+        action="store_true",
+        help="Whether to add the acquisition module",
+    )
+    parser.add_argument(
+        "--svmTrain",
+        action="store_true",
+        help="Whether to add the SVM training module",
+    )
+    parser.add_argument(
+        "--svmInference",
+        action="store_true",
+        help="Whether to add the SVM inference module",
+    )
+    args = vars(parser.parse_args())
+
     # Setup application and main window
     app = QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()
+
+    # Add widgets
+    if args["acq"]:
+        acqController = modules.AcquisitionController()
+        acqController.subscribe(mainWin)
+    if args["svmTrain"]:
+        svmTrainController = modules.SVMTrainController(args["sampFreq"])
+        svmTrainController.subscribe(mainWin)
+    if args["svmInference"]:
+        svmInferenceController = modules.SVMInferenceController()
+        svmInferenceController.subscribe(mainWin)
 
     # Run event loop
     sys.exit(app.exec())
