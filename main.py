@@ -32,24 +32,16 @@ def main():
     # Input
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--streamController",
-        required=False,
-        default="ESB",
-        type=str,
-        choices=("ESB", "Dummy"),
-        help='Streaming controller (either "ESB" or "Dummy")',
-    )
-    parser.add_argument(
         "--sampFreq",
         required=False,
-        default=4000,
+        default=1000,
         type=int,
         help="Sampling frequency (in sps)",
     )
     parser.add_argument(
         "--renderLength",
         required=False,
-        default=1000,
+        default=5000,
         type=int,
         help="Length of the rendering window in the plot (in ms)",
     )
@@ -115,7 +107,6 @@ def main():
     # Setup application and main window
     app = QApplication(sys.argv)
     mainWin = MainWindow(
-        streamControllerType=args["streamController"],
         sampFreq=args["sampFreq"],
         renderLength=args["renderLength"] * args["sampFreq"] // 1000,
     )

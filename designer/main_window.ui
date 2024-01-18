@@ -20,7 +20,7 @@
    <string>sEMG Acquisition GUI</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,6">
+   <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,8">
     <item>
      <layout class="QVBoxLayout" name="confLayout" stretch="0,0,0">
       <item>
@@ -50,34 +50,6 @@
          <set>Qt::AlignCenter</set>
         </property>
         <layout class="QGridLayout" name="gridLayout" columnstretch="3,0,0">
-         <item row="1" column="1">
-          <widget class="QComboBox" name="channelsComboBox">
-           <item>
-            <property name="text">
-             <string>16</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>32</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label2">
-           <property name="text">
-            <string>Number of channels:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="serialPortsComboBox">
-           <property name="toolTip">
-            <string>List of available serial ports</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="2">
           <widget class="QPushButton" name="rescanSerialPortsButton">
            <property name="toolTip">
@@ -98,6 +70,13 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="serialPortsComboBox">
+           <property name="toolTip">
+            <string>List of available serial ports</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -111,8 +90,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>470</width>
-           <height>847</height>
+           <width>375</width>
+           <height>917</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -136,7 +115,26 @@
      </layout>
     </item>
     <item>
-     <widget class="PlotWidget" name="graphWidget" native="true"/>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="PlotWidget" name="PPG_SX" native="true"/>
+      </item>
+      <item row="2" column="1">
+       <widget class="PlotWidget" name="FORCE_DX" native="true"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="PlotWidget" name="FORCE_SX" native="true"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="PlotWidget" name="EDA_DX" native="true"/>
+      </item>
+      <item row="0" column="1">
+       <widget class="PlotWidget" name="PPG_DX" native="true"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="PlotWidget" name="EDA_SX" native="true"/>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -146,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1920</width>
-     <height>30</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
