@@ -528,6 +528,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Source addition/removal
         self.addSourceButton.clicked.connect(self._addSourceHandler)
         self.deleteSourceButton.clicked.connect(self._deleteSourceHandler)
+        self.sourceList.itemClicked.connect(
+            lambda: self.deleteSourceButton.setEnabled(True)
+        )
 
         # Signal addition/removal/moving
         self.addSignalButton.clicked.connect(self._addSignalHandler)
@@ -626,6 +629,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Handle mapping
         del self._source2sigMap[sourceToRemove]
 
+        # Delete streaming controller
+        del self._streamControllers[sourceToRemove]
+
+        # Disable signal configuration and source deletion depending on the number of remaining sources
+        if len(self._streamControllers) == 0:
+            self.deleteSourceButton.setEnabled(False)
+            self.signalsGroupBox.setEnabled(False)
+
     def _addSignalHandler(self) -> None:
         """Handler to add a new signal."""
         # Open the dialog
@@ -652,7 +663,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._openAddSignalDialog(addSignalDialog)  # re-open dialog
                 return
 
-            # Connect to StreamingController
+            # Connect to streaming controller
             source = addSignalDialog.signalConfig["source"]
             streamController = self._streamControllers[source]
             sigName = addSignalDialog.signalConfig["sigName"]
@@ -685,8 +696,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.sigNameList.addItem(sigName)
 
             # Re-adjust layout
-            for i in range(self.sigNameList.count()):
-                self.plotsLayout.setStretch(i, self.sigNameList.count() - i)
+            self._adjustLayout()
 
     def _deleteSignalHandler(self) -> None:
         """Handler to remove the selected signal."""
@@ -705,10 +715,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plotsLayout.removeWidget(plotWidgetToRemove)
         plotWidgetToRemove.deleteLater()
 
-        # Disconnect from StreamingController
+        # Disconnect from streaming controller
         self._streamControllers[source].removeSigName(sigNameToRemove)
 
-        nSig = self.sigNameList.count()
+        # Re-adjust layout
+        self._adjustLayout()
+
+        # Disable signal deletion and moving, depending on the number of remaining signals
+        nSig = len(self._plotWidgets)
         if nSig < 2:
             self.moveUpButton.setEnabled(False)
             self.moveDownButton.setEnabled(False)
@@ -717,7 +731,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _enableMoveButtons(self) -> None:
         """Enable buttons to move signals up/down."""
-        flag = self.sigNameList.count() >= 2
+        flag = len(self._plotWidgets) >= 2
         self.moveUpButton.setEnabled(flag)
         self.moveDownButton.setEnabled(flag)
 
@@ -726,9 +740,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Get the indexes of the elements to swap
         idxFrom = self.sigNameList.currentRow()
         idxTo = (
-            max(0, idxFrom - 1)
-            if up
-            else min(self.sigNameList.count() - 1, idxFrom + 1)
+            max(0, idxFrom - 1) if up else min(len(self._plotWidgets) - 1, idxFrom + 1)
         )
         if idxFrom == idxTo:
             return
@@ -741,13 +753,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plotsLayout.insertWidget(idxTo, plotWidget)
 
         # Re-adjust layout
-        for i in range(self.sigNameList.count()):
-            self.plotsLayout.setStretch(i, self.sigNameList.count() - i)
+        self._adjustLayout()
+
+    def _adjustLayout(self) -> None:
+        """Adjust the layout of the plots."""
+        stretches = map(
+            lambda n: 2**n, list(range(len(self._plotWidgets) - 2, -1, -1)) + [0]
+        )
+        for i, s in enumerate(stretches):
+            self.plotsLayout.setStretch(i, s)
 
     def _startStreaming(self) -> None:
         """Start streaming."""
         # Validate settings
-        if self.sigNameList.count() == 0:
+        if len(self._plotWidgets) == 0:
             QMessageBox.critical(
                 self,
                 "Invalid configuration",

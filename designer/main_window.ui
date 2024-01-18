@@ -67,6 +67,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="deleteSourceButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="toolTip">
               <string>Delete selected source</string>
              </property>
@@ -75,7 +78,7 @@
              </property>
              <property name="icon">
               <iconset theme="user-trash">
-               <normaloff>.</normaloff>.</iconset>
+               <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
              </property>
             </widget>
            </item>
@@ -94,6 +97,9 @@
            </property>
            <property name="title">
             <string/>
+           </property>
+           <property name="flat">
+            <bool>true</bool>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,1">
             <item>
@@ -121,7 +127,7 @@
                 </property>
                 <property name="icon">
                  <iconset theme="user-trash">
-                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
                 </property>
                </widget>
               </item>
@@ -138,7 +144,7 @@
                 </property>
                 <property name="icon">
                  <iconset theme="arrow-up">
-                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
                 </property>
                </widget>
               </item>
@@ -155,7 +161,7 @@
                 </property>
                 <property name="icon">
                  <iconset theme="arrow-down">
-                  <normaloff>../../../.designer/backup</normaloff>../../../.designer/backup</iconset>
+                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
                 </property>
                </widget>
               </item>

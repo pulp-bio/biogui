@@ -64,12 +64,13 @@ class Ui_MainWindow(object):
 
         self.deleteSourceButton = QPushButton(self.streamConfGroupBox)
         self.deleteSourceButton.setObjectName(u"deleteSourceButton")
+        self.deleteSourceButton.setEnabled(False)
         icon = QIcon()
         iconThemeName = u"user-trash"
         if QIcon.hasThemeIcon(iconThemeName):
             icon = QIcon.fromTheme(iconThemeName)
         else:
-            icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
+            icon.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
         self.deleteSourceButton.setIcon(icon)
 
@@ -88,6 +89,7 @@ class Ui_MainWindow(object):
         self.signalsGroupBox = QGroupBox(self.streamConfGroupBox)
         self.signalsGroupBox.setObjectName(u"signalsGroupBox")
         self.signalsGroupBox.setEnabled(False)
+        self.signalsGroupBox.setFlat(True)
         self.verticalLayout2 = QVBoxLayout(self.signalsGroupBox)
         self.verticalLayout2.setObjectName(u"verticalLayout2")
         self.horizontalLayout4 = QHBoxLayout()
@@ -105,7 +107,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon1 = QIcon.fromTheme(iconThemeName)
         else:
-            icon1.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon1.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
         self.deleteSignalButton.setIcon(icon1)
 
@@ -119,7 +121,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon2 = QIcon.fromTheme(iconThemeName)
         else:
-            icon2.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon2.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
         self.moveUpButton.setIcon(icon2)
 
@@ -133,7 +135,7 @@ class Ui_MainWindow(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon3 = QIcon.fromTheme(iconThemeName)
         else:
-            icon3.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon3.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
         self.moveDownButton.setIcon(icon3)
 
