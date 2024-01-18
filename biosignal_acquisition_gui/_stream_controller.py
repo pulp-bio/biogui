@@ -19,12 +19,33 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Callable, TypeAlias
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from scipy import signal
 
-from ._data_source import DataSource, DataWorker, dataSourceMap
+from . import data_source
+
+DecodeFn: TypeAlias = Callable[[bytes], Sequence[np.ndarray]]
+
+
+@dataclass
+class DataPacket:
+    """Dataclass describing a data packet.
+
+    Attributes
+    ----------
+    id : str
+        String identifier.
+    data : ndarray
+        Data packet with shape (nSamp, nCh).
+    """
+
+    id: str
+    data: np.ndarray
 
 
 class _PreprocessWorker(QObject):
@@ -32,66 +53,132 @@ class _PreprocessWorker(QObject):
 
     Parameters
     ----------
-    nCh : int
-        Number of channels.
-    sampFreq : int
-        Sampling frequency.
-    nSamp : int
-        Number of samples in each packet.
+    decodeFn : DecodeFn
+        Decode function.
 
     Attributes
     ----------
-    _nCh : int
-        Number of channels.
-    _nSamp : int
-        Number of samples in each packet.
-    _sos : ndarray
-        Filter SOS coefficients.
-    _zi : list of ndarrays
-        Initial state for the filter (one per channel).
+    _decodeFn : DecodeFn
+        Decode function.
+    _sigNames : list of str
+        List of signal names associated to the source.
+    _sos : dict
+        Dictionary with filters.
+    _zi : dict
+        Dictionary with filter states.
 
     Class attributes
     ----------------
-    dataReadySig : Signal
-        Qt signal emitted when new data is available.
+    dataReadyRawSig : Signal
+        Qt Signal emitted when new raw data is available.
     dataReadyFltSig : Signal
-        Qt signal emitted when new filtered data is available.
+        Qt Signal emitted when new filtered data is available.
+    errorSig : Signal
+        Qt Signal emitted when a configuration error occurs.
     """
 
-    dataReadySig = Signal(np.ndarray)
-    dataReadyFltSig = Signal(np.ndarray)
+    dataReadyRawSig = Signal(DataPacket)
+    dataReadyFltSig = Signal(DataPacket)
+    errorSig = Signal(str)
 
-    def __init__(
-        self,
-        nCh: int,
-        sampFreq: int,
-        nSamp: int,
-    ) -> None:
+    def __init__(self, decodeFn: DecodeFn) -> None:
         super().__init__()
 
-        self._nCh = nCh
-        self._nSamp = nSamp
+        self._decodeFn = decodeFn
+        self._sigNames: list[str] = []
+        self._sos: dict = {}
+        self._zi: dict = {}
+        self._errorOccurred = False
 
-        # Filtering
-        self._sos = signal.butter(N=4, Wn=20, fs=sampFreq, btype="high", output="sos")
-        self._zi = np.zeros((self._sos.shape[0], 2, self._nCh))
+    @property
+    def errorOccurred(self):
+        """bool: Whether an error has occurred or not (useful to limit the number of error signals emitted)."""
+        return self._errorOccurred
 
-    @Slot(np.ndarray)
-    def preprocess(self, data: np.ndarray) -> None:
-        """This method is called automatically when the associated signal is received,
-        it preprocesses the received packet and emits a signal with the preprocessed data.
+    @errorOccurred.setter
+    def errorOccurred(self, errorOccurred: bool):
+        self._errorOccurred = errorOccurred
+
+    def addSigName(self, sigName: str) -> None:
+        """Add a signal name to the source.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name to add.
+        """
+        self._sigNames.append(sigName)
+
+    def removeSigName(self, sigName: str) -> None:
+        """Remove a signal name from the source.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name to remove.
+        """
+        self._sigNames.remove(sigName)
+
+        # Remove filters
+        self._sos.pop(sigName, None)
+        self._zi.pop(sigName, None)
+
+    def configFilter(self, sigName: str, filtSettings: dict) -> None:
+        """Configure a per-signal filter from the given settings.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name.
+        filtSettings : dict
+            Dictionary with the filter settings.
+        """
+        freqs = filtSettings["freqs"]
+        sos = signal.butter(
+            N=filtSettings["filtOrder"],
+            Wn=freqs if len(freqs) > 1 else freqs[0],
+            fs=filtSettings["fs"],
+            btype=filtSettings["filtType"],
+            output="sos",
+        )
+        self._sos[sigName] = sos
+        self._zi[sigName] = np.zeros((sos.shape[0], 2, filtSettings["nCh"]))
+
+    @Slot(bytes)
+    def preprocess(self, data: bytes) -> None:
+        """Decode the received packet of bytes and apply filtering.
 
         Parameters
         ----------
         data : ndarray
             New data.
         """
-        self.dataReadySig.emit(data)
+        try:
+            dataDecList = self._decodeFn(data)
+        except (Exception,):
+            if not self._errorOccurred:
+                self.errorSig.emit("The provided decode function failed.")
+                self._errorOccurred = True
+            return
 
-        # Filter
-        data, self._zi = signal.sosfilt(self._sos, data, axis=0, zi=self._zi)
-        data = data.astype("float32")
-        self.dataReadyFltSig.emit(data)
+        if len(dataDecList) != len(self._sigNames):
+            if not self._errorOccurred:
+                self.errorSig.emit(
+                    "The provided decode function and configured signals do not match."
+                )
+                self._errorOccurred = True
+            return
+
+        for sigName, dataDec in zip(self._sigNames, dataDecList):
+            self.dataReadyRawSig.emit(DataPacket(sigName, dataDec))
+
+            # Filter
+            if sigName in self._sos:
+                dataDec, self._zi[sigName] = signal.sosfilt(
+                    self._sos[sigName], dataDec, axis=0, zi=self._zi[sigName]
+                )
+
+            self.dataReadyFltSig.emit(DataPacket(sigName, dataDec))
 
 
 class StreamingController(QObject):
@@ -99,16 +186,16 @@ class StreamingController(QObject):
 
     Parameters
     ----------
-    packetSize : int
-        Number of bytes in the packet.
-    nSamp : int
-        Number of samples in each packet.
+    dataSourceConfig : dict
+        Dictionary with the data source configuration.
+    decodeFn: DecodeFn
+        Decode function.
     parent : QObject or None, default=None
         Parent QObject.
 
     Attributes
     ----------
-    _dataWorker : _DataWorker
+    _dataSource : _DataWorker
         Worker for data collection.
     _preprocessWorker : _PreprocessWorker
         Worker for data pre-processing.
@@ -119,99 +206,106 @@ class StreamingController(QObject):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
-        Qt Signal emitted when new data is available.
+    dataReadyRawSig : Signal
+        Qt Signal emitted when new raw data is available.
     dataReadyFltSig : Signal
         Qt Signal emitted when new filtered data is available.
-    commErrorSig : Signal
-        Qt Signal emitted when a communication error occurs.
+    errorSig : Signal
+        Qt Signal emitted when an error occurs.
     """
 
-    dataReadySig = Signal(bytes)
-    dataReadyFltSig = Signal(bytes)
-    commErrorSig = Signal()
+    dataReadyRawSig = Signal(DataPacket)
+    dataReadyFltSig = Signal(DataPacket)
+    errorSig = Signal(str)
 
     def __init__(
-        self, packetSize: int, nSamp: int, parent: QObject | None = None
+        self,
+        dataSourceConfig: dict,
+        decodeFn: DecodeFn,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
 
-        self._packetSize = packetSize
-
         # Create data worker and thread
-        self._dataWorker: DataWorker | None = None
-        # self._dataThread = QThread(self)
-        # self._dataWorker.moveToThread(self._dataThread)
-        # self._dataThread.started.connect(self._dataWorker.startCollecting)
+        self._dataSource = data_source.getDataSource(**dataSourceConfig)
+        self._dataThread = QThread(self)
+        self._dataSource.moveToThread(self._dataThread)
 
-        # # Create preprocess worker and thread
-        # self._preprocessWorker = _PreprocessWorker(19, 4000, 5)
-        # self._preprocessThread = QThread(self)
-        # self._preprocessWorker.moveToThread(self._preprocessThread)
-        # self._dataWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
+        # Create preprocess worker and thread
+        self._preprocessWorker = _PreprocessWorker(decodeFn)
+        self._preprocessThread = QThread(self)
+        self._preprocessWorker.moveToThread(self._preprocessThread)
 
-        # # Forward relevant signals
-        # self._preprocessWorker.dataReadySig.connect(lambda d: self.dataReadySig.emit(d))
-        # self._preprocessWorker.dataReadyFltSig.connect(
-        #     lambda d: self.dataReadyFltSig.emit(d)
-        # )
-        # self._dataWorker.commErrorSig.connect(lambda: self.commErrorSig.emit())
+        # Handle signals
+        self._dataThread.started.connect(self._dataSource.startCollecting)  # type: ignore
+        self._dataSource.dataReadySig.connect(self._preprocessWorker.preprocess)
+        self._dataSource.errorSig.connect(self._handleErrors)
+        self._preprocessWorker.errorSig.connect(self._handleErrors)
+        self._preprocessWorker.dataReadyRawSig.connect(
+            lambda d: self.dataReadyRawSig.emit(d)
+        )  # forward raw data
+        self._preprocessWorker.dataReadyFltSig.connect(
+            lambda d: self.dataReadyFltSig.emit(d)
+        )  # forward filtered data
 
-        # Create workers and threads
-        # self._serialWorker = _SerialWorker(
-        #     serialPort, packetSize=243, baudeRate=4_000_000
-        # )
-        # self._preprocessWorker = _PreprocessWorker(
-        #     nCh,
-        #     sampFreq,
-        #     nSamp=5,
-        #     gainScaleFactor=2.38125854276502e-08,
-        #     vScaleFactor=1_000_000,
-        # )
-        # self._serialThread = QThread()
-        # self._serialWorker.moveToThread(self._serialThread)
-        # self._preprocessThread = QThread()
-        # self._preprocessWorker.moveToThread(self._preprocessThread)
+    def __str__(self) -> str:
+        return str(self._dataSource)
 
-        # # Create internal connections
-        # self._serialThread.started.connect(self._serialWorker.startReading)
-        # self._serialWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
+    @Slot(str)
+    def _handleErrors(self, errMessage: str) -> None:
+        """When error occurs, stop collection and preprocessing and forward the error Qt Signal."""
+        self.stopStreaming()
+        self.errorSig.emit(f'StreamingController "{self.__str__()}": {errMessage}')
 
-        # # Forward relevant signals
-        # self._preprocessWorker.dataReadySig.connect(lambda d: self.dataReadySig.emit(d))
-        # self._preprocessWorker.dataReadyFltSig.connect(
-        #     lambda d: self.dataReadyFltSig.emit(d)
-        # )
-        # self._serialWorker.serialErrorSig.connect(lambda: self.commErrorSig.emit())
-
-    def configureDataSource(self, dataWorkerType: DataSource, **kwargs):
-        """Configure the data source.
+    def addSigName(self, sigName: str) -> None:
+        """Add a signal name to the source.
 
         Parameters
         ----------
-        dataWorkerType : DataWorkerType
-            Type of data source.
-        kwargs : dict
-            Keyword arguments for the data worker.
+        sigName : str
+            Signal name to add.
         """
-        # Create data worker
-        self._dataWorker = dataSourceMap[dataWorkerType](
-            packetSize=self._packetSize, **kwargs
-        )
+        self._preprocessWorker.addSigName(sigName)
+
+    def removeSigName(self, sigName: str) -> None:
+        """Remove a signal name from the source.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name to remove.
+        """
+        self._preprocessWorker.removeSigName(sigName)
+
+    def addFiltSettings(self, sigName: str, filtSettings: dict) -> None:
+        """Configure a per-signal filter from the given settings.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name.
+        filtSettings : dict
+            Dictionary with the filter settings.
+        """
+        self._preprocessWorker.configFilter(sigName, filtSettings)
 
     def startStreaming(self) -> None:
         """Start streaming."""
-        # self._preprocessThread.start()
-        # self._dataThread.start()
+        self._preprocessWorker.errorOccurred = False  # reset flag
+        # Start thread
+        self._preprocessThread.start()
+        self._dataThread.start()
 
         logging.info("StreamingController: threads started.")
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
-        # self._dataWorker.stopCollecting()
-        # self._dataThread.quit()
-        # self._dataThread.wait()
-        # self._preprocessThread.quit()
-        # self._preprocessThread.wait()
+        # Check if threads are running
+        if self._dataThread.isRunning() and self._preprocessThread.isRunning():
+            self._dataSource.stopCollecting()
+            self._dataThread.quit()
+            self._dataThread.wait()
+            self._preprocessThread.quit()
+            self._preprocessThread.wait()
 
-        logging.info("StreamingController: threads stopped.")
+            logging.info("StreamingController: threads stopped.")

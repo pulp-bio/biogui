@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>396</height>
+    <width>720</width>
+    <height>560</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,19 @@
   <property name="modal">
    <bool>false</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
    <item>
     <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label1">
+       <property name="text">
+        <string>Source:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="sourceComboBox"/>
+     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label2">
        <property name="text">
@@ -73,20 +83,13 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label1">
-       <property name="text">
-        <string>Source:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="sourceComboBox"/>
-     </item>
     </layout>
    </item>
    <item>
     <widget class="QGroupBox" name="filteringGroupBox">
+     <property name="toolTip">
+      <string>Only for visualization, the raw signal will be saved to file</string>
+     </property>
      <property name="title">
       <string>Configure filtering</string>
      </property>
@@ -182,6 +185,69 @@
         </property>
         <property name="placeholderText">
          <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="fileSavingGroupBox">
+     <property name="title">
+      <string>Configure file saving</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_3">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label9">
+        <property name="text">
+         <string>Output file name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="outFileTextField"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="chSpacingGroupBox">
+     <property name="toolTip">
+      <string>Only for multi-channel signals</string>
+     </property>
+     <property name="title">
+      <string>Configure channel spacing</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_4">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label10">
+        <property name="text">
+         <string>Channel spacing:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="chSpacingTextField">
+        <property name="text">
+         <string>1000</string>
         </property>
        </widget>
       </item>

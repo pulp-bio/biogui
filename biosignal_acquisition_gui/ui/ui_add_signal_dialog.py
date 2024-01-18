@@ -25,12 +25,22 @@ class Ui_AddSignalDialog(object):
         if not AddSignalDialog.objectName():
             AddSignalDialog.setObjectName(u"AddSignalDialog")
         AddSignalDialog.setWindowModality(Qt.WindowModal)
-        AddSignalDialog.resize(640, 396)
+        AddSignalDialog.resize(720, 560)
         AddSignalDialog.setModal(False)
         self.verticalLayout = QVBoxLayout(AddSignalDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
+        self.label1 = QLabel(AddSignalDialog)
+        self.label1.setObjectName(u"label1")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
+
+        self.sourceComboBox = QComboBox(AddSignalDialog)
+        self.sourceComboBox.setObjectName(u"sourceComboBox")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.sourceComboBox)
+
         self.label2 = QLabel(AddSignalDialog)
         self.label2.setObjectName(u"label2")
 
@@ -60,16 +70,6 @@ class Ui_AddSignalDialog(object):
         self.fsTextField.setObjectName(u"fsTextField")
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.fsTextField)
-
-        self.label1 = QLabel(AddSignalDialog)
-        self.label1.setObjectName(u"label1")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
-
-        self.sourceComboBox = QComboBox(AddSignalDialog)
-        self.sourceComboBox.setObjectName(u"sourceComboBox")
-
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.sourceComboBox)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -129,6 +129,46 @@ class Ui_AddSignalDialog(object):
 
         self.verticalLayout.addWidget(self.filteringGroupBox)
 
+        self.fileSavingGroupBox = QGroupBox(AddSignalDialog)
+        self.fileSavingGroupBox.setObjectName(u"fileSavingGroupBox")
+        self.fileSavingGroupBox.setAlignment(Qt.AlignCenter)
+        self.fileSavingGroupBox.setCheckable(True)
+        self.fileSavingGroupBox.setChecked(False)
+        self.formLayout_3 = QFormLayout(self.fileSavingGroupBox)
+        self.formLayout_3.setObjectName(u"formLayout_3")
+        self.label9 = QLabel(self.fileSavingGroupBox)
+        self.label9.setObjectName(u"label9")
+
+        self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.label9)
+
+        self.outFileTextField = QLineEdit(self.fileSavingGroupBox)
+        self.outFileTextField.setObjectName(u"outFileTextField")
+
+        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.outFileTextField)
+
+
+        self.verticalLayout.addWidget(self.fileSavingGroupBox)
+
+        self.chSpacingGroupBox = QGroupBox(AddSignalDialog)
+        self.chSpacingGroupBox.setObjectName(u"chSpacingGroupBox")
+        self.chSpacingGroupBox.setAlignment(Qt.AlignCenter)
+        self.chSpacingGroupBox.setFlat(False)
+        self.chSpacingGroupBox.setCheckable(True)
+        self.formLayout_4 = QFormLayout(self.chSpacingGroupBox)
+        self.formLayout_4.setObjectName(u"formLayout_4")
+        self.label10 = QLabel(self.chSpacingGroupBox)
+        self.label10.setObjectName(u"label10")
+
+        self.formLayout_4.setWidget(0, QFormLayout.LabelRole, self.label10)
+
+        self.chSpacingTextField = QLineEdit(self.chSpacingGroupBox)
+        self.chSpacingTextField.setObjectName(u"chSpacingTextField")
+
+        self.formLayout_4.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
+
+
+        self.verticalLayout.addWidget(self.chSpacingGroupBox)
+
         self.buttonBox = QDialogButtonBox(AddSignalDialog)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
@@ -146,6 +186,7 @@ class Ui_AddSignalDialog(object):
 
     def retranslateUi(self, AddSignalDialog):
         AddSignalDialog.setWindowTitle(QCoreApplication.translate("AddSignalDialog", u"Add signal", None))
+        self.label1.setText(QCoreApplication.translate("AddSignalDialog", u"Source:", None))
         self.label2.setText(QCoreApplication.translate("AddSignalDialog", u"Name:", None))
 #if QT_CONFIG(tooltip)
         self.sigNameTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Name of the signal to display in the GUI", None))
@@ -161,7 +202,9 @@ class Ui_AddSignalDialog(object):
         self.fsTextField.setToolTip("")
 #endif // QT_CONFIG(tooltip)
         self.fsTextField.setPlaceholderText("")
-        self.label1.setText(QCoreApplication.translate("AddSignalDialog", u"Source:", None))
+#if QT_CONFIG(tooltip)
+        self.filteringGroupBox.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Only for visualization, the raw signal will be saved to file", None))
+#endif // QT_CONFIG(tooltip)
         self.filteringGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure filtering", None))
         self.label5.setText(QCoreApplication.translate("AddSignalDialog", u"Type:", None))
         self.filtTypeComboBox.setItemText(0, QCoreApplication.translate("AddSignalDialog", u"highpass", None))
@@ -184,5 +227,13 @@ class Ui_AddSignalDialog(object):
         self.filtOrderTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Order of the Butterworth filter (positive integer)", None))
 #endif // QT_CONFIG(tooltip)
         self.filtOrderTextField.setPlaceholderText("")
+        self.fileSavingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure file saving", None))
+        self.label9.setText(QCoreApplication.translate("AddSignalDialog", u"Output file name:", None))
+#if QT_CONFIG(tooltip)
+        self.chSpacingGroupBox.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Only for multi-channel signals", None))
+#endif // QT_CONFIG(tooltip)
+        self.chSpacingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure channel spacing", None))
+        self.label10.setText(QCoreApplication.translate("AddSignalDialog", u"Channel spacing:", None))
+        self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"1000", None))
     # retranslateUi
 
