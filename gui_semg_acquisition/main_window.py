@@ -28,7 +28,7 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QWidget
 
-from ._streaming import StreamingController, streamControllerFactory
+from ._streaming import StreamingController
 from ._ui.ui_main_window import Ui_MainWindow
 
 
@@ -48,8 +48,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     Parameters
     ----------
-    streamControllerType : str
-        String representing the StreamingController type.
     sampFreq : int
         Sampling frequency.
     renderLength : int
@@ -57,8 +55,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     Attributes
     ----------
-    _streamControllerType : str
-        String representing the StreamingController type.
     _streamController : StreamingController or None
         StreamingController instance.
     _sampFreq : int
@@ -75,8 +71,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Spacing between each channel in the plot.
     _serialPort : str
         Serial port.
-    _nCh : int
-        Number of channels.
     _plots : list of PlotItems
         List containing a PlotItem for each channel.
 
@@ -101,11 +95,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     dataReadyFltSig = Signal(np.ndarray)
 
     def __init__(
-        self, streamControllerType: str, sampFreq: int, renderLength: int
+        self, sampFreq: int, renderLength: int
     ) -> None:
         super().__init__()
 
-        self._streamControllerType = streamControllerType
         self._streamController: StreamingController | None = None
         self._sampFreq = sampFreq
         self._xQueue = deque(maxlen=renderLength)
@@ -121,17 +114,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._serialPort = self.serialPortsComboBox.currentText()
         self.serialPortsComboBox.currentTextChanged.connect(self._serialPortChange)
         self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
-        self._nCh = int(self.channelsComboBox.currentText())
-        self.channelsComboBox.currentTextChanged.connect(self._channelsChange)
 
         # Plot
         self._plots = []
         self._initializePlot()
 
         # Streaming
-        self.startStreamingButton.setEnabled(
-            self._serialPort != "" or self._streamControllerType == "Dummy"
-        )
+        self.startStreamingButton.setEnabled(self._serialPort != "")
         self.stopStreamingButton.setEnabled(False)
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
@@ -155,28 +144,45 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _initializePlot(self) -> None:
         """Render the initial plot."""
         # Reset graph
-        self.graphWidget.clear()
-        self.graphWidget.setYRange(0, self._plotSpacing * (self._nCh - 1))
-        self.graphWidget.getPlotItem().hideAxis("bottom")
-        self.graphWidget.getPlotItem().hideAxis("left")
+        self.PPG_SX.clear()
+        self.PPG_DX.clear()
+        self.EDA_SX.clear()
+        self.EDA_DX.clear()
+        self.FORCE_SX.clear()
+        self.FORCE_DX.clear()
+        self.PPG_SX.setTitle("PPG LEFT", color="b", size="10pt")
+        self.PPG_DX.setTitle("PPG RIGHT", color="b", size="10pt")
+        self.EDA_SX.setTitle("EDA LEFT", color="b", size="10pt")
+        self.EDA_DX.setTitle("EDA RIGHT", color="b", size="10pt")
+        self.FORCE_SX.setTitle("FORCE LEFT", color="b", size="10pt")
+        self.FORCE_DX.setTitle("FORCE RIGHT", color="b", size="10pt")
+        #self.PPG_SX.getPlotItem().hideAxis("bottom")
+        #self.PPG_SX.getPlotItem().hideAxis("left")
         # Initialize queues
         for i in range(-self._xQueue.maxlen, 0):
             self._xQueue.append(i / self._sampFreq)
-            self._yQueue.append(np.zeros(self._nCh))
-        # Get colormap
-        cm = pg.colormap.get("CET-C1")
-        cm.setMappingMode("diverging")
-        lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")
-        colors = [lut[i] for i in range(self._nCh)]
+            self._yQueue.append(np.zeros(6))
         # Plot placeholder data
         ys = np.asarray(self._yQueue).T
-        for i in range(self._nCh):
-            pen = pg.mkPen(color=colors[i])
-            self._plots.append(
-                self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._plotSpacing * i, pen=pen
-                )
-            )
+        
+        self._plots.append(
+            self.PPG_SX.plot(self._xQueue, ys[1])
+        )
+        self._plots.append(
+            self.PPG_DX.plot(self._xQueue, ys[0])
+        )
+        self._plots.append(
+            self.EDA_SX.plot(self._xQueue, ys[3])
+        )
+        self._plots.append(
+            self.EDA_DX.plot(self._xQueue, ys[2])
+        )
+        self._plots.append(
+            self.FORCE_SX.plot(self._xQueue, ys[4])
+        )
+        self._plots.append(
+            self.FORCE_DX.plot(self._xQueue, ys[5])
+        )
 
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
@@ -187,12 +193,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Detect if the serial port has changed."""
         self._serialPort = self.serialPortsComboBox.currentText()
         self.startStreamingButton.setEnabled(self._serialPort != "")
-
-    def _channelsChange(self) -> None:
-        """Detect if the number of channels has changed."""
-        self._nCh = int(self.channelsComboBox.currentText())
-        self._plots = []
-        self._initializePlot()  # redraw plot
 
     def _alertSerialError(self) -> None:
         """Alert message displayed when serial communication fails."""
@@ -222,9 +222,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self._bufferCount >= self._bufferSize:
             ys = np.asarray(self._yQueue).T
-            for i in range(self._nCh):
+            for i in range(6):
                 self._plots[i].setData(
-                    self._xQueue, ys[i] + self._plotSpacing * i, skipFiniteCheck=True
+                    self._xQueue, ys[i], skipFiniteCheck=True
                 )
             self._bufferCount = 0
 
@@ -233,9 +233,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logging.info("MainWindow: streaming started.")
 
         # Attempt to create streaming controller
-        self._streamController = streamControllerFactory(
-            self._streamControllerType, self._serialPort, self._nCh, self._sampFreq
-        )
+        self._streamController = StreamingController(self._serialPort, self._sampFreq)
         self._streamController.dataReadyFltSig.connect(self._plotData)
         self._streamController.serialErrorSig.connect(self._alertSerialError)
         self._streamController.dataReadySig.connect(lambda d: self.dataReadySig.emit(d))

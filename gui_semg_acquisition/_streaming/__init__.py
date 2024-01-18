@@ -16,5 +16,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from ._abc_stream_controller import StreamingController
-from ._stream_controller_factory import streamControllerFactory
+from ._stream_controller import StreamingController

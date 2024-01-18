@@ -19,14 +19,13 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import struct
 import time
 
 import numpy as np
 import serial
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from scipy import signal
-
-from ._abc_stream_controller import StreamingController
 
 
 class _SerialWorker(QObject):
@@ -145,19 +144,19 @@ class _PreprocessWorker(QObject):
         nCh: int,
         sampFreq: int,
         nSamp: int,
-        gainScaleFactor: float,
-        vScaleFactor: int,
     ) -> None:
         super().__init__()
 
         self._nCh = nCh
         self._nSamp = nSamp
-        self._gainScaleFactor = gainScaleFactor
-        self._vScaleFactor = vScaleFactor
 
         # Filtering
-        self._sos = signal.butter(N=4, Wn=20, fs=sampFreq, btype="high", output="sos")
-        self._zi = np.zeros((self._sos.shape[0], 2, self._nCh))
+        self._sos_PPG = signal.butter(N=6, Wn=(0.5,10), fs=sampFreq, btype="bandpass", output="sos")
+        self._zi_PPG = np.zeros((self._sos_PPG.shape[0], 2, 2))
+        self._sos_EDA = signal.butter(N=6, Wn=10, fs=sampFreq, btype="low", output="sos")
+        self._zi_EDA = np.zeros((self._sos_EDA.shape[0], 2, 2))
+        self._sos_FORCE = signal.butter(N=4, Wn=10, fs=sampFreq, btype="low", output="sos")
+        self._zi_FORCE = np.zeros((self._sos_FORCE.shape[0], 2, 2))
 
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -169,37 +168,41 @@ class _PreprocessWorker(QObject):
         data : bytes
             New binary data.
         """
-        # Bytes to floats
-        dataRef = np.zeros(shape=(self._nSamp, self._nCh), dtype="uint32")
-        data = bytearray(data)
-        data = [x for i, x in enumerate(data) if i not in (0, 1, 242)]
-        for k in range(self._nSamp):
-            for i in range(self._nCh):
-                dataRef[k, i] = (
-                    data[k * 48 + (3 * i)] * 256**3
-                    + data[k * 48 + (3 * i) + 1] * 256**2
-                    + data[k * 48 + (3 * i) + 2] * 256
-                )
-        dataRef = dataRef.view("int32").astype("float32")
-        dataRef = dataRef / 256 * self._gainScaleFactor * self._vScaleFactor
+        # ADC parameters
+        vRefADC = 5.0
+        gainADC = 1.0
+
+        dataTmp = bytearray(data)
+        # Convert 24-bit to 32-bit integer
+        pos = 0
+        for _ in range(len(dataTmp) // 3):
+            preFix = 255 if dataTmp[pos] > 127 else 0
+            dataTmp.insert(pos, preFix)
+            pos += 4
+        dataRef = np.asarray(struct.unpack(f">{self._nSamp * self._nCh}i", dataTmp), dtype=np.int32)
+
+        # Reshape and convert ADC readings to V
+        dataRef = dataRef.reshape(self._nSamp, self._nCh)
+        # dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
         dataRef = dataRef.astype("float32")
         self.dataReadySig.emit(dataRef)
 
         # Filter
-        dataFlt, self._zi = signal.sosfilt(self._sos, dataRef, axis=0, zi=self._zi)
-        dataFlt = dataFlt.astype("float32")
+        dataFlt = dataRef.copy()
+        # dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, dataRef[:,0:2], axis=0, zi=self._zi_PPG)
+        # dataFlt[:,2:4], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,2:4], axis=0, zi=self._zi_EDA)
+        # dataFlt[:,4:6], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,4:6], axis=0, zi=self._zi_FORCE)
+        # dataFlt = dataFlt.astype("float32")
         self.dataReadyFltSig.emit(dataFlt)
 
 
-class ESBStreamingController(StreamingController):
+class StreamingController(QObject):
     """Controller for the streaming from the serial port using the ESB protocol.
 
     Parameters
     ----------
     serialPort : str
         String representing the serial port.
-    nCh : int
-        Number of channels.
     sampFreq : int
         Sampling frequency.
 
@@ -228,19 +231,17 @@ class ESBStreamingController(StreamingController):
     dataReadyFltSig = Signal(bytes)
     serialErrorSig = Signal()
 
-    def __init__(self, serialPort: str, nCh: int, sampFreq: int) -> None:
+    def __init__(self, serialPort: str, sampFreq: int) -> None:
         super().__init__()
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(
-            serialPort, packetSize=243, baudeRate=4_000_000
+            serialPort, packetSize=90, baudeRate=230_400
         )
         self._preprocessWorker = _PreprocessWorker(
-            nCh,
-            sampFreq,
+            nCh=6,
+            sampFreq=sampFreq,
             nSamp=5,
-            gainScaleFactor=2.38125854276502e-08,
-            vScaleFactor=1_000_000,
         )
         self._serialThread = QThread()
         self._serialWorker.moveToThread(self._serialThread)
