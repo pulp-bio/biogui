@@ -174,9 +174,17 @@ class _PreprocessWorker(QObject):
 
             # Filter
             if sigName in self._sos:
-                dataDec, self._zi[sigName] = signal.sosfilt(
-                    self._sos[sigName], dataDec, axis=0, zi=self._zi[sigName]
-                )
+                try:
+                    dataDec, self._zi[sigName] = signal.sosfilt(
+                        self._sos[sigName], dataDec, axis=0, zi=self._zi[sigName]
+                    )
+                except ValueError:
+                    if not self._errorOccurred:
+                        self.errorSig.emit(
+                            "An error occurred during filtering, check the settings."
+                        )
+                        self._errorOccurred = True
+                    return
 
             self.dataReadyFltSig.emit(DataPacket(sigName, dataDec))
 

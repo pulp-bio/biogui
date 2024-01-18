@@ -18,22 +18,66 @@ limitations under the License.
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Signal, Slot
+from PySide6.QtCore import QLocale, Qt, Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtWidgets import QDialog, QMainWindow, QMessageBox, QWidget
+from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QWidget
 
 from . import data_source
-from ._stream_controller import StreamingController
+from ._stream_controller import DataPacket, DecodeFn, StreamingController
 from .data_source import DataSourceType
 from .ui.ui_add_signal_dialog import Ui_AddSignalDialog
 from .ui.ui_add_source_dialog import Ui_AddSourceDialog
 from .ui.ui_main_window import Ui_MainWindow
 from .ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
+
+
+def _loadDecodeFnFromFile(
+    filePath: str, functionName: str
+) -> tuple[DecodeFn | None, str]:
+    """Load a decode function from a Python file.
+
+    Parameters
+    ----------
+    filePath : str
+        Path to Python file.
+    functionName : str
+        Name of the function to load from the file.
+
+    Returns
+    -------
+    DecodeFn or None
+        Decode function, or None if the module is not valid.
+    str
+        Error message.
+    """
+    # Remove ".py" extension and get file name
+    moduleName = filePath[:-3].split("/")[-1]
+
+    # Load module
+    spec = importlib.util.spec_from_file_location(moduleName, filePath)
+    if spec is None or spec.loader is None:
+        return None, "The selected file is not a valid Python module."
+
+    module = importlib.util.module_from_spec(spec)
+
+    try:
+        spec.loader.exec_module(module)
+    except ImportError:
+        return None, "Cannot import the selected Python module."
+
+    if not hasattr(module, functionName):
+        return (
+            None,
+            'The selected Python module does not contain a "decodeFn" function.',
+        )
+
+    return module.decodeFn, ""
 
 
 class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
@@ -58,6 +102,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         self.buttonBox.accepted.connect(self._addSourceHandler)
         self.buttonBox.rejected.connect(self.close)
 
+        self.browseDecodeModuleButton.clicked.connect(self._browseDecodeModule)
         self.sourceComboBox.addItems(
             list(map(lambda sourceType: sourceType.value, DataSourceType))
         )
@@ -66,15 +111,13 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         # Source type (default is serial port)
         self._configWidget = data_source.getConfigWidget(DataSourceType.SERIAL, self)
         self.sourceConfigContainer.addWidget(self._configWidget)
-        self._dataSourceType = DataSourceType.SERIAL
+
+        packetSizeValidator = QIntValidator(bottom=1, top=2147483647)
+        self.packetSizeTextField.setValidator(packetSizeValidator)
+
         self._dataSourceConfig = {}
         self._isValid = False
         self._errMessage = ""
-
-    @property
-    def dataSourceType(self) -> DataSourceType:
-        """DataSourceType: Property for getting the data source type."""
-        return self._dataSourceType
 
     @property
     def dataSourceConfig(self) -> dict:
@@ -91,6 +134,30 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         """str: Property for getting the error message if the form is not valid."""
         return self._errMessage
 
+    def _browseDecodeModule(self) -> None:
+        """Browse files to select the module containing the decode function."""
+        filePath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Python module containing the decode function",
+            filter="*.py",
+        )
+        if filePath:
+            decodeFn, errMessage = _loadDecodeFnFromFile(
+                filePath, functionName="decodeFn"
+            )
+            if decodeFn is None:
+                QMessageBox.critical(
+                    self,
+                    "Invalid Python file",
+                    errMessage,
+                    buttons=QMessageBox.Retry,  # type: ignore
+                    defaultButton=QMessageBox.Retry,  # type: ignore
+                )
+                return
+
+            self._dataSourceConfig["decodeFn"] = decodeFn
+            self.decodeModulePathLabel.setText(filePath)
+
     def _onSourceChange(self) -> None:
         """Detect if source type has changed."""
         # Clear container
@@ -106,14 +173,31 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
     def _addSourceHandler(self) -> None:
         """Validate user input in the form."""
 
+        if "decodeFn" not in self._dataSourceConfig:
+            self._isValid = False
+            self._errMessage = "No decode function was provided."
+            return
+
+        if not self.packetSizeTextField.hasAcceptableInput():
+            self._isValid = False
+            self._errMessage = 'The "packet size" field is invalid.'
+            return
+        self._dataSourceConfig["packetSize"] = int(self.packetSizeTextField.text())
+
+        if self.sourceComboBox.currentText() == "":
+            self._isValid = False
+            self._errMessage = 'The "source" field is invalid.'
+            return
+
         configResult = self._configWidget.validateConfig()
         if not configResult.isValid:
             self._isValid = False
             self._errMessage = configResult.errMessage
-        else:
-            self._dataSourceType = configResult.dataSourceType
-            self._dataSourceConfig = configResult.dataSourceConfig
-            self._isValid = True
+            return
+
+        self._dataSourceConfig["dataSourceType"] = configResult.dataSourceType
+        self._dataSourceConfig.update(configResult.dataSourceConfig)
+        self._isValid = True
 
 
 class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
@@ -168,19 +252,22 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         orderValidator = QIntValidator(bottom=minOrd, top=maxOrd)
         self.filtOrderTextField.setValidator(orderValidator)
 
-        self._isValid = False
-        self._signalConfig = {}
-        self._errMessage = ""
+        chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
+        self.chSpacingTextField.setValidator(chSpacingValidator)
 
-    @property
-    def isValid(self) -> bool:
-        """bool: Property representing whether the form is valid."""
-        return self._isValid
+        self._signalConfig = {}
+        self._isValid = False
+        self._errMessage = ""
 
     @property
     def signalConfig(self) -> dict:
         """dict: Property for getting the dictionary with the signal configuration."""
         return self._signalConfig
+
+    @property
+    def isValid(self) -> bool:
+        """bool: Property representing whether the form is valid."""
+        return self._isValid
 
     @property
     def errMessage(self) -> str:
@@ -199,6 +286,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
     def _formValidationHandler(self) -> None:
         """Validate user input in the form."""
+        lo = QLocale()
+
         # Check basic settings
         if self.sourceComboBox.currentText() == "":
             self._isValid = False
@@ -215,13 +304,13 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self._isValid = False
             self._errMessage = 'The "number of channels" field is invalid.'
             return
-        self._signalConfig["nCh"] = int(self.nChTextField.text())
+        self._signalConfig["nCh"] = lo.toInt(self.nChTextField.text())[0]
 
         if not self.fsTextField.hasAcceptableInput():
             self._isValid = False
             self._errMessage = 'The "sampling frequency" field is invalid.'
             return
-        self._signalConfig["fs"] = float(self.fsTextField.text())
+        self._signalConfig["fs"] = lo.toFloat(self.fsTextField.text())[0]
         nyq_fs = self._signalConfig["fs"] // 2
 
         # Check filtering settings
@@ -232,7 +321,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 self._isValid = False
                 self._errMessage = 'The "Frequency 1" field is invalid.'
                 return
-            freq1 = float(self.freq1TextField.text())
+            freq1 = lo.toFloat(self.freq1TextField.text())[0]
 
             if freq1 >= nyq_fs:
                 self._isValid = False
@@ -245,7 +334,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                     self._isValid = False
                     self._errMessage = 'The "Frequency 2" field is invalid.'
                     return
-                freq2 = float(self.freq2TextField.text())
+                freq2 = lo.toFloat(self.freq2TextField.text())[0]
 
                 if freq2 >= nyq_fs:
                     self._isValid = False
@@ -255,19 +344,33 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                     self._isValid = False
                     self._errMessage = "The 2nd critical frequency cannot be lower than the 1st critical frequency."
                     return
-                self._signalConfig["freqs"].append(float(self.freq2TextField.text()))
+                self._signalConfig["freqs"].append(freq2)
 
             if not self.filtOrderTextField.hasAcceptableInput():
                 self._isValid = False
                 self._errMessage = 'The "filter order" field is invalid.'
                 return
-            self._signalConfig["filtOrder"] = int(self.filtOrderTextField.text())
+            self._signalConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[
+                0
+            ]
+
+        # Channel spacing settings
+        if self.chSpacingGroupBox.isChecked():
+            if not self.chSpacingTextField.hasAcceptableInput():
+                self._isValid = False
+                self._errMessage = 'The "channel spacing" field is invalid.'
+                return
+
+            chSpacing = lo.toInt(self.chSpacingTextField.text())[0]
+        else:
+            chSpacing = 0
+        self._signalConfig["chSpacing"] = chSpacing
 
         self._isValid = True
 
 
-class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
-    """Widget showing real-time plots of a signal.
+class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
+    """Widget showing the real-time plot of a signal.
 
     Parameters
     ----------
@@ -277,9 +380,13 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
         Number of channels.
     fs : float
         Sampling frequency.
+    chSpacing : int
+        Spacing between each channel in the plot.
 
     Attributes
     ----------
+    _nCh : int
+        Number of channels.
     _fs : float
         Sampling frequency.
     _xQueue : deque
@@ -290,43 +397,42 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
         Counter for the plot buffer.
     _bufferSize : int
         Size of the buffer for plotting samples.
-    _plotSpacing : int
+    _chSpacing : int
         Spacing between each channel in the plot.
     """
 
     def __init__(
-        self, sigName: str, nCh: int, fs: float, parent: QWidget | None = None
+        self,
+        sigName: str,
+        nCh: int,
+        fs: float,
+        chSpacing: int,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
 
-        renderLength_ms = 1000  # 1s
+        renderLength_ms = 4000  # 4s
         renderLength = int(round(renderLength_ms / 1000 * fs))
         self._xQueue = deque(maxlen=renderLength)
         self._yQueue = deque(maxlen=renderLength)
         self._nCh = nCh
         self._fs = fs
         self._bufferCount = 0
-        self._bufferSize = 200
-        self._plotSpacing = 1000
+        self._bufferSize = max(fs // 20, 1)
+        self._chSpacing = chSpacing
 
         # Initialize plots
-        self.sigNameLabel.setText(sigName)
         self._plots = []
-        self._initializePlots()
+        self._initializePlots(sigName)
 
-    @property
-    def nCh(self) -> int:
-        """int: Property for getting the number of channels."""
-        return self._nCh
-
-    def _initializePlots(self) -> None:
+    def _initializePlots(self, sigName: str) -> None:
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
-        self.graphWidget.setYRange(0, self._plotSpacing * (self._nCh - 1))
-        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+        self.graphWidget.setTitle(sigName)
+        self.graphWidget.setLabel("bottom", "Time (s)")
         self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
 
         # Initialize queues
@@ -345,7 +451,7 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
             pen = pg.mkPen(color=lut[i])
             self._plots.append(
                 self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._plotSpacing * i, pen=pen
+                    self._xQueue, ys[i] + self._chSpacing * i, pen=pen
                 )
             )
 
@@ -367,7 +473,7 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
             for i in range(self._nCh):
                 self._plots[i].setData(
                     self._xQueue,
-                    ys[i] + self._plotSpacing * (self._nCh - i),
+                    ys[i] + self._chSpacing * (self._nCh - i),
                     skipFiniteCheck=True,
                 )
             self._bufferCount = 0
@@ -376,19 +482,16 @@ class _SignalPlots(QWidget, Ui_SignalPlotsWidget):
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window.
 
-    Parameters
-    ----------
-    packetSize : int
-        Number of bytes in the packet.
-
     Attributes
     ----------
-    _packetSize : int
-        Number of bytes in the packet.
-    _sources : list of DataSource
-        List of DataSource objects.
-    _plotWidgets : list of _SignalPlots
-        List of _SignalPlots objects.
+    _streamControllers : dict of {str : StreamingController}
+        Dictionary of StreamingController objects indexed by their string representation.
+    _plotWidgets : dict of {str : _SignalPlots}
+        List of _SignalPlots objects indexed by their names.
+    _source2sigMap : dict of {str : list[str]}
+        Mapping between source and signal name.
+    _sig2sourceMap : dict of {str : str}
+        Mapping between signal and source name.
 
     Class attributes
     ----------------
@@ -407,19 +510,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     startStreamingSig = Signal()
     stopStreamingSig = Signal()
     closeSig = Signal()
-    dataReadyRawSig = Signal(np.ndarray)
-    dataReadyFltSig = Signal(np.ndarray)
+    dataReadyRawSig = Signal(DataPacket)
+    dataReadyFltSig = Signal(DataPacket)
 
-    def __init__(self, packetSize: int) -> None:
-        assert packetSize > 0, 'The "packetSize" argument must be positive.'
-
+    def __init__(self) -> None:
         super().__init__()
 
         self.setupUi(self)
 
-        self._packetSize = packetSize
-        self._sources = []
-        self._plotWidgets = []
+        self._streamControllers: dict[str, StreamingController] = {}
+        self._plotWidgets: dict[str, _SignalPlotWidget] = {}
+
+        # Mappings
+        self._source2sigMap: dict[str, list[str]] = {}
+        self._sig2sourceMap: dict[str, str] = {}
 
         # Source addition/removal
         self.addSourceButton.clicked.connect(self._addSourceHandler)
@@ -428,25 +532,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Signal addition/removal/moving
         self.addSignalButton.clicked.connect(self._addSignalHandler)
         self.deleteSignalButton.clicked.connect(self._deleteSignalHandler)
-        self.signalList.itemClicked.connect(
+        self.sigNameList.itemClicked.connect(
             lambda: self.deleteSignalButton.setEnabled(True)
         )
         self.moveUpButton.clicked.connect(lambda: self._moveSignal(up=True))
         self.moveDownButton.clicked.connect(lambda: self._moveSignal(up=False))
-        self.signalList.itemClicked.connect(self._enableMoveButtons)
+        self.sigNameList.itemClicked.connect(self._enableMoveButtons)
 
         # Streaming
-        self._streamController = StreamingController(self)
-        self._streamController.dataReadySig.connect(
-            lambda d: self.dataReadyRawSig.emit(d)
-        )  # forward Qt Signal for raw data
-        self._streamController.dataReadyFltSig.connect(self._handleData)
-        self._streamController.commErrorSig.connect(self._handleCommunicationError)
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
 
     def addConfWidget(self, widget: QWidget) -> None:
-        """Add a widget for module configuration to the GUI.
+        """Add a widget to configure pluggable modules.
 
         Parameters
         ----------
@@ -479,14 +577,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._openAddSourceDialog(addSourceDialog)  # re-open dialog
                 return
 
-            # Create data source
-            dataSource = data_source.getDataSource(
-                addSourceDialog.dataSourceType,
-                self._packetSize,
-                **addSourceDialog.dataSourceConfig,
-            )
-            self.sourceList.addItem(str(dataSource))
-            self._sources.append(dataSource)
+            # Create streaming controller
+            dataSourceConfig = addSourceDialog.dataSourceConfig
+            decodeFn = dataSourceConfig.pop("decodeFn")
+            streamController = StreamingController(dataSourceConfig, decodeFn, self)
+            self._streamControllers[str(streamController)] = streamController
+            self._source2sigMap[str(streamController)] = []
+
+            # Configure QT Signals
+            streamController.dataReadyFltSig.connect(self._plotData)
+            streamController.errorSig.connect(self._handleErrors)
+            streamController.dataReadyRawSig.connect(
+                lambda d: self.dataReadyRawSig.emit(d)
+            )  # forward Qt Signal for raw data
+            streamController.dataReadyFltSig.connect(
+                lambda d: self.dataReadyFltSig.emit(d)
+            )  # forward Qt Signal for filtered data
+
+            # Update UI list
+            self.sourceList.addItem(str(streamController))
 
             # Enable signal configuration
             if not self.signalsGroupBox.isEnabled():
@@ -494,7 +603,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _deleteSourceHandler(self) -> None:
         """Handler to remove the selected source."""
-        raise NotImplementedError("TODO")  # TODO
+        # Get corresponding index
+        idxToRemove = self.sourceList.currentRow()
+
+        # Update UI list
+        sourceToRemove = self.sourceList.takeItem(idxToRemove).text()
+
+        # Remove every signal associated with the source
+        for sigNameToRemove in self._source2sigMap[sourceToRemove]:
+            # Remove plot widget
+            plotWidgetToRemove = self._plotWidgets.pop(sigNameToRemove)
+            self.plotsLayout.removeWidget(plotWidgetToRemove)
+            plotWidgetToRemove.deleteLater()
+
+            # Update UI list
+            itemToRemove = self.sigNameList.findItems(sigNameToRemove, Qt.MatchExactly)[0]  # type: ignore
+            self.sigNameList.takeItem(self.sigNameList.row(itemToRemove))
+
+            # Handle mapping
+            del self._sig2sourceMap[sigNameToRemove]
+
+        # Handle mapping
+        del self._source2sigMap[sourceToRemove]
 
     def _addSignalHandler(self) -> None:
         """Handler to add a new signal."""
@@ -504,7 +634,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _openAddSignalDialog(self, addSignalDialog: _AddSignalDialog | None = None):
         """Open the dialog for adding signals."""
         if addSignalDialog is None:
-            addSignalDialog = _AddSignalDialog(list(map(str, self._sources)), self)
+            addSignalDialog = _AddSignalDialog(
+                list(map(str, self._streamControllers)), self
+            )
 
         accepted = addSignalDialog.exec()
         if accepted:
@@ -520,30 +652,63 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self._openAddSignalDialog(addSignalDialog)  # re-open dialog
                 return
 
-            # Display signal information
+            # Connect to StreamingController
+            source = addSignalDialog.signalConfig["source"]
+            streamController = self._streamControllers[source]
             sigName = addSignalDialog.signalConfig["sigName"]
-            nCh = addSignalDialog.signalConfig["nCh"]
-            fs = addSignalDialog.signalConfig["fs"]
-            self.signalList.addItem(f"{sigName} - {nCh} channels @ {fs}sps")
+            streamController.addSigName(sigName)
+
+            # Configure filtering
+            if "filtType" in addSignalDialog.signalConfig:
+                filtSettings = {
+                    "filtType": addSignalDialog.signalConfig["filtType"],
+                    "freqs": addSignalDialog.signalConfig["freqs"],
+                    "filtOrder": addSignalDialog.signalConfig["filtOrder"],
+                    "fs": addSignalDialog.signalConfig["fs"],
+                    "nCh": addSignalDialog.signalConfig["nCh"],
+                }
+                streamController.addFiltSettings(sigName, filtSettings)
 
             # Create plot widget
-            plotWidget = _SignalPlots(sigName, nCh, fs, self)
-            self._plotWidgets.append(plotWidget)
+            nCh = addSignalDialog.signalConfig["nCh"]
+            fs = addSignalDialog.signalConfig["fs"]
+            chSpacing = addSignalDialog.signalConfig["chSpacing"]
+            plotWidget = _SignalPlotWidget(sigName, nCh, fs, chSpacing, self)
+            self._plotWidgets[sigName] = plotWidget
             self.plotsLayout.addWidget(plotWidget)
+
+            # Handle mappings
+            self._source2sigMap[source].append(sigName)
+            self._sig2sourceMap[sigName] = source
+
+            # Update UI list
+            self.sigNameList.addItem(sigName)
+
             # Re-adjust layout
-            for i, plotWidget_ in enumerate(self._plotWidgets):
-                self.plotsLayout.setStretch(i, plotWidget_.nCh)
+            for i in range(self.sigNameList.count()):
+                self.plotsLayout.setStretch(i, self.sigNameList.count() - i)
 
     def _deleteSignalHandler(self) -> None:
         """Handler to remove the selected signal."""
-        # Remove list item and plot widget
-        idxToRemove = self.signalList.currentRow()
-        self.signalList.takeItem(idxToRemove)
-        plotWidgetToRemove = self._plotWidgets.pop(idxToRemove)
+        # Get corresponding index
+        idxToRemove = self.sigNameList.currentRow()
+
+        # Update UI list
+        sigNameToRemove = self.sigNameList.takeItem(idxToRemove).text()
+
+        # Handle mappings
+        source = self._sig2sourceMap.pop(sigNameToRemove)
+        self._source2sigMap[source].remove(sigNameToRemove)
+
+        # Remove plot widget
+        plotWidgetToRemove = self._plotWidgets.pop(sigNameToRemove)
         self.plotsLayout.removeWidget(plotWidgetToRemove)
         plotWidgetToRemove.deleteLater()
 
-        nSig = self.signalList.count()
+        # Disconnect from StreamingController
+        self._streamControllers[source].removeSigName(sigNameToRemove)
+
+        nSig = self.sigNameList.count()
         if nSig < 2:
             self.moveUpButton.setEnabled(False)
             self.moveDownButton.setEnabled(False)
@@ -552,37 +717,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _enableMoveButtons(self) -> None:
         """Enable buttons to move signals up/down."""
-        flag = self.signalList.count() >= 2
+        flag = self.sigNameList.count() >= 2
         self.moveUpButton.setEnabled(flag)
         self.moveDownButton.setEnabled(flag)
 
     def _moveSignal(self, up: bool) -> None:
         """Move signal up/down."""
         # Get the indexes of the elements to swap
-        idxFrom = self.signalList.currentRow()
+        idxFrom = self.sigNameList.currentRow()
         idxTo = (
-            max(0, idxFrom - 1) if up else min(self.signalList.count() - 1, idxFrom + 1)
+            max(0, idxFrom - 1)
+            if up
+            else min(self.sigNameList.count() - 1, idxFrom + 1)
         )
         if idxFrom == idxTo:
             return
 
         # Swap list items and plot widgets
-        item = self.signalList.takeItem(idxFrom)
-        self.signalList.insertItem(idxTo, item)
-        plotWidget = self._plotWidgets.pop(idxFrom)
-        self._plotWidgets.insert(idxTo, plotWidget)
+        item = self.sigNameList.takeItem(idxFrom)
+        self.sigNameList.insertItem(idxTo, item)
+        plotWidget = self._plotWidgets[item.text()]
         self.plotsLayout.removeWidget(plotWidget)
         self.plotsLayout.insertWidget(idxTo, plotWidget)
+
         # Re-adjust layout
-        for i, plotWidget_ in enumerate(self._plotWidgets):
-            self.plotsLayout.setStretch(i, plotWidget_.nCh)
+        for i in range(self.sigNameList.count()):
+            self.plotsLayout.setStretch(i, self.sigNameList.count() - i)
 
     def _startStreaming(self) -> None:
         """Start streaming."""
-        logging.info("MainWindow: streaming started.")
-
         # Validate settings
-        if self.signalList.count() == 0:
+        if self.sigNameList.count() == 0:
             QMessageBox.critical(
                 self,
                 "Invalid configuration",
@@ -592,17 +757,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
             return
 
+        logging.info("MainWindow: streaming started.")
+
         # Handle UI elements
         self.startStreamingButton.setEnabled(False)
         self.stopStreamingButton.setEnabled(True)
         self.streamConfGroupBox.setEnabled(False)
 
+        # Start all StreamController objects
+        for streamController in self._streamControllers.values():
+            streamController.startStreaming()
+
+        # Emit "start" Qt Signal (for pluggable modules)
         self.startStreamingSig.emit()
-        self._streamController.startStreaming()
 
     def _stopStreaming(self) -> None:
         """Stop streaming."""
-        self._streamController.stopStreaming()
+        # Stop all StreamingController objects
+        for streamController in self._streamControllers.values():
+            streamController.stopStreaming()
+
+        # Emit "stop" Qt Signal (for pluggable modules)
         self.stopStreamingSig.emit()
 
         # Handle UI elements
@@ -612,24 +787,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         logging.info("MainWindow: streaming stopped.")
 
-    def _handleCommunicationError(self) -> None:
-        """When communication fails, display an alert and stop streaming."""
+    @Slot(str)
+    def _handleErrors(self, errMessage: str) -> None:
+        """When an error occurs, display an alert and stop streaming."""
         QMessageBox.critical(
             self,
-            "Communication error",
-            "Could not communicate with the device.",
+            "Streaming error",
+            errMessage,
             buttons=QMessageBox.Retry,  # type: ignore
             defaultButton=QMessageBox.Retry,  # type: ignore
         )
-        self._stopStreaming()
 
-    @Slot(np.ndarray)
-    def _handleData(self, data: np.ndarray) -> None:
-        """Handler for the Qt Signal associated to the receiving of new data."""
-        # Plot data
-        i = 0
-        for plotWidget in self._plotWidgets:
-            plotWidget.plotData(data[:, i : i + plotWidget.nCh])
-            i += plotWidget.nCh
-        # Forward signal
-        self.dataReadyFltSig.emit(data)
+    @Slot(DataPacket)
+    def _plotData(self, dataPacket: DataPacket):
+        """Plot the given data on the corresponding plot.
+
+        Parameters
+        ----------
+        dataPacket : DataPacket
+            Data to plot.
+        """
+        self._plotWidgets[dataPacket.id].plotData(dataPacket.data)
