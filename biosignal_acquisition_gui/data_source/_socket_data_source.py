@@ -132,10 +132,11 @@ class SocketDataSource(DataSource):
         # Non-blocking accept
         while not self._exitAcceptLoopFlag:
             try:
-                conn, _ = sock.accept()
+                conn, (addr, _) = sock.accept()
+                # conn.settimeout(5)
 
                 logging.info(
-                    f"DataWorker: TCP connection from {conn}, communication started."
+                    f"DataWorker: TCP connection from {addr}, communication started."
                 )
 
                 # conn.sendall(b"=")
@@ -144,11 +145,10 @@ class SocketDataSource(DataSource):
 
                     # Check number of bytes read
                     if len(data) != self._packetSize:
-                        self.errorSig.emit("TCP communication failed.")
+                        # self.errorSig.emit("TCP communication failed.")
                         logging.error("DataWorker: TCP communication failed.")
-                        break
-
-                    self.dataReadySig.emit(data)
+                    else:
+                        self.dataReadySig.emit(data)
                 # conn.sendall(b":")
 
                 # Close connection and socket
@@ -159,7 +159,7 @@ class SocketDataSource(DataSource):
 
                 logging.info("DataWorker: TCP communication stopped.")
 
-                break
+                self._exitAcceptLoopFlag = True
             except socket.timeout:
                 pass
 
