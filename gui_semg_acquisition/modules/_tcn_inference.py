@@ -140,7 +140,7 @@ class TCNInferenceController(QObject):
     def __init__(self) -> None:
         super().__init__()
 
-        self._modelPath = "model.pth"
+        self._modelPath = "gui_semg_acquisition/modules/model.pth"
 
         # Create worker and thread
         self._svmWorker = _SVMWorker()
@@ -155,7 +155,6 @@ class TCNInferenceController(QObject):
         mainWin : MainWindow
             Instance of MainWindow.
         """
-        mainWin.addWidget(self.confWidget)
         mainWin.startStreamingSig.connect(self._startInference)
         mainWin.stopStreamingSig.connect(self._stopInference)
         mainWin.closeSig.connect(self._stopInference)
