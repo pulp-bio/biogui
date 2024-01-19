@@ -120,23 +120,23 @@ def main():
         svmTrainController = modules.SVMTrainController(args["sampFreq"])
         svmTrainController.subscribe(mainWin)
     if args["svmInference"]:
-        svmInferenceController = modules.SVMInferenceController()
-        svmInferenceController.subscribe(mainWin)
+        tcnInferenceController = modules.TCNInferenceController()
+        tcnInferenceController.subscribe(mainWin)
 
-        if args["virtHand"]:
-            with open(args["gestureMapping"]) as f:
-                gestureMapping = json.load(f)
-                gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
+        # if args["virtHand"]:
+        #     with open(args["gestureMapping"]) as f:
+        #         gestureMapping = json.load(f)
+        #         gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
 
-            svmInferenceController.tcpServerController = modules.TCPServerController(
-                address=args["tcpAddress"],
-                port1=args["tcpPort1"],
-                port2=args["tcpPort2"],
-                gestureMap=gestureMapping,
-            )
-    if args["muDecomp"]:
-        decompositionController = modules.DecompositionController()
-        decompositionController.subscribe(mainWin)
+        #      svmInferenceController.tcpServerController = modules.TCPServerController(
+        #         address=args["tcpAddress"],
+        #         port1=args["tcpPort1"],
+        #         port2=args["tcpPort2"],
+        #         gestureMap=gestureMapping,
+        #     )
+    # if args["muDecomp"]:
+    #     decompositionController = modules.DecompositionController()
+    #     decompositionController.subscribe(mainWin)
 
     # Run event loop
     sys.exit(app.exec())

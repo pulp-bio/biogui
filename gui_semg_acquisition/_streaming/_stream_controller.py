@@ -169,30 +169,34 @@ class _PreprocessWorker(QObject):
             New binary data.
         """
         # ADC parameters
-        vRefADC = 5.0
-        gainADC = 1.0
+        # vRefADC = 5.0
+        # gainADC = 1.0
 
-        dataTmp = bytearray(data)
+        # dataTmp = bytearray(data)
         # Convert 24-bit to 32-bit integer
-        pos = 0
-        for _ in range(len(dataTmp) // 3):
-            preFix = 255 if dataTmp[pos] > 127 else 0
-            dataTmp.insert(pos, preFix)
-            pos += 4
-        dataRef = np.asarray(struct.unpack(f">{self._nSamp * self._nCh}i", dataTmp), dtype=np.int32)
+        # pos = 0
+        # for _ in range(len(dataTmp) // 3):
+        #     preFix = 255 if dataTmp[pos] > 127 else 0
+        #     dataTmp.insert(pos, preFix)
+        #     pos += 4
+        # dataRef = np.asarray(struct.unpack(f">{self._nSamp * self._nCh}i", dataTmp), dtype=np.int32)
 
         # Reshape and convert ADC readings to V
-        dataRef = dataRef.reshape(self._nSamp, self._nCh)
+        # dataRef = dataRef.reshape(self._nSamp, self._nCh)
         # dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
-        dataRef = dataRef.astype("float32")
+        # dataRef = dataRef.astype("float32")
+        
+        # !!! DUMMY !!!
+        dataTmp = np.frombuffer(data, dtype="float32").reshape(5, 1)
+        dataRef = np.repeat(dataTmp, 6, axis=1)
         self.dataReadySig.emit(dataRef)
 
         # Filter
         dataFlt = dataRef.copy()
-        # dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, dataRef[:,0:2], axis=0, zi=self._zi_PPG)
-        # dataFlt[:,2:4], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,2:4], axis=0, zi=self._zi_EDA)
-        # dataFlt[:,4:6], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,4:6], axis=0, zi=self._zi_FORCE)
-        # dataFlt = dataFlt.astype("float32")
+        dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, dataRef[:,0:2], axis=0, zi=self._zi_PPG)
+        dataFlt[:,2:4], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,2:4], axis=0, zi=self._zi_EDA)
+        dataFlt[:,4:6], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,4:6], axis=0, zi=self._zi_FORCE)
+        dataFlt = dataFlt.astype("float32")
         self.dataReadyFltSig.emit(dataFlt)
 
 
@@ -236,7 +240,9 @@ class StreamingController(QObject):
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(
-            serialPort, packetSize=90, baudeRate=230_400
+            serialPort,
+            packetSize=20,  # !!! DUMMY !!! (before was 90)
+            baudeRate=230_400
         )
         self._preprocessWorker = _PreprocessWorker(
             nCh=6,
