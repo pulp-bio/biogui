@@ -22,7 +22,6 @@ import logging
 from collections import deque
 
 import torch
-from .TEMPONet_gap import TEMPONet_gap
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -30,6 +29,7 @@ from PySide6.QtWidgets import QFileDialog, QWidget
 from ..main_window import MainWindow
 from scipy import signal
 from collections import deque
+from .TEMPONet_gap import TEMPONet_gap
 
 class _SVMWorker(QObject):
     """Worker that performs inference on the data it receives via a Qt signal.
@@ -146,6 +146,11 @@ class TCNInferenceController(QObject):
         self._svmWorker = _SVMWorker()
         self._svmThread = QThread()
         self._svmWorker.moveToThread(self._svmThread)
+        
+        self._svmWorker.model = TEMPONet_gap()
+        self._svmWorker.model.load_state_dict(torch.load(self._modelPath))
+        self._svmWorker.model.eval()
+        logging.info("Model loaded!")
 
     def subscribe(self, mainWin: MainWindow) -> None:
         """Subscribe to instance of MainWindow.
@@ -164,11 +169,6 @@ class TCNInferenceController(QObject):
         """Start the inference."""
         
         logging.info("SVMInferenceController: inference started.")
-
-        self._svmWorker.model = TEMPONet_gap()
-        checkpoint = torch.load(self._modelPath)
-        self._svmWorker.model.load_state_dict(checkpoint['state_dict'])
-        self._svmWorker.model.eval()
 
         self._dataReadySig.connect(self._svmWorker.predict)
         self._svmThread.start()
