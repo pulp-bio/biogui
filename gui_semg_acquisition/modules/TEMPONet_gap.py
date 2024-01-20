@@ -1,10 +1,9 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import movedim
-from .base import BaseModel
 from math import ceil
 
-class TEMPONet_gap(BaseModel):
+class TEMPONet_gap(nn.Module):
     """
     TEMPONet architecture:
     Three repeated instances of TemporalConvBlock and ConvBlock organized as follows:
@@ -166,7 +165,7 @@ class TEMPONet_gap(BaseModel):
 
         return x
 
-class TempConvBlock(BaseModel):
+class TempConvBlock(nn.Module):
     """
     Temporal Convolutional Block composed of one temporal convolutional layers.
     The block is composed of :
@@ -206,7 +205,7 @@ class TempConvBlock(BaseModel):
         )
         return x
 
-class ConvBlock(BaseModel):
+class ConvBlock(nn.Module):
     """
     Convolutional Block composed of:
     - Conv1d layer
@@ -254,7 +253,7 @@ class ConvBlock(BaseModel):
 
         return x
 
-class FC(BaseModel):
+class FC(nn.Module):
     """
     Regressor block  composed of :
     - Linear layer
@@ -295,7 +294,7 @@ class FC(BaseModel):
         )
         x = x.squeeze()
         return x
-class Chomp1d(BaseModel):
+class Chomp1d(nn.Module):
     """
     Module that perform a chomping operation on the input tensor.
     It is used to chomp the amount of zero-padding added on the right of the input tensor, this operation is necessary to compute causal convolutions.
