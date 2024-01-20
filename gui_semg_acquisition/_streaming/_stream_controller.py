@@ -153,9 +153,9 @@ class _PreprocessWorker(QObject):
         # Filtering
         self._sos_PPG = signal.butter(N=6, Wn=(0.5,10), fs=sampFreq, btype="bandpass", output="sos")
         self._zi_PPG = np.zeros((self._sos_PPG.shape[0], 2, 2))
-        self._sos_EDA = signal.butter(N=6, Wn=10, fs=sampFreq, btype="low", output="sos")
+        self._sos_EDA = signal.butter(N=6, Wn=(10), fs=sampFreq, btype="lowpass", output="sos")
         self._zi_EDA = np.zeros((self._sos_EDA.shape[0], 2, 2))
-        self._sos_FORCE = signal.butter(N=4, Wn=10, fs=sampFreq, btype="low", output="sos")
+        self._sos_FORCE = signal.butter(N=6, Wn=(10), fs=sampFreq, btype="lowpass", output="sos")
         self._zi_FORCE = np.zeros((self._sos_FORCE.shape[0], 2, 2))
 
     @Slot(bytes)
@@ -183,16 +183,16 @@ class _PreprocessWorker(QObject):
 
         # Reshape and convert ADC readings to V
         dataRef = dataRef.reshape(self._nSamp, self._nCh)
-        # dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
+        dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
         dataRef = dataRef.astype("float32")
         self.dataReadySig.emit(dataRef)
 
         # Filter
         dataFlt = dataRef.copy()
-        # dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, dataRef[:,0:2], axis=0, zi=self._zi_PPG)
-        # dataFlt[:,2:4], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,2:4], axis=0, zi=self._zi_EDA)
-        # dataFlt[:,4:6], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,4:6], axis=0, zi=self._zi_FORCE)
-        # dataFlt = dataFlt.astype("float32")
+        # dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, -dataRef[:,0:2], axis=0, zi=self._zi_PPG)
+        # dataFlt[:,2:4], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,2:4], axis=0, zi=self._zi_FORCE)
+        # dataFlt[:,4:6], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,4:6], axis=0, zi=self._zi_EDA)
+        dataFlt = dataFlt.astype("float32")
         self.dataReadyFltSig.emit(dataFlt)
 
 

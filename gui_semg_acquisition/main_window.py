@@ -172,16 +172,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.PPG_DX.plot(self._xQueue, ys[0])
         )
         self._plots.append(
-            self.EDA_SX.plot(self._xQueue, ys[3])
+            self.EDA_SX.plot(self._xQueue, ys[4])
         )
         self._plots.append(
-            self.EDA_DX.plot(self._xQueue, ys[2])
+            self.EDA_DX.plot(self._xQueue, ys[5])
         )
         self._plots.append(
-            self.FORCE_SX.plot(self._xQueue, ys[4])
+            self.FORCE_SX.plot(self._xQueue, ys[3])
         )
         self._plots.append(
-            self.FORCE_DX.plot(self._xQueue, ys[5])
+            self.FORCE_DX.plot(self._xQueue, ys[2])
         )
 
     def _rescanSerialPorts(self) -> None:
