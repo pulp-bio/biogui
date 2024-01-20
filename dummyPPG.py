@@ -11,11 +11,14 @@ t = 0
 subject = sio.loadmat("U02.mat", simplify_cells=True)
 subject = subject[list(subject.keys())[-1]]
 ppg = -subject["sx"].astype("float32")
+print(len(ppg))
 
 ser = serial.Serial("/dev/ttyUSB1", 230400)  # change tty to COM on Windows
 
 sig = ser.read(1).decode("ascii")
 print(sig)
+time.sleep(0.1)
+
 if sig == "=":
     while True:
         if ser.in_waiting > 0:

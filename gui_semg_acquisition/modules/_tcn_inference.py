@@ -22,6 +22,7 @@ import logging
 from collections import deque
 
 import torch
+from torch.nn import functional as F
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -30,6 +31,7 @@ from ..main_window import MainWindow
 from scipy import signal
 from collections import deque
 from .TEMPONet_gap import TEMPONet_gap
+
 
 class _SVMWorker(QObject):
     """Worker that performs inference on the data it receives via a Qt signal.
@@ -59,7 +61,6 @@ class _SVMWorker(QObject):
     def __init__(self) -> None:
         super().__init__()
 
-        self._bufferCount = 0
         self._bufferSize = 2 * 60 * 1000
         self._queue = deque()
 
@@ -89,9 +90,8 @@ class _SVMWorker(QObject):
         """
         for samples in data:
             self._queue.append(samples[1])  # only PPG_SX
-        self._bufferCount += data.shape[0]
 
-        if self._bufferCount >= self._bufferSize:
+        if len(self._queue) == self._bufferSize:
             data = np.asarray(self._queue)
             # Resample to 20Hz
             for i in [10,5]:
@@ -104,19 +104,19 @@ class _SVMWorker(QObject):
             data = np.vstack([data, timeWeight])
 
             # Add extra dimension for 2D Convs
-            data = np.expand_dims(data, -1)
+            data = np.expand_dims(data, (0, -1))
+            data = torch.as_tensor(data, dtype=torch.float32)
 
             # Inference
             with torch.no_grad():
-                label = self._model(data).item()
+                y_pred = F.sigmoid(self._model(data)).item()
 
-            self.inferenceSig.emit(label)
-            logging.info(f"TCNWorker: predicted label {label}.")
+            self.inferenceSig.emit(y_pred)
+            prediction = "ALERT" if y_pred < 0.5 else "DROWSY"
+            logging.info(f"TCNWorker: predicted {prediction}.")
 
-            self._bufferCount = 0
-
-            # update buffer
-            self._queue.popleft(30000) #remove the first 30 seconds of data
+            # Update buffer
+            [self._queue.popleft() for _ in range(30000)]  # remove the first 30 seconds of data
 
 
 class TCNInferenceController(QObject):
