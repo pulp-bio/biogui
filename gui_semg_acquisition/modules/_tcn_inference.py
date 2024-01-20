@@ -1,4 +1,4 @@
-"""This module contains the controller for SVM inference.
+"""This module contains the controller for TCN inference.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -33,7 +33,7 @@ from collections import deque
 from .TEMPONet_gap import TEMPONet_gap
 
 
-class _SVMWorker(QObject):
+class _TCNWorker(QObject):
     """Worker that performs inference on the data it receives via a Qt signal.
 
     Parameters
@@ -71,7 +71,7 @@ class _SVMWorker(QObject):
 
     @property
     def model(self) -> torch.nn.Module:
-        """SVC: Property representing the SVM model."""
+        """SVC: Property representing the TCN model."""
         return self._model
 
     @model.setter
@@ -120,14 +120,14 @@ class _SVMWorker(QObject):
 
 
 class TCNInferenceController(QObject):
-    """Controller for SVM inference.
+    """Controller for TCN inference.
 
     Attributes
     ----------
-    _svmWorker : _SVMWorker
-        Worker for performing SVM inference.
+    _svmWorker : _TCNWorker
+        Worker for performing TCN inference.
     _svmThread : QThread
-        The QThread associated to the SVM worker.
+        The QThread associated to the TCN worker.
 
     Class attributes
     ----------------
@@ -143,7 +143,7 @@ class TCNInferenceController(QObject):
         self._modelPath = "gui_semg_acquisition/modules/model.pth"
 
         # Create worker and thread
-        self._svmWorker = _SVMWorker()
+        self._svmWorker = _TCNWorker()
         self._svmThread = QThread()
         self._svmWorker.moveToThread(self._svmThread)
         
@@ -168,7 +168,7 @@ class TCNInferenceController(QObject):
     def _startInference(self) -> None:
         """Start the inference."""
         
-        logging.info("SVMInferenceController: inference started.")
+        logging.info("TCNInferenceController: inference started.")
 
         self._dataReadySig.connect(self._svmWorker.predict)
         self._svmThread.start()
@@ -180,4 +180,4 @@ class TCNInferenceController(QObject):
             self._svmThread.quit()
             self._svmThread.wait()
 
-            logging.info("SVMInferenceController: inference stopped.")
+            logging.info("TCNInferenceController: inference stopped.")
