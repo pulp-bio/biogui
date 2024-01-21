@@ -564,7 +564,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             List with the signal names.
         """
         sigNameList = self._plotWidgets.keys()
-        fsList = map(lambda pw: pw.fs, self._plotWidgets.keys())
+        fsList = map(lambda pw: pw.fs, self._plotWidgets.values())
         return list(zip(sigNameList, fsList))
 
     def addConfWidget(self, widget: QWidget) -> None:
