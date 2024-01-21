@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch import movedim
 from math import ceil
 
 class TEMPONet_gap(nn.Module):
@@ -13,7 +13,7 @@ class TEMPONet_gap(nn.Module):
     """
     def __init__(self, dataset_name='PPG_Dalia', dataset_args={}):
         super(TEMPONet_gap, self).__init__()
-        
+
         self.dil = [
                 2, 2, 1,
                 4, 4, 1,
@@ -26,7 +26,7 @@ class TEMPONet_gap(nn.Module):
                 ]
         self.ch = [
             8, 8, 8,
-            16, 16, 16, 
+            16, 16, 16,
             32, 32, 32,
             64, 1
         ]
@@ -57,7 +57,7 @@ class TEMPONet_gap(nn.Module):
                 dilation = [self.dil[2],1],
                 strd_avg  = [2,1]
                 )
-        
+
         # 2nd instance of two TempConvBlocks and ConvBlock
         k_tcb10 = [ceil(self.rf[3]/self.dil[3]),1]
         self.tcb10 = TempConvBlock(
@@ -111,14 +111,14 @@ class TEMPONet_gap(nn.Module):
                 strd = [4,1],
                 pad = [((k_cb2[0]-1)*self.dil[8]+1)//2, 0],
                 strd_avg  = [2,1]
-                )        
-        # # 1st instance of regressor 
+                )
+        # # 1st instance of regressor
         self.fc0 = FC(
                 ft_in = self.ch[8] * 5,
                 ft_out = self.ch[9]
         )
-        
-        # 2nd instance of FC 
+
+        # 2nd instance of FC
         self.fc1 = nn.Linear(self.ch[9], self.ch[10])
         # self.out_neuron = nn.Linear(
         #         in_features = self.ch[10],
@@ -152,9 +152,9 @@ class TEMPONet_gap(nn.Module):
                 x
                 )
         )
-        # x = self.padding(x)       
+        # x = self.padding(x)
         x = self.cb2(x)
-        
+
         x = x.flatten(1)
         x = self.fc0(
                 x
@@ -182,7 +182,7 @@ class TempConvBlock(nn.Module):
     """
     def __init__(self, ch_in, ch_out, k_size, dil, pad):
         super(TempConvBlock, self).__init__()
-        
+
         self.tcn0 = nn.Conv2d(
                 in_channels = ch_in,
                 out_channels = ch_out,
@@ -196,7 +196,7 @@ class TempConvBlock(nn.Module):
 
         self.relu0 = nn.ReLU()
 
-       
+
     def forward(self, x):
         x = self.relu0(
                 self.bn0(
@@ -221,7 +221,7 @@ class ConvBlock(nn.Module):
     """
     def __init__(self, ch_in, ch_out, k_size, strd, pad, strd_avg, dilation=1):
         super(ConvBlock, self).__init__()
-        
+
         self.conv0 = nn.Conv2d(
                 in_channels = ch_in,
                 out_channels = ch_out,
@@ -246,11 +246,11 @@ class ConvBlock(nn.Module):
                                 self.conv0(
                                         x
                                 )
-                                
+
                         )
                 )
         )
-                
+
         return x
 
 class FC(nn.Module):
@@ -267,7 +267,7 @@ class FC(nn.Module):
         super(FC, self).__init__()
         self.ft_in = ft_in
         self.ft_out = ft_out
-            
+
         self.fc0 = nn.Linear(
                 in_features = ft_in,
                 out_features = ft_out
@@ -275,7 +275,7 @@ class FC(nn.Module):
         self.bn0 = nn.BatchNorm2d(
                 num_features = ft_out
             )
-        
+
         self.relu0 = nn.ReLU()
         self.drop0 = nn.Dropout()
 
@@ -286,9 +286,9 @@ class FC(nn.Module):
         x = self.drop0(
                 self.relu0(
                         self.bn0(
-                                
+
                                 x
-                                
+
                         )
                 )
         )
@@ -306,4 +306,3 @@ class Chomp1d(nn.Module):
 
     def forward(self, x):
         return x[:, :, :-self.chomp_size].contiguous()
-                
