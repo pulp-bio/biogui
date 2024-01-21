@@ -1,0 +1,2 @@
+U02.mat filter=lfs diff=lfs merge=lfs -text
+gui_semg_acquisition/modules/model.pth filter=lfs diff=lfs merge=lfs -text
