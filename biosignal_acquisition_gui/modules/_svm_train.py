@@ -113,8 +113,8 @@ class _SVMTrainWorker(QObject):
         self._fs = fs
 
     @property
-    def model(self) -> SVC:
-        """SVC: Property representing the SVM model."""
+    def model(self) -> SVC | None:
+        """SVC or None: Property representing the SVM model."""
         return self._model
 
     @model.setter
@@ -122,8 +122,8 @@ class _SVMTrainWorker(QObject):
         self._model = model
 
     @property
-    def trainData(self) -> np.ndarray:
-        """ndarray: Property representing the training data as an array with shape (nSamp, nCh + 1)."""
+    def trainData(self) -> np.ndarray | None:
+        """ndarray or None: Property representing the training data as an array with shape (nSamp, nCh + 1)."""
         return self._trainData
 
     @trainData.setter
@@ -177,7 +177,7 @@ class _SVMTrainWorker(QObject):
         self._model.fit(xTrain, yTrain)
         yPred = self._model.predict(xTest)
 
-        logging.info(f"SVMTrainWorker: training ended.")
+        logging.info("SVMTrainWorker: training ended.")
 
         self.trainStopSig.emit(accuracy_score(yTest, yPred))
 
@@ -192,6 +192,7 @@ class _SVMTrainConfigWidget(QWidget, Ui_SVMTrainConfig):
 
         self._fs = None
         self._trainData = None
+        self._trainDataPath = ""
 
         self.browseTrainDataButton.clicked.connect(self._browseTrainData)
         self.startTrainButton.setEnabled(False)
@@ -234,6 +235,11 @@ class _SVMTrainConfigWidget(QWidget, Ui_SVMTrainConfig):
         """ndarray or None: Property representing the training data."""
         return self._trainData
 
+    @property
+    def trainDataPath(self) -> str:
+        """str: Property representing the path to training data."""
+        return self._trainDataPath
+
     def isValid(self) -> bool:
         """Check if the configuration is valid.
 
@@ -268,6 +274,8 @@ class _SVMTrainConfigWidget(QWidget, Ui_SVMTrainConfig):
                 return
 
             self._trainData = trainData
+            self._trainDataPath = filePath
+
             displayText = (
                 filePath
                 if len(filePath) <= 24
@@ -366,7 +374,7 @@ class SVMTrainController(QObject):
 
         # Output file
         expDir = os.path.join(
-            os.path.dirname(self._confWidget.trainDataPathLabel.text()), "..", "models"
+            os.path.dirname(self._confWidget.trainDataPath), "..", "models"
         )
         os.makedirs(expDir, exist_ok=True)
         outFileName = self._confWidget.outModelTextField.text()

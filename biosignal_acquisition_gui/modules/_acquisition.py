@@ -226,6 +226,8 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
     ----------
     _mainWin : MainWindow
         Reference to MainWindow object.
+    _sigInfo : list of tuples of (str, float)
+        Signal information.
     """
 
     def __init__(self, mainWin: MainWindow) -> None:
@@ -235,6 +237,7 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
 
         self._mainWin = mainWin
         self._config = {}
+        self._configJSONPath = ""
         self._sigInfo = []
 
         self.rescanSignalsButton.clicked.connect(self._rescanSignals)
@@ -244,6 +247,11 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
     def config(self) -> dict:
         """dict: Property representing the JSON configuration."""
         return self._config
+
+    @property
+    def configJSONPath(self) -> str:
+        """str: Property representing the JSON path."""
+        return self._configJSONPath
 
     def _browseAcqConfig(self) -> None:
         """Browse to select the JSON file with the experiment configuration."""
@@ -265,6 +273,8 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
                 return
 
             self._config = config
+            self._configJSONPath = filePath
+
             displayText = (
                 filePath
                 if len(filePath) <= 20
@@ -391,7 +401,7 @@ class AcquisitionController(QObject):
 
             # Output file
             expDir = os.path.join(
-                os.path.dirname(self._confWidget.configJSONPathLabel.text()), "data"
+                os.path.dirname(self._confWidget.configJSONPath), "data"
             )
             os.makedirs(expDir, exist_ok=True)
             outFileName = self._confWidget.acquisitionTextField.text()

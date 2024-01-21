@@ -18,5 +18,6 @@ limitations under the License.
 
 from . import modules
 from .main_window import MainWindow
+from .stream_controller import DataPacket
 
-__all__ = ["MainWindow", "modules"]
+__all__ = ["MainWindow", "DataPacket", "modules"]
