@@ -29,7 +29,7 @@ from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QWidget
 
 from . import data_source
-from ._stream_controller import DataPacket, DecodeFn, StreamingController
+from .stream_controller import DataPacket, DecodeFn, StreamingController
 from .data_source import DataSourceType
 from .ui.ui_add_signal_dialog import Ui_AddSignalDialog
 from .ui.ui_add_source_dialog import Ui_AddSourceDialog
@@ -156,7 +156,13 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
                 return
 
             self._dataSourceConfig["decodeFn"] = decodeFn
-            self.decodeModulePathLabel.setText(filePath)
+            displayText = (
+                filePath
+                if len(filePath) <= 50
+                else filePath[:20] + "..." + filePath[-30:]
+            )
+            self.decodeModulePathLabel.setText(displayText)
+            self.decodeModulePathLabel.setToolTip(filePath)
 
     def _onSourceChange(self) -> None:
         """Detect if source type has changed."""
@@ -387,8 +393,6 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
     ----------
     _nCh : int
         Number of channels.
-    _fs : float
-        Sampling frequency.
     _xQueue : deque
         Queue for X values.
     _yQueue : deque
@@ -426,6 +430,11 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         # Initialize plots
         self._plots = []
         self._initializePlots(sigName)
+
+    @property
+    def fs(self) -> float:
+        """float: Property representing the sampling frequency."""
+        return self._fs
 
     def _initializePlots(self, sigName: str) -> None:
         """Render the initial plot."""
@@ -545,6 +554,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Streaming
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
+
+    def getSigInfo(self) -> list[tuple[str, float]]:
+        """Get the list with signal information (i.e., name and sampling frequency).
+
+        Returns
+        -------
+        list of str
+            List with the signal names.
+        """
+        sigNameList = self._plotWidgets.keys()
+        fsList = map(lambda pw: pw.fs, self._plotWidgets.keys())
+        return list(zip(sigNameList, fsList))
 
     def addConfWidget(self, widget: QWidget) -> None:
         """Add a widget to configure pluggable modules.

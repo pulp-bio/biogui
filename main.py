@@ -17,6 +17,7 @@ limitations under the License.
 """
 
 import argparse
+import json
 import logging
 import sys
 
@@ -45,7 +46,37 @@ def main():
         action="store_true",
         help="Whether to add the SVM inference module",
     )
+    parser.add_argument(
+        "--virtHand",
+        action="store_true",
+        help="Whether to add the module for communicating with the virtual hand",
+    )
+    parser.add_argument(
+        "--tcpPort1",
+        required=False,
+        default=3334,
+        type=int,
+        help="Port for the first virtual hand",
+    )
+    parser.add_argument(
+        "--tcpPort2",
+        required=False,
+        default=3335,
+        type=int,
+        help="Port for the second virtual hand",
+    )
+    parser.add_argument(
+        "--gestureMapping",
+        required=False,
+        default="",
+        type=str,
+        help="Path to a JSON specifying the mapping between gesture labels and joint angles",
+    )
     args = vars(parser.parse_args())
+
+    argConstraint = sum([bool(args["virtHand"]), bool(args["gestureMapping"])])
+    if argConstraint != 0 and argConstraint != 2:
+        parser.error("--virtHand and --gestureMapping must be given together")
 
     # Setup application and main window
     app = QApplication(sys.argv)
@@ -54,14 +85,23 @@ def main():
 
     # Add widgets
     if args["acq"]:
-        acqController = modules.AcquisitionController()
-        acqController.subscribe(mainWin)
+        modules.AcquisitionController(mainWin)  # add acquisition module
     if args["svmTrain"]:
-        svmTrainController = modules.SVMTrainController(args["sampFreq"])
+        svmTrainController = modules.SVMTrainController()
         svmTrainController.subscribe(mainWin)
     if args["svmInference"]:
-        svmInferenceController = modules.SVMInferenceController()
-        svmInferenceController.subscribe(mainWin)
+        svmInferenceController = modules.SVMInferenceController(mainWin)
+
+        if args["virtHand"]:
+            with open(args["gestureMapping"]) as f:
+                gestureMapping = json.load(f)
+                gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
+
+            svmInferenceController.tcpServerController = modules.TCPServerController(
+                port1=args["tcpPort1"],
+                port2=args["tcpPort2"],
+                gestureMap=gestureMapping,
+            )
 
     # Run event loop
     sys.exit(app.exec())

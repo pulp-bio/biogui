@@ -3,13 +3,9 @@
         "open hand": "1.png",
         "fist (power grip)": "2.png",
         "index pointed": "3.png",
-        "ok (thumb up)": "4.png",
-        "right flexion (wrist supination)": "5.png",
-        "left flexion (wrist pronation)": "6.png",
-        "horns": "7.png",
-        "shaka": "8.png"
+        "ok (thumb up)": "4.png"
     },
     "nReps": 3,
-    "durationMs": 5000,
+    "durationMs": 4000,
     "imageFolder": "acquisitions/hand_mov"
 }

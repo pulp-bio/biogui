@@ -155,9 +155,11 @@ class _PreprocessWorker(QObject):
         """
         try:
             dataDecList = self._decodeFn(data)
-        except (Exception,):
+        except (Exception,) as e:
             if not self._errorOccurred:
-                self.errorSig.emit("The provided decode function failed.")
+                self.errorSig.emit(
+                    f"The provided decode function failed with the following exception:\n{e}."
+                )
                 self._errorOccurred = True
             return
 

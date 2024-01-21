@@ -8,274 +8,196 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QDate,
-    QDateTime,
-    QLocale,
-    QMetaObject,
-    QObject,
-    QPoint,
-    QRect,
-    QSize,
-    Qt,
-    QTime,
-    QUrl,
-)
-from PySide6.QtGui import (
-    QBrush,
-    QColor,
-    QConicalGradient,
-    QCursor,
-    QFont,
-    QFontDatabase,
-    QGradient,
-    QIcon,
-    QImage,
-    QKeySequence,
-    QLinearGradient,
-    QPainter,
-    QPalette,
-    QPixmap,
-    QRadialGradient,
-    QTransform,
-)
-from PySide6.QtWidgets import (
-    QApplication,
-    QComboBox,
-    QGridLayout,
-    QGroupBox,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-    QWidget,
-)
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QGroupBox,
+    QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QVBoxLayout, QWidget)
 from . import resources_rc
-
 
 class Ui_SVMTrainConfig(object):
     def setupUi(self, SVMTrainConfig):
         if not SVMTrainConfig.objectName():
-            SVMTrainConfig.setObjectName("SVMTrainConfig")
-        SVMTrainConfig.resize(400, 398)
+            SVMTrainConfig.setObjectName(u"SVMTrainConfig")
+        SVMTrainConfig.resize(400, 480)
         self.verticalLayout = QVBoxLayout(SVMTrainConfig)
-        self.verticalLayout.setObjectName("verticalLayout")
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.svmGroupBox = QGroupBox(SVMTrainConfig)
-        self.svmGroupBox.setObjectName("svmGroupBox")
+        self.svmGroupBox.setObjectName(u"svmGroupBox")
         self.svmGroupBox.setAlignment(Qt.AlignCenter)
         self.svmGroupBox.setCheckable(False)
         self.svmGroupBox.setChecked(False)
-        self.verticalLayout_4 = QVBoxLayout(self.svmGroupBox)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.gridLayout1 = QGridLayout()
-        self.gridLayout1.setObjectName("gridLayout1")
+        self.verticalLayout_2 = QVBoxLayout(self.svmGroupBox)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.formLayout1 = QFormLayout()
+        self.formLayout1.setObjectName(u"formLayout1")
         self.label1 = QLabel(self.svmGroupBox)
-        self.label1.setObjectName("label1")
+        self.label1.setObjectName(u"label1")
 
-        self.gridLayout1.addWidget(self.label1, 0, 0, 1, 1)
+        self.formLayout1.setWidget(0, QFormLayout.LabelRole, self.label1)
 
-        self.label6 = QLabel(self.svmGroupBox)
-        self.label6.setObjectName("label6")
+        self.featureComboBox = QComboBox(self.svmGroupBox)
+        self.featureComboBox.addItem("")
+        self.featureComboBox.addItem("")
+        self.featureComboBox.setObjectName(u"featureComboBox")
 
-        self.gridLayout1.addWidget(self.label6, 5, 0, 1, 1)
+        self.formLayout1.setWidget(0, QFormLayout.FieldRole, self.featureComboBox)
 
-        self.outModelTextField = QLineEdit(self.svmGroupBox)
-        self.outModelTextField.setObjectName("outModelTextField")
+        self.label2 = QLabel(self.svmGroupBox)
+        self.label2.setObjectName(u"label2")
 
-        self.gridLayout1.addWidget(self.outModelTextField, 4, 1, 1, 1)
+        self.formLayout1.setWidget(1, QFormLayout.LabelRole, self.label2)
+
+        self.winSizeTextField = QLineEdit(self.svmGroupBox)
+        self.winSizeTextField.setObjectName(u"winSizeTextField")
+
+        self.formLayout1.setWidget(1, QFormLayout.FieldRole, self.winSizeTextField)
+
+        self.fsTextField = QLineEdit(self.svmGroupBox)
+        self.fsTextField.setObjectName(u"fsTextField")
+
+        self.formLayout1.setWidget(2, QFormLayout.FieldRole, self.fsTextField)
+
+        self.label4 = QLabel(self.svmGroupBox)
+        self.label4.setObjectName(u"label4")
+
+        self.formLayout1.setWidget(3, QFormLayout.LabelRole, self.label4)
 
         self.kernelComboBox = QComboBox(self.svmGroupBox)
         self.kernelComboBox.addItem("")
         self.kernelComboBox.addItem("")
         self.kernelComboBox.addItem("")
         self.kernelComboBox.addItem("")
-        self.kernelComboBox.setObjectName("kernelComboBox")
+        self.kernelComboBox.setObjectName(u"kernelComboBox")
 
-        self.gridLayout1.addWidget(self.kernelComboBox, 2, 1, 1, 1)
+        self.formLayout1.setWidget(3, QFormLayout.FieldRole, self.kernelComboBox)
 
         self.label5 = QLabel(self.svmGroupBox)
-        self.label5.setObjectName("label5")
+        self.label5.setObjectName(u"label5")
 
-        self.gridLayout1.addWidget(self.label5, 4, 0, 1, 1)
-
-        self.label3 = QLabel(self.svmGroupBox)
-        self.label3.setObjectName("label3")
-
-        self.gridLayout1.addWidget(self.label3, 2, 0, 1, 1)
-
-        self.featureComboBox = QComboBox(self.svmGroupBox)
-        self.featureComboBox.addItem("")
-        self.featureComboBox.addItem("")
-        self.featureComboBox.setObjectName("featureComboBox")
-
-        self.gridLayout1.addWidget(self.featureComboBox, 0, 1, 1, 1)
+        self.formLayout1.setWidget(4, QFormLayout.LabelRole, self.label5)
 
         self.cTextField = QLineEdit(self.svmGroupBox)
-        self.cTextField.setObjectName("cTextField")
+        self.cTextField.setObjectName(u"cTextField")
 
-        self.gridLayout1.addWidget(self.cTextField, 3, 1, 1, 1)
+        self.formLayout1.setWidget(4, QFormLayout.FieldRole, self.cTextField)
+
+        self.label6 = QLabel(self.svmGroupBox)
+        self.label6.setObjectName(u"label6")
+
+        self.formLayout1.setWidget(5, QFormLayout.LabelRole, self.label6)
+
+        self.outModelTextField = QLineEdit(self.svmGroupBox)
+        self.outModelTextField.setObjectName(u"outModelTextField")
+
+        self.formLayout1.setWidget(5, QFormLayout.FieldRole, self.outModelTextField)
+
+        self.label7 = QLabel(self.svmGroupBox)
+        self.label7.setObjectName(u"label7")
+
+        self.formLayout1.setWidget(6, QFormLayout.LabelRole, self.label7)
 
         self.browseTrainDataButton = QPushButton(self.svmGroupBox)
-        self.browseTrainDataButton.setObjectName("browseTrainDataButton")
+        self.browseTrainDataButton.setObjectName(u"browseTrainDataButton")
 
-        self.gridLayout1.addWidget(self.browseTrainDataButton, 5, 1, 1, 1)
+        self.formLayout1.setWidget(6, QFormLayout.FieldRole, self.browseTrainDataButton)
 
-        self.label4 = QLabel(self.svmGroupBox)
-        self.label4.setObjectName("label4")
+        self.label8 = QLabel(self.svmGroupBox)
+        self.label8.setObjectName(u"label8")
 
-        self.gridLayout1.addWidget(self.label4, 3, 0, 1, 1)
+        self.formLayout1.setWidget(7, QFormLayout.LabelRole, self.label8)
 
-        self.label2 = QLabel(self.svmGroupBox)
-        self.label2.setObjectName("label2")
+        self.trainDataPathLabel = QLabel(self.svmGroupBox)
+        self.trainDataPathLabel.setObjectName(u"trainDataPathLabel")
 
-        self.gridLayout1.addWidget(self.label2, 1, 0, 1, 1)
+        self.formLayout1.setWidget(7, QFormLayout.FieldRole, self.trainDataPathLabel)
 
-        self.winTextField = QLineEdit(self.svmGroupBox)
-        self.winTextField.setObjectName("winTextField")
+        self.label3 = QLabel(self.svmGroupBox)
+        self.label3.setObjectName(u"label3")
 
-        self.gridLayout1.addWidget(self.winTextField, 1, 1, 1, 1)
+        self.formLayout1.setWidget(2, QFormLayout.LabelRole, self.label3)
 
-        self.gridLayout1.setColumnStretch(0, 2)
-        self.gridLayout1.setColumnStretch(1, 1)
 
-        self.verticalLayout_4.addLayout(self.gridLayout1)
-
-        self.trainDataLabel = QLabel(self.svmGroupBox)
-        self.trainDataLabel.setObjectName("trainDataLabel")
-
-        self.verticalLayout_4.addWidget(self.trainDataLabel)
+        self.verticalLayout_2.addLayout(self.formLayout1)
 
         self.progressLabel = QLabel(self.svmGroupBox)
-        self.progressLabel.setObjectName("progressLabel")
+        self.progressLabel.setObjectName(u"progressLabel")
         self.progressLabel.setMinimumSize(QSize(0, 0))
         self.progressLabel.setMaximumSize(QSize(400, 200))
         self.progressLabel.setAlignment(Qt.AlignCenter)
 
-        self.verticalLayout_4.addWidget(self.progressLabel)
-
-        self.gridLayout2 = QGridLayout()
-        self.gridLayout2.setObjectName("gridLayout2")
-        self.accLabel = QLabel(self.svmGroupBox)
-        self.accLabel.setObjectName("accLabel")
-
-        self.gridLayout2.addWidget(self.accLabel, 0, 1, 1, 1)
-
-        self.label7 = QLabel(self.svmGroupBox)
-        self.label7.setObjectName("label7")
-
-        self.gridLayout2.addWidget(self.label7, 0, 0, 1, 1)
-
-        self.verticalLayout_4.addLayout(self.gridLayout2)
+        self.verticalLayout_2.addWidget(self.progressLabel)
 
         self.startTrainButton = QPushButton(self.svmGroupBox)
-        self.startTrainButton.setObjectName("startTrainButton")
+        self.startTrainButton.setObjectName(u"startTrainButton")
 
-        self.verticalLayout_4.addWidget(self.startTrainButton)
+        self.verticalLayout_2.addWidget(self.startTrainButton)
 
-        self.verticalLayout_4.setStretch(0, 4)
-        self.verticalLayout_4.setStretch(2, 4)
+        self.formLayout2 = QFormLayout()
+        self.formLayout2.setObjectName(u"formLayout2")
+        self.label9 = QLabel(self.svmGroupBox)
+        self.label9.setObjectName(u"label9")
+
+        self.formLayout2.setWidget(0, QFormLayout.LabelRole, self.label9)
+
+        self.accLabel = QLabel(self.svmGroupBox)
+        self.accLabel.setObjectName(u"accLabel")
+
+        self.formLayout2.setWidget(0, QFormLayout.FieldRole, self.accLabel)
+
+
+        self.verticalLayout_2.addLayout(self.formLayout2)
+
 
         self.verticalLayout.addWidget(self.svmGroupBox)
+
 
         self.retranslateUi(SVMTrainConfig)
 
         QMetaObject.connectSlotsByName(SVMTrainConfig)
-
     # setupUi
 
     def retranslateUi(self, SVMTrainConfig):
-        SVMTrainConfig.setWindowTitle(
-            QCoreApplication.translate("SVMTrainConfig", "SVM Widget", None)
-        )
-        self.svmGroupBox.setTitle(
-            QCoreApplication.translate("SVMTrainConfig", "SVM training", None)
-        )
-        self.label1.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Feature selection:", None)
-        )
-        self.label6.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Training data:", None)
-        )
-        # if QT_CONFIG(tooltip)
-        self.outModelTextField.setToolTip(
-            QCoreApplication.translate(
-                "SVMTrainConfig",
-                "If no name is provided, one based on the timestamp will be used",
-                None,
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
-        self.kernelComboBox.setItemText(
-            0, QCoreApplication.translate("SVMTrainConfig", "rbf", None)
-        )
-        self.kernelComboBox.setItemText(
-            1, QCoreApplication.translate("SVMTrainConfig", "linear", None)
-        )
-        self.kernelComboBox.setItemText(
-            2, QCoreApplication.translate("SVMTrainConfig", "poly", None)
-        )
-        self.kernelComboBox.setItemText(
-            3, QCoreApplication.translate("SVMTrainConfig", "sigmoid", None)
-        )
+        SVMTrainConfig.setWindowTitle(QCoreApplication.translate("SVMTrainConfig", u"SVM Widget", None))
+        self.svmGroupBox.setTitle(QCoreApplication.translate("SVMTrainConfig", u"SVM training", None))
+        self.label1.setText(QCoreApplication.translate("SVMTrainConfig", u"Feature selection:", None))
+        self.featureComboBox.setItemText(0, QCoreApplication.translate("SVMTrainConfig", u"Waveform length", None))
+        self.featureComboBox.setItemText(1, QCoreApplication.translate("SVMTrainConfig", u"RMS", None))
 
-        self.label5.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Output file name:", None)
-        )
-        self.label3.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Kernel selection:", None)
-        )
-        self.featureComboBox.setItemText(
-            0, QCoreApplication.translate("SVMTrainConfig", "Waveform length", None)
-        )
-        self.featureComboBox.setItemText(
-            1, QCoreApplication.translate("SVMTrainConfig", "RMS", None)
-        )
+        self.label2.setText(QCoreApplication.translate("SVMTrainConfig", u"Window size (ms):", None))
+#if QT_CONFIG(tooltip)
+        self.winSizeTextField.setToolTip("")
+#endif // QT_CONFIG(tooltip)
+        self.winSizeTextField.setPlaceholderText("")
+        self.label4.setText(QCoreApplication.translate("SVMTrainConfig", u"Kernel selection:", None))
+        self.kernelComboBox.setItemText(0, QCoreApplication.translate("SVMTrainConfig", u"rbf", None))
+        self.kernelComboBox.setItemText(1, QCoreApplication.translate("SVMTrainConfig", u"linear", None))
+        self.kernelComboBox.setItemText(2, QCoreApplication.translate("SVMTrainConfig", u"poly", None))
+        self.kernelComboBox.setItemText(3, QCoreApplication.translate("SVMTrainConfig", u"sigmoid", None))
 
-        # if QT_CONFIG(tooltip)
-        self.cTextField.setToolTip(
-            QCoreApplication.translate(
-                "SVMTrainConfig",
-                "If a non-numeric value is set, the default value will be used",
-                None,
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
+        self.label5.setText(QCoreApplication.translate("SVMTrainConfig", u"C selection:", None))
+#if QT_CONFIG(tooltip)
+        self.cTextField.setToolTip("")
+#endif // QT_CONFIG(tooltip)
         self.cTextField.setText("")
-        self.cTextField.setPlaceholderText(
-            QCoreApplication.translate("SVMTrainConfig", "1.0", None)
-        )
-        self.browseTrainDataButton.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Browse", None)
-        )
-        self.label4.setText(
-            QCoreApplication.translate("SVMTrainConfig", "C selection:", None)
-        )
-        self.label2.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Window size (ms):", None)
-        )
-        # if QT_CONFIG(tooltip)
-        self.winTextField.setToolTip(
-            QCoreApplication.translate(
-                "SVMTrainConfig",
-                "If a non-numeric value is set, the default value will be used",
-                None,
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
-        self.winTextField.setPlaceholderText(
-            QCoreApplication.translate("SVMTrainConfig", "100", None)
-        )
-        self.trainDataLabel.setText("")
+        self.cTextField.setPlaceholderText("")
+        self.label6.setText(QCoreApplication.translate("SVMTrainConfig", u"Output file name:", None))
+#if QT_CONFIG(tooltip)
+        self.outModelTextField.setToolTip(QCoreApplication.translate("SVMTrainConfig", u"If no name is provided, one based on the timestamp will be used", None))
+#endif // QT_CONFIG(tooltip)
+        self.label7.setText(QCoreApplication.translate("SVMTrainConfig", u"Training data:", None))
+        self.browseTrainDataButton.setText(QCoreApplication.translate("SVMTrainConfig", u"Browse", None))
+        self.label8.setText(QCoreApplication.translate("SVMTrainConfig", u"Path to training data:", None))
+        self.trainDataPathLabel.setText("")
+        self.label3.setText(QCoreApplication.translate("SVMTrainConfig", u"Sampling frequency:", None))
         self.progressLabel.setText("")
+        self.startTrainButton.setText(QCoreApplication.translate("SVMTrainConfig", u"Start training", None))
+        self.label9.setText(QCoreApplication.translate("SVMTrainConfig", u"Accuracy:", None))
         self.accLabel.setText("")
-        self.label7.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Accuracy:", None)
-        )
-        self.startTrainButton.setText(
-            QCoreApplication.translate("SVMTrainConfig", "Start training", None)
-        )
-
     # retranslateUi
+
