@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>200</height>
+    <height>202</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,45 +28,75 @@
      <property name="checked">
       <bool>false</bool>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <layout class="QGridLayout" name="gridLayout" columnstretch="2,1">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label1">
-          <property name="text">
-           <string>Output file name:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="acquisitionTextField">
-          <property name="toolTip">
-           <string>If no name is provided, one based on the timestamp will be used</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label2">
-          <property name="text">
-           <string>JSON with configuration:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="browseJSONButton">
-          <property name="text">
-           <string>Browse</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label1">
+        <property name="text">
+         <string>Signal:</string>
+        </property>
+       </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="JSONLabel">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label2">
+        <property name="text">
+         <string>Output file name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="acquisitionTextField">
+        <property name="toolTip">
+         <string>If no name is provided, one based on the timestamp will be used</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label3">
+        <property name="text">
+         <string>JSON with configuration:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QPushButton" name="browseJSONButton">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="label4">
+        <property name="text">
+         <string>Path to JSON:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLabel" name="configJSONPathLabel">
         <property name="text">
          <string/>
         </property>
        </widget>
+      </item>
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
+        <item>
+         <widget class="QComboBox" name="signalComboBox"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="rescanSignalsButton">
+          <property name="toolTip">
+           <string>Rescan signals</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset theme="view-refresh"/>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>

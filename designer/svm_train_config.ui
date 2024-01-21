@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>398</height>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,9 +28,9 @@
      <property name="checked">
       <bool>false</bool>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4" stretch="4,0,4,0,0">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <layout class="QGridLayout" name="gridLayout1" columnstretch="2,1">
+       <layout class="QFormLayout" name="formLayout1">
         <item row="0" column="0">
          <widget class="QLabel" name="label1">
           <property name="text">
@@ -38,21 +38,48 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label6">
+        <item row="0" column="1">
+         <widget class="QComboBox" name="featureComboBox">
+          <item>
+           <property name="text">
+            <string>Waveform length</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RMS</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label2">
           <property name="text">
-           <string>Training data:</string>
+           <string>Window size (ms):</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
-         <widget class="QLineEdit" name="outModelTextField">
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="winSizeTextField">
           <property name="toolTip">
-           <string>If no name is provided, one based on the timestamp will be used</string>
+           <string/>
+          </property>
+          <property name="placeholderText">
+           <string/>
           </property>
          </widget>
         </item>
         <item row="2" column="1">
+         <widget class="QLineEdit" name="fsTextField"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label4">
+          <property name="text">
+           <string>Kernel selection:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
          <widget class="QComboBox" name="kernelComboBox">
           <item>
            <property name="text">
@@ -79,83 +106,73 @@
         <item row="4" column="0">
          <widget class="QLabel" name="label5">
           <property name="text">
-           <string>Output file name:</string>
+           <string>C selection:</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label3">
-          <property name="text">
-           <string>Kernel selection:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QComboBox" name="featureComboBox">
-          <item>
-           <property name="text">
-            <string>Waveform length</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>RMS</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="3" column="1">
+        <item row="4" column="1">
          <widget class="QLineEdit" name="cTextField">
           <property name="toolTip">
-           <string>If a non-numeric value is set, the default value will be used</string>
+           <string/>
           </property>
           <property name="text">
            <string/>
           </property>
           <property name="placeholderText">
-           <string>1.0</string>
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label6">
+          <property name="text">
+           <string>Output file name:</string>
           </property>
          </widget>
         </item>
         <item row="5" column="1">
+         <widget class="QLineEdit" name="outModelTextField">
+          <property name="toolTip">
+           <string>If no name is provided, one based on the timestamp will be used</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label7">
+          <property name="text">
+           <string>Training data:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
          <widget class="QPushButton" name="browseTrainDataButton">
           <property name="text">
            <string>Browse</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label4">
+        <item row="7" column="0">
+         <widget class="QLabel" name="label8">
           <property name="text">
-           <string>C selection:</string>
+           <string>Path to training data:</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label2">
+        <item row="7" column="1">
+         <widget class="QLabel" name="trainDataPathLabel">
           <property name="text">
-           <string>Window size (ms):</string>
+           <string/>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="winTextField">
-          <property name="toolTip">
-           <string>If a non-numeric value is set, the default value will be used</string>
-          </property>
-          <property name="placeholderText">
-           <string>100</string>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label3">
+          <property name="text">
+           <string>Sampling frequency:</string>
           </property>
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QLabel" name="trainDataLabel">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QLabel" name="progressLabel">
@@ -180,7 +197,21 @@
        </widget>
       </item>
       <item>
-       <layout class="QGridLayout" name="gridLayout2">
+       <widget class="QPushButton" name="startTrainButton">
+        <property name="text">
+         <string>Start training</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="formLayout2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label9">
+          <property name="text">
+           <string>Accuracy:</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="1">
          <widget class="QLabel" name="accLabel">
           <property name="text">
@@ -188,21 +219,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label7">
-          <property name="text">
-           <string>Accuracy:</string>
-          </property>
-         </widget>
-        </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QPushButton" name="startTrainButton">
-        <property name="text">
-         <string>Start training</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
