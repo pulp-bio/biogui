@@ -42,9 +42,9 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     """
 
     # Split bytes into PPG, ECG and accelerometer
-    ppgBytes = bytearray(data[:30])
-    ecgBytes1 = bytearray(data[30:60])
-    accelBytes = bytearray(data[60:66])
+    ppgBytes = bytearray(data[:30] + data[68:98] + data[136:166])
+    ecgBytes1 = bytearray(data[30:60] + data[98:128] + data[166:196])
+    accelBytes = bytearray(data[60:66] + data[128:134] + data[196:202])
     ecgBytes2 = []
 
     # Convert to 32-bit integer
@@ -62,9 +62,9 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
         ecgBytes2.append(struct.unpack(">i", ecgByte)[0])
 
         pos += 4
-    ppg = np.asarray(struct.unpack(">10i", ppgBytes), dtype="int32")
+    ppg = np.asarray(struct.unpack(">30i", ppgBytes), dtype="int32")
     ecg = np.asarray(ecgBytes2, dtype="int32")
-    acc = np.asarray(struct.unpack("<3h", accelBytes), dtype="int32")
+    acc = np.asarray(struct.unpack("<9h", accelBytes), dtype="int32")
 
     # ADC parameters
     vRefECG = 1.0

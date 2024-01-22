@@ -25,7 +25,7 @@ class Ui_AddSignalDialog(object):
         if not AddSignalDialog.objectName():
             AddSignalDialog.setObjectName(u"AddSignalDialog")
         AddSignalDialog.setWindowModality(Qt.WindowModal)
-        AddSignalDialog.resize(720, 560)
+        AddSignalDialog.resize(720, 600)
         AddSignalDialog.setModal(False)
         self.verticalLayout = QVBoxLayout(AddSignalDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -129,31 +129,32 @@ class Ui_AddSignalDialog(object):
 
         self.verticalLayout.addWidget(self.filteringGroupBox)
 
-        self.fileSavingGroupBox = QGroupBox(AddSignalDialog)
-        self.fileSavingGroupBox.setObjectName(u"fileSavingGroupBox")
-        self.fileSavingGroupBox.setAlignment(Qt.AlignCenter)
-        self.fileSavingGroupBox.setCheckable(True)
-        self.fileSavingGroupBox.setChecked(False)
-        self.formLayout_3 = QFormLayout(self.fileSavingGroupBox)
+        self.groupBox = QGroupBox(AddSignalDialog)
+        self.groupBox.setObjectName(u"groupBox")
+        self.groupBox.setAlignment(Qt.AlignCenter)
+        self.groupBox.setCheckable(True)
+        self.groupBox.setChecked(False)
+        self.formLayout_3 = QFormLayout(self.groupBox)
         self.formLayout_3.setObjectName(u"formLayout_3")
-        self.label9 = QLabel(self.fileSavingGroupBox)
+        self.label9 = QLabel(self.groupBox)
         self.label9.setObjectName(u"label9")
 
         self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.label9)
 
-        self.outFileTextField = QLineEdit(self.fileSavingGroupBox)
-        self.outFileTextField.setObjectName(u"outFileTextField")
+        self.fileNameTextField = QLineEdit(self.groupBox)
+        self.fileNameTextField.setObjectName(u"fileNameTextField")
 
-        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.outFileTextField)
+        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.fileNameTextField)
 
 
-        self.verticalLayout.addWidget(self.fileSavingGroupBox)
+        self.verticalLayout.addWidget(self.groupBox)
 
         self.chSpacingGroupBox = QGroupBox(AddSignalDialog)
         self.chSpacingGroupBox.setObjectName(u"chSpacingGroupBox")
         self.chSpacingGroupBox.setAlignment(Qt.AlignCenter)
         self.chSpacingGroupBox.setFlat(False)
-        self.chSpacingGroupBox.setCheckable(True)
+        self.chSpacingGroupBox.setCheckable(False)
+        self.chSpacingGroupBox.setChecked(False)
         self.formLayout_4 = QFormLayout(self.chSpacingGroupBox)
         self.formLayout_4.setObjectName(u"formLayout_4")
         self.label10 = QLabel(self.chSpacingGroupBox)
@@ -165,6 +166,16 @@ class Ui_AddSignalDialog(object):
         self.chSpacingTextField.setObjectName(u"chSpacingTextField")
 
         self.formLayout_4.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
+
+        self.label11 = QLabel(self.chSpacingGroupBox)
+        self.label11.setObjectName(u"label11")
+
+        self.formLayout_4.setWidget(1, QFormLayout.LabelRole, self.label11)
+
+        self.bufferSizeTextField = QLineEdit(self.chSpacingGroupBox)
+        self.bufferSizeTextField.setObjectName(u"bufferSizeTextField")
+
+        self.formLayout_4.setWidget(1, QFormLayout.FieldRole, self.bufferSizeTextField)
 
 
         self.verticalLayout.addWidget(self.chSpacingGroupBox)
@@ -227,13 +238,17 @@ class Ui_AddSignalDialog(object):
         self.filtOrderTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Order of the Butterworth filter (positive integer)", None))
 #endif // QT_CONFIG(tooltip)
         self.filtOrderTextField.setPlaceholderText("")
-        self.fileSavingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure file saving", None))
-        self.label9.setText(QCoreApplication.translate("AddSignalDialog", u"Output file name:", None))
+        self.groupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure file saving", None))
+        self.label9.setText(QCoreApplication.translate("AddSignalDialog", u"File name:", None))
 #if QT_CONFIG(tooltip)
         self.chSpacingGroupBox.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Only for multi-channel signals", None))
 #endif // QT_CONFIG(tooltip)
-        self.chSpacingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure channel spacing", None))
+        self.chSpacingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure plot", None))
         self.label10.setText(QCoreApplication.translate("AddSignalDialog", u"Channel spacing:", None))
         self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"1000", None))
+        self.chSpacingTextField.setPlaceholderText("")
+        self.label11.setText(QCoreApplication.translate("AddSignalDialog", u"Buffer size (ms):", None))
+        self.bufferSizeTextField.setText(QCoreApplication.translate("AddSignalDialog", u"200", None))
+        self.bufferSizeTextField.setPlaceholderText("")
     # retranslateUi
 
