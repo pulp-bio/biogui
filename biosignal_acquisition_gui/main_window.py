@@ -29,8 +29,8 @@ from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QWidget
 
 from . import data_source
-from .stream_controller import DataPacket, DecodeFn, StreamingController
 from .data_source import DataSourceType
+from .stream_controller import DataPacket, DecodeFn, StreamingController
 from .ui.ui_add_signal_dialog import Ui_AddSignalDialog
 from .ui.ui_add_source_dialog import Ui_AddSourceDialog
 from .ui.ui_main_window import Ui_MainWindow
@@ -260,6 +260,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
         self.chSpacingTextField.setValidator(chSpacingValidator)
+        buffSizeValidator = QIntValidator(bottom=1, top=2147483647)
+        self.bufferSizeTextField.setValidator(buffSizeValidator)
 
         self._signalConfig = {}
         self._isValid = False
@@ -360,17 +362,20 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 0
             ]
 
-        # Channel spacing settings
-        if self.chSpacingGroupBox.isChecked():
-            if not self.chSpacingTextField.hasAcceptableInput():
-                self._isValid = False
-                self._errMessage = 'The "channel spacing" field is invalid.'
-                return
+        # Plot settings
+        if not self.chSpacingTextField.hasAcceptableInput():
+            self._isValid = False
+            self._errMessage = 'The "channel spacing" field is invalid.'
+            return
+        self._signalConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
 
-            chSpacing = lo.toInt(self.chSpacingTextField.text())[0]
-        else:
-            chSpacing = 0
-        self._signalConfig["chSpacing"] = chSpacing
+        if not self.bufferSizeTextField.hasAcceptableInput():
+            self._isValid = False
+            self._errMessage = 'The "buffer size" field is invalid.'
+            return
+        self._signalConfig["bufferSizeMs"] = lo.toInt(self.bufferSizeTextField.text())[
+            0
+        ]
 
         self._isValid = True
 
@@ -388,6 +393,8 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Sampling frequency.
     chSpacing : int
         Spacing between each channel in the plot.
+    bufferSizeMs : int
+        Size of the plot buffer (in ms).
 
     Attributes
     ----------
@@ -399,10 +406,10 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Queue for Y values.
     _bufferCount : int
         Counter for the plot buffer.
-    _bufferSize : int
-        Size of the buffer for plotting samples.
     _chSpacing : int
         Spacing between each channel in the plot.
+    _bufferSize : int
+        Size of the plot buffer.
     """
 
     def __init__(
@@ -411,6 +418,7 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         nCh: int,
         fs: float,
         chSpacing: int,
+        bufferSizeMs: int,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -424,8 +432,8 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._nCh = nCh
         self._fs = fs
         self._bufferCount = 0
-        self._bufferSize = max(fs // 20, 1)
         self._chSpacing = chSpacing
+        self._bufferSize = min(int(round(bufferSizeMs / 1000 * fs)), 1)
 
         # Initialize plots
         self._plots = []
@@ -705,7 +713,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             nCh = addSignalDialog.signalConfig["nCh"]
             fs = addSignalDialog.signalConfig["fs"]
             chSpacing = addSignalDialog.signalConfig["chSpacing"]
-            plotWidget = _SignalPlotWidget(sigName, nCh, fs, chSpacing, self)
+            bufferSizeMs = addSignalDialog.signalConfig["bufferSizeMs"]
+            plotWidget = _SignalPlotWidget(
+                sigName, nCh, fs, chSpacing, bufferSizeMs, self
+            )
             self._plotWidgets[sigName] = plotWidget
             self.plotsLayout.addWidget(plotWidget)
 
