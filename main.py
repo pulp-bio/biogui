@@ -17,7 +17,6 @@ limitations under the License.
 """
 
 import argparse
-import json
 import logging
 import sys
 
@@ -90,18 +89,7 @@ def main():
         svmTrainController = modules.SVMTrainController()
         svmTrainController.subscribe(mainWin)
     if args["svmInference"]:
-        svmInferenceController = modules.SVMInferenceController(mainWin)
-
-        if args["virtHand"]:
-            with open(args["gestureMapping"]) as f:
-                gestureMapping = json.load(f)
-                gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
-
-            svmInferenceController.tcpServerController = modules.TCPServerController(
-                port1=args["tcpPort1"],
-                port2=args["tcpPort2"],
-                gestureMap=gestureMapping,
-            )
+        modules.SVMInferenceController(mainWin)
 
     # Run event loop
     sys.exit(app.exec())

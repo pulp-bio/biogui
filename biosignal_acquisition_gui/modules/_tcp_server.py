@@ -30,8 +30,6 @@ class _TCPServerWorker(QObject):
 
     Parameters
     ----------
-    address : str
-        Server address
     port : str
         Server port.
     gestureMap : dict of {int : list of int}
@@ -39,8 +37,6 @@ class _TCPServerWorker(QObject):
 
     Attributes
     ----------
-    _address : str
-        Server address
     _port : str
         Server port.
     _sock : socket or None
@@ -51,12 +47,9 @@ class _TCPServerWorker(QObject):
         Mapping between gesture label and joint angles.
     """
 
-    def __init__(
-        self, address: str, port: int, gestureMap: dict[int, list[int]]
-    ) -> None:
+    def __init__(self, port: int, gestureMap: dict[int, list[int]]) -> None:
         super(_TCPServerWorker, self).__init__()
 
-        self._address = address
         self._port = port
         self._gestureMap = gestureMap
 
@@ -78,7 +71,7 @@ class _TCPServerWorker(QObject):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.settimeout(1.0)
-        self._sock.bind((self._address, self._port))
+        self._sock.bind(("", self._port))
         self._sock.listen(1)
         logging.info(f"TCPServerWorker: waiting for connection on port {self._port}.")
 
@@ -123,8 +116,6 @@ class TCPServerController(QObject):
 
     Parameters
     ----------
-    address : str
-        Server address
     port1 : str
         port for the first socket connected to the virtual hand
     port2 : str
@@ -145,18 +136,18 @@ class TCPServerController(QObject):
     """
 
     def __init__(
-        self, address: str, port1: int, port2: int, gestureMap: dict[int, list[int]]
+        self, port1: int, port2: int, gestureMap: dict[int, list[int]]
     ) -> None:
         super(TCPServerController, self).__init__()
 
         # Create worker and thread for first connection
-        self._tcpServerWorker1 = _TCPServerWorker(address, port1, gestureMap)
+        self._tcpServerWorker1 = _TCPServerWorker(port1, gestureMap)
         self._tcpServerThread1 = QThread()
         self._tcpServerWorker1.moveToThread(self._tcpServerThread1)
         self._tcpServerThread1.started.connect(self._tcpServerWorker1.openConnection)
         self._tcpServerThread1.finished.connect(self._tcpServerWorker1.closeConnection)
         # Create worker and thread for second connection
-        self._tcpServerWorker2 = _TCPServerWorker(address, port2, gestureMap)
+        self._tcpServerWorker2 = _TCPServerWorker(port2, gestureMap)
         self._tcpServerThread2 = QThread()
         self._tcpServerWorker2.moveToThread(self._tcpServerThread2)
         self._tcpServerThread2.started.connect(self._tcpServerWorker2.openConnection)

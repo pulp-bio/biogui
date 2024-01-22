@@ -76,11 +76,20 @@ class _SVMTrainWorker(QObject):
     def __init__(self) -> None:
         super().__init__()
 
+        self._fs = 0.0
         self._feature = ""
         self._windowSize = 0
-        self._fs = 0.0
         self._model = None
         self._trainData = None
+
+    @property
+    def fs(self) -> float:
+        """float: Property representing the sampling frequency."""
+        return self._fs
+
+    @fs.setter
+    def fs(self, fs: float) -> None:
+        self._fs = fs
 
     @property
     def feature(self) -> str:
@@ -102,15 +111,6 @@ class _SVMTrainWorker(QObject):
     @windowSize.setter
     def windowSize(self, windowSizeMs: int) -> None:
         self._windowSize = int(windowSizeMs * self._fs / 1000)
-
-    @property
-    def fs(self) -> float:
-        """float: Property representing the sampling frequency."""
-        return self._fs
-
-    @fs.setter
-    def fs(self, fs: float) -> None:
-        self._fs = fs
 
     @property
     def model(self) -> SVC | None:
