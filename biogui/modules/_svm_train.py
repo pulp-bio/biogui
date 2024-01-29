@@ -28,6 +28,7 @@ from PySide6.QtCore import QLocale, QObject, QSize, QThread, Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator, QMovie
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from scipy import signal
+from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -136,8 +137,8 @@ class _SVMTrainWorker(QObject):
         logging.info("SVMTrainWorker: preprocessing...")
         sos = signal.butter(4, (20, 500), "bandpass", output="sos", fs=self._fs)
         dataFlt = signal.sosfiltfilt(sos, self._trainData[:, :-1], axis=0)
-        nSamp, nCh = dataFlt.shape
         labels = self._trainData[:, -1].astype("int32")
+        nSamp, nCh = dataFlt.shape
 
         # Feature extraction
         logging.info(
@@ -172,9 +173,7 @@ class _SVMTrainWorker(QObject):
         logging.info(
             f"SVMTrainWorker: training... (training set size: {xTrain.shape}, test set size: {xTest.shape})"
         )
-        xTrain = signal.decimate(xTrain, 10, axis=0)
-        yTrain = yTrain[::10]
-        self._model.fit(xTrain, yTrain)
+        self._model.fit(xTrain[::10], yTrain[::10])
         yPred = self._model.predict(xTest)
 
         logging.info("SVMTrainWorker: training ended.")

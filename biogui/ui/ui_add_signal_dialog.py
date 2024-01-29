@@ -129,26 +129,6 @@ class Ui_AddSignalDialog(object):
 
         self.verticalLayout.addWidget(self.filteringGroupBox)
 
-        self.groupBox = QGroupBox(AddSignalDialog)
-        self.groupBox.setObjectName(u"groupBox")
-        self.groupBox.setAlignment(Qt.AlignCenter)
-        self.groupBox.setCheckable(True)
-        self.groupBox.setChecked(False)
-        self.formLayout_3 = QFormLayout(self.groupBox)
-        self.formLayout_3.setObjectName(u"formLayout_3")
-        self.label9 = QLabel(self.groupBox)
-        self.label9.setObjectName(u"label9")
-
-        self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.label9)
-
-        self.fileNameTextField = QLineEdit(self.groupBox)
-        self.fileNameTextField.setObjectName(u"fileNameTextField")
-
-        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.fileNameTextField)
-
-
-        self.verticalLayout.addWidget(self.groupBox)
-
         self.chSpacingGroupBox = QGroupBox(AddSignalDialog)
         self.chSpacingGroupBox.setObjectName(u"chSpacingGroupBox")
         self.chSpacingGroupBox.setAlignment(Qt.AlignCenter)
@@ -238,8 +218,6 @@ class Ui_AddSignalDialog(object):
         self.filtOrderTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Order of the Butterworth filter (positive integer)", None))
 #endif // QT_CONFIG(tooltip)
         self.filtOrderTextField.setPlaceholderText("")
-        self.groupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure file saving", None))
-        self.label9.setText(QCoreApplication.translate("AddSignalDialog", u"File name:", None))
 #if QT_CONFIG(tooltip)
         self.chSpacingGroupBox.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Only for multi-channel signals", None))
 #endif // QT_CONFIG(tooltip)
@@ -248,7 +226,7 @@ class Ui_AddSignalDialog(object):
         self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"1000", None))
         self.chSpacingTextField.setPlaceholderText("")
         self.label11.setText(QCoreApplication.translate("AddSignalDialog", u"Buffer size (ms):", None))
-        self.bufferSizeTextField.setText(QCoreApplication.translate("AddSignalDialog", u"200", None))
+        self.bufferSizeTextField.setText(QCoreApplication.translate("AddSignalDialog", u"50", None))
         self.bufferSizeTextField.setPlaceholderText("")
     # retranslateUi
 
