@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>sEMG Acquisition GUI</string>
+   <string>biogui</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
