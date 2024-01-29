@@ -27,9 +27,9 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QFileDialog, QWidget
 
+from ..main_window import MainWindow
 from ..ui.ui_decomposition_config import Ui_DecompositionConfig
 from ..ui.ui_mu_plot import Ui_MUPlot
-from ..main_window import MainWindow
 
 
 def extend_signal(x: np.ndarray, f_ext: int = 1) -> np.ndarray:
