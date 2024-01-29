@@ -433,7 +433,7 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._fs = fs
         self._bufferCount = 0
         self._chSpacing = chSpacing
-        self._bufferSize = min(int(round(bufferSizeMs / 1000 * fs)), 1)
+        self._bufferSize = max(int(round(bufferSizeMs / 1000 * fs)), 1)
 
         # Initialize plots
         self._plots = []

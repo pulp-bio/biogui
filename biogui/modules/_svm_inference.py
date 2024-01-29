@@ -488,7 +488,7 @@ class SVMInferenceController(QObject):
 
         if self._confWidget.svmGroupBox.isChecked() and self._confWidget.isValid():
             logging.info("SVMInferenceController: inference started.")
-            self._confWidget.svmGroupBox.setEnabled(False)
+            # self._confWidget.svmGroupBox.setEnabled(False)
 
             # Handle UBHand connection
             if (
@@ -504,6 +504,7 @@ class SVMInferenceController(QObject):
             feature = self._confWidget.featureComboBox.currentText()
             windowSizeMs = lo.toInt(self._confWidget.winSizeTextField.text())[0]
 
+            self._svmWorker.fs = self._confWidget.fs
             self._svmWorker.feature = feature
             self._svmWorker.windowSize = windowSizeMs
             self._svmWorker.model = self._confWidget.model
@@ -525,4 +526,4 @@ class SVMInferenceController(QObject):
                 self._tcpServerController.stopTransmission()
 
             logging.info("SVMInferenceController: inference stopped.")
-            self._confWidget.svmGroupBox.setEnabled(True)
+            # self._confWidget.svmGroupBox.setEnabled(True)

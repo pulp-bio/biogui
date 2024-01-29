@@ -35,7 +35,7 @@ class Ui_SVMInferenceConfig(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.ubHandGroupBox = QGroupBox(self.svmGroupBox)
         self.ubHandGroupBox.setObjectName(u"ubHandGroupBox")
-        self.ubHandGroupBox.setEnabled(True)
+        self.ubHandGroupBox.setEnabled(False)
         self.ubHandGroupBox.setCheckable(True)
         self.formLayout_3 = QFormLayout(self.ubHandGroupBox)
         self.formLayout_3.setObjectName(u"formLayout_3")
@@ -89,6 +89,7 @@ class Ui_SVMInferenceConfig(object):
 
         self.horizontalLayout.addWidget(self.rescanSignalsButton)
 
+        self.horizontalLayout.setStretch(0, 4)
         self.horizontalLayout.setStretch(1, 1)
 
         self.formLayout.setLayout(0, QFormLayout.FieldRole, self.horizontalLayout)
@@ -135,18 +136,23 @@ class Ui_SVMInferenceConfig(object):
 
         self.formLayout.setWidget(4, QFormLayout.FieldRole, self.svmModelPathLabel)
 
+
+        self.verticalLayout_2.addLayout(self.formLayout)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.label6 = QLabel(self.svmGroupBox)
         self.label6.setObjectName(u"label6")
 
-        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.label6)
+        self.horizontalLayout_2.addWidget(self.label6)
 
         self.svmPredLabel = QLabel(self.svmGroupBox)
         self.svmPredLabel.setObjectName(u"svmPredLabel")
 
-        self.formLayout.setWidget(5, QFormLayout.FieldRole, self.svmPredLabel)
+        self.horizontalLayout_2.addWidget(self.svmPredLabel)
 
 
-        self.verticalLayout_2.addLayout(self.formLayout)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
 
         self.verticalLayout.addWidget(self.svmGroupBox)
