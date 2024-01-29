@@ -22,7 +22,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from biosignal_acquisition_gui import MainWindow, modules
+from biogui import MainWindow, modules
 
 
 def main():
