@@ -1,0 +1,8 @@
+{
+    "gestures": {
+        "isometric grasp": "2.png"
+    },
+    "nReps": 3,
+    "durationMs": 5000,
+    "imageFolder": "acquisitions/hand_mov"
+}
