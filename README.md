@@ -1,7 +1,7 @@
 # biogui
 
 ## Introduction
-MModular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
+Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
 
 ## Environment setup
 The code is compatible with Python 3.7+. To create and activate the Python environment, run the following commands:
