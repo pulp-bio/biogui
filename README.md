@@ -10,6 +10,11 @@ python -m venv <ENV_NAME>
 source <ENV_NAME>/bin/activate
 ```
 
+Then, **from within the virtual environment**, the required packages can be installed with the following command:
+```
+pip install -r requirements.txt
+```
+
 ## Usage
 Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py).
 
