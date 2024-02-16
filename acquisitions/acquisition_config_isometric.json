@@ -1,8 +1,15 @@
 {
     "gestures": {
-        "isometric grasp": "2.png"
+        "thumb extension": "fist.png",
+        "index flexion": "index_pointed.png",
+        "index extension": "index_pointed.png",
+        "middle flexion": "pinch.png",
+        "ring flexion": "pinch.png",
+        "little flexion": "pinch.png",
+        "wrist extension": "pinch.png",
+        "wrist flexion": "pinch.png"
     },
-    "nReps": 3,
-    "durationMs": 5000,
-    "imageFolder": "acquisitions/hand_mov"
+    "nReps": 1,
+    "durationMs": 6000,
+    "imageFolder": "acquisitions/gestures_images"
 }

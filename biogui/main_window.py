@@ -156,6 +156,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
                 return
 
             self._dataSourceConfig["decodeFn"] = decodeFn
+            # Limit display text to 50 characters
             displayText = (
                 filePath
                 if len(filePath) <= 50

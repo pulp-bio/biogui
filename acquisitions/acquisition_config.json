@@ -4,15 +4,11 @@
         "fist (power grip)": "fist.png",
         "index pointed": "index_pointed.png",
         "ok (thumb up)": "ok.png",
-        "horns": "horns.png",
-        "shaka": "shaka.png",
-        "victory": "victory.png",
         "pinch": "pinch.png",
-        "fingers crossed": "fingers_crossed.png",
         "wrist supination": "wrist_supination.png",
         "wrist pronation": "wrist_pronation.png"
     },
-    "nReps": 3,
-    "durationMs": 4000,
+    "nReps": 10,
+    "durationMs": 5000,
     "imageFolder": "acquisitions/gestures_images"
 }
