@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>720</width>
-    <height>600</height>
+    <width>500</width>
+    <height>722</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,9 +19,9 @@
   <property name="modal">
    <bool>false</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
    <item>
-    <layout class="QFormLayout" name="formLayout">
+    <layout class="QFormLayout" name="formLayout1">
      <item row="0" column="0">
       <widget class="QLabel" name="label1">
        <property name="text">
@@ -42,7 +42,7 @@
      <item row="1" column="1">
       <widget class="QLineEdit" name="sigNameTextField">
        <property name="toolTip">
-        <string>Name of the signal to display in the GUI</string>
+        <string>Name of the signal to display in the GUI (must be unique)</string>
        </property>
        <property name="placeholderText">
         <string/>
@@ -99,7 +99,10 @@
      <property name="checkable">
       <bool>true</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout_2">
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout2">
       <item row="0" column="0">
        <widget class="QLabel" name="label5">
         <property name="frameShape">
@@ -137,7 +140,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label6">
         <property name="text">
-         <string>First critical frequency:</string>
+         <string>First critical frequency (in sps):</string>
         </property>
        </widget>
       </item>
@@ -154,7 +157,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label7">
         <property name="text">
-         <string>Second critical frequency:</string>
+         <string>Second critical frequency (in sps):</string>
         </property>
        </widget>
       </item>
@@ -192,9 +195,69 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="fileSavingGroupBox">
+     <property name="title">
+      <string>Configure file saving</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout3">
+      <item row="1" column="1">
+       <widget class="QPushButton" name="browseOutDirButton">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label9">
+        <property name="text">
+         <string>Directory where the file will be saved:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label10">
+        <property name="text">
+         <string>Path to directoy:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="outDirPathLabel">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label11">
+        <property name="text">
+         <string>File name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="fileNameTextField">
+        <property name="toolTip">
+         <string>If empty, a name based on the timestamp will be employed</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="chSpacingGroupBox">
      <property name="toolTip">
-      <string>Only for multi-channel signals</string>
+      <string/>
      </property>
      <property name="title">
       <string>Configure plot</string>
@@ -211,16 +274,19 @@
      <property name="checked">
       <bool>false</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout_4">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label10">
+     <layout class="QFormLayout" name="formLayout4">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label14">
         <property name="text">
-         <string>Channel spacing:</string>
+         <string>Channel spacing (in a.u.):</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="2" column="1">
        <widget class="QLineEdit" name="chSpacingTextField">
+        <property name="toolTip">
+         <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
+        </property>
         <property name="text">
          <string>1000</string>
         </property>
@@ -229,20 +295,40 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label11">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label12">
+        <property name="toolTip">
+         <string/>
+        </property>
         <property name="text">
-         <string>Buffer size (ms):</string>
+         <string>Buffer size (in ms):</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="0" column="1">
        <widget class="QLineEdit" name="bufferSizeTextField">
+        <property name="toolTip">
+         <string>If it's low, plots are re-drawn more frequently increasing CPU load; if it's high, plots are re-drawn less frequently making them erratic</string>
+        </property>
         <property name="text">
          <string>50</string>
         </property>
         <property name="placeholderText">
          <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="renderLengthTextField">
+        <property name="toolTip">
+         <string>Length of the window with the plot</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label13">
+        <property name="text">
+         <string>Render length (in s):</string>
         </property>
        </widget>
       </item>

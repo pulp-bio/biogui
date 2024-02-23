@@ -466,7 +466,7 @@ class _SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         # Plot placeholder data
         ys = np.asarray(self._yQueue).T
         for i in range(self._nCh):
-            pen = pg.mkPen(color=lut[i])
+            pen = pg.mkPen(color=lut[i], width=2)
             self._plots.append(
                 self.graphWidget.plot(
                     self._xQueue, ys[i] + self._chSpacing * i, pen=pen
