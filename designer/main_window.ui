@@ -55,9 +55,30 @@
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,1,1">
+        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,1,2">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,1">
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QPushButton" name="loadConfButton">
+             <property name="text">
+              <string>Load configuration</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="saveConfButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Save configuration</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="9,1">
            <item>
             <widget class="QPushButton" name="addSourceButton">
              <property name="text">
@@ -103,7 +124,7 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,1">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout4" stretch="7,1,1,1">
+             <layout class="QHBoxLayout" name="horizontalLayout5" stretch="7,1,1,1">
               <item>
                <widget class="QPushButton" name="addSignalButton">
                 <property name="toolTip">

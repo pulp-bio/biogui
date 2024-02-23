@@ -370,9 +370,14 @@ class AcquisitionController(QObject):
             self._restFlag = False
         else:  # gesture
             gestureLabel = self._gesturesLabels[self._gestCounter]
-            old_trigger = self._fileWriterWorker.trigger
-            new_trigger = self._gesturesId[gestureLabel]
-            image = self._confWidget.config["gestures"][gestureLabel]
+            if gestureLabel != "last_stop":
+                old_trigger = self._fileWriterWorker.trigger
+                new_trigger = self._gesturesId[gestureLabel]
+                image = self._confWidget.config["gestures"][gestureLabel]
+            else:
+                old_trigger = self._fileWriterWorker.trigger
+                new_trigger = 0
+                image = "stop"
 
             self._gestCounter += 1
             self._restFlag = True
@@ -394,6 +399,7 @@ class AcquisitionController(QObject):
             for i, k in enumerate(self._confWidget.config["gestures"].keys()):
                 self._gesturesId[k] = i + 1
                 self._gesturesLabels.extend([k] * self._confWidget.config["nReps"])
+            self._gesturesLabels.append("last_stop")
 
             self._gestWidget.imageFolder = self._confWidget.config["imageFolder"]
             self._gestWidget.renderImage("start")

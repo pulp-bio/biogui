@@ -28,7 +28,6 @@ from PySide6.QtCore import QLocale, QObject, QSize, QThread, Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator, QMovie
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from scipy import signal
-from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -173,7 +172,7 @@ class _SVMTrainWorker(QObject):
         logging.info(
             f"SVMTrainWorker: training... (training set size: {xTrain.shape}, test set size: {xTest.shape})"
         )
-        self._model.fit(xTrain[::10], yTrain[::10])
+        self._model.fit(xTrain[::1000], yTrain[::1000])
         yPred = self._model.predict(xTest)
 
         logging.info("SVMTrainWorker: training ended.")
