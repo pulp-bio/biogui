@@ -233,7 +233,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         minCh, maxCh = 1, 64
         nDec = 3
         minFreq, maxFreq = 1 * 10 ** (-nDec), 20_000.0
-        minOrd, maxOrd = 1, 8
+        minOrd, maxOrd = 1, 20
 
         self.nChTextField.setToolTip(f"Integer between {minCh} and {maxCh}")
         nChValidator = QIntValidator(bottom=minCh, top=maxCh)
