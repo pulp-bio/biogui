@@ -150,21 +150,51 @@ class SerialDataSource(DataSource):
 
         # Open serial port
         ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
+        # while ser.in_waiting:
+        #     ser.read()
 
         logging.info("DataWorker: serial communication started.")
 
-        ser.write(b"=")  # start code
+        ser.write((15).to_bytes())
+        state = ser.read()
+        logging.info(f"Old state: {int.from_bytes(state)}")
+
+        ser.write(bytes([20, 1, 50]))
+
+        time.sleep(0.2)
+
+        ser.write((15).to_bytes())
+        state = ser.read()
+        logging.info(f"New state: {int.from_bytes(state)}")
+
+        ser.write((18).to_bytes())  # start code
+
+        params = [6, 0, 1, 4, 0, 13, 10]
+        ser.write(bytes(params))
+
+        counter = 0
+
+        # ser.write(b"=")  # start code
         while not self._stopReadingFlag:
             data = ser.read(self._packetSize)
+            counter += 1
 
             # Check number of bytes read
             if len(data) != self._packetSize:
                 self.errorSig.emit("Serial communication failed.")
                 logging.error("DataWorker: serial communication failed.")
+
+                logging.info(f"Crashed after reading {counter} packets.")
+
+                ser.write((15).to_bytes())
+                state = ser.read()
+                logging.info(f"Error state: {int.from_bytes(state)}")
+
                 break
 
             self.dataReadySig.emit(data)
-        ser.write(b":")  # stop code
+        # ser.write(b":")  # stop code
+        ser.write((19).to_bytes())  # stop code
 
         # Close port
         time.sleep(0.2)
