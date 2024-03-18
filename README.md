@@ -16,6 +16,17 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+
+### Interface with board
+To enable the communication between the GUI and a board, one must provide a Python file with the following specifications:
+
+- `startSeq`: sequence of commands to start the board, expressed as a list of bytes;
+- `stopSeq`: sequence of commands to stop the board, expressed as a list of bytes;
+- `SigsPacket`: named tuple containing one field for each signal to read from the board;
+- `decodeFn`: function that decodes each packet of byte read from the board into the specified signals.
+
+Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
+
 Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py).
 
 ## Authors
