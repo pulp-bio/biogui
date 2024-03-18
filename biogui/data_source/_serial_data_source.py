@@ -153,7 +153,6 @@ class SerialDataSource(DataSource):
 
         logging.info("DataWorker: serial communication started.")
 
-        ser.write(b"=")  # start code
         while not self._stopReadingFlag:
             data = ser.read(self._packetSize)
 
@@ -164,7 +163,6 @@ class SerialDataSource(DataSource):
                 break
 
             self.dataReadySig.emit(data)
-        ser.write(b":")  # stop code
 
         # Close port
         time.sleep(0.2)
