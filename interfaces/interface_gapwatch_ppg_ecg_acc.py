@@ -33,7 +33,7 @@ stopSeq = []
 """Sequence of commands to stop the board."""
 
 
-SigsPacket = namedtuple("SigsPacket", "ppg", "ecg", "acc")
+SigsPacket = namedtuple("SigsPacket", "ppg, ecg, acc")
 """Named tuple containing the PPG, ECG and accelerometer packets."""
 
 
