@@ -30,29 +30,25 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QW
 
 from . import data_source
 from .data_source import DataSourceType
-from .stream_controller import DataPacket, DecodeFn, StreamingController
+from .stream_controller import DataPacket, InterfaceModule, StreamingController
 from .ui.ui_add_signal_dialog import Ui_AddSignalDialog
 from .ui.ui_add_source_dialog import Ui_AddSourceDialog
 from .ui.ui_main_window import Ui_MainWindow
 from .ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
 
 
-def _loadDecodeFnFromFile(
-    filePath: str, functionName: str
-) -> tuple[DecodeFn | None, str]:
-    """Load a decode function from a Python file.
+def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
+    """Load an interface from a Python file.
 
     Parameters
     ----------
     filePath : str
         Path to Python file.
-    functionName : str
-        Name of the function to load from the file.
 
     Returns
     -------
-    DecodeFn or None
-        Decode function, or None if the module is not valid.
+    InterfaceModule or None
+        InterfaceModule object, or None if the module is not valid.
     str
         Error message.
     """
@@ -71,13 +67,42 @@ def _loadDecodeFnFromFile(
     except ImportError:
         return None, "Cannot import the selected Python module."
 
-    if not hasattr(module, functionName):
+    if not hasattr(module, "PACKET_SIZE"):
+        return (
+            None,
+            'The selected Python module does not contain a "PACKET_SIZE" constant.',
+        )
+    if not hasattr(module, "startSeq"):
+        return (
+            None,
+            'The selected Python module does not contain a "startSeq" variable.',
+        )
+    if not hasattr(module, "stopSeq"):
+        return (
+            None,
+            'The selected Python module does not contain a "stopSeq" variable.',
+        )
+    if not hasattr(module, "SigsPacket"):
+        return (
+            None,
+            'The selected Python module does not contain a "SigsPacket" named tuple.',
+        )
+    if not hasattr(module, "decodeFn"):
         return (
             None,
             'The selected Python module does not contain a "decodeFn" function.',
         )
 
-    return module.decodeFn, ""
+    return (
+        InterfaceModule(
+            packetSize=module.PACKET_SIZE,
+            startSeq=module.startSeq,
+            stopSeq=module.stopSeq,
+            sigNames=module.SigsPacket._fields,
+            decodeFn=module.decodeFn,
+        ),
+        "",
+    )
 
 
 class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
@@ -112,9 +137,6 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         self._configWidget = data_source.getConfigWidget(DataSourceType.SERIAL, self)
         self.sourceConfigContainer.addWidget(self._configWidget)
 
-        packetSizeValidator = QIntValidator(bottom=1, top=2147483647)
-        self.packetSizeTextField.setValidator(packetSizeValidator)
-
         self._dataSourceConfig = {}
         self._isValid = False
         self._errMessage = ""
@@ -142,10 +164,8 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
             filter="*.py",
         )
         if filePath:
-            decodeFn, errMessage = _loadDecodeFnFromFile(
-                filePath, functionName="decodeFn"
-            )
-            if decodeFn is None:
+            interfaceModule, errMessage = _loadInterfaceFromFile(filePath)
+            if interfaceModule is None:
                 QMessageBox.critical(
                     self,
                     "Invalid Python file",
@@ -155,7 +175,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
                 )
                 return
 
-            self._dataSourceConfig["decodeFn"] = decodeFn
+            self._dataSourceConfig["interfaceModule"] = interfaceModule
             # Limit display text to 50 characters
             displayText = (
                 filePath
@@ -180,16 +200,10 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
     def _addSourceHandler(self) -> None:
         """Validate user input in the form."""
 
-        if "decodeFn" not in self._dataSourceConfig:
+        if "interfaceModule" not in self._dataSourceConfig:
             self._isValid = False
-            self._errMessage = "No decode function was provided."
+            self._errMessage = "No interface was provided."
             return
-
-        if not self.packetSizeTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "packet size" field is invalid.'
-            return
-        self._dataSourceConfig["packetSize"] = int(self.packetSizeTextField.text())
 
         if self.sourceComboBox.currentText() == "":
             self._isValid = False
@@ -612,8 +626,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             # Create streaming controller
             dataSourceConfig = addSourceDialog.dataSourceConfig
-            decodeFn = dataSourceConfig.pop("decodeFn")
-            streamController = StreamingController(dataSourceConfig, decodeFn, self)
+            interfaceModule = dataSourceConfig.pop("interfaceModule")
+            dataSourceConfig["packetSize"] = interfaceModule.packetSize
+            streamController = StreamingController(
+                dataSourceConfig, interfaceModule.decodeFn, self
+            )
             self._streamControllers[str(streamController)] = streamController
             self._source2sigMap[str(streamController)] = []
 

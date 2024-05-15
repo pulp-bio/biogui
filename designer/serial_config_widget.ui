@@ -54,6 +54,11 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>serialPortsComboBox</tabstop>
+  <tabstop>rescanSerialPortsButton</tabstop>
+  <tabstop>baudRateTextField</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
