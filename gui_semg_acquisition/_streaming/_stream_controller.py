@@ -72,7 +72,54 @@ class _SerialWorker(QObject):
         """Read data indefinitely from the serial port, and send it."""
         logging.info("Worker: serial communication started.")
 
-        self._ser.write(b"=")
+        ampere = [20] * 16
+        fattoreV0 = 7.26
+        fattoreV1 = 2
+        resistenza = 33
+
+        buff = bytearray(10)
+
+        # Set fs = 1kHz
+        buff[0] = ord("C")
+        buff[1] = ord("M")
+        buff[2] = ord("D")
+        buff[3] = ord("8")
+        self._ser.write(buff)
+
+        # Set DAC
+        buff[0] = ord("C")
+        buff[1] = ord("M")
+        buff[2] = ord("D")
+        buff[3] = ord("D")
+        buff[4] = ord("1")
+        for i in range(16):
+            buff[5] = i
+
+            if i % 4 == 0:
+                tensioneDAC = fattoreV0 * resistenza * ampere[i] / 1000
+            else:
+                tensioneDAC = fattoreV1 * resistenza * ampere[i] / 1000
+
+            if i < 8:
+                tensioneDACfin = int(tensioneDAC * 4096 / 5)
+            else:
+                tensioneDACfin = int(tensioneDAC * 4096 / 5)
+
+            buff[6] = tensioneDACfin // 256
+            buff[7] = tensioneDACfin % 256
+
+            self._ser.write(buff)
+            time.sleep(0.025)
+
+        # Start
+        buff = bytearray(10)
+        buff[0] = ord("C")
+        buff[1] = ord("M")
+        buff[2] = ord("D")
+        buff[3] = ord("1")
+        self._ser.write(buff)
+
+        # Read loop
         while not self._stopReading:
             data = self._ser.read(self._packetSize)
 
@@ -84,7 +131,21 @@ class _SerialWorker(QObject):
 
             self.dataReadySig.emit(data)
 
-        self._ser.write(b":")
+        # Stop
+        buff[0] = ord("C")
+        buff[1] = ord("M")
+        buff[2] = ord("D")
+        buff[3] = ord("2")
+        self._ser.write(buff)
+
+        # DAC
+        # buff[0] = ord("C")
+        # buff[1] = ord("M")
+        # buff[2] = ord("D")
+        # buff[3] = ord("D")
+        # buff[4] = ord("0")
+        # self._ser.write(buff)
+        
         time.sleep(0.2)
         self._ser.reset_input_buffer()
         time.sleep(0.2)
@@ -151,11 +212,11 @@ class _PreprocessWorker(QObject):
         self._nSamp = nSamp
 
         # Filtering
-        self._sos_PPG = signal.butter(N=6, Wn=(0.5,10), fs=sampFreq, btype="bandpass", output="sos")
+        self._sos_PPG = signal.butter(N=6, Wn=(0.5, 10), fs=sampFreq, btype="bandpass", output="sos")
         self._zi_PPG = np.zeros((self._sos_PPG.shape[0], 2, 2))
-        self._sos_EDA = signal.butter(N=6, Wn=(10), fs=sampFreq, btype="lowpass", output="sos")
+        self._sos_EDA = signal.butter(N=6, Wn=10, fs=sampFreq, btype="lowpass", output="sos")
         self._zi_EDA = np.zeros((self._sos_EDA.shape[0], 2, 2))
-        self._sos_FORCE = signal.butter(N=6, Wn=(10), fs=sampFreq, btype="lowpass", output="sos")
+        self._sos_FORCE = signal.butter(N=6, Wn=10, fs=sampFreq, btype="lowpass", output="sos")
         self._zi_FORCE = np.zeros((self._sos_FORCE.shape[0], 2, 2))
 
     @Slot(bytes)
@@ -168,30 +229,48 @@ class _PreprocessWorker(QObject):
         data : bytes
             New binary data.
         """
-        # ADC parameters
-        vRefADC = 5.0
-        gainADC = 1.0
+        # # ADC parameters
+        # vRefADC = 5.0
+        # gainADC = 1.0
 
-        dataTmp = bytearray(data)
-        # Convert 24-bit to 32-bit integer
-        pos = 0
-        for _ in range(len(dataTmp) // 3):
-            preFix = 255 if dataTmp[pos] > 127 else 0
-            dataTmp.insert(pos, preFix)
-            pos += 4
-        dataRef = np.asarray(struct.unpack(f">{self._nSamp * self._nCh}i", dataTmp), dtype=np.int32)
+        # dataTmp = bytearray(data)
+        # # Convert 24-bit to 32-bit integer
+        # pos = 0
+        # for _ in range(len(dataTmp) // 3):
+        #     preFix = 255 if dataTmp[pos] > 127 else 0
+        #     dataTmp.insert(pos, preFix)
+        #     pos += 4
+        # dataRef = np.asarray(struct.unpack(f">{self._nSamp * self._nCh}i", dataTmp), dtype=np.int32)
 
-        # Reshape and convert ADC readings to V
-        dataRef = dataRef.reshape(self._nSamp, self._nCh)
-        dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
-        dataRef = dataRef.astype("float32")
+        # # Reshape and convert ADC readings to V
+        # dataRef = dataRef.reshape(self._nSamp, self._nCh)
+        # dataRef = dataRef * (vRefADC / gainADC / 2**24)  # V
+        # dataRef = dataRef.astype("float32")
+        # self.dataReadySig.emit(dataRef)
+
+        dataRef = np.asarray(struct.unpack(f"<{15 * 256}i", data[:-4]), dtype="int32").reshape(-1, 15)
+        #conversion
+        dataRef = dataRef * 4.5/2**23
         self.dataReadySig.emit(dataRef)
-
+        
         # Filter
-        dataFlt = dataRef.copy()
-        # dataFlt[:,0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, -dataRef[:,0:2], axis=0, zi=self._zi_PPG)
-        # dataFlt[:,2:4], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:,2:4], axis=0, zi=self._zi_FORCE)
-        # dataFlt[:,4:6], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:,4:6], axis=0, zi=self._zi_EDA)
+        dataFlt = np.zeros(shape=(256, 6), dtype="float32")
+        dataFlt[:, 0] = dataRef[:, 1]
+        dataFlt[:, 1] = dataRef[:, 2]
+        dataFlt[:, 2] = dataRef[:, 3]
+        dataFlt[:, 3] = dataRef[:, 4]
+        dataFlt[:, 4] = dataRef[:, 5]
+        dataFlt[:, 5] = dataRef[:, 6]
+        dataFlt[:, 0:2], self._zi_PPG = signal.sosfilt(self._sos_PPG, dataRef[:, 1:3], axis=0, zi=self._zi_PPG)
+        dataFlt[:, 4:6], self._zi_FORCE = signal.sosfilt(self._sos_FORCE, dataRef[:, 3:5], axis=0, zi=self._zi_FORCE)
+        dataFlt[:, 2:4], self._zi_EDA = signal.sosfilt(self._sos_EDA, dataRef[:, 5:7], axis=0, zi=self._zi_EDA)
+
+
+        dataFlt[:, 0] = - dataFlt[:, 0]
+        dataFlt[:, 2] = - dataFlt[:, 3] + dataFlt[:, 2]*10
+        #dataFlt[:, 3] = dataFlt[:, 3]
+        #dataFlt[:, 5] = - dataFlt[:, 5]
+
         dataFlt = dataFlt.astype("float32")
         self.dataReadyFltSig.emit(dataFlt)
 
@@ -236,12 +315,14 @@ class StreamingController(QObject):
 
         # Create workers and threads
         self._serialWorker = _SerialWorker(
-            serialPort, packetSize=90, baudeRate=230_400
+            serialPort,
+            packetSize=15_364,  # 3_844,
+            baudeRate=115_200,
         )
         self._preprocessWorker = _PreprocessWorker(
-            nCh=6,
+            nCh=15,
             sampFreq=sampFreq,
-            nSamp=5,
+            nSamp=256,
         )
         self._serialThread = QThread()
         self._serialWorker.moveToThread(self._serialThread)
