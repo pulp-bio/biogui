@@ -29,7 +29,7 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QWidget
 
 from ._streaming import StreamingController
-from ._ui.ui_main_window import Ui_MainWindow
+from ._ui.ui_New_GUI_2 import Ui_MainWindow
 
 
 def serialPorts():
@@ -150,18 +150,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.EDA_DX.clear()
         self.FORCE_SX.clear()
         self.FORCE_DX.clear()
-        self.PPG_SX.setTitle("PPG LEFT", color="b", size="10pt")
-        self.PPG_DX.setTitle("PPG RIGHT", color="b", size="10pt")
-        self.EDA_SX.setTitle("EDA LEFT", color="b", size="10pt")
-        self.EDA_DX.setTitle("EDA RIGHT", color="b", size="10pt")
-        self.FORCE_SX.setTitle("FORCE LEFT", color="b", size="10pt")
-        self.FORCE_DX.setTitle("FORCE RIGHT", color="b", size="10pt")
+        self.ACC_X.clear()
+        self.ACC_Y.clear()
+        self.ACC_Z.clear()
+        self.PPG_SX.setTitle("PPG LEFT", color="r", size="20pt")
+        self.PPG_DX.setTitle("PPG RIGHT", color="r", size="20pt")
+        self.EDA_SX.setTitle("EDA LEFT", color="r", size="20pt")
+        self.EDA_DX.setTitle("EDA RIGHT", color="r", size="20pt")
+        self.FORCE_SX.setTitle("FORCE LEFT", color="r", size="20pt")
+        self.FORCE_DX.setTitle("FORCE RIGHT", color="r", size="20pt")
+        self.ACC_X.setTitle("X AXIS", color="r", size="20pt")
+        self.ACC_Y.setTitle("Y AXIS", color="r", size="20pt")
+        self.ACC_Z.setTitle("Z AXIS", color="r", size="20pt")
         #self.PPG_SX.getPlotItem().hideAxis("bottom")
-        #self.PPG_SX.getPlotItem().hideAxis("left")
+        self.PPG_SX.getPlotItem().hideAxis("left")
+        self.PPG_DX.getPlotItem().hideAxis("left")
+        self.EDA_DX.getPlotItem().hideAxis("left")
+        self.EDA_SX.getPlotItem().hideAxis("left")
+        self.FORCE_DX.getPlotItem().hideAxis("left")
+        self.FORCE_SX.getPlotItem().hideAxis("left")
         # Initialize queues
         for i in range(-self._xQueue.maxlen, 0):
             self._xQueue.append(i / self._sampFreq)
-            self._yQueue.append(np.zeros(6))
+            self._yQueue.append(np.zeros(9))
         # Plot placeholder data
         ys = np.asarray(self._yQueue).T
         
@@ -172,16 +183,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.PPG_DX.plot(self._xQueue, ys[0])
         )
         self._plots.append(
-            self.EDA_SX.plot(self._xQueue, ys[4])
+            self.EDA_SX.plot(self._xQueue, ys[2])
         )
         self._plots.append(
-            self.EDA_DX.plot(self._xQueue, ys[5])
+            self.EDA_DX.plot(self._xQueue, ys[3])
         )
         self._plots.append(
-            self.FORCE_SX.plot(self._xQueue, ys[3])
+            self.FORCE_SX.plot(self._xQueue, ys[4])
         )
         self._plots.append(
-            self.FORCE_DX.plot(self._xQueue, ys[2])
+            self.FORCE_DX.plot(self._xQueue, ys[5])
+        )
+        self._plots.append(
+            self.ACC_X.plot(self._xQueue, ys[7])
+        )
+        self._plots.append(
+            self.ACC_Y.plot(self._xQueue, ys[6])
+        )
+        self._plots.append(
+            self.ACC_Z.plot(self._xQueue, ys[8])
         )
 
     def _rescanSerialPorts(self) -> None:
@@ -222,7 +242,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self._bufferCount >= self._bufferSize:
             ys = np.asarray(self._yQueue).T
-            for i in range(6):
+            for i in range(9):
                 self._plots[i].setData(
                     self._xQueue, ys[i], skipFiniteCheck=True
                 )

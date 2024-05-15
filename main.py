@@ -34,7 +34,7 @@ def main():
     parser.add_argument(
         "--sampFreq",
         required=False,
-        default=1000,
+        default=4000,
         type=int,
         help="Sampling frequency (in sps)",
     )

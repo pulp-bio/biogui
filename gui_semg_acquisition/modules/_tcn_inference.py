@@ -61,7 +61,7 @@ class _TCNWorker(QObject):
     def __init__(self) -> None:
         super().__init__()
 
-        self._bufferSize = 2 * 60 * 1000
+        self._bufferSize = 2 * 60 * 4000
         self._queue = deque()
 
         self._timeElapsed = 0
@@ -94,7 +94,7 @@ class _TCNWorker(QObject):
         if len(self._queue) == self._bufferSize:
             data = np.asarray(self._queue)
             # Resample to 20Hz
-            for i in [10,5]:
+            for i in [20,10]:
                 data = signal.decimate(data,i)
 
             # Add time channel
@@ -116,7 +116,7 @@ class _TCNWorker(QObject):
             logging.info(f"TCNWorker: predicted {prediction}.")
 
             # Update buffer
-            [self._queue.popleft() for _ in range(30000)]  # remove the first 30 seconds of data
+            [self._queue.popleft() for _ in range(120000)]  # remove the first 30 seconds of data
 
 
 class TCNInferenceController(QObject):
