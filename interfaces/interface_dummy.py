@@ -20,11 +20,14 @@ from collections import namedtuple
 
 import numpy as np
 
-startSeq = []
+PACKET_SIZE: int = 0
+"""Number of bytes in each package."""
+
+startSeq: list[bytes] = []
 """Sequence of commands to start the board."""
 
 
-stopSeq = []
+stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
 

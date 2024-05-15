@@ -76,7 +76,6 @@ def main():
     argConstraint = sum([bool(args["virtHand"]), bool(args["gestureMapping"])])
     if argConstraint != 0 and argConstraint != 2:
         parser.error("--virtHand and --gestureMapping must be given together")
-
     # Setup application and main window
     app = QApplication(sys.argv)
     mainWin = MainWindow()
@@ -85,11 +84,11 @@ def main():
     # Add widgets
     if args["acq"]:
         modules.AcquisitionController(mainWin)  # add acquisition module
-    if args["svmTrain"]:
-        svmTrainController = modules.SVMTrainController()
-        svmTrainController.subscribe(mainWin)
-    if args["svmInference"]:
-        modules.SVMInferenceController(mainWin)
+    # if args["svmTrain"]:
+    #     svmTrainController = modules.SVMTrainController()
+    #     svmTrainController.subscribe(mainWin)
+    # if args["svmInference"]:
+    #     modules.SVMInferenceController(mainWin)
 
     # Run event loop
     sys.exit(app.exec())

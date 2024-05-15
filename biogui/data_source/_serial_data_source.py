@@ -152,7 +152,7 @@ class SerialDataSource(DataSource):
         ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
 
         logging.info("DataWorker: serial communication started.")
-
+        ser.write(b"=")
         while not self._stopReadingFlag:
             data = ser.read(self._packetSize)
 
@@ -163,7 +163,7 @@ class SerialDataSource(DataSource):
                 break
 
             self.dataReadySig.emit(data)
-
+        ser.write(b":")
         # Close port
         time.sleep(0.2)
         ser.reset_input_buffer()

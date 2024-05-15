@@ -3,7 +3,9 @@
 ## Introduction
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
 
-## Environment setup
+## Usage
+
+### Environment setup
 The code is compatible with Python 3.7+. To create and activate the Python environment, run the following commands:
 ```
 python -m venv <ENV_NAME>
@@ -15,8 +17,6 @@ Then, **from within the virtual environment**, the required packages can be inst
 pip install -r requirements.txt
 ```
 
-## Usage
-
 ### Interface with board
 To enable the communication between the GUI and a board, one must provide a Python file with the following specifications:
 
@@ -27,7 +27,8 @@ To enable the communication between the GUI and a board, one must provide a Pyth
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
 
-Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py).
+### Execution
+Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py), which launches the main window.
 
 ## Authors
 - [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en)

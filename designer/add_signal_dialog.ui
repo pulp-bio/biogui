@@ -323,6 +323,9 @@
         <property name="toolTip">
          <string>Length of the window with the plot</string>
         </property>
+        <property name="text">
+         <string>4</string>
+        </property>
        </widget>
       </item>
       <item row="1" column="0">
@@ -347,6 +350,23 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>sourceComboBox</tabstop>
+  <tabstop>sigNameTextField</tabstop>
+  <tabstop>nChTextField</tabstop>
+  <tabstop>fsTextField</tabstop>
+  <tabstop>filteringGroupBox</tabstop>
+  <tabstop>filtTypeComboBox</tabstop>
+  <tabstop>freq1TextField</tabstop>
+  <tabstop>freq2TextField</tabstop>
+  <tabstop>filtOrderTextField</tabstop>
+  <tabstop>fileSavingGroupBox</tabstop>
+  <tabstop>browseOutDirButton</tabstop>
+  <tabstop>fileNameTextField</tabstop>
+  <tabstop>bufferSizeTextField</tabstop>
+  <tabstop>renderLengthTextField</tabstop>
+  <tabstop>chSpacingTextField</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

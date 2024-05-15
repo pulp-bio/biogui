@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -55,22 +55,6 @@ class Ui_MainWindow(object):
         self.streamConfGroupBox.setAlignment(Qt.AlignCenter)
         self.verticalLayout1 = QVBoxLayout(self.streamConfGroupBox)
         self.verticalLayout1.setObjectName(u"verticalLayout1")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.loadConfButton = QPushButton(self.streamConfGroupBox)
-        self.loadConfButton.setObjectName(u"loadConfButton")
-
-        self.horizontalLayout.addWidget(self.loadConfButton)
-
-        self.saveConfButton = QPushButton(self.streamConfGroupBox)
-        self.saveConfButton.setObjectName(u"saveConfButton")
-        self.saveConfButton.setEnabled(False)
-
-        self.horizontalLayout.addWidget(self.saveConfButton)
-
-
-        self.verticalLayout1.addLayout(self.horizontalLayout)
-
         self.horizontalLayout4 = QHBoxLayout()
         self.horizontalLayout4.setObjectName(u"horizontalLayout4")
         self.addSourceButton = QPushButton(self.streamConfGroupBox)
@@ -175,8 +159,8 @@ class Ui_MainWindow(object):
 
         self.verticalLayout1.addWidget(self.signalsGroupBox)
 
-        self.verticalLayout1.setStretch(2, 1)
-        self.verticalLayout1.setStretch(3, 2)
+        self.verticalLayout1.setStretch(1, 1)
+        self.verticalLayout1.setStretch(2, 2)
 
         self.confLayout.addWidget(self.streamConfGroupBox)
 
@@ -188,7 +172,7 @@ class Ui_MainWindow(object):
         self.moduleContainer.setGeometry(QRect(0, 0, 374, 478))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout3.addItem(self.verticalSpacer)
 
@@ -227,8 +211,6 @@ class Ui_MainWindow(object):
         self.startStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Start streaming", None))
         self.stopStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Stop streaming", None))
         self.streamConfGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Configuration", None))
-        self.loadConfButton.setText(QCoreApplication.translate("MainWindow", u"Load configuration", None))
-        self.saveConfButton.setText(QCoreApplication.translate("MainWindow", u"Save configuration", None))
         self.addSourceButton.setText(QCoreApplication.translate("MainWindow", u"Add source", None))
 #if QT_CONFIG(tooltip)
         self.deleteSourceButton.setToolTip(QCoreApplication.translate("MainWindow", u"Delete selected source", None))

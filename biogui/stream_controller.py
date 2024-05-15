@@ -19,6 +19,7 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+from collections import namedtuple
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Callable, TypeAlias
@@ -30,6 +31,10 @@ from scipy import signal
 from . import data_source
 
 DecodeFn: TypeAlias = Callable[[bytes], Sequence[np.ndarray]]
+
+InterfaceModule = namedtuple(
+    "InterfaceModule", "packetSize, startSeq, stopSeq, sigNames, decodeFn"
+)
 
 
 @dataclass
@@ -198,8 +203,8 @@ class StreamingController(QObject):
     ----------
     dataSourceConfig : dict
         Dictionary with the data source configuration.
-    decodeFn: DecodeFn
-        Decode function.
+    interfaceModule: InterfaceModule
+        InterfaceModule object.
     parent : QObject or None, default=None
         Parent QObject.
 

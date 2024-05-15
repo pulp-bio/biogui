@@ -18,7 +18,6 @@ limitations under the License.
 
 import struct
 from collections import namedtuple
-from collections.abc import Sequence
 
 import numpy as np
 
@@ -26,11 +25,15 @@ PACKET_SIZE: int = 234
 """Number of bytes in each package."""
 
 
-startSeq = [bytes([20, 1, 50]), (18).to_bytes(), bytes([6, 0, 1, 4, 0, 13, 10])]
+startSeq: list[bytes] = [
+    bytes([20, 1, 50]),
+    (18).to_bytes(),
+    bytes([6, 0, 1, 4, 0, 13, 10]),
+]
 """Sequence of commands to start the board."""
 
 
-stopSeq = [(19).to_bytes()]
+stopSeq: list[bytes] = [(19).to_bytes()]
 """Sequence of commands to stop the board."""
 
 
@@ -38,7 +41,7 @@ SigsPacket = namedtuple("SigsPacket", "emg")
 """Named tuple containing the EMG packet."""
 
 
-def decodeFn(data: bytes) -> Sequence[np.ndarray]:
+def decodeFn(data: bytes) -> SigsPacket:
     """Function to decode the binary data received from BioGAP into a single sEMG signal.
 
     Parameters
@@ -84,4 +87,4 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     emg *= 1_000_000  # uV
     emg = emg.astype("float32")
 
-    return [emg]
+    return SigsPacket(emg=emg)

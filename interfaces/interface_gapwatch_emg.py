@@ -25,11 +25,11 @@ PACKET_SIZE: int = 720
 """Number of bytes in each package."""
 
 
-startSeq = []
+startSeq: list[bytes] = []
 """Sequence of commands to start the board."""
 
 
-stopSeq = []
+stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
 

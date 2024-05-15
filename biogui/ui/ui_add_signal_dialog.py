@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'add_signal_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -218,6 +218,20 @@ class Ui_AddSignalDialog(object):
 
         self.verticalLayout.addWidget(self.buttonBox)
 
+        QWidget.setTabOrder(self.sourceComboBox, self.sigNameTextField)
+        QWidget.setTabOrder(self.sigNameTextField, self.nChTextField)
+        QWidget.setTabOrder(self.nChTextField, self.fsTextField)
+        QWidget.setTabOrder(self.fsTextField, self.filteringGroupBox)
+        QWidget.setTabOrder(self.filteringGroupBox, self.filtTypeComboBox)
+        QWidget.setTabOrder(self.filtTypeComboBox, self.freq1TextField)
+        QWidget.setTabOrder(self.freq1TextField, self.freq2TextField)
+        QWidget.setTabOrder(self.freq2TextField, self.filtOrderTextField)
+        QWidget.setTabOrder(self.filtOrderTextField, self.fileSavingGroupBox)
+        QWidget.setTabOrder(self.fileSavingGroupBox, self.browseOutDirButton)
+        QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
+        QWidget.setTabOrder(self.fileNameTextField, self.bufferSizeTextField)
+        QWidget.setTabOrder(self.bufferSizeTextField, self.renderLengthTextField)
+        QWidget.setTabOrder(self.renderLengthTextField, self.chSpacingTextField)
 
         self.retranslateUi(AddSignalDialog)
         self.buttonBox.accepted.connect(AddSignalDialog.accept)
@@ -300,6 +314,7 @@ class Ui_AddSignalDialog(object):
 #if QT_CONFIG(tooltip)
         self.renderLengthTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Length of the window with the plot", None))
 #endif // QT_CONFIG(tooltip)
+        self.renderLengthTextField.setText(QCoreApplication.translate("AddSignalDialog", u"4", None))
         self.label13.setText(QCoreApplication.translate("AddSignalDialog", u"Render length (in s):", None))
     # retranslateUi
 
