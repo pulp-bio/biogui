@@ -1,14 +1,15 @@
 {
     "gestures": {
-        "open hand": "open_hand.png",
-        "fist (power grip)": "fist.png",
-        "index pointed": "index_pointed.png",
-        "ok (thumb up)": "ok.png",
-        "pinch": "pinch.png",
-        "wrist supination": "wrist_supination.png",
-        "wrist pronation": "wrist_pronation.png"
+        "open hand": "1.png",
+        "fist (power grip)": "2.png",
+        "index pointed": "3.png",
+        "ok (thumb up)": "4.png",
+        "right flexion (wrist supination)": "5.png",
+        "left flexion (wrist pronation)": "6.png",
+        "horns": "7.png",
+        "shaka": "8.png"
     },
-    "nReps": 10,
+    "nReps": 3,
     "durationMs": 5000,
-    "imageFolder": "acquisitions/gestures_images"
+    "imageFolder": "acquisitions/hand_mov"
 }

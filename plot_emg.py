@@ -25,8 +25,8 @@ def main():
     nCh, nSamp = sig.shape
     t = np.arange(nSamp) / fs
 
-    # Band-pass filter
-    sos = signal.butter(4, (20, 500), "bandpass", output="sos", fs=fs)
+    # High-pass filter
+    sos = signal.butter(4, 20, "high", output="sos", fs=fs)
     sig = signal.sosfiltfilt(sos, sig)
 
     # Plot
