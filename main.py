@@ -17,12 +17,13 @@ limitations under the License.
 """
 
 import argparse
+import json
 import logging
 import sys
 
 from PySide6.QtWidgets import QApplication
 
-from biogui import MainWindow, modules
+from gui_semg_acquisition import MainWindow, modules
 
 
 def main():
@@ -30,6 +31,20 @@ def main():
 
     # Input
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--sampFreq",
+        required=False,
+        default=4000,
+        type=int,
+        help="Sampling frequency (in sps)",
+    )
+    parser.add_argument(
+        "--renderLength",
+        required=False,
+        default=5000,
+        type=int,
+        help="Length of the rendering window in the plot (in ms)",
+    )
     parser.add_argument(
         "--acq",
         action="store_true",
@@ -51,16 +66,23 @@ def main():
         help="Whether to add the module for communicating with the virtual hand",
     )
     parser.add_argument(
+        "--tcpAddress",
+        required=False,
+        default="127.0.0.1",
+        type=str,
+        help="Address of the virtual hand server",
+    )
+    parser.add_argument(
         "--tcpPort1",
         required=False,
-        default=3334,
+        default=3333,
         type=int,
         help="Port for the first virtual hand",
     )
     parser.add_argument(
         "--tcpPort2",
         required=False,
-        default=3335,
+        default=3334,
         type=int,
         help="Port for the second virtual hand",
     )
@@ -71,6 +93,11 @@ def main():
         type=str,
         help="Path to a JSON specifying the mapping between gesture labels and joint angles",
     )
+    parser.add_argument(
+        "--muDecomp",
+        action="store_true",
+        help="Whether to add the MU decomposition module",
+    )
     args = vars(parser.parse_args())
 
     argConstraint = sum([bool(args["virtHand"]), bool(args["gestureMapping"])])
@@ -79,17 +106,37 @@ def main():
 
     # Setup application and main window
     app = QApplication(sys.argv)
-    mainWin = MainWindow()
+    mainWin = MainWindow(
+        sampFreq=args["sampFreq"],
+        renderLength=args["renderLength"] * args["sampFreq"] // 1000,
+    )
     mainWin.show()
 
     # Add widgets
     if args["acq"]:
-        modules.AcquisitionController(mainWin)  # add acquisition module
+        acqController = modules.AcquisitionController()
+        acqController.subscribe(mainWin)
     if args["svmTrain"]:
-        svmTrainController = modules.SVMTrainController()
+        svmTrainController = modules.SVMTrainController(args["sampFreq"])
         svmTrainController.subscribe(mainWin)
     if args["svmInference"]:
-        modules.SVMInferenceController(mainWin)
+        tcnInferenceController = modules.TCNInferenceController()
+        tcnInferenceController.subscribe(mainWin)
+
+        # if args["virtHand"]:
+        #     with open(args["gestureMapping"]) as f:
+        #         gestureMapping = json.load(f)
+        #         gestureMapping = {i: k for i, k in enumerate(gestureMapping.values())}
+
+        #      svmInferenceController.tcpServerController = modules.TCPServerController(
+        #         address=args["tcpAddress"],
+        #         port1=args["tcpPort1"],
+        #         port2=args["tcpPort2"],
+        #         gestureMap=gestureMapping,
+        #     )
+    # if args["muDecomp"]:
+    #     decompositionController = modules.DecompositionController()
+    #     decompositionController.subscribe(mainWin)
 
     # Run event loop
     sys.exit(app.exec())
