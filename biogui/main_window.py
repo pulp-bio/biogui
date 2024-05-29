@@ -543,6 +543,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     stopStreamingSig = Signal()
     closeSig = Signal()
     dataReadyRawSig = Signal(DataPacket)
+    dataReadyRawSig2 = Signal(DataPacket)
     dataReadyFltSig = Signal(DataPacket)
 
     def __init__(self) -> None:
@@ -639,6 +640,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             streamController.errorSig.connect(self._handleErrors)
             streamController.dataReadyRawSig.connect(
                 lambda d: self.dataReadyRawSig.emit(d)
+            )  # forward Qt Signal for raw data
+            streamController.dataReadyRawSig2.connect(
+                lambda d: self.dataReadyRawSig2.emit(d)
             )  # forward Qt Signal for raw data
             streamController.dataReadyFltSig.connect(
                 lambda d: self.dataReadyFltSig.emit(d)
