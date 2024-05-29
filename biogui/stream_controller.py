@@ -83,6 +83,7 @@ class _PreprocessWorker(QObject):
     """
 
     dataReadyRawSig = Signal(DataPacket)
+    dataReadyRawSig2 = Signal(DataPacket)
     dataReadyFltSig = Signal(DataPacket)
     errorSig = Signal(str)
 
@@ -176,6 +177,15 @@ class _PreprocessWorker(QObject):
                 self._errorOccurred = True
             return
 
+        self.dataReadyRawSig2.emit(
+            tuple(
+                [
+                    DataPacket(sigName, dataDec)
+                    for sigName, dataDec in zip(self._sigNames, dataDecList)
+                ]
+            )
+        )
+
         for sigName, dataDec in zip(self._sigNames, dataDecList):
             self.dataReadyRawSig.emit(DataPacket(sigName, dataDec))
 
@@ -230,6 +240,7 @@ class StreamingController(QObject):
     """
 
     dataReadyRawSig = Signal(DataPacket)
+    dataReadyRawSig2 = Signal(DataPacket)
     dataReadyFltSig = Signal(DataPacket)
     errorSig = Signal(str)
 
@@ -262,6 +273,10 @@ class StreamingController(QObject):
         self._preprocessWorker.dataReadyFltSig.connect(
             lambda d: self.dataReadyFltSig.emit(d)
         )  # forward filtered data
+
+        self._preprocessWorker.dataReadyRawSig2.connect(
+            lambda d: self.dataReadyRawSig2.emit(d)
+        )  # forward raw data
 
     def __str__(self) -> str:
         return str(self._dataSource)

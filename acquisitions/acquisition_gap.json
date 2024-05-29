@@ -1,0 +1,8 @@
+{
+    "gestures": {
+        "open hand": "open_hand.png"
+    },
+    "nReps": 1,
+    "durationMs": 120000,
+    "imageFolder": "acquisitions/gestures_images"
+}
