@@ -1,10 +1,7 @@
-#!/bin/python
-
 import struct
 import sys
 
 import numpy as np
-import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy import signal
 
@@ -27,10 +24,10 @@ def main():
     t = np.arange(nSamp) / fs
 
     # Band-pass filter
-    # sos = signal.butter(8, (0.5, 48), "bandpass", output="sos", fs=fs)
-    # sig = signal.sosfiltfilt(sos, sig)
-    # sos = signal.butter(8, (49, 51), "bandstop", output="sos", fs=fs)
-    # sig = signal.sosfiltfilt(sos, sig)
+    sos = signal.butter(8, (0.5, 48), "bandpass", output="sos", fs=fs)
+    sig = signal.sosfiltfilt(sos, sig)
+    sos = signal.butter(8, (49, 51), "bandstop", output="sos", fs=fs)
+    sig = signal.sosfiltfilt(sos, sig)
 
     # Plot
     _, axes = plt.subplots(
