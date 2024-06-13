@@ -20,7 +20,7 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
 from .ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
@@ -88,11 +88,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._plots = []
         self._initializePlots(sigName)
 
-    @property
-    def fs(self) -> float:
-        """float: Property representing the sampling frequency."""
-        return self._fs
-
     def _initializePlots(self, sigName: str) -> None:
         """Render the initial plot."""
         # Reset graph
@@ -122,6 +117,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
                 )
             )
 
+    @Slot(np.ndarray)
     def addData(self, data: np.ndarray) -> None:
         """Add the given data to the internal queues.
 

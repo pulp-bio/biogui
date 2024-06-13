@@ -458,9 +458,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         list of str
             List with the signal names.
         """
-        sigNameList = self._sigPlotWidgets.keys()
-        fsList = map(lambda pw: pw.fs, self._sigPlotWidgets.values())
-        return list(zip(sigNameList, fsList))
+        return list(self._sigPlotWidgets.keys())
 
     def addConfWidget(self, widget: QWidget) -> None:
         """Add a widget to configure pluggable modules.
