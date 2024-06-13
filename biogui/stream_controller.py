@@ -18,7 +18,7 @@ limitations under the License.
 
 from __future__ import annotations
 
-import logging
+from collections import namedtuple
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Callable, TypeAlias
@@ -30,6 +30,10 @@ from scipy import signal
 from . import data_source
 
 DecodeFn: TypeAlias = Callable[[bytes], Sequence[np.ndarray]]
+
+InterfaceModule = namedtuple(
+    "InterfaceModule", "packetSize, startSeq, stopSeq, sigNames, decodeFn"
+)
 
 
 @dataclass
@@ -198,21 +202,21 @@ class StreamingController(QObject):
     ----------
     dataSourceConfig : dict
         Dictionary with the data source configuration.
-    decodeFn: DecodeFn
-        Decode function.
+    interfaceModule: InterfaceModule
+        InterfaceModule object.
     parent : QObject or None, default=None
         Parent QObject.
 
     Attributes
     ----------
-    _dataSource : _DataWorker
-        Worker for data collection.
+    _dataSourceWorker : DataSource
+        Worker for data acquisition.
+    _dataSourceThread : QThread
+        The QThread associated to the data source worker.
     _preprocessWorker : _PreprocessWorker
         Worker for data pre-processing.
-    _dataThread : QThread
-        The QThread associated to the data worker.
     _preprocessThread : QThread
-        The QThread associated to the preprocess worker.
+        The QThread associated to the pre-processing worker.
 
     Class attributes
     ----------------
@@ -236,10 +240,10 @@ class StreamingController(QObject):
     ) -> None:
         super().__init__(parent)
 
-        # Create data worker and thread
-        self._dataSource = data_source.getDataSource(**dataSourceConfig)
-        self._dataThread = QThread(self)
-        self._dataSource.moveToThread(self._dataThread)
+        # Create data source worker and thread
+        self._dataSourceWorker = data_source.getDataSource(**dataSourceConfig)
+        self._dataSourceThread = QThread(self)
+        self._dataSourceWorker.moveToThread(self._dataSourceThread)
 
         # Create preprocess worker and thread
         self._preprocessWorker = _PreprocessWorker(decodeFn)
@@ -247,19 +251,20 @@ class StreamingController(QObject):
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
         # Handle signals
-        self._dataThread.started.connect(self._dataSource.startCollecting)  # type: ignore
-        self._dataSource.dataReadySig.connect(self._preprocessWorker.preprocess)
-        self._dataSource.errorSig.connect(self._handleErrors)
-        self._preprocessWorker.errorSig.connect(self._handleErrors)
+        self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
+        self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
+        self._dataSourceWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
+        self._dataSourceWorker.errorSig.connect(self._handleErrors)
         self._preprocessWorker.dataReadyRawSig.connect(
             lambda d: self.dataReadyRawSig.emit(d)
         )  # forward raw data
         self._preprocessWorker.dataReadyFltSig.connect(
             lambda d: self.dataReadyFltSig.emit(d)
         )  # forward filtered data
+        self._preprocessWorker.errorSig.connect(self._handleErrors)
 
     def __str__(self) -> str:
-        return str(self._dataSource)
+        return str(self._dataSourceWorker)
 
     @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
@@ -302,20 +307,13 @@ class StreamingController(QObject):
     def startStreaming(self) -> None:
         """Start streaming."""
         self._preprocessWorker.errorOccurred = False  # reset flag
-        # Start thread
-        self._preprocessThread.start()
-        self._dataThread.start()
 
-        logging.info("StreamingController: threads started.")
+        self._preprocessThread.start()
+        self._dataSourceThread.start()
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
-        # Check if threads are running
-        if self._dataThread.isRunning() and self._preprocessThread.isRunning():
-            self._dataSource.stopCollecting()
-            self._dataThread.quit()
-            self._dataThread.wait()
-            self._preprocessThread.quit()
-            self._preprocessThread.wait()
-
-            logging.info("StreamingController: threads stopped.")
+        self._dataSourceThread.quit()
+        self._dataSourceThread.wait()
+        self._preprocessThread.quit()
+        self._preprocessThread.wait()

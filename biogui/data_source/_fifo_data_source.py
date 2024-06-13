@@ -1,4 +1,4 @@
-"""Classes for the dummy data source.
+"""Classes for the FIFO data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -18,15 +18,16 @@ limitations under the License.
 
 from __future__ import annotations
 
-import numpy as np
-from PySide6.QtCore import QTimer
+import logging
+
 from PySide6.QtWidgets import QWidget
 
+from ..ui.ui_fifo_config_widget import Ui_FIFOConfigWidget
 from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
 
 
-class DummyConfigWidget(ConfigWidget):
-    """Empty widget for the dummy source.
+class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
+    """Widget to configure the FIFO source.
 
     Parameters
     ----------
@@ -37,6 +38,8 @@ class DummyConfigWidget(ConfigWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.setupUi(self)
+
     def validateConfig(self) -> ConfigResult:
         """Validate the configuration.
 
@@ -45,32 +48,38 @@ class DummyConfigWidget(ConfigWidget):
         ConfigResult
             Configuration result.
         """
+        if self.fifoPathTextField.text() == "":
+            return ConfigResult(
+                dataSourceType=DataSourceType.FIFO,
+                dataSourceConfig={},
+                isValid=False,
+                errMessage='The "path to FIFO" field is empty.',
+            )
+
         return ConfigResult(
-            dataSourceType=DataSourceType.DUMMY,
-            dataSourceConfig={},
+            dataSourceType=DataSourceType.FIFO,
+            dataSourceConfig={"fifoPath": self.fifoPathTextField.text()},
             isValid=True,
             errMessage="",
         )
 
 
-class DummyDataSource(DataSource):
-    """Concrete worker that collects data by generating it randomly.
+class FIFODataSource(DataSource):
+    """Concrete worker that collects data from a FIFO.
 
     Parameters
     ----------
     packetSize : int
         Number of bytes in the packet.
+    fifoPath : str
+        Path to the FIFO.
 
     Attributes
     ----------
     _packetSize : int
         Number of bytes in the packet (for compatibility with other data sources).
-    _prng : Generator
-        Pseudo-random number generator.
-    _mean : float
-        Mean of the generated data.
-    _timer : QTimer
-        Instance of QTimer.
+    _stopReadingFlag : bool
+        Flag indicating to stop reading data.
 
     Class attributes
     ----------------
@@ -80,44 +89,30 @@ class DummyDataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int) -> None:
+    def __init__(self, packetSize: int, fifoPath: str) -> None:
         super().__init__()
 
         self._packetSize = packetSize
-        self._prng = np.random.default_rng(seed=42)
-        self._mean = 0.0
-
-        self._timer = QTimer(self)
-        # Fastest signal: 128 sps, 10 samples generated at once
-        # -> set timer interval corresponding to one tenth of 128 sps, i.e., 78 ms
-        self._timer.setInterval(78)
-        self._timer.timeout.connect(self._generateData)
+        self._fifoPath = fifoPath
+        self._stopstopReadingFlag = False
 
     def __str__(self):
-        return "Dummy"
+        return f"FIFO - {self._fifoPath}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._timer.start()
+        self._stopstopReadingFlag = False
+
+        logging.info("DataWorker: data reading started.")
+
+        with open(self._fifoPath, "rb") as f:
+            while not self._stopstopReadingFlag:
+                data = f.read(self._packetSize)
+
+                self.dataReadySig.emit(data)
+
+        logging.info("DataWorker: data reading stopped.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._timer.stop()
-
-    def _generateData(self) -> None:
-        """Generate dummy data when the QTimer ticks."""
-        # 1st signal: 4 channels, 10 samples, 128sps
-        data1 = self._prng.normal(loc=self._mean, scale=100.0, size=(10, 4)).astype(
-            np.float32
-        )
-        # 2nd signal: 2 channel, 4 samples, 51.2sps
-        data2 = self._prng.normal(loc=self._mean, scale=100.0, size=(4, 2)).astype(
-            np.float32
-        )
-
-        # Concatenate and emit bytes
-        data = np.concatenate((data1.flatten(), data2.flatten()))
-        self.dataReadySig.emit(data.tobytes())
-
-        # Update mean
-        self._mean += self._prng.normal(scale=50.0)
+        self._stopstopReadingFlag = True

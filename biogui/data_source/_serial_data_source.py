@@ -19,26 +19,14 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-import time
 
-import serial
-import serial.tools.list_ports
+from PySide6.QtCore import QByteArray, QIODevice
 from PySide6.QtGui import QIntValidator
+from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_serial_config_widget import Ui_SerialConfigWidget
 from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
-
-
-def _serialPorts() -> list[str]:
-    """Lists serial port names.
-
-    Returns
-    -------
-    list of str
-        A list of the serial ports available on the system.
-    """
-    return [info[0] for info in serial.tools.list_ports.comports()]
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
@@ -85,11 +73,11 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
                 errMessage='The "baud rate" field is invalid.',
             )
 
-        serialPort = self.serialPortsComboBox.currentText()
+        serialPortName = self.serialPortsComboBox.currentText()
         return ConfigResult(
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
-                "serialPort": serialPort,
+                "serialPortName": serialPortName,
                 "baudRate": int(self.baudRateTextField.text()),
             },
             isValid=True,
@@ -99,7 +87,9 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
-        self.serialPortsComboBox.addItems(_serialPorts())
+        self.serialPortsComboBox.addItems(
+            [portInfo.portName() for portInfo in QSerialPortInfo.availablePorts()]
+        )
 
 
 class SerialDataSource(DataSource):
@@ -109,7 +99,7 @@ class SerialDataSource(DataSource):
     ----------
     packetSize : int
         Size of each packet read from the serial port.
-    serialPort : str
+    serialPortName : str
         String representing the serial port.
     baudRate : int
         Baud rate.
@@ -118,12 +108,10 @@ class SerialDataSource(DataSource):
     ----------
     _packetSize : int
         Size of each packet read from the serial port.
-    _serialPort : str
-        String representing the serial port.
-    _baudRate : int
-        Baud rate.
-    _stopReadingFlag : bool
-        Flag indicating to stop reading data.
+    _serialPort : QSerialPort
+        Serial port object.
+    _buffer : bytearray
+        Input buffer.
 
     Class attributes
     ----------------
@@ -133,47 +121,45 @@ class SerialDataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int, serialPort: str, baudRate: int) -> None:
+    def __init__(self, packetSize: int, serialPortName: str, baudRate: int) -> None:
         super().__init__()
 
         self._packetSize = packetSize
-        self._serialPort = serialPort
-        self._baudRate = baudRate
-        self._stopReadingFlag = False
+        self._serialPort = QSerialPort(self)
+        self._serialPort.setPortName(serialPortName)
+        self._serialPort.setBaudRate(baudRate)
+        self._serialPort.readyRead.connect(self._collectData)
+        self._buffer = bytearray(self._packetSize)
 
     def __str__(self):
-        return f"Serial port - {self._serialPort}"
+        return f"Serial port - {self._serialPort.portName()}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._stopReadingFlag = False
+        # Open port
+        if not self._serialPort.open(QIODevice.ReadWrite):
+            self.errorSig.emit("Cannot open serial port.")
+            logging.error("DataWorker: cannot open serial port.")
+            return
 
-        # Open serial port
-        ser = serial.Serial(self._serialPort, self._baudRate, timeout=5)
-
-        logging.info("DataWorker: serial communication started.")
-
-        ser.write(b"=")  # start code
-        while not self._stopReadingFlag:
-            data = ser.read(self._packetSize)
-
-            # Check number of bytes read
-            if len(data) != self._packetSize:
-                self.errorSig.emit("Serial communication failed.")
-                logging.error("DataWorker: serial communication failed.")
-                break
-
-            self.dataReadySig.emit(data)
-        ser.write(b":")  # stop code
-
-        # Close port
-        time.sleep(0.2)
-        ser.reset_input_buffer()
-        time.sleep(0.2)
-        ser.close()
-
-        logging.info("DataWorker: serial communication stopped.")
+        # Start command
+        self._serialPort.write(b"=")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._stopReadingFlag = True
+        # Stop command
+        self._serialPort.write(b":")
+
+        # Reset input buffer and close port
+        while self._serialPort.waitForReadyRead(100):
+            self._serialPort.clear()
+        self._serialPort.close()
+        self._buffer = QByteArray()
+
+    def _collectData(self) -> None:
+        """Fill input buffer when data is ready."""
+        self._buffer.append(self._serialPort.readAll())
+        if len(self._buffer) >= self._packetSize:
+            data = self._buffer.mid(0, self._packetSize).data()
+            self.dataReadySig.emit(data)
+            self._buffer.remove(0, self._packetSize)

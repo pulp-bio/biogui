@@ -16,14 +16,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-
 import struct
-from collections.abc import Sequence
+from collections import namedtuple
 
 import numpy as np
 
+PACKET_SIZE: int = 204
+"""Number of bytes in each package."""
 
-def decodeFn(data: bytes) -> Sequence[np.ndarray]:
+
+startSeq: list[bytes] = []
+"""Sequence of commands to start the board."""
+
+
+stopSeq: list[bytes] = []
+"""Sequence of commands to stop the board."""
+
+
+SigsPacket = namedtuple("SigsPacket", "ppg, ecg, acc")
+"""Named tuple containing the PPG, ECG and accelerometer packets."""
+
+
+def decodeFn(data: bytes) -> SigsPacket:
     """Function to decode the binary data received from GAPWatch into PPG, ECG and accelerometer signals.
 
     Parameters
@@ -33,12 +47,8 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
 
     Returns
     -------
-    ndarray
-        PPG signal with shape (nSamp, nCh).
-    ndarray
-        ECG signal with shape (nSamp, nCh).
-    ndarray
-        Accelerometer signal with shape (nSamp, nCh).
+    SigsPacket
+        Named tuple containing the PPG, ECG and accelerometer packets, each with shape (nSamp, nCh).
     """
 
     # Split bytes into PPG, ECG and accelerometer
@@ -85,4 +95,4 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     acc = acc * accConvFactor  # mg
     acc = acc.astype("float32")
 
-    return ppg, ecg, acc
+    return SigsPacket(ppg=ppg, ecg=ecg, acc=acc)

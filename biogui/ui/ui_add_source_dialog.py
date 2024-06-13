@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'add_source_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -48,7 +48,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -65,6 +64,18 @@ class Ui_AddSourceDialog(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName("formLayout")
+        self.label1 = QLabel(AddSourceDialog)
+        self.label1.setObjectName("label1")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
+
+        self.browseDecodeModuleButton = QPushButton(AddSourceDialog)
+        self.browseDecodeModuleButton.setObjectName("browseDecodeModuleButton")
+
+        self.formLayout.setWidget(
+            0, QFormLayout.FieldRole, self.browseDecodeModuleButton
+        )
+
         self.label2 = QLabel(AddSourceDialog)
         self.label2.setObjectName("label2")
 
@@ -75,38 +86,16 @@ class Ui_AddSourceDialog(object):
 
         self.formLayout.setWidget(1, QFormLayout.FieldRole, self.decodeModulePathLabel)
 
-        self.label3 = QLabel(AddSourceDialog)
-        self.label3.setObjectName("label3")
-
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label3)
-
-        self.packetSizeTextField = QLineEdit(AddSourceDialog)
-        self.packetSizeTextField.setObjectName("packetSizeTextField")
-
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.packetSizeTextField)
-
         self.label4 = QLabel(AddSourceDialog)
         self.label4.setObjectName("label4")
         self.label4.setAlignment(Qt.AlignLeading | Qt.AlignLeft | Qt.AlignVCenter)
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label4)
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label4)
 
         self.sourceComboBox = QComboBox(AddSourceDialog)
         self.sourceComboBox.setObjectName("sourceComboBox")
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.sourceComboBox)
-
-        self.browseDecodeModuleButton = QPushButton(AddSourceDialog)
-        self.browseDecodeModuleButton.setObjectName("browseDecodeModuleButton")
-
-        self.formLayout.setWidget(
-            0, QFormLayout.FieldRole, self.browseDecodeModuleButton
-        )
-
-        self.label1 = QLabel(AddSourceDialog)
-        self.label1.setObjectName("label1")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.sourceComboBox)
 
         self.verticalLayout.addLayout(self.formLayout)
 
@@ -123,6 +112,7 @@ class Ui_AddSourceDialog(object):
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.verticalLayout.setStretch(1, 1)
+        QWidget.setTabOrder(self.browseDecodeModuleButton, self.sourceComboBox)
 
         self.retranslateUi(AddSourceDialog)
         self.buttonBox.accepted.connect(AddSourceDialog.accept)
@@ -136,30 +126,11 @@ class Ui_AddSourceDialog(object):
         AddSourceDialog.setWindowTitle(
             QCoreApplication.translate("AddSourceDialog", "Add source", None)
         )
-        self.label2.setText(
-            QCoreApplication.translate("AddSourceDialog", "Path to module:", None)
-        )
-        self.decodeModulePathLabel.setText("")
-        self.label3.setText(
-            QCoreApplication.translate("AddSourceDialog", "Packet size:", None)
-        )
-        # if QT_CONFIG(tooltip)
-        self.packetSizeTextField.setToolTip(
+        self.label1.setText(
             QCoreApplication.translate(
-                "AddSourceDialog", "Number of bytes in each packet", None
+                "AddSourceDialog", "Module with decode function:", None
             )
         )
-        # endif // QT_CONFIG(tooltip)
-        self.label4.setText(
-            QCoreApplication.translate("AddSourceDialog", "Source:", None)
-        )
-        # if QT_CONFIG(tooltip)
-        self.sourceComboBox.setToolTip(
-            QCoreApplication.translate(
-                "AddSourceDialog", "List of available serial ports", None
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
         # if QT_CONFIG(tooltip)
         self.browseDecodeModuleButton.setToolTip(
             QCoreApplication.translate(
@@ -172,10 +143,20 @@ class Ui_AddSourceDialog(object):
         self.browseDecodeModuleButton.setText(
             QCoreApplication.translate("AddSourceDialog", "Browse", None)
         )
-        self.label1.setText(
+        self.label2.setText(
+            QCoreApplication.translate("AddSourceDialog", "Path to module:", None)
+        )
+        self.decodeModulePathLabel.setText("")
+        self.label4.setText(
+            QCoreApplication.translate("AddSourceDialog", "Source:", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.sourceComboBox.setToolTip(
             QCoreApplication.translate(
-                "AddSourceDialog", "Module with decode function:", None
+                "AddSourceDialog", "List of available serial ports", None
             )
         )
 
-    # retranslateUi
+
+# endif // QT_CONFIG(tooltip)
+# retranslateUi

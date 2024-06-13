@@ -1,4 +1,4 @@
-"""This module contains the decode function for sEMG from BioWolf.
+"""This module contains the decode function for dummy signals.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,15 +16,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-
-import struct
 from collections.abc import Sequence
 
 import numpy as np
 
 
 def decodeFn(data: bytes) -> Sequence[np.ndarray]:
-    """Function to decode the binary data received from BioWolf into a single sEMG signal.
+    """Function to decode the binary data generated into two dummy signals.
 
     Parameters
     ----------
@@ -36,30 +34,8 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     Sequence of ndarray
         Sequence of corresponding signals with shape (nSamp, nCh).
     """
-    nSamp = 5
-    nCh = 16
+    dataTmp = np.frombuffer(data, dtype="float32")
+    nSamp, nCh = 5, 16
+    sig = dataTmp[: nSamp * nCh].reshape(nSamp, nCh)
 
-    # ADC parameters
-    vRef = 2.5
-    gain = 6.0
-    nBit = 24
-
-    dataTmp = bytearray(
-        [x for i, x in enumerate(data) if i not in (0, 1, 242)]
-    )  # discard header and footer
-
-    # Convert 24-bit to 32-bit integer
-    pos = 0
-    for _ in range(len(dataTmp) // 3):
-        preFix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, preFix)
-        pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype="int32")
-
-    # Reshape and convert ADC readings to uV
-    emg = emg.reshape(nSamp, nCh)
-    emg = emg * (vRef / gain / 2**nBit)  # V
-    emg *= 1_000_000  # uV
-    emg = emg.astype("float32")
-
-    return [emg]
+    return [sig]
