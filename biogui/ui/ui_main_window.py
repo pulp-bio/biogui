@@ -8,69 +8,108 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QListView,
-    QListWidget, QListWidgetItem, QMainWindow, QMenuBar,
-    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QStatusBar, QVBoxLayout, QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    Qt,
+    QTime,
+    QUrl,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QGroupBox,
+    QHBoxLayout,
+    QListView,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMenuBar,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QStatusBar,
+    QVBoxLayout,
+    QWidget,
+)
+
 from . import resources_rc
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
+            MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1920, 1080)
         MainWindow.setMinimumSize(QSize(1080, 720))
         self.centralWidget = QWidget(MainWindow)
-        self.centralWidget.setObjectName(u"centralWidget")
+        self.centralWidget.setObjectName("centralWidget")
         self.horizontalLayout1 = QHBoxLayout(self.centralWidget)
-        self.horizontalLayout1.setObjectName(u"horizontalLayout1")
+        self.horizontalLayout1.setObjectName("horizontalLayout1")
         self.confLayout = QVBoxLayout()
-        self.confLayout.setObjectName(u"confLayout")
+        self.confLayout.setObjectName("confLayout")
         self.horizontalLayout2 = QHBoxLayout()
-        self.horizontalLayout2.setObjectName(u"horizontalLayout2")
+        self.horizontalLayout2.setObjectName("horizontalLayout2")
         self.startStreamingButton = QPushButton(self.centralWidget)
-        self.startStreamingButton.setObjectName(u"startStreamingButton")
+        self.startStreamingButton.setObjectName("startStreamingButton")
         self.startStreamingButton.setEnabled(True)
 
         self.horizontalLayout2.addWidget(self.startStreamingButton)
 
         self.stopStreamingButton = QPushButton(self.centralWidget)
-        self.stopStreamingButton.setObjectName(u"stopStreamingButton")
+        self.stopStreamingButton.setObjectName("stopStreamingButton")
         self.stopStreamingButton.setEnabled(False)
 
         self.horizontalLayout2.addWidget(self.stopStreamingButton)
 
-
         self.confLayout.addLayout(self.horizontalLayout2)
 
         self.streamConfGroupBox = QGroupBox(self.centralWidget)
-        self.streamConfGroupBox.setObjectName(u"streamConfGroupBox")
+        self.streamConfGroupBox.setObjectName("streamConfGroupBox")
         self.streamConfGroupBox.setAlignment(Qt.AlignCenter)
         self.verticalLayout1 = QVBoxLayout(self.streamConfGroupBox)
-        self.verticalLayout1.setObjectName(u"verticalLayout1")
+        self.verticalLayout1.setObjectName("verticalLayout1")
         self.horizontalLayout4 = QHBoxLayout()
-        self.horizontalLayout4.setObjectName(u"horizontalLayout4")
+        self.horizontalLayout4.setObjectName("horizontalLayout4")
         self.addSourceButton = QPushButton(self.streamConfGroupBox)
-        self.addSourceButton.setObjectName(u"addSourceButton")
+        self.addSourceButton.setObjectName("addSourceButton")
 
         self.horizontalLayout4.addWidget(self.addSourceButton)
 
         self.deleteSourceButton = QPushButton(self.streamConfGroupBox)
-        self.deleteSourceButton.setObjectName(u"deleteSourceButton")
+        self.deleteSourceButton.setObjectName("deleteSourceButton")
         self.deleteSourceButton.setEnabled(False)
         icon = QIcon()
-        iconThemeName = u"user-trash"
+        iconThemeName = "user-trash"
         if QIcon.hasThemeIcon(iconThemeName):
             icon = QIcon.fromTheme(iconThemeName)
         else:
-            icon.addFile(u"../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon.addFile("../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
 
         self.deleteSourceButton.setIcon(icon)
 
@@ -82,60 +121,66 @@ class Ui_MainWindow(object):
         self.verticalLayout1.addLayout(self.horizontalLayout4)
 
         self.sourceList = QListWidget(self.streamConfGroupBox)
-        self.sourceList.setObjectName(u"sourceList")
+        self.sourceList.setObjectName("sourceList")
 
         self.verticalLayout1.addWidget(self.sourceList)
 
         self.signalsGroupBox = QGroupBox(self.streamConfGroupBox)
-        self.signalsGroupBox.setObjectName(u"signalsGroupBox")
+        self.signalsGroupBox.setObjectName("signalsGroupBox")
         self.signalsGroupBox.setEnabled(False)
         self.signalsGroupBox.setFlat(True)
         self.verticalLayout2 = QVBoxLayout(self.signalsGroupBox)
-        self.verticalLayout2.setObjectName(u"verticalLayout2")
+        self.verticalLayout2.setObjectName("verticalLayout2")
         self.horizontalLayout5 = QHBoxLayout()
-        self.horizontalLayout5.setObjectName(u"horizontalLayout5")
+        self.horizontalLayout5.setObjectName("horizontalLayout5")
         self.addSignalButton = QPushButton(self.signalsGroupBox)
-        self.addSignalButton.setObjectName(u"addSignalButton")
+        self.addSignalButton.setObjectName("addSignalButton")
 
         self.horizontalLayout5.addWidget(self.addSignalButton)
 
         self.deleteSignalButton = QPushButton(self.signalsGroupBox)
-        self.deleteSignalButton.setObjectName(u"deleteSignalButton")
+        self.deleteSignalButton.setObjectName("deleteSignalButton")
         self.deleteSignalButton.setEnabled(False)
         icon1 = QIcon()
-        iconThemeName = u"user-trash"
+        iconThemeName = "user-trash"
         if QIcon.hasThemeIcon(iconThemeName):
             icon1 = QIcon.fromTheme(iconThemeName)
         else:
-            icon1.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon1.addFile(
+                "../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off
+            )
 
         self.deleteSignalButton.setIcon(icon1)
 
         self.horizontalLayout5.addWidget(self.deleteSignalButton)
 
         self.moveUpButton = QPushButton(self.signalsGroupBox)
-        self.moveUpButton.setObjectName(u"moveUpButton")
+        self.moveUpButton.setObjectName("moveUpButton")
         self.moveUpButton.setEnabled(False)
         icon2 = QIcon()
-        iconThemeName = u"arrow-up"
+        iconThemeName = "arrow-up"
         if QIcon.hasThemeIcon(iconThemeName):
             icon2 = QIcon.fromTheme(iconThemeName)
         else:
-            icon2.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon2.addFile(
+                "../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off
+            )
 
         self.moveUpButton.setIcon(icon2)
 
         self.horizontalLayout5.addWidget(self.moveUpButton)
 
         self.moveDownButton = QPushButton(self.signalsGroupBox)
-        self.moveDownButton.setObjectName(u"moveDownButton")
+        self.moveDownButton.setObjectName("moveDownButton")
         self.moveDownButton.setEnabled(False)
         icon3 = QIcon()
-        iconThemeName = u"arrow-down"
+        iconThemeName = "arrow-down"
         if QIcon.hasThemeIcon(iconThemeName):
             icon3 = QIcon.fromTheme(iconThemeName)
         else:
-            icon3.addFile(u"../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off)
+            icon3.addFile(
+                "../../../../.designer/backup", QSize(), QIcon.Normal, QIcon.Off
+            )
 
         self.moveDownButton.setIcon(icon3)
 
@@ -149,7 +194,7 @@ class Ui_MainWindow(object):
         self.verticalLayout2.addLayout(self.horizontalLayout5)
 
         self.sigNameList = QListWidget(self.signalsGroupBox)
-        self.sigNameList.setObjectName(u"sigNameList")
+        self.sigNameList.setObjectName("sigNameList")
         self.sigNameList.setAutoFillBackground(False)
         self.sigNameList.setResizeMode(QListView.Adjust)
 
@@ -165,14 +210,16 @@ class Ui_MainWindow(object):
         self.confLayout.addWidget(self.streamConfGroupBox)
 
         self.scrollArea2 = QScrollArea(self.centralWidget)
-        self.scrollArea2.setObjectName(u"scrollArea2")
+        self.scrollArea2.setObjectName("scrollArea2")
         self.scrollArea2.setWidgetResizable(True)
         self.moduleContainer = QWidget()
-        self.moduleContainer.setObjectName(u"moduleContainer")
+        self.moduleContainer.setObjectName("moduleContainer")
         self.moduleContainer.setGeometry(QRect(0, 0, 374, 478))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
-        self.verticalLayout3.setObjectName(u"verticalLayout3")
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalLayout3.setObjectName("verticalLayout3")
+        self.verticalSpacer = QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+        )
 
         self.verticalLayout3.addItem(self.verticalSpacer)
 
@@ -186,7 +233,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout1.addLayout(self.confLayout)
 
         self.plotsLayout = QVBoxLayout()
-        self.plotsLayout.setObjectName(u"plotsLayout")
+        self.plotsLayout.setObjectName("plotsLayout")
 
         self.horizontalLayout1.addLayout(self.plotsLayout)
 
@@ -194,50 +241,86 @@ class Ui_MainWindow(object):
         self.horizontalLayout1.setStretch(1, 8)
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
+        self.menubar.setObjectName("menubar")
         self.menubar.setGeometry(QRect(0, 0, 1920, 30))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
+        self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
 
         QMetaObject.connectSlotsByName(MainWindow)
+
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"biogui", None))
-        self.startStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Start streaming", None))
-        self.stopStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Stop streaming", None))
-        self.streamConfGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Configuration", None))
-        self.addSourceButton.setText(QCoreApplication.translate("MainWindow", u"Add source", None))
-#if QT_CONFIG(tooltip)
-        self.deleteSourceButton.setToolTip(QCoreApplication.translate("MainWindow", u"Delete selected source", None))
-#endif // QT_CONFIG(tooltip)
+        MainWindow.setWindowTitle(
+            QCoreApplication.translate("MainWindow", "biogui", None)
+        )
+        self.startStreamingButton.setText(
+            QCoreApplication.translate("MainWindow", "Start streaming", None)
+        )
+        self.stopStreamingButton.setText(
+            QCoreApplication.translate("MainWindow", "Stop streaming", None)
+        )
+        self.streamConfGroupBox.setTitle(
+            QCoreApplication.translate("MainWindow", "Configuration", None)
+        )
+        self.addSourceButton.setText(
+            QCoreApplication.translate("MainWindow", "Add source", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.deleteSourceButton.setToolTip(
+            QCoreApplication.translate("MainWindow", "Delete selected source", None)
+        )
+        # endif // QT_CONFIG(tooltip)
         self.deleteSourceButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.signalsGroupBox.setToolTip(QCoreApplication.translate("MainWindow", u"Configure a source first", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.signalsGroupBox.setToolTip(
+            QCoreApplication.translate("MainWindow", "Configure a source first", None)
+        )
+        # endif // QT_CONFIG(tooltip)
         self.signalsGroupBox.setTitle("")
-#if QT_CONFIG(tooltip)
-        self.addSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller", None))
-#endif // QT_CONFIG(tooltip)
-        self.addSignalButton.setText(QCoreApplication.translate("MainWindow", u"Add signal", None))
-#if QT_CONFIG(tooltip)
-        self.deleteSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"Delete selected signal", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.addSignalButton.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                "The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        self.addSignalButton.setText(
+            QCoreApplication.translate("MainWindow", "Add signal", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.deleteSignalButton.setToolTip(
+            QCoreApplication.translate("MainWindow", "Delete selected signal", None)
+        )
+        # endif // QT_CONFIG(tooltip)
         self.deleteSignalButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveUpButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move up selected signal", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.moveUpButton.setToolTip(
+            QCoreApplication.translate("MainWindow", "Move up selected signal", None)
+        )
+        # endif // QT_CONFIG(tooltip)
         self.moveUpButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveDownButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move down selected signal", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.moveDownButton.setToolTip(
+            QCoreApplication.translate("MainWindow", "Move down selected signal", None)
+        )
+        # endif // QT_CONFIG(tooltip)
         self.moveDownButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.sigNameList.setToolTip(QCoreApplication.translate("MainWindow", u"The order of the signals must match the one provided by the streaming controller", None))
-#endif // QT_CONFIG(tooltip)
-    # retranslateUi
+        # if QT_CONFIG(tooltip)
+        self.sigNameList.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                "The order of the signals must match the one provided by the streaming controller",
+                None,
+            )
+        )
 
+
+# endif // QT_CONFIG(tooltip)
+# retranslateUi
