@@ -1,4 +1,4 @@
-# """Class for the real-time plot.
+# """Class for the real-time chart.
 
 
 # Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
@@ -19,15 +19,16 @@
 from collections import deque
 
 import numpy as np
-import pyqtgraph as pg
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QObject, QTimer, Slot
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
+from PySide6.QtWidgets import QGraphicsLineItem, QGraphicsScene, QWidget
 
 from .ui.ui_signal_plots_widget import Ui_SignalPlotsWidget
 
 
 class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
-    """Widget showing the real-time plot of a signal.
+    """Real-time chart of a signal.
 
     Parameters
     ----------
@@ -38,26 +39,24 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
     fs : float
         Sampling frequency.
     renderLengthS : int
-        Length of the window in the plot (in s).
+        Length of the window in the chart (in s).
     chSpacing : int
         Spacing between each channel in the plot.
 
     Attributes
     ----------
+    _dataQueue : deque
+        Queue containing the data samples.
+    _series : list of QLineSeries
+        List of QLineSeries objects (one per channel).
     _nCh : int
         Number of channels.
     _fs : float
         Sampling frequency.
+    _renderLength : int
+        Length of the plot window.
     _chSpacing : int
         Spacing between each channel in the plot.
-    _xQueue : deque
-        Queue for X values.
-    _yQueue : deque
-        Queue for Y values.
-    _timer : QTimer
-        Timer for plot refreshing.
-    _plots : list of PlotItem
-        List containing the references to the PlotItem objects.
     """
 
     def __init__(
@@ -67,63 +66,45 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         fs: float,
         renderLengthS: int,
         chSpacing: int,
-        parent: QWidget | None = None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
 
-        renderLength = int(round(renderLengthS * fs))
-        self._xQueue = deque(maxlen=renderLength)
-        self._yQueue = deque(maxlen=renderLength)
+        self.sigNameLabel.setText(sigName)
+
         self._nCh = nCh
         self._fs = fs
+        self._renderLength = int(round(renderLengthS * fs))
         self._chSpacing = chSpacing
+        self._dataQueue = deque(maxlen=self._renderLength)
         self._timer = QTimer(self)
-        self._timer.setInterval(16)  # ~50 FPS
+        self._timer.setInterval(17)  # ~60 FPS
         self._timer.timeout.connect(self._refreshPlot)
         self._timer.start()
 
-        # Initialize plots
-        self._plots = []
-        self._initializePlots(sigName)
+        # Create OpenGL-accelerated scene
+        self.scene = QGraphicsScene(self)
+        self.view.setScene(self.scene)
+        self.view.setViewport(QOpenGLWidget())
+        self.view.setRenderHint(QPainter.Antialiasing)
+        self.view.setBackgroundBrush(QColor("black"))
 
-    @property
-    def fs(self) -> float:
-        """float: Property representing the sampling frequency."""
-        return self._fs
+        self.pen = QPen(QColor("blue"))
+        self.pen.setWidth(2)
 
-    def _initializePlots(self, sigName: str) -> None:
-        """Render the initial plot."""
-        # Reset graph
-        self.graphWidget.clear()
-        self.graphWidget.useOpenGL(True)
-        self.graphWidget.setTitle(sigName)
-        self.graphWidget.setLabel("bottom", "Time (s)")
-        self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._configScene()
 
-        # Initialize queues
-        for i in range(-self._xQueue.maxlen, 0):  # type: ignore
-            self._xQueue.append(i / self._fs)
-            self._yQueue.append(np.zeros(self._nCh))
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._configScene()
 
-        # Get colormap
-        cm = pg.colormap.get("CET-C1")  # type: ignore
-        cm.setMappingMode("diverging")  # type: ignore
-        lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")  # type: ignore
-
-        # Plot placeholder data
-        ys = np.asarray(self._yQueue).T
-        for i in range(self._nCh):
-            pen = pg.mkPen(color=lut[i], width=2)
-            self._plots.append(
-                self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._chSpacing * i, pen=pen
-                )
-            )
-
+    @Slot(np.ndarray)
     def addData(self, data: np.ndarray) -> None:
-        """Add the given data to the internal queues.
+        """Plot the given data.
 
         Parameters
         ----------
@@ -131,16 +112,29 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
             Data to plot.
         """
         for samples in data:
-            self._xQueue.append(self._xQueue[-1] + 1 / self._fs)
-            self._yQueue.append(samples)
+            self._dataQueue.append(samples)
+
+    def _configScene(self) -> None:
+        """Configure the scene (called the first time the plot is shown and everytime it is resized)."""
+        self.scene.setSceneRect(
+            0,
+            -self.view.viewport().height(),
+            self.view.viewport().width(),
+            self.view.viewport().height(),
+        )
 
     def _refreshPlot(self) -> None:
-        """Plot the given data."""
+        """Refresh the scene."""
+        if len(self._dataQueue) != 0:
 
-        ys = np.asarray(self._yQueue).T
-        for i in range(self._nCh):
-            self._plots[i].setData(
-                self._xQueue,
-                ys[i] + self._chSpacing * (self._nCh - i),
-                skipFiniteCheck=True,
-            )
+            self.scene.clear()
+            for i in range(1, len(self._dataQueue)):
+                x1 = i - 1
+                y1 = (
+                    100 - self._dataQueue[i - 1][0] * 100
+                )  # Scale y for better visibility
+                x2 = i
+                y2 = 100 - self._dataQueue[i][0] * 100  # Scale y for better visibility
+                line = QGraphicsLineItem(x1, y1, x2, y2)
+                line.setPen(self.pen)
+                self.scene.addItem(line)
