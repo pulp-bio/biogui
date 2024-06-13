@@ -22,6 +22,7 @@ from PySide6.QtWidgets import QWidget
 
 from ._abc_data_source import ConfigWidget, DataSource, DataSourceType
 from ._dummy_data_source import DummyConfigWidget, DummyDataSource
+from ._fifo_data_source import FIFOConfigWidget, FIFODataSource
 from ._serial_data_source import SerialConfigWidget, SerialDataSource
 from ._socket_data_source import SocketConfigWidget, SocketDataSource
 
@@ -45,6 +46,7 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
         DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.SOCKET: SocketConfigWidget,
         DataSourceType.DUMMY: DummyConfigWidget,
+        DataSourceType.FIFO: FIFOConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
 
@@ -72,6 +74,7 @@ def getDataSource(
         DataSourceType.SERIAL: SerialDataSource,
         DataSourceType.SOCKET: SocketDataSource,
         DataSourceType.DUMMY: DummyDataSource,
+        DataSourceType.FIFO: FIFODataSource,
     }
     return dataSourceDict[dataSourceType](packetSize, **kwargs)
 

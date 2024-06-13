@@ -32,6 +32,7 @@ class DataSourceType(Enum):
     SERIAL = "Serial port"
     SOCKET = "Socket"
     DUMMY = "Dummy"
+    FIFO = "FIFO"
 
 
 @dataclass

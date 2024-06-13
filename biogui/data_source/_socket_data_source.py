@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import socket
+from asyncio import IncompleteReadError
 
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
@@ -142,10 +143,23 @@ class SocketDataSource(DataSource):
                 # conn.sendall(b"=")
                 while not self._stopReadingFlag:
                     try:
-                        data = conn.recv(self._packetSize)
+                        data = bytearray(self._packetSize)
+                        pos = 0
+                        while pos < self._packetSize:
+                            nRead = conn.recv_into(memoryview(data)[pos:])
+                            if nRead == 0:
+                                raise IncompleteReadError(
+                                    bytes[data[:pos]], self._packetSize
+                                )
+                            pos += nRead
                     except socket.timeout:
                         self.errorSig.emit("TCP communication failed.")
                         logging.error("DataWorker: TCP communication failed.")
+                        return
+                    except IncompleteReadError as e:
+                        logging.error(
+                            f"DataWorker: read only {len(e.partial)} out of {e.expected} bytes."
+                        )
                         return
 
                     # Check number of bytes read

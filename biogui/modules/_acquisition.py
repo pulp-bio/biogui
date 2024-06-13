@@ -80,7 +80,9 @@ class _FileWriterWorker(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self._f = None
+        self._f1 = None
+        self._f2 = None
+        self._f3 = None
         self._firstWrite = True
 
         self._filePath = ""
@@ -114,8 +116,8 @@ class _FileWriterWorker(QObject):
     def targetSigName(self, targetSigName: str) -> None:
         self._targetSigName = targetSigName
 
-    @Slot(DataPacket)
-    def write(self, dataPacket: DataPacket) -> None:
+    @Slot(object)
+    def write(self, dataPackets: tuple[DataPacket]) -> None:
         """This method is called automatically when the associated signal is received,
         and it writes to the file the received data.
 
@@ -124,28 +126,50 @@ class _FileWriterWorker(QObject):
         dataPacket : DataPacket
             Data to write.
         """
-        if dataPacket.id == self._targetSigName:
-            if self._firstWrite:  # write number of channels
-                self._f.write(struct.pack("<I", dataPacket.data.shape[1] + 1))  # type: ignore
-                self._firstWrite = False
-            data = np.concatenate(
-                (
-                    dataPacket.data,
-                    np.repeat(self._trigger, dataPacket.data.shape[0]).reshape(-1, 1),
-                ),
-                axis=1,
-            ).astype("float32")
-            self._f.write(data.tobytes())  # type: ignore
+        # if dataPacket.id == self._targetSigName:
+        if self._firstWrite:  # write number of channels
+            self._f1.write(struct.pack("<I", dataPackets[0].data.shape[1] + 1))  # type: ignore
+            self._f2.write(struct.pack("<I", dataPackets[1].data.shape[1] + 1))  # type: ignore
+            self._f3.write(struct.pack("<I", dataPackets[2].data.shape[1] + 1))  # type: ignore
+            self._firstWrite = False
+        data1 = np.concatenate(
+            (
+                dataPackets[0].data,
+                np.repeat(self._trigger, dataPackets[0].data.shape[0]).reshape(-1, 1),
+            ),
+            axis=1,
+        ).astype("float32")
+        self._f1.write(data1.tobytes())  # type: ignore
+        data2 = np.concatenate(
+            (
+                dataPackets[1].data,
+                np.repeat(self._trigger, dataPackets[1].data.shape[0]).reshape(-1, 1),
+            ),
+            axis=1,
+        ).astype("float32")
+        self._f2.write(data2.tobytes())  # type: ignore
+        data3 = np.concatenate(
+            (
+                dataPackets[2].data,
+                np.repeat(self._trigger, dataPackets[2].data.shape[0]).reshape(-1, 1),
+            ),
+            axis=1,
+        ).astype("float32")
+        self._f3.write(data3.tobytes())  # type: ignore
 
     def openFile(self) -> None:
         """Open the file."""
-        self._f = open(self._filePath, "wb")
+        self._f1 = open(self._filePath[:-4] + "_ppg.bin", "wb")
+        self._f2 = open(self._filePath[:-4] + "_ecg.bin", "wb")
+        self._f3 = open(self._filePath[:-4] + "_acc.bin", "wb")
         self._firstWrite = True
         logging.info("FileWriterWorker: file opened.")
 
     def closeFile(self) -> None:
         """Close the file."""
-        self._f.close()  # type: ignore
+        self._f1.close()  # type: ignore
+        self._f2.close()  # type: ignore
+        self._f3.close()  # type: ignore
         logging.info("FileWriterWorker: file closed.")
 
 
@@ -348,7 +372,7 @@ class AcquisitionController(QObject):
         mainWin.startStreamingSig.connect(self._startAcquisition)
         mainWin.stopStreamingSig.connect(self._stopAcquisition)
         mainWin.closeSig.connect(self._stopAcquisition)
-        mainWin.dataReadyRawSig.connect(lambda d: self._dataReadySig.emit(d))
+        mainWin.dataReadyRawSig2.connect(lambda d: self._dataReadySig.emit(d))
 
         self._gesturesId = {}
         self._gesturesLabels = []

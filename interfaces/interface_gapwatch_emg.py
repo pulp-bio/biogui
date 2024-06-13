@@ -17,12 +17,27 @@ limitations under the License.
 """
 
 import struct
-from collections.abc import Sequence
+from collections import namedtuple
 
 import numpy as np
 
+PACKET_SIZE: int = 720
+"""Number of bytes in each package."""
 
-def decodeFn(data: bytes) -> Sequence[np.ndarray]:
+
+startSeq: list[bytes] = []
+"""Sequence of commands to start the board."""
+
+
+stopSeq: list[bytes] = []
+"""Sequence of commands to stop the board."""
+
+
+SigsPacket = namedtuple("SigsPacket", "emg")
+"""Named tuple containing the EMG packet."""
+
+
+def decodeFn(data: bytes) -> SigsPacket:
     """Function to decode the binary data received from GAPWatch into a single sEMG signal.
 
     Parameters
@@ -32,8 +47,8 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
 
     Returns
     -------
-    Sequence of ndarray
-        Sequence of corresponding signals with shape (nSamp, nCh).
+    SigsPacket
+        Named tuple containing the EMG packet with shape (nSamp, nCh).
     """
     nSamp = 12
     nCh = 16
@@ -47,8 +62,8 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     # Convert 24-bit to 32-bit integer
     pos = 0
     for _ in range(len(dataTmp) // 3):
-        preFix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, preFix)
+        prefix = 255 if dataTmp[pos] > 127 else 0
+        dataTmp.insert(pos, prefix)
         pos += 4
     emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype="int32")
 
@@ -58,4 +73,4 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     emg *= 1_000_000  # uV
     emg = emg.astype("float32")
 
-    return [emg]
+    return SigsPacket(emg=emg)
