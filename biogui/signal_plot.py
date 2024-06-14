@@ -41,6 +41,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Length of the window in the plot (in s).
     chSpacing : int
         Spacing between each channel in the plot.
+    parent : QWidget or None
+        Parent widget.
 
     Attributes
     ----------
@@ -92,10 +94,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
-        self.graphWidget.useOpenGL(True)
         self.graphWidget.setTitle(sigName)
         self.graphWidget.setLabel("bottom", "Time (s)")
         self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
+        self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
         # Initialize queues
         for i in range(-self._xQueue.maxlen, 0):  # type: ignore

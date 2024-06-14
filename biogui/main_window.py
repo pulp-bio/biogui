@@ -414,7 +414,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     stopStreamingSig = Signal()
     closeSig = Signal()
     dataReadyRawSig = Signal(DataPacket)
-    dataReadyRawSig2 = Signal(DataPacket)
     dataReadyFltSig = Signal(DataPacket)
 
     def __init__(self) -> None:
