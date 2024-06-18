@@ -60,11 +60,19 @@ class DummyDataSource(DataSource):
     ----------
     packetSize : int
         Number of bytes in the packet.
+    startSeq : list of bytes
+        Sequence of commands to start the source.
+    stopSeq : list of bytes
+        Sequence of commands to stop the source.
 
     Attributes
     ----------
     _packetSize : int
         Number of bytes in the packet (for compatibility with other data sources).
+    _startSeq : list of bytes
+        Sequence of commands to start the source (for compatibility with other data sources).
+    _stopSeq : list of bytes
+        Sequence of commands to stop the source (for compatibility with other data sources).
     _prng : Generator
         Pseudo-random number generator.
     _mean : float
@@ -80,10 +88,14 @@ class DummyDataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int) -> None:
+    def __init__(
+        self, packetSize: int, startSeq: list[bytes], stopSeq: list[bytes]
+    ) -> None:
         super().__init__()
 
         self._packetSize = packetSize
+        self._startSeq = startSeq
+        self._stopSeq = stopSeq
         self._prng = np.random.default_rng(seed=42)
         self._mean = 0.0
 

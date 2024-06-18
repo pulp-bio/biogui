@@ -52,7 +52,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the two dummy signals.
     """
-    dataTmp = np.frombuffer(data, dtype="float32")
+    dataTmp = np.frombuffer(data, dtype=np.float32)
     nSamp1, nSamp2 = 10, 4
     sig1 = dataTmp[: nSamp1 * 4].reshape(nSamp1, 4)
     sig2 = dataTmp[nSamp1 * 4 :].reshape(nSamp2, 2)

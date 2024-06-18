@@ -55,7 +55,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     """
     nSamp = 1
 
-    joints = np.asarray(struct.unpack(f"<{nSamp * 40}f", data), dtype="float32")
+    joints = np.asarray(struct.unpack(f"<{nSamp * 40}f", data), dtype=np.float32)
 
     # Reshape and convert ADC readings to uV
     joints = joints.reshape(nSamp, 40)[:, :20]
