@@ -6,6 +6,8 @@ import sys
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import signal
+from scipy import stats
+import seaborn as sns
 
 
 def main():
@@ -23,20 +25,26 @@ def main():
     trigger = sig[:, -1]
     sig = sig[:, :-1].T
     nCh, nSamp = sig.shape
+    print(nCh, nSamp)
     t = np.arange(nSamp) / fs
 
     # Band-pass filter
-    sos = signal.butter(4, (20, 500), "bandpass", output="sos", fs=fs)
-    sig = signal.sosfiltfilt(sos, sig)
+    # sos = signal.butter(20, (20, 499), "bandpass", output="sos", fs=fs)
+    # sig = signal.sosfiltfilt(sos, sig)
+    # sos = signal.butter(20, (49, 51), "bandstop", output="sos", fs=fs)
+    # sig = signal.sosfiltfilt(sos, sig)
+    trigger1 = trigger[5*128:7*128]
+    print((trigger1==0).sum())
 
     # Plot
-    _, axes = plt.subplots(
-        nrows=nChAndTrigger, sharex="all", figsize=(16, 20), layout="constrained"
-    )
-    for i in range(nCh):
-        axes[i].plot(t, sig[i])
+    _, axes = plt.subplots(nrows=nChAndTrigger, sharex="all", figsize=(16, 20), layout="constrained")
+    for i in range(0,nCh):
+        axes[i].plot(sig[i])
     axes[-1].set_title("Trigger")
-    axes[-1].plot(t, trigger)
+    axes[-1].plot(trigger)
+    plt.show()
+    corr = np.corrcoef(sig)
+    sns.heatmap(corr)
 
     plt.show()
 

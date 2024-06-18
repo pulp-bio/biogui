@@ -139,7 +139,7 @@ class SocketDataSource(DataSource):
                     f"DataWorker: TCP connection from {addr}, communication started."
                 )
 
-                # conn.sendall(b"=")
+                conn.sendall(b"=")
                 while not self._stopReadingFlag:
                     try:
                         data = conn.recv(self._packetSize)
@@ -156,8 +156,8 @@ class SocketDataSource(DataSource):
                 # Close connection and socket
                 conn.shutdown(socket.SHUT_RDWR)
                 conn.close()
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
+                # sock.shutdown(socket.SHUT_RDWR)
+                # sock.close()
 
                 logging.info("DataWorker: TCP communication stopped.")
 

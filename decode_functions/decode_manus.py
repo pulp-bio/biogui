@@ -1,4 +1,4 @@
-"""This module contains the decode function for sEMG from BioGAP.
+"""This module contains the decode function for sEMG from GAPWatch.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -23,7 +23,7 @@ import numpy as np
 
 
 def decodeFn(data: bytes) -> Sequence[np.ndarray]:
-    """Function to decode the binary data received from BioGAP into a single sEMG signal.
+    """Function to decode the binary data received from GAPWatch into a single sEMG signal.
 
     Parameters
     ----------
@@ -35,37 +35,12 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     Sequence of ndarray
         Sequence of corresponding signals with shape (nSamp, nCh).
     """
-    nSamp = 7
-    nCh = 8
+    nSamp = 1
+    nCh = 40
 
-    # ADC parameters
-    vRef = 2.5
-    gain = 6.0
-    nBit = 24
-
-    dataTmp = bytearray(
-        data[2:26]
-        + data[34:58]
-        + data[66:90]
-        + data[98:122]
-        + data[130:154]
-        + data[162:186]
-        + data[194:218]
-    )
-    # Convert 24-bit to 32-bit integer
-    pos = 0
-    for _ in range(len(dataTmp) // 3):
-        preFix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, preFix)
-        pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype="int32")
+    joints = np.asarray(struct.unpack(f"<{nSamp * nCh}f", data), dtype="float32")
 
     # Reshape and convert ADC readings to uV
-    emg = emg.reshape(nSamp, nCh)
-    #emg[:,2:] = 0
-    emg = emg[:,:4]
-    emg = emg * (vRef / gain / 2**nBit)  # V
-    emg *= 1_000_000  # uV
-    emg = emg.astype("float32")
+    joints = joints.reshape(nSamp, nCh)[:,:20]
 
-    return [emg]
+    return [joints]

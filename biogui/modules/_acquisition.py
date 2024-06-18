@@ -25,7 +25,7 @@ import os
 import struct
 
 import numpy as np
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot, Qt
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
@@ -50,7 +50,7 @@ def _loadValidateJSON(filePath: str) -> dict | None:
         config = json.load(f)
     # Check keys
     providedKeys = set(config.keys())
-    validKeys = {"gestures", "nReps", "durationMs", "imageFolder"}
+    validKeys = {"gestures", "nReps", "durationGesture",  "durationStart", "durationRest", "imageFolder"}
     if providedKeys != validKeys:
         return None
     # Check paths
@@ -341,6 +341,7 @@ class AcquisitionController(QObject):
         self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)  # type: ignore
 
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.PreciseTimer)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
 
         # Make connections with MainWindow
@@ -363,12 +364,15 @@ class AcquisitionController(QObject):
             return
 
         if self._restFlag:  # rest
+            self._timer.start(self._confWidget.config["durationRest"])
             old_trigger = self._fileWriterWorker.trigger
             new_trigger = 0
             image = "stop"
 
             self._restFlag = False
+            
         else:  # gesture
+            self._timer.start(self._confWidget.config["durationGesture"])
             gestureLabel = self._gesturesLabels[self._gestCounter]
             if gestureLabel != "last_stop":
                 old_trigger = self._fileWriterWorker.trigger
@@ -381,6 +385,7 @@ class AcquisitionController(QObject):
 
             self._gestCounter += 1
             self._restFlag = True
+            
 
         self._fileWriterWorker.trigger = new_trigger
         self._gestWidget.renderImage(image)
@@ -431,7 +436,7 @@ class AcquisitionController(QObject):
             self._dataReadySig.connect(self._fileWriterWorker.write)
             self._fileWriterThread.start()
 
-            self._timer.start(self._confWidget.config["durationMs"])
+            self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopAcquisition(self) -> None:
         """Stop the acquisition by exploiting GestureWidget close event."""
