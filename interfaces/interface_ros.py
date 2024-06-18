@@ -34,7 +34,7 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
     Sequence of ndarray
         Sequence of corresponding signals with shape (nSamp, nCh).
     """
-    dataTmp = np.frombuffer(data, dtype="float32")
+    dataTmp = np.frombuffer(data, dtype=np.float32)
     nSamp, nCh = 5, 16
     sig = dataTmp[: nSamp * nCh].reshape(nSamp, nCh)
 

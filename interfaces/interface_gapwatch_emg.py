@@ -67,12 +67,12 @@ def decodeFn(data: bytes) -> SigsPacket:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * 16}i", dataTmp), dtype="int32")
+    emg = np.asarray(struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32)
 
     # Reshape and convert ADC readings to uV
     emg = emg.reshape(nSamp, 16)
     emg = emg * (vRef / gain / 2**nBit)  # V
     emg *= 1_000_000  # uV
-    emg = emg.astype("float32")
+    emg = emg.astype(np.float32)
 
     return SigsPacket(emg=emg)

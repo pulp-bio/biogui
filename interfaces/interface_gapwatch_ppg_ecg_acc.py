@@ -75,9 +75,9 @@ def decodeFn(data: bytes) -> SigsPacket:
         ecgBytes2.append(struct.unpack(">i", ecgByte)[0])
 
         pos += 4
-    ppg = np.asarray(struct.unpack(">30i", ppgBytes), dtype="int32")
-    ecg = np.asarray(ecgBytes2, dtype="int32")
-    acc = np.asarray(struct.unpack("<9h", accelBytes), dtype="int32")
+    ppg = np.asarray(struct.unpack(">30i", ppgBytes), dtype=np.int32)
+    ecg = np.asarray(ecgBytes2, dtype=np.int32)
+    acc = np.asarray(struct.unpack("<9h", accelBytes), dtype=np.int32)
 
     # ADC parameters
     vRefECG = 1.0
@@ -87,15 +87,15 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     # Reshape PPG
     ppg = ppg.reshape(-1, 1)  # 1 channel
-    ppg = ppg.astype("float32")
+    ppg = ppg.astype(np.float32)
     # Reshape ECG and convert it to mV
     ecg = ecg.reshape(-1, 1)  # 1 channel
     ecg = ecg * (vRefECG / gainECG / 2**nBitECG)  # V
     ecg *= 1000  # mV
-    ecg = ecg.astype("float32")
+    ecg = ecg.astype(np.float32)
     # Reshape accelerometer and convert it to mg
     acc = acc.reshape(-1, 3)  # 3 channels
     acc = acc * accConvFactor  # mg
-    acc = acc.astype("float32")
+    acc = acc.astype(np.float32)
 
     return SigsPacket(ppg=ppg, ecg=ecg, acc=acc)

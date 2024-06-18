@@ -19,6 +19,7 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import time
 
 from PySide6.QtCore import QByteArray, QIODevice
 from PySide6.QtGui import QIntValidator
@@ -99,6 +100,10 @@ class SerialDataSource(DataSource):
     ----------
     packetSize : int
         Size of each packet read from the serial port.
+    startSeq : list of bytes
+        Sequence of commands to start the source.
+    stopSeq : list of bytes
+        Sequence of commands to stop the source.
     serialPortName : str
         String representing the serial port.
     baudRate : int
@@ -108,6 +113,10 @@ class SerialDataSource(DataSource):
     ----------
     _packetSize : int
         Size of each packet read from the serial port.
+    _startSeq : list of bytes
+        Sequence of commands to start the source.
+    _stopSeq : list of bytes
+        Sequence of commands to stop the source.
     _serialPort : QSerialPort
         Serial port object.
     _buffer : bytearray
@@ -121,19 +130,22 @@ class SerialDataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int, serialPortName: str, baudRate: int) -> None:
+    def __init__(
+        self,
+        packetSize: int,
+        startSeq: list[bytes],
+        stopSeq: list[bytes],
+        serialPortName: str,
+        baudRate: int,
+    ) -> None:
         super().__init__()
 
         self._packetSize = packetSize
+        self._startSeq = startSeq
+        self._stopSeq = stopSeq
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
-        self._serialPort.setDataBits(QSerialPort.Data8)
-        self._serialPort.setParity(QSerialPort.NoParity)
-        self._serialPort.setStopBits(QSerialPort.OneStop)
-        self._serialPort.setFlowControl(QSerialPort.NoFlowControl)
-        self._serialPort.setRequestToSend(True)
-        self._serialPort.setDataTerminalReady(True)
         self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
 
@@ -147,14 +159,20 @@ class SerialDataSource(DataSource):
             self.errorSig.emit("Cannot open serial port.")
             logging.error("DataWorker: cannot open serial port.")
             return
+        self._serialPort.setRequestToSend(True)
+        self._serialPort.setDataTerminalReady(True)
 
         # Start command
-        self._serialPort.write(b"=")
+        for c in self._startSeq:
+            self._serialPort.write(c)
+            time.sleep(0.2)
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
         # Stop command
-        self._serialPort.write(b":")
+        for c in self._stopSeq:
+            self._serialPort.write(c)
+            time.sleep(0.2)
         self._serialPort.flush()
 
         # Reset input buffer and close port
