@@ -128,6 +128,10 @@ class SerialDataSource(DataSource):
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
+        self._serialPort.setDataBits(QSerialPort.Data8)
+        self._serialPort.setParity(QSerialPort.NoParity)
+        self._serialPort.setStopBits(QSerialPort.OneStop)
+        self._serialPort.setFlowControl(QSerialPort.NoFlowControl)
         self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
 
@@ -149,7 +153,7 @@ class SerialDataSource(DataSource):
         """Stop data collection."""
         # Stop command
         self._serialPort.write(b":")
-        self._serialPort.waitForBytesWritten(200)
+        self._serialPort.flush()
 
         # Reset input buffer and close port
         while self._serialPort.waitForReadyRead(200):
