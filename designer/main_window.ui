@@ -22,7 +22,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
     <item>
-     <layout class="QVBoxLayout" name="confLayout" stretch="0,1,1">
+     <layout class="QVBoxLayout" name="confLayout" stretch="0,1,2">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout2">
         <item>
@@ -55,13 +55,30 @@
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,1,2">
+        <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0,0">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="9,1">
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,0,1">
            <item>
             <widget class="QPushButton" name="addSourceButton">
              <property name="text">
               <string>Add source</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="editSourceButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Edit the selected source</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-entry">
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -101,67 +118,79 @@
            <property name="flat">
             <bool>true</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,1">
+           <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,0">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout5" stretch="7,1,1,1">
+             <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0,0,0,0">
               <item>
-               <widget class="QPushButton" name="addSignalButton">
-                <property name="toolTip">
-                 <string>The number of signals and channels must respect the communication protocol used in the device firmware and in the streaming controller</string>
-                </property>
-                <property name="text">
-                 <string>Add signal</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="deleteSignalButton">
+               <widget class="QPushButton" name="editSignalButton">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
                 <property name="toolTip">
-                 <string>Delete selected signal</string>
+                 <string>Edit the selected signal</string>
                 </property>
                 <property name="text">
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset theme="user-trash">
-                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                 <iconset theme="edit-entry">
+                  <normaloff>.</normaloff>.</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="moveLeftButton">
+                <property name="toolTip">
+                 <string>Move the selected signal left</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="arrow-left">
+                  <normaloff>.</normaloff>.</iconset>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="moveUpButton">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
                 <property name="toolTip">
-                 <string>Move up selected signal</string>
+                 <string>Move the selected signal up</string>
                 </property>
                 <property name="text">
                  <string/>
                 </property>
                 <property name="icon">
                  <iconset theme="arrow-up">
-                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                  <normaloff>.</normaloff>.</iconset>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="moveDownButton">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
                 <property name="toolTip">
-                 <string>Move down selected signal</string>
+                 <string>Move the selected signal down</string>
                 </property>
                 <property name="text">
                  <string/>
                 </property>
                 <property name="icon">
                  <iconset theme="arrow-down">
-                  <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+                  <normaloff>.</normaloff>.</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="moveRightButton">
+                <property name="toolTip">
+                 <string>Move the selected signal right</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="arrow-right">
+                  <normaloff>.</normaloff>.</iconset>
                 </property>
                </widget>
               </item>
@@ -183,11 +212,29 @@
            </layout>
           </widget>
          </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Render length (s):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="renderLengthTextField">
+             <property name="text">
+              <string>4</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QScrollArea" name="scrollArea2">
+       <widget class="QScrollArea" name="scrollArea">
         <property name="widgetResizable">
          <bool>true</bool>
         </property>
@@ -197,7 +244,7 @@
            <x>0</x>
            <y>0</y>
            <width>374</width>
-           <height>478</height>
+           <height>601</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout3">
@@ -237,6 +284,17 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <tabstops>
+  <tabstop>startStreamingButton</tabstop>
+  <tabstop>stopStreamingButton</tabstop>
+  <tabstop>addSourceButton</tabstop>
+  <tabstop>editSourceButton</tabstop>
+  <tabstop>deleteSourceButton</tabstop>
+  <tabstop>sourceList</tabstop>
+  <tabstop>editSignalButton</tabstop>
+  <tabstop>sigNameList</tabstop>
+  <tabstop>scrollArea</tabstop>
+ </tabstops>
  <resources>
   <include location="resources.qrc"/>
  </resources>

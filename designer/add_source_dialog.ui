@@ -19,12 +19,12 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label1">
        <property name="text">
-        <string>Module with decode function:</string>
+        <string>Interface module:</string>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QPushButton" name="browseDecodeModuleButton">
+      <widget class="QPushButton" name="browseInterfaceModuleButton">
        <property name="toolTip">
         <string>The module must contain a function called &quot;decodeFn&quot; that converts bytes into a sequence of signals</string>
        </property>
@@ -41,7 +41,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QLabel" name="decodeModulePathLabel">
+      <widget class="QLabel" name="interfaceModulePathLabel">
        <property name="text">
         <string/>
        </property>
@@ -82,7 +82,7 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>browseDecodeModuleButton</tabstop>
+  <tabstop>browseInterfaceModuleButton</tabstop>
   <tabstop>sourceComboBox</tabstop>
  </tabstops>
  <resources/>

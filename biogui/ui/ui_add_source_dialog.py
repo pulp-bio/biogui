@@ -8,155 +8,94 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QDate,
-    QDateTime,
-    QLocale,
-    QMetaObject,
-    QObject,
-    QPoint,
-    QRect,
-    QSize,
-    Qt,
-    QTime,
-    QUrl,
-)
-from PySide6.QtGui import (
-    QBrush,
-    QColor,
-    QConicalGradient,
-    QCursor,
-    QFont,
-    QFontDatabase,
-    QGradient,
-    QIcon,
-    QImage,
-    QKeySequence,
-    QLinearGradient,
-    QPainter,
-    QPalette,
-    QPixmap,
-    QRadialGradient,
-    QTransform,
-)
-from PySide6.QtWidgets import (
-    QAbstractButton,
-    QApplication,
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFormLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-    QWidget,
-)
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
+    QDialogButtonBox, QFormLayout, QLabel, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_AddSourceDialog(object):
     def setupUi(self, AddSourceDialog):
         if not AddSourceDialog.objectName():
-            AddSourceDialog.setObjectName("AddSourceDialog")
+            AddSourceDialog.setObjectName(u"AddSourceDialog")
         AddSourceDialog.resize(480, 320)
         self.verticalLayout = QVBoxLayout(AddSourceDialog)
-        self.verticalLayout.setObjectName("verticalLayout")
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
-        self.formLayout.setObjectName("formLayout")
+        self.formLayout.setObjectName(u"formLayout")
         self.label1 = QLabel(AddSourceDialog)
-        self.label1.setObjectName("label1")
+        self.label1.setObjectName(u"label1")
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
 
-        self.browseDecodeModuleButton = QPushButton(AddSourceDialog)
-        self.browseDecodeModuleButton.setObjectName("browseDecodeModuleButton")
+        self.browseInterfaceModuleButton = QPushButton(AddSourceDialog)
+        self.browseInterfaceModuleButton.setObjectName(u"browseInterfaceModuleButton")
 
-        self.formLayout.setWidget(
-            0, QFormLayout.FieldRole, self.browseDecodeModuleButton
-        )
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.browseInterfaceModuleButton)
 
         self.label2 = QLabel(AddSourceDialog)
-        self.label2.setObjectName("label2")
+        self.label2.setObjectName(u"label2")
 
         self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label2)
 
-        self.decodeModulePathLabel = QLabel(AddSourceDialog)
-        self.decodeModulePathLabel.setObjectName("decodeModulePathLabel")
+        self.interfaceModulePathLabel = QLabel(AddSourceDialog)
+        self.interfaceModulePathLabel.setObjectName(u"interfaceModulePathLabel")
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.decodeModulePathLabel)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.interfaceModulePathLabel)
 
         self.label4 = QLabel(AddSourceDialog)
-        self.label4.setObjectName("label4")
-        self.label4.setAlignment(Qt.AlignLeading | Qt.AlignLeft | Qt.AlignVCenter)
+        self.label4.setObjectName(u"label4")
+        self.label4.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
 
         self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label4)
 
         self.sourceComboBox = QComboBox(AddSourceDialog)
-        self.sourceComboBox.setObjectName("sourceComboBox")
+        self.sourceComboBox.setObjectName(u"sourceComboBox")
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.sourceComboBox)
+
 
         self.verticalLayout.addLayout(self.formLayout)
 
         self.sourceConfigContainer = QVBoxLayout()
-        self.sourceConfigContainer.setObjectName("sourceConfigContainer")
+        self.sourceConfigContainer.setObjectName(u"sourceConfigContainer")
 
         self.verticalLayout.addLayout(self.sourceConfigContainer)
 
         self.buttonBox = QDialogButtonBox(AddSourceDialog)
-        self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
 
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.verticalLayout.setStretch(1, 1)
-        QWidget.setTabOrder(self.browseDecodeModuleButton, self.sourceComboBox)
+        QWidget.setTabOrder(self.browseInterfaceModuleButton, self.sourceComboBox)
 
         self.retranslateUi(AddSourceDialog)
         self.buttonBox.accepted.connect(AddSourceDialog.accept)
         self.buttonBox.rejected.connect(AddSourceDialog.reject)
 
         QMetaObject.connectSlotsByName(AddSourceDialog)
-
     # setupUi
 
     def retranslateUi(self, AddSourceDialog):
-        AddSourceDialog.setWindowTitle(
-            QCoreApplication.translate("AddSourceDialog", "Add source", None)
-        )
-        self.label1.setText(
-            QCoreApplication.translate(
-                "AddSourceDialog", "Module with decode function:", None
-            )
-        )
-        # if QT_CONFIG(tooltip)
-        self.browseDecodeModuleButton.setToolTip(
-            QCoreApplication.translate(
-                "AddSourceDialog",
-                'The module must contain a function called "decodeFn" that converts bytes into a sequence of signals',
-                None,
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
-        self.browseDecodeModuleButton.setText(
-            QCoreApplication.translate("AddSourceDialog", "Browse", None)
-        )
-        self.label2.setText(
-            QCoreApplication.translate("AddSourceDialog", "Path to module:", None)
-        )
-        self.decodeModulePathLabel.setText("")
-        self.label4.setText(
-            QCoreApplication.translate("AddSourceDialog", "Source:", None)
-        )
-        # if QT_CONFIG(tooltip)
-        self.sourceComboBox.setToolTip(
-            QCoreApplication.translate(
-                "AddSourceDialog", "List of available serial ports", None
-            )
-        )
+        AddSourceDialog.setWindowTitle(QCoreApplication.translate("AddSourceDialog", u"Add source", None))
+        self.label1.setText(QCoreApplication.translate("AddSourceDialog", u"Interface module:", None))
+#if QT_CONFIG(tooltip)
+        self.browseInterfaceModuleButton.setToolTip(QCoreApplication.translate("AddSourceDialog", u"The module must contain a function called \"decodeFn\" that converts bytes into a sequence of signals", None))
+#endif // QT_CONFIG(tooltip)
+        self.browseInterfaceModuleButton.setText(QCoreApplication.translate("AddSourceDialog", u"Browse", None))
+        self.label2.setText(QCoreApplication.translate("AddSourceDialog", u"Path to module:", None))
+        self.interfaceModulePathLabel.setText("")
+        self.label4.setText(QCoreApplication.translate("AddSourceDialog", u"Source:", None))
+#if QT_CONFIG(tooltip)
+        self.sourceComboBox.setToolTip(QCoreApplication.translate("AddSourceDialog", u"List of available serial ports", None))
+#endif // QT_CONFIG(tooltip)
+    # retranslateUi
 
-
-# endif // QT_CONFIG(tooltip)
-# retranslateUi

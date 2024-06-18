@@ -21,9 +21,8 @@ from collections import namedtuple
 
 import numpy as np
 
-PACKET_SIZE: int = 234
+packetSize: int = 234
 """Number of bytes in each package."""
-
 
 startSeq: list[bytes] = [
     bytes([20, 1, 50]),
@@ -32,10 +31,14 @@ startSeq: list[bytes] = [
 ]
 """Sequence of commands to start the board."""
 
-
 stopSeq: list[bytes] = [(19).to_bytes()]
 """Sequence of commands to stop the board."""
 
+fs: list[float] = [500]
+"""Sequence of floats representing the sampling rate of each signal."""
+
+nCh: list[int] = [8]
+"""Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "emg")
 """Named tuple containing the EMG packet."""
@@ -57,7 +60,6 @@ def decodeFn(data: bytes) -> SigsPacket:
     # PACKET SIZE: 234
 
     nSamp = 7
-    nCh = 8
 
     # ADC parameters
     vRef = 2.5
@@ -79,10 +81,10 @@ def decodeFn(data: bytes) -> SigsPacket:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype="int32")
+    emg = np.asarray(struct.unpack(f">{nSamp * 8}i", dataTmp), dtype="int32")
 
     # Reshape and convert ADC readings to uV
-    emg = emg.reshape(nSamp, nCh)
+    emg = emg.reshape(nSamp, 8)
     emg = emg * (vRef / gain / 2**nBit)  # V
     emg *= 1_000_000  # uV
     emg = emg.astype("float32")
