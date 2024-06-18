@@ -132,6 +132,8 @@ class SerialDataSource(DataSource):
         self._serialPort.setParity(QSerialPort.NoParity)
         self._serialPort.setStopBits(QSerialPort.OneStop)
         self._serialPort.setFlowControl(QSerialPort.NoFlowControl)
+        self._serialPort.setRequestToSend(True)
+        self._serialPort.setDataTerminalReady(True)
         self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
 
