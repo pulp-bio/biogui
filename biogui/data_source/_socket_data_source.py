@@ -81,6 +81,10 @@ class SocketDataSource(DataSource):
     ----------
     packetSize : int
         Size of each packet read from the socket.
+    startSeq : list of bytes
+        Sequence of commands to start the source.
+    stopSeq : list of bytes
+        Sequence of commands to stop the source.
     socketPort: int
         Socket port.
 
@@ -88,6 +92,10 @@ class SocketDataSource(DataSource):
     ----------
     _packetSize : int
         Size of each packet read from the socket.
+    _startSeq : list of bytes
+        Sequence of commands to start the source.
+    _stopSeq : list of bytes
+        Sequence of commands to stop the source.
     _socketPort: int
         Socket port.
     _stopReadingFlag : bool
@@ -103,10 +111,18 @@ class SocketDataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int, socketPort: int) -> None:
+    def __init__(
+        self,
+        packetSize: int,
+        startSeq: list[bytes],
+        stopSeq: list[bytes],
+        socketPort: int,
+    ) -> None:
         super().__init__()
 
         self._packetSize = packetSize
+        self._startSeq = startSeq
+        self._stopSeq = stopSeq
         self._socketPort = socketPort
         self._stopReadingFlag = False
         self._exitAcceptLoopFlag = False
@@ -140,7 +156,9 @@ class SocketDataSource(DataSource):
                     f"DataWorker: TCP connection from {addr}, communication started."
                 )
 
-                # conn.sendall(b"=")
+                # Start command
+                for c in self._startSeq:
+                    conn.write(c)
                 while not self._stopReadingFlag:
                     try:
                         data = bytearray(self._packetSize)
@@ -165,7 +183,9 @@ class SocketDataSource(DataSource):
                     # Check number of bytes read
                     if len(data) == self._packetSize:
                         self.dataReadySig.emit(data)
-                # conn.sendall(b":")
+                # Stop command
+                for c in self._stopSeq:
+                    conn.write(c)
 
                 # Close connection and socket
                 conn.shutdown(socket.SHUT_RDWR)
