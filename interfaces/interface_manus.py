@@ -21,17 +21,20 @@ from collections import namedtuple
 
 import numpy as np
 
-PACKET_SIZE: int = 160
+packetSize: int = 160
 """Number of bytes in each package."""
-
 
 startSeq: list[bytes] = [b"="]
 """Sequence of commands to start the board."""
 
-
 stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the board."""
 
+fs: list[float] = [90]
+"""Sequence of floats representing the sampling rate of each signal."""
+
+nCh: list[int] = [20]
+"""Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "manus")
 """Named tuple containing the Manus data packet."""
@@ -51,11 +54,10 @@ def decodeFn(data: bytes) -> SigsPacket:
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
     nSamp = 1
-    nCh = 40
 
-    joints = np.asarray(struct.unpack(f"<{nSamp * nCh}f", data), dtype="float32")
+    joints = np.asarray(struct.unpack(f"<{nSamp * 40}f", data), dtype="float32")
 
     # Reshape and convert ADC readings to uV
-    joints = joints.reshape(nSamp, nCh)[:, :20]
+    joints = joints.reshape(nSamp, 40)[:, :20]
 
     return SigsPacket(manus=joints)

@@ -129,7 +129,7 @@ class SerialDataSource(DataSource):
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
         self._serialPort.readyRead.connect(self._collectData)
-        self._buffer = bytearray(self._packetSize)
+        self._buffer = QByteArray()
 
     def __str__(self):
         return f"Serial port - {self._serialPort.portName()}"
@@ -149,10 +149,11 @@ class SerialDataSource(DataSource):
         """Stop data collection."""
         # Stop command
         self._serialPort.write(b":")
+        self._serialPort.waitForBytesWritten(200)
 
         # Reset input buffer and close port
-        while self._serialPort.waitForReadyRead(100):
-            self._serialPort.clear()
+        while self._serialPort.waitForReadyRead(200):
+            self._serialPort.readAll()
         self._serialPort.close()
         self._buffer = QByteArray()
 

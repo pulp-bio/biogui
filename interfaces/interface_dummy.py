@@ -20,16 +20,20 @@ from collections import namedtuple
 
 import numpy as np
 
-PACKET_SIZE: int = 0
+packetSize: int = 0
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []
 """Sequence of commands to start the board."""
 
-
 stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
+fs: list[float] = [128, 51.2]
+"""Sequence of floats representing the sampling rate of each signal."""
+
+nCh: list[int] = [4, 2]
+"""Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "sig1, sig2")
 """Named tuple containing the packets for the two dummy signals."""
@@ -49,9 +53,8 @@ def decodeFn(data: bytes) -> SigsPacket:
         Named tuple containing the two dummy signals.
     """
     dataTmp = np.frombuffer(data, dtype="float32")
-    nSamp1, nCh1 = 10, 4
-    nSamp2, nCh2 = 4, 2
-    sig1 = dataTmp[: nSamp1 * nCh1].reshape(nSamp1, nCh1)
-    sig2 = dataTmp[nSamp1 * nCh1 :].reshape(nSamp2, nCh2)
+    nSamp1, nSamp2 = 10, 4
+    sig1 = dataTmp[: nSamp1 * 4].reshape(nSamp1, 4)
+    sig2 = dataTmp[nSamp1 * 4 :].reshape(nSamp2, 2)
 
     return SigsPacket(sig1=sig1, sig2=sig2)

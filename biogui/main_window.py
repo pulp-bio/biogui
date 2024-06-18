@@ -64,10 +64,10 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
     except ImportError:
         return None, "Cannot import the selected Python module."
 
-    if not hasattr(module, "PACKET_SIZE"):
+    if not hasattr(module, "packetSize"):
         return (
             None,
-            'The selected Python module does not contain a "PACKET_SIZE" constant.',
+            'The selected Python module does not contain a "packetSize" constant.',
         )
     if not hasattr(module, "startSeq"):
         return (
@@ -78,6 +78,16 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
         return (
             None,
             'The selected Python module does not contain a "stopSeq" variable.',
+        )
+    if not hasattr(module, "fs"):
+        return (
+            None,
+            'The selected Python module does not contain a "fs" variable.',
+        )
+    if not hasattr(module, "nCh"):
+        return (
+            None,
+            'The selected Python module does not contain a "nCh" variable.',
         )
     if not hasattr(module, "SigsPacket"):
         return (
@@ -92,9 +102,11 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
 
     return (
         InterfaceModule(
-            packetSize=module.PACKET_SIZE,
+            packetSize=module.packetSize,
             startSeq=module.startSeq,
             stopSeq=module.stopSeq,
+            fs=module.fs,
+            nCh=module.nCh,
             sigNames=module.SigsPacket._fields,
             decodeFn=module.decodeFn,
         ),
@@ -124,7 +136,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         self.buttonBox.accepted.connect(self._addSourceHandler)
         self.buttonBox.rejected.connect(self.close)
 
-        self.browseDecodeModuleButton.clicked.connect(self._browseDecodeModule)
+        self.browseInterfaceModuleButton.clicked.connect(self._browseInterfaceModule)
         self.sourceComboBox.addItems(
             list(map(lambda sourceType: sourceType.value, DataSourceType))
         )
@@ -153,7 +165,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         """str: Property for getting the error message if the form is not valid."""
         return self._errMessage
 
-    def _browseDecodeModule(self) -> None:
+    def _browseInterfaceModule(self) -> None:
         """Browse files to select the module containing the decode function."""
         filePath, _ = QFileDialog.getOpenFileName(
             self,
@@ -179,8 +191,8 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
                 if len(filePath) <= 50
                 else filePath[:20] + "..." + filePath[-30:]
             )
-            self.decodeModulePathLabel.setText(displayText)
-            self.decodeModulePathLabel.setToolTip(filePath)
+            self.interfaceModulePathLabel.setText(displayText)
+            self.interfaceModulePathLabel.setToolTip(filePath)
 
     def _onSourceChange(self) -> None:
         """Detect if source type has changed."""
@@ -223,13 +235,26 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
     Parameters
     ----------
-    sourceList : list of str
-        List of the sources.
+    sourceName : str
+        Name of the source.
+    sigName : str
+        Name of the signal.
+    nCh : int
+        Number of channels.
+    fs : float
+        Sampling frequency.
     parent : QWidget or None, default=None
         Parent widget.
     """
 
-    def __init__(self, sourceList: list[str], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        sourceName: str,
+        sigName: str,
+        nCh: int,
+        fs: float,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
@@ -238,22 +263,15 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.buttonBox.rejected.connect(self.close)
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
 
-        self.sourceComboBox.addItems(sourceList)
+        self.sourceNameLabel.setText(sourceName)
+        self.sigNameLabel.setText(sigName)
+        self.nChLabel.setText(str(nCh))
+        self.freqLabel.setText(str(fs))
 
         # Validation rules
-        minCh, maxCh = 1, 64
         nDec = 3
         minFreq, maxFreq = 1 * 10 ** (-nDec), 20_000.0
         minOrd, maxOrd = 1, 20
-
-        self.nChTextField.setToolTip(f"Integer between {minCh} and {maxCh}")
-        nChValidator = QIntValidator(bottom=minCh, top=maxCh)
-        self.nChTextField.setValidator(nChValidator)
-
-        self.fsTextField.setToolTip(f"Float between {minFreq:.3f} and {maxFreq:.3f}")
-        fsValidator = QDoubleValidator(bottom=minFreq, top=maxFreq, decimals=nDec)
-        fsValidator.setNotation(QDoubleValidator.StandardNotation)  # type: ignore
-        self.fsTextField.setValidator(fsValidator)
 
         self.freq1TextField.setToolTip(
             f"Float between {minFreq:.3f} and {maxFreq / 2:.3f}"
@@ -274,6 +292,10 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.chSpacingTextField.setValidator(chSpacingValidator)
 
         self._signalConfig = {}
+        self._signalConfig["source"] = sourceName
+        self._signalConfig["sigName"] = sigName
+        self._signalConfig["nCh"] = nCh
+        self._signalConfig["fs"] = fs
         self._isValid = False
         self._errMessage = ""
 
@@ -306,29 +328,6 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         """Validate user input in the form."""
         lo = QLocale()
 
-        # Check basic settings
-        if self.sourceComboBox.currentText() == "":
-            self._isValid = False
-            self._errMessage = 'The "source" field is empty.'
-        self._signalConfig["source"] = self.sourceComboBox.currentText()
-
-        if not self.sigNameTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "signal name" field is empty.'
-            return
-        self._signalConfig["sigName"] = self.sigNameTextField.text()
-
-        if not self.nChTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "number of channels" field is invalid.'
-            return
-        self._signalConfig["nCh"] = lo.toInt(self.nChTextField.text())[0]
-
-        if not self.fsTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "sampling frequency" field is invalid.'
-            return
-        self._signalConfig["fs"] = lo.toFloat(self.fsTextField.text())[0]
         nyq_fs = self._signalConfig["fs"] // 2
 
         # Check filtering settings
@@ -436,28 +435,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         # Signal addition/removal/moving
-        self.addSignalButton.clicked.connect(self._addSignalHandler)
-        self.deleteSignalButton.clicked.connect(self._deleteSignalHandler)
-        self.sigNameList.itemClicked.connect(
-            lambda: self.deleteSignalButton.setEnabled(True)
-        )
-        self.moveUpButton.clicked.connect(lambda: self._moveSignal(up=True))
-        self.moveDownButton.clicked.connect(lambda: self._moveSignal(up=False))
+        # self.deleteSignalButton.clicked.connect(self._deleteSignalHandler)
+        # self.sigNameList.itemClicked.connect(
+        #     lambda: self.deleteSignalButton.setEnabled(True)
+        # )
+        # self.moveUpButton.clicked.connect(lambda: self._moveSignal(up=True))
+        # self.moveDownButton.clicked.connect(lambda: self._moveSignal(up=False))
         self.sigNameList.itemClicked.connect(self._enableMoveButtons)
 
         # Streaming
         self.startStreamingButton.clicked.connect(self._startStreaming)
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
-
-    def getSigInfo(self) -> list[tuple[str, float]]:
-        """Get the list with signal information (i.e., name and sampling frequency).
-
-        Returns
-        -------
-        list of str
-            List with the signal names.
-        """
-        return list(self._sigPlotWidgets.keys())
 
     def addConfWidget(self, widget: QWidget) -> None:
         """Add a widget to configure pluggable modules.
@@ -520,6 +508,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.signalsGroupBox.isEnabled():
                 self.signalsGroupBox.setEnabled(True)
 
+            # Add signals
+            for sigName, nCh, fs in zip(
+                interfaceModule.sigNames, interfaceModule.nCh, interfaceModule.fs
+            ):
+                self._openAddSignalDialog(str(streamController), sigName, nCh, fs)
+
     def _deleteSourceHandler(self) -> None:
         """Handler to remove the selected source."""
         # Get corresponding index
@@ -558,12 +552,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Open the dialog
         self._openAddSignalDialog()
 
-    def _openAddSignalDialog(self, addSignalDialog: _AddSignalDialog | None = None):
+    def _openAddSignalDialog(
+        self,
+        sourceName: str,
+        sigName: str,
+        nCh: int,
+        fs: float,
+        addSignalDialog: _AddSignalDialog | None = None,
+    ):
         """Open the dialog for adding signals."""
         if addSignalDialog is None:
-            addSignalDialog = _AddSignalDialog(
-                list(map(str, self._streamControllers)), self
-            )
+            addSignalDialog = _AddSignalDialog(sourceName, sigName, nCh, fs, self)
 
         accepted = addSignalDialog.exec()
         if accepted:
@@ -576,7 +575,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     buttons=QMessageBox.Retry,  # type: ignore
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
-                self._openAddSignalDialog(addSignalDialog)  # re-open dialog
+                self._openAddSignalDialog(
+                    sourceName, sigName, nCh, fs, addSignalDialog
+                )  # re-open dialog
                 return
 
             # Connect to streaming controller

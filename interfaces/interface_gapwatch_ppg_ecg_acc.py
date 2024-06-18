@@ -21,17 +21,20 @@ from collections import namedtuple
 
 import numpy as np
 
-PACKET_SIZE: int = 204
+packetSize: int = 204
 """Number of bytes in each package."""
-
 
 startSeq: list[bytes] = []
 """Sequence of commands to start the board."""
 
-
 stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
+fs: list[float] = [128, 128, 12.8]
+"""Sequence of floats representing the sampling rate of each signal."""
+
+nCh: list[int] = [1, 1, 3]
+"""Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "ppg, ecg, acc")
 """Named tuple containing the PPG, ECG and accelerometer packets."""

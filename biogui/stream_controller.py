@@ -32,7 +32,7 @@ from . import data_source
 DecodeFn: TypeAlias = Callable[[bytes], Sequence[np.ndarray]]
 
 InterfaceModule = namedtuple(
-    "InterfaceModule", "packetSize, startSeq, stopSeq, sigNames, decodeFn"
+    "InterfaceModule", "packetSize, startSeq, stopSeq, fs, nCh, sigNames, decodeFn"
 )
 
 
