@@ -138,9 +138,7 @@ class SocketDataSource(DataSource):
         """Collect data from the configured source."""
         # Start server
         if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):
-            self.errorSig.emit(
-                f"Cannot start TCP server: {self._tcpServer.errorString()}."
-            )
+            self.errorSig.emit(f"Cannot start TCP server.")
             logging.error("DataWorker: cannot start TCP server.")
             return
 
@@ -156,12 +154,11 @@ class SocketDataSource(DataSource):
                 self._clientSock.write(c)
             self._clientSock.flush()
 
-            # Reset input buffer and close socket and server
-            # while self._clientSock.waitForReadyRead(200):
-            #     self._clientSock.readAll()
+            # Close socket
             self._clientSock.close()
-            self._tcpServer.close()
-            self._buffer = QByteArray()
+        # Close server
+        self._tcpServer.close()
+        self._buffer = QByteArray()
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
