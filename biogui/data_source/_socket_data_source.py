@@ -138,7 +138,7 @@ class SocketDataSource(DataSource):
         """Collect data from the configured source."""
         # Start server
         if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):
-            self.errorSig.emit(f"Cannot start TCP server.")
+            self.errorSig.emit("Cannot start TCP server.")
             logging.error("DataWorker: cannot start TCP server.")
             return
 
