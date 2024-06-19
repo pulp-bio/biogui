@@ -150,17 +150,18 @@ class SocketDataSource(DataSource):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        # Stop command
-        for c in self._stopSeq:
-            self._clientSock.write(c)
-        self._clientSock.flush()
+        if self._clientSock is not None:
+            # Stop command
+            for c in self._stopSeq:
+                self._clientSock.write(c)
+            self._clientSock.flush()
 
-        # Reset input buffer and close socket and server
-        # while self._clientSock.waitForReadyRead(200):
-        #     self._clientSock.readAll()
-        self._clientSock.close()
-        self._tcpServer.close()
-        self._buffer = QByteArray()
+            # Reset input buffer and close socket and server
+            # while self._clientSock.waitForReadyRead(200):
+            #     self._clientSock.readAll()
+            self._clientSock.close()
+            self._tcpServer.close()
+            self._buffer = QByteArray()
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
