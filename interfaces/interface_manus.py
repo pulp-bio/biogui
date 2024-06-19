@@ -24,10 +24,10 @@ import numpy as np
 packetSize: int = 160
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = [b"="]
+startSeq: list[bytes] = [b"A"]
 """Sequence of commands to start the board."""
 
-stopSeq: list[bytes] = [b":"]
+stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
 fs: list[float] = [90]
@@ -53,11 +53,9 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
-    nSamp = 1
-
-    joints = np.asarray(struct.unpack(f"<{nSamp * 40}f", data), dtype=np.float32)
+    joints = np.asarray(struct.unpack(f"<{40}f", data), dtype=np.float32)
 
     # Reshape and convert ADC readings to uV
-    joints = joints.reshape(nSamp, 40)[:, :20]
+    joints = joints.reshape(1, 40)[:, :20]
 
     return SigsPacket(manus=joints)

@@ -119,7 +119,7 @@ class SerialDataSource(DataSource):
         Sequence of commands to stop the source.
     _serialPort : QSerialPort
         Serial port object.
-    _buffer : bytearray
+    _buffer : QByteArray
         Input buffer.
 
     Class attributes
