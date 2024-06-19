@@ -156,8 +156,8 @@ class SocketDataSource(DataSource):
         self._clientSock.flush()
 
         # Reset input buffer and close socket and server
-        while self._clientSock.waitForReadyRead(200):
-            self._clientSock.readAll()
+        # while self._clientSock.waitForReadyRead(200):
+        #     self._clientSock.readAll()
         self._clientSock.close()
         self._tcpServer.close()
         self._buffer = QByteArray()
