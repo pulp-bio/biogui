@@ -290,6 +290,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
         self.chSpacingTextField.setValidator(chSpacingValidator)
+        renderLenValidator = QIntValidator(bottom=1, top=8)
+        self.renderLenTextField.setValidator(renderLenValidator)
 
         self._signalConfig = {}
         self._signalConfig["source"] = sourceName
@@ -377,6 +379,11 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self._errMessage = 'The "channel spacing" field is invalid.'
             return
         self._signalConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
+        if not self.renderLenTextField.hasAcceptableInput():
+            self._isValid = False
+            self._errMessage = 'The "render length" field is invalid.'
+            return
+        self._signalConfig["renderLen"] = lo.toInt(self.renderLenTextField.text())[0]
 
         self._isValid = True
 
@@ -602,8 +609,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # Create plot widget
             nCh = addSignalDialog.signalConfig["nCh"]
             fs = addSignalDialog.signalConfig["fs"]
+            renderLen = addSignalDialog.signalConfig["renderLen"]
             chSpacing = addSignalDialog.signalConfig["chSpacing"]
-            sigPlotWidget = SignalPlotWidget(sigName, nCh, fs, 4, chSpacing)
+            sigPlotWidget = SignalPlotWidget(sigName, nCh, fs, renderLen, chSpacing)
             self._sigPlotWidgets[sigName] = sigPlotWidget
             self.plotsLayout.addWidget(sigPlotWidget)
 

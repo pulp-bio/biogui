@@ -15,11 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFormLayout, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QListView, QListWidget,
-    QListWidgetItem, QMainWindow, QMenuBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QStatusBar,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QListView,
+    QListWidget, QListWidgetItem, QMainWindow, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QStatusBar, QVBoxLayout, QWidget)
 from . import resources_rc
 
 class Ui_MainWindow(object):
@@ -181,21 +180,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout1.addWidget(self.signalsGroupBox)
 
-        self.formLayout = QFormLayout()
-        self.formLayout.setObjectName(u"formLayout")
-        self.label = QLabel(self.streamConfGroupBox)
-        self.label.setObjectName(u"label")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
-
-        self.renderLengthTextField = QLineEdit(self.streamConfGroupBox)
-        self.renderLengthTextField.setObjectName(u"renderLengthTextField")
-
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.renderLengthTextField)
-
-
-        self.verticalLayout1.addLayout(self.formLayout)
-
 
         self.confLayout.addWidget(self.streamConfGroupBox)
 
@@ -204,7 +188,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.moduleContainer = QWidget()
         self.moduleContainer.setObjectName(u"moduleContainer")
-        self.moduleContainer.setGeometry(QRect(0, 0, 374, 601))
+        self.moduleContainer.setGeometry(QRect(0, 0, 374, 639))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -290,7 +274,5 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.sigNameList.setToolTip(QCoreApplication.translate("MainWindow", u"The order of the signals must match the one provided by the streaming controller", None))
 #endif // QT_CONFIG(tooltip)
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Render length (s):", None))
-        self.renderLengthTextField.setText(QCoreApplication.translate("MainWindow", u"4", None))
     # retranslateUi
 
