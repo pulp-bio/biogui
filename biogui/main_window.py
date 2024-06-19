@@ -603,7 +603,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             nCh = addSignalDialog.signalConfig["nCh"]
             fs = addSignalDialog.signalConfig["fs"]
             chSpacing = addSignalDialog.signalConfig["chSpacing"]
-            sigPlotWidget = SignalPlotWidget(sigName, nCh, fs, 2, chSpacing)
+            sigPlotWidget = SignalPlotWidget(sigName, nCh, fs, 4, chSpacing)
             self._sigPlotWidgets[sigName] = sigPlotWidget
             self.plotsLayout.addWidget(sigPlotWidget)
 
