@@ -19,10 +19,10 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-import socket
-from asyncio import IncompleteReadError
 
+from PySide6.QtCore import QByteArray
 from PySide6.QtGui import QIntValidator
+from PySide6.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_socket_config_widget import Ui_SocketConfigWidget
@@ -96,12 +96,14 @@ class SocketDataSource(DataSource):
         Sequence of commands to start the source.
     _stopSeq : list of bytes
         Sequence of commands to stop the source.
+    _tcpServer : QTcpServer
+        Instance of QTcpServer.
+    _clientSock : QTcpSocket or None
+        Client socket.
     _socketPort: int
         Socket port.
-    _stopReadingFlag : bool
-        Flag indicating to stop reading data.
-    _exitAcceptLoopFlag : bool
-        Flag indicating to exit the non-blocking accept loop.
+    _buffer : QByteArray
+        Input buffer.
 
     Class attributes
     ----------------
@@ -123,83 +125,59 @@ class SocketDataSource(DataSource):
         self._packetSize = packetSize
         self._startSeq = startSeq
         self._stopSeq = stopSeq
+        self._tcpServer = QTcpServer(self)
+        self._tcpServer.newConnection.connect(self._handleConnection)
+        self._clientSock: QTcpSocket | None = None
         self._socketPort = socketPort
-        self._stopReadingFlag = False
-        self._exitAcceptLoopFlag = False
+        self._buffer = QByteArray()
 
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._stopReadingFlag = False
-        self._exitAcceptLoopFlag = False
-
-        # Open socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(0.5)
-        sock.bind(("", self._socketPort))
-        sock.listen()
+        # Start server
+        if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):
+            self.errorSig.emit(
+                f"Cannot start TCP server: {self._tcpServer.errorString()}."
+            )
+            logging.error("DataWorker: cannot start TCP server.")
+            return
 
         logging.info(
             f"DataWorker: waiting for TCP connection on port {self._socketPort}."
         )
 
-        # Non-blocking accept
-        while not self._exitAcceptLoopFlag:
-            try:
-                conn, (addr, _) = sock.accept()
-                conn.settimeout(5)
-
-                logging.info(
-                    f"DataWorker: TCP connection from {addr}, communication started."
-                )
-
-                # Start command
-                for c in self._startSeq:
-                    conn.write(c)
-                while not self._stopReadingFlag:
-                    try:
-                        data = bytearray(self._packetSize)
-                        pos = 0
-                        while pos < self._packetSize:
-                            nRead = conn.recv_into(memoryview(data)[pos:])
-                            if nRead == 0:
-                                raise IncompleteReadError(
-                                    bytes[data[:pos]], self._packetSize
-                                )
-                            pos += nRead
-                    except socket.timeout:
-                        self.errorSig.emit("TCP communication failed.")
-                        logging.error("DataWorker: TCP communication failed.")
-                        return
-                    except IncompleteReadError as e:
-                        logging.error(
-                            f"DataWorker: read only {len(e.partial)} out of {e.expected} bytes."
-                        )
-                        return
-
-                    # Check number of bytes read
-                    if len(data) == self._packetSize:
-                        self.dataReadySig.emit(data)
-                # Stop command
-                for c in self._stopSeq:
-                    conn.write(c)
-
-                # Close connection and socket
-                conn.shutdown(socket.SHUT_RDWR)
-                conn.close()
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
-
-                logging.info("DataWorker: TCP communication stopped.")
-
-                self._exitAcceptLoopFlag = True
-            except socket.timeout:
-                pass
-
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._exitAcceptLoopFlag = True
-        self._stopReadingFlag = True
+        # Stop command
+        for c in self._stopSeq:
+            self._clientSock.write(c)
+        self._clientSock.flush()
+
+        # Reset input buffer and close socket and server
+        while self._clientSock.waitForReadyRead(200):
+            self._clientSock.readAll()
+        self._clientSock.close()
+        self._tcpServer.close()
+        self._buffer = QByteArray()
+
+    def _handleConnection(self) -> None:
+        """Handle a new TCP connection."""
+        self._clientSock = self._tcpServer.nextPendingConnection()
+        self._clientSock.readyRead.connect(self._collectData)
+        self._clientSock.disconnected.connect(self._clientSock.deleteLater)
+
+        logging.info("DataWorker: new TCP connection.")
+
+        # Start command
+        for c in self._startSeq:
+            self._clientSock.write(c)
+
+    def _collectData(self) -> None:
+        """Fill input buffer when data is ready."""
+        self._buffer.append(self._clientSock.readAll())
+        if len(self._buffer) >= self._packetSize:
+            data = self._buffer.mid(0, self._packetSize).data()
+            self.dataReadySig.emit(data)
+            self._buffer.remove(0, self._packetSize)
