@@ -188,6 +188,16 @@ class Ui_AddSignalDialog(object):
 
         self.formLayout4.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
 
+        self.label15 = QLabel(self.chSpacingGroupBox)
+        self.label15.setObjectName(u"label15")
+
+        self.formLayout4.setWidget(1, QFormLayout.LabelRole, self.label15)
+
+        self.renderLenTextField = QLineEdit(self.chSpacingGroupBox)
+        self.renderLenTextField.setObjectName(u"renderLenTextField")
+
+        self.formLayout4.setWidget(1, QFormLayout.FieldRole, self.renderLenTextField)
+
 
         self.verticalLayout.addWidget(self.chSpacingGroupBox)
 
@@ -266,7 +276,9 @@ class Ui_AddSignalDialog(object):
 #if QT_CONFIG(tooltip)
         self.chSpacingTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
 #endif // QT_CONFIG(tooltip)
-        self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"1000", None))
+        self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"100", None))
         self.chSpacingTextField.setPlaceholderText("")
+        self.label15.setText(QCoreApplication.translate("AddSignalDialog", u"Render length (in s):", None))
+        self.renderLenTextField.setText(QCoreApplication.translate("AddSignalDialog", u"4", None))
     # retranslateUi
 

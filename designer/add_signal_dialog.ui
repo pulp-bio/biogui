@@ -283,10 +283,24 @@
          <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
         </property>
         <property name="text">
-         <string>1000</string>
+         <string>100</string>
         </property>
         <property name="placeholderText">
          <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label15">
+        <property name="text">
+         <string>Render length (in s):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="renderLenTextField">
+        <property name="text">
+         <string>4</string>
         </property>
        </widget>
       </item>
