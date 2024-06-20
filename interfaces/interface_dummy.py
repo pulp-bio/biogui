@@ -1,4 +1,5 @@
-"""This module contains the decode function for dummy signals.
+"""
+This module contains an example interface for dummy signals.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -40,7 +41,8 @@ SigsPacket = namedtuple("SigsPacket", "sig1, sig2")
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data generated into two dummy signals.
+    """
+    Function to decode the binary data generated into two dummy signals.
 
     Parameters
     ----------

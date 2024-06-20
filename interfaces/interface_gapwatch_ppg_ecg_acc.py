@@ -1,4 +1,5 @@
-"""This module contains the decode function for GAPWatch bio-signals.
+"""
+This module contains the GAPWatch interface for PPG, ECG and accelerometer.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -41,7 +42,8 @@ SigsPacket = namedtuple("SigsPacket", "ppg, ecg, acc")
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data received from GAPWatch into PPG, ECG and accelerometer signals.
+    """
+    Function to decode the binary data received from GAPWatch into PPG, ECG and accelerometer signals.
 
     Parameters
     ----------
