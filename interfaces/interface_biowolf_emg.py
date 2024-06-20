@@ -1,4 +1,5 @@
-"""This module contains the BioWolf interface for sEMG.
+"""
+This module contains the BioWolf interface for sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -41,7 +42,8 @@ SigsPacket = namedtuple("SigsPacket", "emg")
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data received from BioWolf into a single sEMG signal.
+    """
+    Function to decode the binary data received from BioWolf into a single sEMG signal.
 
     Parameters
     ----------

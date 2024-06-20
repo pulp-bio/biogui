@@ -1,4 +1,5 @@
-"""This module contains the decode function for sEMG from GAPWatch.
+"""
+This module contains the GAPWatch interface for sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -41,7 +42,8 @@ nCh: list[int] = [16]
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data received from GAPWatch into a single sEMG signal.
+    """
+    Function to decode the binary data received from GAPWatch into a single sEMG signal.
 
     Parameters
     ----------

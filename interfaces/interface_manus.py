@@ -1,4 +1,5 @@
-"""This module contains the decode function for sEMG from GAPWatch.
+"""
+This module contains the Manus interface for kinematic data.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -41,7 +42,8 @@ SigsPacket = namedtuple("SigsPacket", "manus")
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data received from Manus.
+    """
+    Function to decode the binary data received from Manus.
 
     Parameters
     ----------

@@ -1,4 +1,5 @@
-"""This module contains the decode function for sEMG from BioGAP.
+"""
+This module contains the BioGAP interface for sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -45,7 +46,8 @@ SigsPacket = namedtuple("SigsPacket", "emg")
 
 
 def decodeFn(data: bytes) -> SigsPacket:
-    """Function to decode the binary data received from BioGAP into a single sEMG signal.
+    """
+    Function to decode the binary data received from BioGAP into a single sEMG signal.
 
     Parameters
     ----------
