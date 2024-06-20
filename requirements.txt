@@ -5,10 +5,10 @@ matplotlib
 numpy
 pyqtgraph
 pyserial
-PySide6==6.6.3
-PySide6_Addons==6.6.3
-PySide6_Essentials==6.6.3
+PySide6
+PySide6_Addons
+PySide6_Essentials
 scikit-learn
 scipy
-shiboken6==6.6.3
+shiboken6
 skops
