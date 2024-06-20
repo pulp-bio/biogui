@@ -1,4 +1,5 @@
-"""Classes for the FIFO data source.
+"""
+Classes for the FIFO data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,7 +28,8 @@ from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSource
 
 
 class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
-    """Widget to configure the FIFO source.
+    """
+    Widget to configure the FIFO source.
 
     Parameters
     ----------
@@ -41,7 +43,8 @@ class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
         self.setupUi(self)
 
     def validateConfig(self) -> ConfigResult:
-        """Validate the configuration.
+        """
+        Validate the configuration.
 
         Returns
         -------
@@ -65,7 +68,8 @@ class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
 
 
 class FIFODataSource(DataSource):
-    """Concrete worker that collects data from a FIFO.
+    """
+    Concrete worker that collects data from a FIFO.
 
     Parameters
     ----------

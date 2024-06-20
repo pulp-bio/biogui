@@ -1,4 +1,5 @@
-"""Interfaces for data sources.
+"""
+Interfaces for data sources.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -37,7 +38,8 @@ class DataSourceType(Enum):
 
 @dataclass
 class ConfigResult:
-    """Dataclass representing the result configuration.
+    """
+    Dataclass representing the result configuration.
 
     Attributes
     ----------
@@ -66,7 +68,8 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
 
     @abstractmethod
     def validateConfig(self) -> ConfigResult:
-        """Validate the configuration.
+        """
+        Validate the configuration.
 
         Returns
         -------
@@ -80,7 +83,8 @@ class DataWorkerMeta(type(QObject), ABCMeta):
 
 
 class DataSource(ABC, QObject, metaclass=DataWorkerMeta):
-    """Interface for data sources.
+    """
+    Interface for data sources.
 
     Class attributes
     ----------------

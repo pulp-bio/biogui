@@ -1,4 +1,5 @@
-"""Classes for the dummy data source.
+"""
+Classes for the dummy data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -26,7 +27,8 @@ from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSource
 
 
 class DummyConfigWidget(ConfigWidget):
-    """Empty widget for the dummy source.
+    """
+    Empty widget for the dummy source.
 
     Parameters
     ----------
@@ -38,7 +40,8 @@ class DummyConfigWidget(ConfigWidget):
         super().__init__(parent)
 
     def validateConfig(self) -> ConfigResult:
-        """Validate the configuration.
+        """
+        Validate the configuration.
 
         Returns
         -------
@@ -54,7 +57,8 @@ class DummyConfigWidget(ConfigWidget):
 
 
 class DummyDataSource(DataSource):
-    """Concrete worker that collects data by generating it randomly.
+    """
+    Concrete worker that collects data by generating it randomly.
 
     Parameters
     ----------

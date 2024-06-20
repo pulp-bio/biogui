@@ -1,4 +1,5 @@
-"""This package contains the code for managing data sources.
+"""
+This package contains the code for managing data sources.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -28,7 +29,8 @@ from ._socket_data_source import SocketConfigWidget, SocketDataSource
 
 
 def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
-    """Factory function for producing DataConfigWidget objects.
+    """
+    Factory function for producing DataConfigWidget objects.
 
     Parameters
     ----------
@@ -54,7 +56,8 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
 def getDataSource(
     dataSourceType: DataSourceType, packetSize: int, **kwargs
 ) -> DataSource:
-    """Factory function for producing DataSource objects.
+    """
+    Factory function for producing DataSource objects.
 
     Parameters
     ----------
