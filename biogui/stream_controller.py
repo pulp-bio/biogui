@@ -19,7 +19,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import logging
 import struct
 from collections import namedtuple
 from collections.abc import Sequence
@@ -131,13 +130,9 @@ class _FileWriterWorker(QObject):
         self._f = open(self._filePath, "wb")
         self._firstWrite = True
 
-        logging.info(f"FileWriterWorker: file opened: {self._filePath}.")
-
     def closeFile(self) -> None:
         """Close the file."""
         self._f.close()  # type: ignore
-
-        logging.info("FileWriterWorker: file closed.")
 
 
 class _PreprocessWorker(QObject):
