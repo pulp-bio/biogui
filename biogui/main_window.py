@@ -1,4 +1,5 @@
-"""This module contains the main window of the app.
+"""
+This module contains the main window of the app.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -18,8 +19,10 @@ limitations under the License.
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import logging
+import os
 
 from PySide6.QtCore import QLocale, Qt, Signal, Slot
 from PySide6.QtGui import QDoubleValidator, QIntValidator
@@ -35,7 +38,8 @@ from .ui.ui_main_window import Ui_MainWindow
 
 
 def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
-    """Load an interface from a Python file.
+    """
+    Load an interface from a Python file.
 
     Parameters
     ----------
@@ -115,7 +119,8 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
 
 
 class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
-    """Dialog for adding a new source.
+    """
+    Dialog for adding a new source.
 
     Parameters
     ----------
@@ -172,7 +177,7 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
             "Load Python module containing the decode function",
             filter="*.py",
         )
-        if filePath:
+        if filePath != "":
             interfaceModule, errMessage = _loadInterfaceFromFile(filePath)
             if interfaceModule is None:
                 QMessageBox.critical(
@@ -231,7 +236,8 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
 
 
 class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
-    """Dialog for adding a new signal to plot.
+    """
+    Dialog for adding a new signal to plot.
 
     Parameters
     ----------
@@ -262,6 +268,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.buttonBox.accepted.connect(self._formValidationHandler)
         self.buttonBox.rejected.connect(self.close)
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
+        self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
         self.sourceNameLabel.setText(sourceName)
         self.sigNameLabel.setText(sigName)
@@ -326,6 +333,25 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         else:
             self.freq2TextField.setEnabled(True)
 
+    def _browseOutDir(self) -> None:
+        """Browse directory where the data will be saved."""
+        outDirPath = QFileDialog.getExistingDirectory(
+            self,
+            "Select destination directory",
+            os.getcwd(),
+            QFileDialog.ShowDirsOnly,
+        )
+        if outDirPath != "":
+            self._signalConfig["filePath"] = outDirPath
+
+            displayText = (
+                outDirPath
+                if len(outDirPath) <= 30
+                else outDirPath[:13] + "..." + outDirPath[-14:]
+            )
+            self.outDirPathLabel.setText(displayText)
+            self.outDirPathLabel.setToolTip(outDirPath)
+
     def _formValidationHandler(self) -> None:
         """Validate user input in the form."""
         lo = QLocale()
@@ -373,6 +399,24 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 0
             ]
 
+        # Check file saving settings
+        if self.fileSavingGroupBox.isChecked():
+            if "filePath" not in self._signalConfig.keys():
+                self._isValid = False
+                self._errMessage = "Select an output directory."
+                return
+            outFileName = self.fileNameTextField.text()
+            if outFileName == "":
+                outFileName = (
+                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
+                    .replace(":", "-")
+                    .replace(".", "-")
+                )
+            outFileName = f"{outFileName}.bin"
+            self._signalConfig["filePath"] = os.path.join(
+                self._signalConfig["filePath"], outFileName
+            )
+
         # Plot settings
         if not self.chSpacingTextField.hasAcceptableInput():
             self._isValid = False
@@ -389,7 +433,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    """Main window.
+    """
+    Main window.
 
     Attributes
     ----------
@@ -410,17 +455,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Qt Signal emitted when streaming stops.
     closeSig : Signal
         Qt Signal emitted when the application is closed.
-    dataReadyRawSig : Signal
-        Qt Signal emitted when new raw data is available.
-    dataReadyFltSig : Signal
+    dataReadySig : Signal
         Qt Signal emitted when new filtered data is available.
     """
 
     startStreamingSig = Signal()
     stopStreamingSig = Signal()
     closeSig = Signal()
-    dataReadyRawSig = Signal(DataPacket)
-    dataReadyFltSig = Signal(DataPacket)
+    dataReadySig = Signal(DataPacket)
 
     def __init__(self) -> None:
         super().__init__()
@@ -455,7 +497,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopStreamingButton.clicked.connect(self._stopStreaming)
 
     def addConfWidget(self, widget: QWidget) -> None:
-        """Add a widget to configure pluggable modules.
+        """
+        Add a widget to configure pluggable modules.
 
         Parameters
         ----------
@@ -501,13 +544,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._source2sigMap[str(streamController)] = []
 
             # Configure Qt Signals
-            streamController.dataReadyFltSig.connect(self._plotData)
+            streamController.dataReadySig.connect(self._plotData)
             streamController.errorSig.connect(self._handleErrors)
-            streamController.dataReadyRawSig.connect(
-                lambda d: self.dataReadyRawSig.emit(d)
-            )  # forward Qt Signal for raw data
-            streamController.dataReadyFltSig.connect(
-                lambda d: self.dataReadyFltSig.emit(d)
+            streamController.dataReadySig.connect(
+                lambda d: self.dataReadySig.emit(d)
             )  # forward Qt Signal for filtered data
 
             # Update UI list
@@ -605,6 +645,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     "nCh": addSignalDialog.signalConfig["nCh"],
                 }
                 streamController.addFiltSettings(sigName, filtSettings)
+
+            # Configure file saving
+            if "filePath" in addSignalDialog.signalConfig:
+                streamController.addFileSavingSettings(
+                    sigName, addSignalDialog.signalConfig["filePath"]
+                )
 
             # Create plot widget
             nCh = addSignalDialog.signalConfig["nCh"]
