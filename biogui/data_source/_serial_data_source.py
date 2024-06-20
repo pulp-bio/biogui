@@ -1,4 +1,5 @@
-"""Classes for the serial data source.
+"""
+Classes for the serial data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -31,7 +32,8 @@ from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSource
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
-    """Widget to configure the serial source.
+    """
+    Widget to configure the serial source.
 
     Parameters
     ----------
@@ -51,7 +53,8 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
         self.baudRateTextField.setValidator(baudRateValidator)
 
     def validateConfig(self) -> ConfigResult:
-        """Validate the configuration.
+        """
+        Validate the configuration.
 
         Returns
         -------
@@ -94,7 +97,8 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
 
 
 class SerialDataSource(DataSource):
-    """Concrete worker that collects data from a serial port.
+    """
+    Concrete worker that collects data from a serial port.
 
     Parameters
     ----------

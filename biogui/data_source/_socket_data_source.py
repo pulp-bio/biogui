@@ -1,4 +1,5 @@
-"""Classes for the TCP socket data source.
+"""
+Classes for the TCP socket data source.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -30,7 +31,8 @@ from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSource
 
 
 class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
-    """Widget to configure the socket source.
+    """
+    Widget to configure the socket source.
 
     Parameters
     ----------
@@ -50,7 +52,8 @@ class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
         self.portTextField.setValidator(portValidator)
 
     def validateConfig(self) -> ConfigResult:
-        """Validate the configuration.
+        """
+        Validate the configuration.
 
         Returns
         -------
@@ -75,7 +78,8 @@ class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
 
 
 class SocketDataSource(DataSource):
-    """Concrete worker that collects data from a TCP socket.
+    """
+    Concrete worker that collects data from a TCP socket.
 
     Parameters
     ----------
