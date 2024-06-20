@@ -408,7 +408,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
             outFileName = self.fileNameTextField.text()
             if outFileName == "":
                 outFileName = (
-                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
+                    f"{self._signalConfig["sigName"]}_{datetime.datetime.now()}"
+                    .replace(" ", "_")
                     .replace(":", "-")
                     .replace(".", "-")
                 )
