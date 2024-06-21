@@ -17,9 +17,8 @@ def main():
     with open(filePath, "rb") as f:
         nChAndTrigger = struct.unpack("<I", f.read(4))[0]
         bSig = bytes(f.read())
-    sig = np.frombuffer(bSig, dtype="float32").reshape(-1, nChAndTrigger)
-    trigger = sig[:, -1]
-    sig = sig[:, :-1].T
+    sig = np.frombuffer(bSig, dtype="float32").reshape(-1, nChAndTrigger).T
+    # trigger, sig = sig[-1], sig[:-1]
     nCh, nSamp = sig.shape
     t = np.arange(nSamp) / fs
 
@@ -33,8 +32,8 @@ def main():
     )
     for i in range(nCh):
         axes[i].plot(t, sig[i])
-    axes[-1].set_title("Trigger")
-    axes[-1].plot(t, trigger)
+    # axes[-1].set_title("Trigger")
+    # axes[-1].plot(t, trigger)
 
     plt.show()
 
