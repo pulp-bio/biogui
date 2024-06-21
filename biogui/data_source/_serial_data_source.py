@@ -22,9 +22,9 @@ from __future__ import annotations
 import logging
 import time
 
-from PySide6.QtCore import QByteArray, QIODevice
+import serial
+import serial.tools.list_ports
 from PySide6.QtGui import QIntValidator
-from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_serial_config_widget import Ui_SerialConfigWidget
@@ -51,6 +51,8 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
 
         baudRateValidator = QIntValidator(bottom=1, top=4_000_000)
         self.baudRateTextField.setValidator(baudRateValidator)
+
+        self.destroyed.connect(self.deleteLater)
 
     def validateConfig(self) -> ConfigResult:
         """
@@ -92,7 +94,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
         self.serialPortsComboBox.addItems(
-            [portInfo.portName() for portInfo in QSerialPortInfo.availablePorts()]
+            [info[0] for info in serial.tools.list_ports.comports()]
         )
 
 
@@ -121,10 +123,12 @@ class SerialDataSource(DataSource):
         Sequence of commands to start the source.
     _stopSeq : list of bytes
         Sequence of commands to stop the source.
-    _serialPort : QSerialPort
-        Serial port object.
-    _buffer : QByteArray
-        Input buffer.
+    _serialPortName : str
+        String representing the serial port.
+    _baudRate : int
+        Baud rate.
+    _stopReadingFlag : bool
+        Flag indicating to stop reading data.
 
     Class attributes
     ----------------
@@ -147,48 +151,50 @@ class SerialDataSource(DataSource):
         self._packetSize = packetSize
         self._startSeq = startSeq
         self._stopSeq = stopSeq
-        self._serialPort = QSerialPort(self)
-        self._serialPort.setPortName(serialPortName)
-        self._serialPort.setBaudRate(baudRate)
-        self._serialPort.readyRead.connect(self._collectData)
-        self._buffer = QByteArray()
+        self._serialPortName = serialPortName
+        self._baudRate = baudRate
+        self._stopReadingFlag = False
 
     def __str__(self):
-        return f"Serial port - {self._serialPort.portName()}"
+        return f"Serial port - {self._serialPortName}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        # Open port
-        if not self._serialPort.open(QIODevice.ReadWrite):
-            self.errorSig.emit("Cannot open serial port.")
-            logging.error("DataWorker: cannot open serial port.")
-            return
-        self._serialPort.setRequestToSend(True)
-        self._serialPort.setDataTerminalReady(True)
+        self._stopReadingFlag = False
+
+        # Open serial port
+        ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+
+        logging.info("DataWorker: serial communication started.")
 
         # Start command
         for c in self._startSeq:
-            self._serialPort.write(c)
+            ser.write(c)
             time.sleep(0.2)
+
+        while not self._stopReadingFlag:
+            data = ser.read(self._packetSize)
+
+            # Check number of bytes read
+            if len(data) != self._packetSize:
+                self.errorSig.emit("Serial communication failed.")
+                logging.error("DataWorker: serial communication failed.")
+                break
+
+            self.dataReadySig.emit(data)
+
+        # Stop command
+        for c in self._stopSeq:
+            ser.write(c)
+            time.sleep(0.2)
+        ser.flush()
+
+        # Close port
+        ser.reset_input_buffer()
+        ser.close()
+
+        logging.info("DataWorker: serial communication stopped.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        # Stop command
-        for c in self._stopSeq:
-            self._serialPort.write(c)
-            time.sleep(0.2)
-        self._serialPort.flush()
-
-        # Reset input buffer and close port
-        while self._serialPort.waitForReadyRead(200):
-            self._serialPort.readAll()
-        self._serialPort.close()
-        self._buffer = QByteArray()
-
-    def _collectData(self) -> None:
-        """Fill input buffer when data is ready."""
-        self._buffer.append(self._serialPort.readAll())
-        if len(self._buffer) >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
-            self.dataReadySig.emit(data)
-            self._buffer.remove(0, self._packetSize)
+        self._stopReadingFlag = True
