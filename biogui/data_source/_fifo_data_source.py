@@ -42,6 +42,8 @@ class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
 
         self.setupUi(self)
 
+        self.destroyed.connect(self.deleteLater)
+
     def validateConfig(self) -> ConfigResult:
         """
         Validate the configuration.

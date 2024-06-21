@@ -434,6 +434,8 @@ class StreamingController(QObject):
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
+        self._dataSourceWorker.stopCollecting()
+
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
         self._preprocessThread.quit()

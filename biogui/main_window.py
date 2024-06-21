@@ -155,6 +155,8 @@ class _AddSourceDialog(QDialog, Ui_AddSourceDialog):
         self._isValid = False
         self._errMessage = ""
 
+        self.destroyed.connect(self.deleteLater)
+
     @property
     def dataSourceConfig(self) -> dict:
         """dict: Property for getting the data source configuration."""
@@ -307,6 +309,8 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self._signalConfig["fs"] = fs
         self._isValid = False
         self._errMessage = ""
+
+        self.destroyed.connect(self.deleteLater)
 
     @property
     def signalConfig(self) -> dict:

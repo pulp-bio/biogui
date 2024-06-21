@@ -39,6 +39,8 @@ class DummyConfigWidget(ConfigWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.destroyed.connect(self.deleteLater)
+
     def validateConfig(self) -> ConfigResult:
         """
         Validate the configuration.
