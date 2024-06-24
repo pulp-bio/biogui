@@ -77,6 +77,10 @@ class FIFODataSource(DataSource):
     ----------
     packetSize : int
         Number of bytes in the packet.
+    startSeq : list of bytes
+        Sequence of commands to start the source.
+    stopSeq : list of bytes
+        Sequence of commands to stop the source.
     fifoPath : str
         Path to the FIFO.
 
@@ -84,6 +88,10 @@ class FIFODataSource(DataSource):
     ----------
     _packetSize : int
         Number of bytes in the packet (for compatibility with other data sources).
+    _startSeq : list of bytes
+        Sequence of commands to start the source.
+    _stopSeq : list of bytes
+        Sequence of commands to stop the source.
     _stopReadingFlag : bool
         Flag indicating to stop reading data.
 
@@ -95,10 +103,18 @@ class FIFODataSource(DataSource):
         Qt Signal emitted when a communication error occurs.
     """
 
-    def __init__(self, packetSize: int, fifoPath: str) -> None:
+    def __init__(
+        self,
+        packetSize: int,
+        startSeq: list[bytes],
+        stopSeq: list[bytes],
+        fifoPath: str,
+    ) -> None:
         super().__init__()
 
         self._packetSize = packetSize
+        self._startSeq = startSeq
+        self._stopSeq = stopSeq
         self._fifoPath = fifoPath
         self._stopstopReadingFlag = False
 
