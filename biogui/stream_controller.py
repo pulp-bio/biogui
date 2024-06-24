@@ -243,7 +243,7 @@ class _PreprocessWorker(QObject):
 
         Parameters
         ----------
-        data : ndarray
+        data : bytes
             New data.
         """
         try:
