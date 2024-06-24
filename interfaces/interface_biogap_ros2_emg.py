@@ -22,7 +22,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
-packetSize: int = 972
+packetSize: int = 224
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []
@@ -56,7 +56,7 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
         Sequence of corresponding signals with shape (nSamp, nCh).
     """
     dataTmp = np.frombuffer(data, dtype=np.float32)
-    nSamp, nCh = 5, 16
+    nSamp, nCh = 7, 8
     sig = dataTmp[: nSamp * nCh].reshape(nSamp, nCh)
 
     return [sig]
