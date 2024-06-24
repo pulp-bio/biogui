@@ -31,7 +31,7 @@ startSeq: list[bytes] = [b"A"]
 stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [90]
+fs: list[float] = [120]
 """Sequence of floats representing the sampling rate of each signal."""
 
 nCh: list[int] = [20]
