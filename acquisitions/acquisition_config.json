@@ -9,6 +9,8 @@
         "wrist pronation": "wrist_pronation.png"
     },
     "nReps": 10,
-    "durationMs": 5000,
+    "durationGesture": 4000,
+    "durationStart": 8000,
+    "durationRest": 2000,
     "imageFolder": "acquisitions/gestures_images"
 }

@@ -115,6 +115,7 @@ class _FileWriterWorker(QObject):
             nCh = data.shape[1] + 1 if self._trigger is not None else data.shape[1]
             self._f.write(struct.pack("<I", nCh))  # type: ignore
             self._firstWrite = False
+            print(self._trigger)
         if self._trigger is not None:
             data = np.concatenate(
                 [
@@ -421,6 +422,18 @@ class StreamingController(QObject):
 
         self._fileWriterWorkers.append(fileWriterWorker)
         self._fileWriterThreads.append(fileWriterThread)
+
+    def setTrigger(self, trigger: int) -> None:
+        """
+        Set the trigger for each file writer worker.
+
+        Parameters
+        ----------
+        trigger : int
+            Trigger value.
+        """
+        for fileWriterWorker in self._fileWriterWorkers:
+            fileWriterWorker.trigger = trigger
 
     def startStreaming(self) -> None:
         """Start streaming."""

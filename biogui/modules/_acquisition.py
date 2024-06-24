@@ -1,4 +1,5 @@
-"""This module contains the acquisition controller and widgets.
+"""
+This module contains the acquisition controller and widgets.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -18,23 +19,21 @@ limitations under the License.
 
 from __future__ import annotations
 
-import datetime
 import json
 import logging
 import os
-import struct
 
-import numpy as np
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
-from ..main_window import DataPacket, MainWindow
+from ..main_window import MainWindow
 from ..ui.ui_acquisition_config import Ui_AcquisitionConfig
 
 
 def _loadValidateJSON(filePath: str) -> dict | None:
-    """Load and validate a JSON file representing the experiment configuration.
+    """
+    Load and validate a JSON file representing the experiment configuration.
 
     Parameters
     ----------
@@ -50,7 +49,14 @@ def _loadValidateJSON(filePath: str) -> dict | None:
         config = json.load(f)
     # Check keys
     providedKeys = set(config.keys())
-    validKeys = {"gestures", "nReps", "durationMs", "imageFolder"}
+    validKeys = {
+        "gestures",
+        "nReps",
+        "durationGesture",
+        "durationStart",
+        "durationRest",
+        "imageFolder",
+    }
     if providedKeys != validKeys:
         return None
     # Check paths
@@ -67,114 +73,9 @@ def _loadValidateJSON(filePath: str) -> dict | None:
     return config
 
 
-class _FileWriterWorker(QObject):
-    """Worker that writes into a file the data it receives via a Qt signal.
-
-    Attributes
-    ----------
-    _f : BinaryIO or None
-        File object.
-    _firstWrite : bool
-        Whether it's the first time the worker receives data.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._f1 = None
-        self._f2 = None
-        self._f3 = None
-        self._firstWrite = True
-
-        self._filePath = ""
-        self._trigger = 0
-        self._targetSigName = ""
-
-    @property
-    def filePath(self) -> str:
-        """str: Property representing the path to the file."""
-        return self._filePath
-
-    @filePath.setter
-    def filePath(self, filePath: str) -> None:
-        self._filePath = filePath
-
-    @property
-    def trigger(self) -> int:
-        """int: Property representing the trigger, namely the gesture label."""
-        return self._trigger
-
-    @trigger.setter
-    def trigger(self, trigger: int) -> None:
-        self._trigger = trigger
-
-    @property
-    def targetSigName(self) -> str:
-        """str: Property representing the target signal name."""
-        return self._targetSigName
-
-    @targetSigName.setter
-    def targetSigName(self, targetSigName: str) -> None:
-        self._targetSigName = targetSigName
-
-    @Slot(object)
-    def write(self, dataPackets: tuple[DataPacket]) -> None:
-        """This method is called automatically when the associated signal is received,
-        and it writes to the file the received data.
-
-        Parameters
-        ----------
-        dataPacket : DataPacket
-            Data to write.
-        """
-        # if dataPacket.id == self._targetSigName:
-        if self._firstWrite:  # write number of channels
-            self._f1.write(struct.pack("<I", dataPackets[0].data.shape[1] + 1))  # type: ignore
-            self._f2.write(struct.pack("<I", dataPackets[1].data.shape[1] + 1))  # type: ignore
-            self._f3.write(struct.pack("<I", dataPackets[2].data.shape[1] + 1))  # type: ignore
-            self._firstWrite = False
-        data1 = np.concatenate(
-            (
-                dataPackets[0].data,
-                np.repeat(self._trigger, dataPackets[0].data.shape[0]).reshape(-1, 1),
-            ),
-            axis=1,
-        ).astype("float32")
-        self._f1.write(data1.tobytes())  # type: ignore
-        data2 = np.concatenate(
-            (
-                dataPackets[1].data,
-                np.repeat(self._trigger, dataPackets[1].data.shape[0]).reshape(-1, 1),
-            ),
-            axis=1,
-        ).astype("float32")
-        self._f2.write(data2.tobytes())  # type: ignore
-        data3 = np.concatenate(
-            (
-                dataPackets[2].data,
-                np.repeat(self._trigger, dataPackets[2].data.shape[0]).reshape(-1, 1),
-            ),
-            axis=1,
-        ).astype("float32")
-        self._f3.write(data3.tobytes())  # type: ignore
-
-    def openFile(self) -> None:
-        """Open the file."""
-        self._f1 = open(self._filePath[:-4] + "_ppg.bin", "wb")
-        self._f2 = open(self._filePath[:-4] + "_ecg.bin", "wb")
-        self._f3 = open(self._filePath[:-4] + "_acc.bin", "wb")
-        self._firstWrite = True
-        logging.info("FileWriterWorker: file opened.")
-
-    def closeFile(self) -> None:
-        """Close the file."""
-        self._f1.close()  # type: ignore
-        self._f2.close()  # type: ignore
-        self._f3.close()  # type: ignore
-        logging.info("FileWriterWorker: file closed.")
-
-
 class _GesturesWidget(QWidget):
-    """Widget showing the gestures to perform.
+    """
+    Widget showing the gestures to perform.
 
     Attributes
     ----------
@@ -204,6 +105,8 @@ class _GesturesWidget(QWidget):
 
         self._imageFolder = ""
 
+        self.destroyed.connect(self.deleteLater)
+
     @property
     def imageFolder(self) -> str:
         """str: Property representing the path to the folder containing
@@ -216,7 +119,8 @@ class _GesturesWidget(QWidget):
         self._imageFolder = imageFolder
 
     def renderImage(self, image: str) -> None:
-        """Render the image for the current gesture.
+        """
+        Render the image for the current gesture.
 
         Parameters
         ----------
@@ -239,43 +143,32 @@ class _GesturesWidget(QWidget):
 
 
 class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
-    """Widget providing configuration options for the acquisition.
+    """
+    Widget providing configuration options for the acquisition.
 
-    Parameters
-    ----------
-    mainWin : MainWindow
-        Reference to MainWindow object.
-
-    Attributes
-    ----------
-    _mainWin : MainWindow
-        Reference to MainWindow object.
-    _sigInfo : list of tuples of (str, float)
-        Signal information.
+    Class attributes
+    ----------------
+    validConfigSig : Signal
+        Qt Signal emitted when the acquisition configuration is validated.
     """
 
-    def __init__(self, mainWin: MainWindow) -> None:
-        super().__init__(mainWin)
+    validConfigSig = Signal()
+
+    def __init__(self) -> None:
+        super().__init__()
 
         self.setupUi(self)
 
-        self._mainWin = mainWin
         self._config = {}
-        self._configJSONPath = ""
-        self._sigInfo = []
 
-        self.rescanSignalsButton.clicked.connect(self._rescanSignals)
         self.browseJSONButton.clicked.connect(self._browseAcqConfig)
+
+        self.destroyed.connect(self.deleteLater)
 
     @property
     def config(self) -> dict:
         """dict: Property representing the JSON configuration."""
         return self._config
-
-    @property
-    def configJSONPath(self) -> str:
-        """str: Property representing the JSON path."""
-        return self._configJSONPath
 
     def _browseAcqConfig(self) -> None:
         """Browse to select the JSON file with the experiment configuration."""
@@ -307,19 +200,10 @@ class _AcquisitionConfigWidget(QWidget, Ui_AcquisitionConfig):
             self.configJSONPathLabel.setText(displayText)
             self.configJSONPathLabel.setToolTip(filePath)
 
-    def _rescanSignals(self) -> None:
-        """Re-scan the available signals."""
-        self._sigInfo = self._mainWin.getSigInfo()
-        self.signalComboBox.addItems(list(zip(*self._sigInfo))[0])
-
 
 class AcquisitionController(QObject):
-    """Controller for the acquisition.
-
-    Parameters
-    ----------
-    mainWin : MainWindow
-        Reference to MainWindow object.
+    """
+    Controller for the acquisition.
 
     Attributes
     ----------
@@ -327,13 +211,11 @@ class AcquisitionController(QObject):
         Instance of _AcquisitionConfigWidget.
     _gestWidget : _GesturesWidget
         Instance of _GesturesWidget.
-    _fileWriterWorker : _FileWriterWorker
-        Instance of _FileWriterWorker.
-    _fileWriterThread : QThread
-        The QThread associated to the file writer worker.
     _timer : QTimer
         Timer.
-    _gesturesId : dict of {str : int}
+    _streamControllers : list of StreamingController
+        List containing the references to the streaming controllers.
+    _gesturesId : dict of (str: int)
         Dictionary containing pairs of gesture labels and integer indexes.
     _gesturesLabels : list of str
         List of gesture labels accounting for the number of repetitions.
@@ -341,74 +223,79 @@ class AcquisitionController(QObject):
         Counter for the gesture.
     _restFlag : bool
         Flag for rest vs gesture.
-
-    Class attributes
-    ----------------
-    _dataReadySig : Signal
-        Qt Signal that forwards the dataReadySig signal from MainWindow.
     """
 
-    _dataReadySig = Signal(DataPacket)
-
-    def __init__(self, mainWin: MainWindow) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        self._confWidget = _AcquisitionConfigWidget(mainWin)
+        self._confWidget = _AcquisitionConfigWidget()
 
         self._gestWidget = _GesturesWidget()
         self._gestWidget.closeSig.connect(self._actualStopAcquisition)
 
-        self._fileWriterWorker = _FileWriterWorker()
-        self._fileWriterThread = QThread()
-        self._fileWriterWorker.moveToThread(self._fileWriterThread)
-        self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)  # type: ignore
-        self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)  # type: ignore
-
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.PreciseTimer)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
 
-        # Make connections with MainWindow
-        mainWin.addConfWidget(self._confWidget)
-        mainWin.startStreamingSig.connect(self._startAcquisition)
-        mainWin.stopStreamingSig.connect(self._stopAcquisition)
-        mainWin.closeSig.connect(self._stopAcquisition)
-        mainWin.dataReadyRawSig2.connect(lambda d: self._dataReadySig.emit(d))
-
+        self._streamControllers = []
         self._gesturesId = {}
         self._gesturesLabels = []
         self._gestCounter = 0
         self._restFlag = False
 
+    def subscribeToMainWin(self, mainWin: MainWindow) -> None:
+        """
+        Subscribe to the main window.
+
+        Parameters
+        ----------
+        mainWin : MainWindow
+            Reference to the main window.
+        """
+        # Make connections with MainWindow
+        mainWin.addConfWidget(self._confWidget)
+        mainWin.startStreamingSig.connect(self._startAcquisition)
+        mainWin.stopStreamingSig.connect(self._stopAcquisition)
+        mainWin.closeSig.connect(self._stopAcquisition)
+
+        # Subscribe to NewSourceAdded Signal
+        mainWin.newSourceAddedSig.connect(
+            lambda streamController: self._streamControllers.append(streamController)
+        )
+
     def _updateTriggerAndImage(self) -> None:
-        """Update the trigger for _FileWriterWorker and the image for the _GestureWidget"""
+        """Update the trigger and the image to display."""
         logging.info(f"{self._gestCounter}")
         if self._gestCounter >= len(self._gesturesLabels):
             self._stopAcquisition()
             return
 
         if self._restFlag:  # rest
-            old_trigger = self._fileWriterWorker.trigger
+            self._timer.start(self._confWidget.config["durationRest"])
+
             new_trigger = 0
             image = "stop"
 
             self._restFlag = False
+
         else:  # gesture
+            self._timer.start(self._confWidget.config["durationGesture"])
+
             gestureLabel = self._gesturesLabels[self._gestCounter]
             if gestureLabel != "last_stop":
-                old_trigger = self._fileWriterWorker.trigger
                 new_trigger = self._gesturesId[gestureLabel]
                 image = self._confWidget.config["gestures"][gestureLabel]
             else:
-                old_trigger = self._fileWriterWorker.trigger
                 new_trigger = 0
                 image = "stop"
 
             self._gestCounter += 1
             self._restFlag = True
 
-        self._fileWriterWorker.trigger = new_trigger
+        for streamController in self._streamControllers:
+            streamController.setTrigger(new_trigger)
         self._gestWidget.renderImage(image)
-        logging.info(f"Trigger updated: {old_trigger} -> {new_trigger}.")
+        logging.info(f"Trigger updated: {new_trigger}.")
 
     def _startAcquisition(self) -> None:
         """Start the acquisition."""
@@ -418,6 +305,10 @@ class AcquisitionController(QObject):
             and len(self._confWidget.config) > 0
         ):
             logging.info("AcquisitionController: acquisition started.")
+
+            # Set initial trigger
+            for streamController in self._streamControllers:
+                streamController.setTrigger(0)
 
             # Gestures
             for i, k in enumerate(self._confWidget.config["gestures"].keys()):
@@ -429,33 +320,7 @@ class AcquisitionController(QObject):
             self._gestWidget.renderImage("start")
             self._gestWidget.show()
 
-            # Output file
-            expDir = os.path.join(
-                os.path.dirname(self._confWidget.configJSONPath), "data"
-            )
-            os.makedirs(expDir, exist_ok=True)
-            outFileName = self._confWidget.acquisitionTextField.text()
-            if outFileName == "":
-                outFileName = (
-                    f"acq_{datetime.datetime.now()}".replace(" ", "_")
-                    .replace(":", "-")
-                    .replace(".", "-")
-                )
-            outFileName = f"{outFileName}.bin"
-            outFilePath = os.path.join(expDir, outFileName)
-
-            print(self._gesturesLabels, len(self._gesturesLabels))
-
-            # File writing
-            self._fileWriterWorker.filePath = outFilePath
-            self._fileWriterWorker.trigger = 0
-            self._fileWriterWorker.targetSigName = (
-                self._confWidget.signalComboBox.currentText()
-            )
-            self._dataReadySig.connect(self._fileWriterWorker.write)
-            self._fileWriterThread.start()
-
-            self._timer.start(self._confWidget.config["durationMs"])
+            self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopAcquisition(self) -> None:
         """Stop the acquisition by exploiting GestureWidget close event."""
@@ -466,16 +331,12 @@ class AcquisitionController(QObject):
 
     def _actualStopAcquisition(self) -> None:
         """Stop the acquisition."""
-        if self._fileWriterThread.isRunning():
-            self._timer.stop()
-            self._dataReadySig.disconnect(self._fileWriterWorker.write)
-            self._fileWriterThread.quit()
-            self._fileWriterThread.wait()
+        self._timer.stop()
 
-            self._gesturesId = {}
-            self._gesturesLabels = []
-            self._gestCounter = 0
-            self._restFlag = False
+        self._gesturesId = {}
+        self._gesturesLabels = []
+        self._gestCounter = 0
+        self._restFlag = False
 
         logging.info("AcquisitionController: acquisition stopped.")
         self._confWidget.acquisitionGroupBox.setEnabled(True)

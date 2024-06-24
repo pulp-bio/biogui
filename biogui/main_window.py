@@ -443,13 +443,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     Attributes
     ----------
-    _streamControllers : dict of {str : StreamingController}
+    _streamControllers : dict of (str: StreamingController)
         Dictionary of StreamingController objects indexed by their string representation.
-    _sigPlotWidgets : dict of {str : SignalPlotWidget}
+    _sigPlotWidgets : dict of (str: SignalPlotWidget)
         List of SignalPlotWidget objects indexed by their names.
-    _source2sigMap : dict of {str : list[str]}
+    _source2sigMap : dict of (str: list of str)
         Mapping between source and signal name.
-    _sig2sourceMap : dict of {str : str}
+    _sig2sourceMap : dict of (str: str)
         Mapping between signal and source name.
 
     Class attributes
@@ -462,12 +462,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Qt Signal emitted when the application is closed.
     dataReadySig : Signal
         Qt Signal emitted when new filtered data is available.
+    newSourceAddedSig : Signal
+        Qt Signal emitted when a new source is added.
     """
 
     startStreamingSig = Signal()
     stopStreamingSig = Signal()
     closeSig = Signal()
     dataReadySig = Signal(DataPacket)
+    newSourceAddedSig = Signal(DataPacket)
 
     def __init__(self) -> None:
         super().__init__()
@@ -567,6 +570,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 interfaceModule.sigNames, interfaceModule.nCh, interfaceModule.fs
             ):
                 self._openAddSignalDialog(str(streamController), sigName, nCh, fs)
+
+            self.newSourceAddedSig.emit(streamController)
 
     def _deleteSourceHandler(self) -> None:
         """Handler to remove the selected source."""
