@@ -83,7 +83,8 @@ def main():
 
     # Add widgets
     if args["acq"]:
-        modules.AcquisitionController(mainWin)  # add acquisition module
+        acqModule = modules.AcquisitionController()  # add acquisition module
+        acqModule.subscribeToMainWin(mainWin)
     # if args["svmTrain"]:
     #     svmTrainController = modules.SVMTrainController()
     #     svmTrainController.subscribe(mainWin)
