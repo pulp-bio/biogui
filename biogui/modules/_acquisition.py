@@ -215,7 +215,7 @@ class AcquisitionController(QObject):
         Timer.
     _streamControllers : list of StreamingController
         List containing the references to the streaming controllers.
-    _gesturesId : dict of (str: int)
+    _gesturesId : dict of str: int
         Dictionary containing pairs of gesture labels and integer indexes.
     _gesturesLabels : list of str
         List of gesture labels accounting for the number of repetitions.

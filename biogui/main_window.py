@@ -443,13 +443,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     Attributes
     ----------
-    _streamControllers : dict of (str: StreamingController)
+    _streamControllers : dict of str: StreamingController
         Dictionary of StreamingController objects indexed by their string representation.
-    _sigPlotWidgets : dict of (str: SignalPlotWidget)
+    _sigPlotWidgets : dict of str: SignalPlotWidget
         List of SignalPlotWidget objects indexed by their names.
-    _source2sigMap : dict of (str: list of str)
+    _source2sigMap : dict of str: list of str
         Mapping between source and signal name.
-    _sig2sourceMap : dict of (str: str)
+    _sig2sourceMap : dict of str: str
         Mapping between signal and source name.
 
     Class attributes
