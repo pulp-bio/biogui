@@ -1,4 +1,5 @@
-"""This module runs the app.
+"""
+This module runs the app.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa

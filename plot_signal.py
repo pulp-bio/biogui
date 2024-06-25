@@ -81,11 +81,11 @@ def main():
         trigger, sig = sig[-1], sig[:-1]
         nCh -= 1
 
-    # Handl filtering
+    # Handle filtering
     if args["filtType"]:
         cutOffFreqs = [args["f1"]]
         if args["filtType"] == "bandpass":
-            cutOffFreqs.append([args["f2"]])
+            cutOffFreqs.append(args["f2"])
         sos = signal.butter(4, cutOffFreqs, args["filtType"], output="sos", fs=fs)
         sig = signal.sosfiltfilt(sos, sig)
 
