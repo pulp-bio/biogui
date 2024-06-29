@@ -5,6 +5,8 @@
     <file alias="waiting">images/waiting.gif</file>
   </qresource>
   <qresource prefix="icons">
+    <file alias="dark/reload">icons/dark/reload.png</file>
+    <file alias="light/reload">icons/light/reload.png</file>
     <file alias="dark/down-arrow">icons/dark/down-arrow.png</file>
     <file alias="dark/edit">icons/dark/edit.png</file>
     <file alias="dark/left-arrow">icons/dark/left-arrow.png</file>
