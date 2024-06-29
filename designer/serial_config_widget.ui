@@ -59,6 +59,8 @@
   <tabstop>rescanSerialPortsButton</tabstop>
   <tabstop>baudRateTextField</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
