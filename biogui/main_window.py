@@ -25,8 +25,15 @@ import logging
 import os
 
 from PySide6.QtCore import QLocale, Qt, Signal, Slot
-from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QWidget
+from PySide6.QtGui import QDoubleValidator, QIcon, QIntValidator, QPalette
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QWidget,
+)
 
 from . import data_source
 from .data_source import DataSourceType
@@ -475,7 +482,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
 
+        # Setup UI
         self.setupUi(self)
+        theme = self._detectTheme()
+        self.editSourceButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
+        self.deleteSourceButton.setIcon(QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash")))
+        self.editSignalButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
+        self.moveLeftButton.setIcon(QIcon.fromTheme("arrow-left", QIcon(f":icons/{theme}/left-arrow")))
+        self.moveUpButton.setIcon(QIcon.fromTheme("arrow-up", QIcon(f":icons/{theme}/up-arrow")))
+        self.moveDownButton.setIcon(QIcon.fromTheme("arrow-down", QIcon(f":icons/{theme}/down-arrow")))
+        self.moveRightButton.setIcon(QIcon.fromTheme("arrow-right", QIcon(f":icons/{theme}/right-arrow")))
 
         self._streamControllers: dict[str, StreamingController] = {}
         self._sigPlotWidgets: dict[str, SignalPlotWidget] = {}
@@ -514,6 +530,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             Widget to display.
         """
         self.moduleContainer.layout().addWidget(widget)
+
+    def _detectTheme(self):
+        """Determine whether the system theme is light or dark."""
+        # Get palette of QApplication
+        palette = QApplication.palette()
+
+        # Compare the color of the background and text to infer theme
+        textColor = palette.color(QPalette.Text)
+        backgroundColor = palette.color(QPalette.Window)
+
+        # Simple heuristic to determine if the theme is light or dark
+        isDark = backgroundColor.lightness() < textColor.lightness()
+        return "dark" if isDark else "light"
 
     def _addSourceHandler(self) -> None:
         """Handler to add a new source."""
