@@ -4,4 +4,19 @@
     <file alias="stop">images/stop.png</file>
     <file alias="waiting">images/waiting.gif</file>
   </qresource>
+  <qresource prefix="icons">
+    <file alias="dark/down-arrow">icons/dark/down-arrow.png</file>
+    <file alias="dark/edit">icons/dark/edit.png</file>
+    <file alias="dark/left-arrow">icons/dark/left-arrow.png</file>
+    <file alias="dark/right-arrow">icons/dark/right-arrow.png</file>
+    <file alias="dark/trash">icons/dark/trash.png</file>
+    <file alias="dark/up-arrow">icons/dark/up-arrow.png</file>
+    <file alias="light/down-arrow">icons/light/down-arrow.png</file>
+    <file alias="light/edit">icons/light/edit.png</file>
+    <file alias="light/left-arrow">icons/light/left-arrow.png</file>
+    <file alias="light/right-arrow">icons/light/right-arrow.png</file>
+    <file alias="light/trash">icons/light/trash.png</file>
+    <file alias="light/up-arrow">icons/light/up-arrow.png</file>
+  </qresource>
+  <qresource prefix="dark"/>
 </RCC>
