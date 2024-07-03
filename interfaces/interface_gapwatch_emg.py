@@ -55,7 +55,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the EMG packet with shape (nSamp, nCh).
     """
-    nSamp = 12
+    nSamp = 15
 
     # ADC parameters
     vRef = 2.5
