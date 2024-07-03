@@ -309,11 +309,7 @@ class _AddSignalDialog(QDialog, Ui_AddSignalDialog):
         renderLenValidator = QIntValidator(bottom=1, top=8)
         self.renderLenTextField.setValidator(renderLenValidator)
 
-        self._signalConfig = {}
-        self._signalConfig["source"] = sourceName
-        self._signalConfig["sigName"] = sigName
-        self._signalConfig["nCh"] = nCh
-        self._signalConfig["fs"] = fs
+        self._signalConfig = {"source": sourceName, "sigName": sigName, "nCh": nCh, "fs": fs}
         self._isValid = False
         self._errMessage = ""
 
@@ -635,11 +631,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.deleteSourceButton.setEnabled(False)
             self.signalsGroupBox.setEnabled(False)
 
-    def _addSignalHandler(self) -> None:
-        """Handler to add a new signal."""
-        # Open the dialog
-        self._openAddSignalDialog()
-
     def _openAddSignalDialog(
         self,
         sourceName: str,
@@ -709,37 +700,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             # Re-adjust layout
             self._adjustLayout()
-
-    def _deleteSignalHandler(self) -> None:
-        """Handler to remove the selected signal."""
-        # Get corresponding index
-        idxToRemove = self.sigNameList.currentRow()
-
-        # Update UI list
-        sigNameToRemove = self.sigNameList.takeItem(idxToRemove).text()
-
-        # Handle mappings
-        source = self._sig2sourceMap.pop(sigNameToRemove)
-        self._source2sigMap[source].remove(sigNameToRemove)
-
-        # Remove plot widget
-        plotWidgetToRemove = self._sigPlotWidgets.pop(sigNameToRemove)
-        self.plotsLayout.removeWidget(plotWidgetToRemove)
-        plotWidgetToRemove.deleteLater()
-
-        # Disconnect from streaming controller
-        self._streamControllers[source].removeSigName(sigNameToRemove)
-
-        # Re-adjust layout
-        self._adjustLayout()
-
-        # Disable signal deletion and moving, depending on the number of remaining signals
-        nSig = len(self._sigPlotWidgets)
-        if nSig < 2:
-            self.moveUpButton.setEnabled(False)
-            self.moveDownButton.setEnabled(False)
-            if nSig == 0:
-                self.deleteSignalButton.setEnabled(False)
 
     def _enableMoveButtons(self) -> None:
         """Enable buttons to move signals up/down."""

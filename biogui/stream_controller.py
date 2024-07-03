@@ -94,7 +94,7 @@ class _FileWriterWorker(QObject):
         return self._trigger
 
     @trigger.setter
-    def trigger(self, trigger: int) -> None:
+    def trigger(self, trigger: int | None) -> None:
         self._trigger = trigger
 
     @Slot(DataPacket)
@@ -457,6 +457,9 @@ class StreamingController(QObject):
         self._preprocessThread.quit()
         self._preprocessThread.wait()
 
-        for fileWriterThread in self._fileWriterThreads:
+        for fileWriterWorker, fileWriterThread in zip(
+            self._fileWriterWorkers, self._fileWriterThreads
+        ):
             fileWriterThread.quit()
             fileWriterThread.wait()
+            fileWriterWorker.trigger = None
