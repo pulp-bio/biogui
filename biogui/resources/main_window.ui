@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>biogui</string>
+   <string>BioGUI</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
@@ -57,33 +57,16 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,0,1">
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,1">
            <item>
-            <widget class="QPushButton" name="addSourceButton">
+            <widget class="QPushButton" name="addDataSourceButton">
              <property name="text">
-              <string>Add source</string>
+              <string>Add data source</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="editSourceButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Edit the selected source</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="edit-entry">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="deleteSourceButton">
+            <widget class="QPushButton" name="deleteDataSourceButton">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -102,7 +85,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QListWidget" name="sourceList"/>
+          <widget class="QListWidget" name="dataSourceList"/>
          </item>
          <item>
           <widget class="QGroupBox" name="signalsGroupBox">
@@ -263,22 +246,27 @@
      <height>30</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuModules">
+    <property name="title">
+     <string>Modules</string>
+    </property>
+   </widget>
+   <addaction name="menuModules"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <tabstops>
   <tabstop>startStreamingButton</tabstop>
   <tabstop>stopStreamingButton</tabstop>
-  <tabstop>addSourceButton</tabstop>
-  <tabstop>editSourceButton</tabstop>
-  <tabstop>deleteSourceButton</tabstop>
-  <tabstop>sourceList</tabstop>
+  <tabstop>addDataSourceButton</tabstop>
+  <tabstop>deleteDataSourceButton</tabstop>
+  <tabstop>dataSourceList</tabstop>
   <tabstop>editSignalButton</tabstop>
   <tabstop>sigNameList</tabstop>
   <tabstop>scrollArea</tabstop>
  </tabstops>
  <resources>
-  <include location="resources.qrc"/>
+  <include location="biogui.qrc"/>
  </resources>
  <connections/>
 </ui>

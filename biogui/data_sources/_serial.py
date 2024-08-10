@@ -2,7 +2,7 @@
 Classes for the serial data source.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,8 +27,22 @@ import serial.tools.list_ports
 from PySide6.QtGui import QIcon, QIntValidator, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
-from ..ui.ui_serial_config_widget import Ui_SerialConfigWidget
-from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
+from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
+from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
+
+
+def _detectTheme():
+    """Determine whether the system theme is light or dark."""
+    # Get palette of QApplication
+    palette = QApplication.palette()
+
+    # Compare the color of the background and text to infer theme
+    textColor = palette.color(QPalette.Text)
+    backgroundColor = palette.color(QPalette.Window)
+
+    # Simple heuristic to determine if the theme is light or dark
+    isDark = backgroundColor.lightness() < textColor.lightness()
+    return "dark" if isDark else "light"
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
@@ -46,7 +60,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
 
         # Setup UI
         self.setupUi(self)
-        theme = self._detectTheme()
+        theme = _detectTheme()
         self.rescanSerialPortsButton.setIcon(
             QIcon.fromTheme("view-refresh", QIcon(f":icons/{theme}/reload"))
         )
@@ -102,23 +116,10 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
             [info[0] for info in serial.tools.list_ports.comports()]
         )
 
-    def _detectTheme(self):
-        """Determine whether the system theme is light or dark."""
-        # Get palette of QApplication
-        palette = QApplication.palette()
 
-        # Compare the color of the background and text to infer theme
-        textColor = palette.color(QPalette.Text)
-        backgroundColor = palette.color(QPalette.Window)
-
-        # Simple heuristic to determine if the theme is light or dark
-        isDark = backgroundColor.lightness() < textColor.lightness()
-        return "dark" if isDark else "light"
-
-
-class SerialDataSource(DataSource):
+class SerialDataSourceController(DataSourceController):
     """
-    Concrete worker that collects data from a serial port.
+    Concrete DataSourceController that collects data from a serial port.
 
     Parameters
     ----------

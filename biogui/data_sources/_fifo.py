@@ -2,7 +2,7 @@
 Classes for the FIFO data source.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@ import logging
 
 from PySide6.QtWidgets import QWidget
 
-from ..ui.ui_fifo_config_widget import Ui_FIFOConfigWidget
-from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
+from ..ui.fifo_config_widget_ui import Ui_FifoConfigView
+from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
 
 
-class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
+class FIFOConfigWidget(ConfigWidget, Ui_FifoConfigView):
     """
     Widget to configure the FIFO source.
 
@@ -69,9 +69,9 @@ class FIFOConfigWidget(ConfigWidget, Ui_FIFOConfigWidget):
         )
 
 
-class FIFODataSource(DataSource):
+class FIFODataSourceController(DataSourceController):
     """
-    Concrete worker that collects data from a FIFO.
+    Concrete DataSourceController that collects data from a FIFO.
 
     Parameters
     ----------
@@ -116,19 +116,19 @@ class FIFODataSource(DataSource):
         self._startSeq = startSeq
         self._stopSeq = stopSeq
         self._fifoPath = fifoPath
-        self._stopstopReadingFlag = False
+        self._stopReadingFlag = False
 
     def __str__(self):
         return f"FIFO - {self._fifoPath}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        self._stopstopReadingFlag = False
+        self._stopReadingFlag = False
 
         logging.info("DataWorker: data reading started.")
 
         with open(self._fifoPath, "rb") as f:
-            while not self._stopstopReadingFlag:
+            while not self._stopReadingFlag:
                 data = f.read(self._packetSize)
 
                 self.dataReadySig.emit(data)
@@ -137,4 +137,4 @@ class FIFODataSource(DataSource):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._stopstopReadingFlag = True
+        self._stopReadingFlag = True

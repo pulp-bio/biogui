@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FIFOConfigWidget</class>
- <widget class="QWidget" name="FIFOConfigWidget">
+ <class>FifoConfigView</class>
+ <widget class="QWidget" name="FifoConfigView">
   <property name="geometry">
    <rect>
     <x>0</x>

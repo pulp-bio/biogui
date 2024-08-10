@@ -1,8 +1,8 @@
 """
-BioGUI entry point.
+Sub-package containing the views.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,20 +17,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-if __name__ == "__main__":
-    import sys
+from .add_data_source_dialog import AddDataSourceDialog
+from .add_signal_dialog import AddSignalDialog
+from .main_window import MainWindow
 
-    if len(sys.argv) > 2:
-        sys.exit("Usage: python main.py [ENABLE_LOGS]")
-
-    # Enable logging
-    if len(sys.argv) == 2 and sys.argv[1]:
-
-        import logging
-
-        logging.basicConfig(level=logging.INFO)
-
-    from biogui import BioGUI
-
-    app = BioGUI()
-    sys.exit(app.exec())
+__all__ = ["MainWindow", "AddDataSourceDialog", "AddSignalDialog"]

@@ -1,8 +1,8 @@
 """
-Interfaces for data sources.
+Abstract base class for data source controllers.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,9 +31,9 @@ class DataSourceType(Enum):
     """Enum representing the data source type."""
 
     SERIAL = "Serial port"
-    SOCKET = "Socket"
-    DUMMY = "Dummy"
+    TCP = "TCP socket"
     FIFO = "FIFO"
+    DUMMY = "Dummy"
 
 
 @dataclass
@@ -60,7 +60,7 @@ class ConfigResult:
 
 
 class ConfigWidgetMeta(type(QObject), ABCMeta):
-    """Metaclass for the interface of data source configuration widgets."""
+    """Interface of data source configuration widgets (metaclass)."""
 
 
 class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
@@ -78,19 +78,19 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
         """
 
 
-class DataWorkerMeta(type(QObject), ABCMeta):
-    """Metaclass for the interface of data sources."""
+class DataSourceControllerMeta(type(QObject), ABCMeta):
+    """Abstract base class for data source controllers (metaclass)."""
 
 
-class DataSource(ABC, QObject, metaclass=DataWorkerMeta):
+class DataSourceController(ABC, QObject, metaclass=DataSourceControllerMeta):
     """
-    Interface for data sources.
+    Abstract base class for data source controllers.
 
     Class attributes
     ----------------
     dataReadySig : Signal
         Qt Signal emitted when new data is collected.
-    commErrorSig : Signal
+    errorSig : Signal
         Qt Signal emitted when a communication error occurs.
     """
 

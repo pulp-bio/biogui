@@ -29,13 +29,15 @@ import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from scipy import signal
 
-from . import data_source
+from .. import data_sources
 
 DecodeFn: TypeAlias = Callable[[bytes], Sequence[np.ndarray]]
+"""Type representing the decode function that translates the bytes read from the data source to actual signals."""
 
 InterfaceModule = namedtuple(
     "InterfaceModule", "packetSize, startSeq, stopSeq, fs, nCh, sigNames, decodeFn"
 )
+"""Type representing the interface module to communicate with the data source."""
 
 
 @dataclass
@@ -295,8 +297,8 @@ class StreamingController(QObject):
     ----------
     dataSourceConfig : dict
         Dictionary with the data source configuration.
-    interfaceModule: InterfaceModule
-        InterfaceModule object.
+    decodeFn : DecodeFn
+        The decoding function.
     parent : QObject or None, default=None
         Parent QObject.
 
@@ -335,7 +337,7 @@ class StreamingController(QObject):
         super().__init__(parent)
 
         # Create data source worker and thread
-        self._dataSourceWorker = data_source.getDataSource(**dataSourceConfig)
+        self._dataSourceWorker = data_sources.getDataSource(**dataSourceConfig)
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
 
