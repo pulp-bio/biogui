@@ -24,25 +24,13 @@ import time
 
 import serial
 import serial.tools.list_ports
-from PySide6.QtGui import QIcon, QIntValidator, QPalette
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QIcon, QIntValidator
+from PySide6.QtWidgets import QWidget
+
+from biogui.utils import detectTheme
 
 from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
-from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
-
-
-def _detectTheme():
-    """Determine whether the system theme is light or dark."""
-    # Get palette of QApplication
-    palette = QApplication.palette()
-
-    # Compare the color of the background and text to infer theme
-    textColor = palette.color(QPalette.Text)
-    backgroundColor = palette.color(QPalette.Window)
-
-    # Simple heuristic to determine if the theme is light or dark
-    isDark = backgroundColor.lightness() < textColor.lightness()
-    return "dark" if isDark else "light"
+from .base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
@@ -60,7 +48,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
 
         # Setup UI
         self.setupUi(self)
-        theme = _detectTheme()
+        theme = detectTheme()
         self.rescanSerialPortsButton.setIcon(
             QIcon.fromTheme("view-refresh", QIcon(f":icons/{theme}/reload"))
         )

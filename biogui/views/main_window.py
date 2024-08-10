@@ -17,24 +17,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from PySide6.QtGui import QIcon, QPalette
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMainWindow
 
 from biogui.ui.main_window_ui import Ui_MainWindow
+from biogui.utils import detectTheme
 
-
-def _detectTheme():
-    """Determine whether the system theme is light or dark."""
-    # Get palette of QApplication
-    palette = QApplication.palette()
-
-    # Compare the color of the background and text to infer theme
-    textColor = palette.color(QPalette.Text)  # type: ignore
-    backgroundColor = palette.color(QPalette.Window)  # type: ignore
-
-    # Simple heuristic to determine if the theme is light or dark
-    isDark = backgroundColor.lightness() < textColor.lightness()
-    return "dark" if isDark else "light"
+from .signal_plot_widget import SignalPlotWidget
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -52,7 +41,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Setup UI
         self.setupUi(self)
-        theme = _detectTheme()
+        theme = detectTheme()
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
@@ -72,7 +61,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QIcon.fromTheme("arrow-right", QIcon(f":icons/{theme}/right-arrow"))
         )
 
-        self.sigPlotWidgets = {}
+        self.sigPlotWidgets: dict[str, SignalPlotWidget] = {}
 
     def adjustLayout(self) -> None:
         """Adjust the layout of the plots."""

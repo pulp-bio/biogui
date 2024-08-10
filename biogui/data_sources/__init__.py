@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from ._base import ConfigWidget, DataSourceController, DataSourceType
-from ._dummy import DummyConfigWidget, DummyDataSourceController
-from ._fifo import FIFOConfigWidget, FIFODataSourceController
-from ._serial import SerialConfigWidget, SerialDataSourceController
-from ._tcp import TCPConfigWidget, TCPDataSourceController
+from .base import ConfigWidget, DataSourceController, DataSourceType
+from .dummy import DummyConfigWidget, DummyDataSourceController
+from .fifo import FIFOConfigWidget, FIFODataSourceController
+from .serial import SerialConfigWidget, SerialDataSourceController
+from .tcp import TCPConfigWidget, TCPDataSourceController
 
 
 def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
