@@ -20,5 +20,6 @@ limitations under the License.
 from .add_data_source_dialog import AddDataSourceDialog
 from .add_signal_dialog import AddSignalDialog
 from .main_window import MainWindow
+from .signal_plot_widget import SignalPlotWidget
 
-__all__ = ["MainWindow", "AddDataSourceDialog", "AddSignalDialog"]
+__all__ = ["MainWindow", "AddDataSourceDialog", "AddSignalDialog", "SignalPlotWidget"]
