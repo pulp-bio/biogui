@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import ConfigWidget, DataSource, DataSourceType
-from ._dummy_data_source import DummyConfigWidget, DummyDataSource
-from ._fifo_data_source import FIFOConfigWidget, FIFODataSource
-from ._serial_data_source import SerialConfigWidget, SerialDataSource
-from ._socket_data_source import SocketConfigWidget, SocketDataSource
+from ._base import ConfigWidget, DataSourceController, DataSourceType
+from ._dummy import DummyConfigWidget, DummyDataSourceController
+from ._fifo import FIFOConfigWidget, FIFODataSourceController
+from ._serial import SerialConfigWidget, SerialDataSourceController
+from ._tcp import TCPConfigWidget, TCPDataSourceController
 
 
 def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
@@ -46,7 +46,7 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
     """
     configWidgetDict = {
         DataSourceType.SERIAL: SerialConfigWidget,
-        DataSourceType.SOCKET: SocketConfigWidget,
+        DataSourceType.TCP: TCPConfigWidget,
         DataSourceType.DUMMY: DummyConfigWidget,
         DataSourceType.FIFO: FIFOConfigWidget,
     }
@@ -55,9 +55,9 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
 
 def getDataSource(
     dataSourceType: DataSourceType, packetSize: int, **kwargs
-) -> DataSource:
+) -> DataSourceController:
     """
-    Factory function for producing DataSource objects.
+    Factory function for producing DataSourceController objects.
 
     Parameters
     ----------
@@ -74,10 +74,10 @@ def getDataSource(
         Corresponding DataSource object.
     """
     dataSourceDict = {
-        DataSourceType.SERIAL: SerialDataSource,
-        DataSourceType.SOCKET: SocketDataSource,
-        DataSourceType.DUMMY: DummyDataSource,
-        DataSourceType.FIFO: FIFODataSource,
+        DataSourceType.SERIAL: SerialDataSourceController,
+        DataSourceType.TCP: TCPDataSourceController,
+        DataSourceType.DUMMY: DummyDataSourceController,
+        DataSourceType.FIFO: FIFODataSourceController,
     }
     return dataSourceDict[dataSourceType](packetSize, **kwargs)
 
@@ -85,7 +85,7 @@ def getDataSource(
 __all__ = [
     "DataSourceType",
     "ConfigWidget",
-    "DataSource",
+    "DataSourceController",
     "getConfigWidget",
     "getDataSource",
 ]

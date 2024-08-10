@@ -2,7 +2,7 @@
 Classes for the TCP socket data source.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,11 +26,11 @@ from asyncio import IncompleteReadError
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from ..ui.ui_socket_config_widget import Ui_SocketConfigWidget
-from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
+from ..ui.tcp_config_widget_ui import Ui_TCPConfigWidget
+from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
 
 
-class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
+class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
     """
     Widget to configure the socket source.
 
@@ -64,7 +64,7 @@ class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
         """
         if not self.portTextField.hasAcceptableInput():
             return ConfigResult(
-                dataSourceType=DataSourceType.SOCKET,
+                dataSourceType=DataSourceType.TCP,
                 dataSourceConfig={},
                 isValid=False,
                 errMessage='The "port" field is invalid.',
@@ -72,16 +72,16 @@ class SocketConfigWidget(ConfigWidget, Ui_SocketConfigWidget):
 
         socketPort = int(self.portTextField.text())
         return ConfigResult(
-            dataSourceType=DataSourceType.SOCKET,
+            dataSourceType=DataSourceType.TCP,
             dataSourceConfig={"socketPort": socketPort},
             isValid=True,
             errMessage="",
         )
 
 
-class SocketDataSource(DataSource):
+class TCPDataSourceController(DataSourceController):
     """
-    Concrete worker that collects data from a TCP socket.
+    Concrete DataSourceController that collects data from a TCP socket.
 
     Parameters
     ----------
@@ -174,7 +174,7 @@ class SocketDataSource(DataSource):
                             nRead = conn.recv_into(memoryview(data)[pos:])
                             if nRead == 0:
                                 raise IncompleteReadError(
-                                    bytes[data[:pos]], self._packetSize
+                                    bytes(data[:pos]), self._packetSize
                                 )
                             pos += nRead
                     except socket.timeout:

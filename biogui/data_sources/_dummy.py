@@ -2,7 +2,7 @@
 Classes for the dummy data source.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from ._abc_data_source import ConfigResult, ConfigWidget, DataSource, DataSourceType
+from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
 
 
 class DummyConfigWidget(ConfigWidget):
@@ -58,9 +58,9 @@ class DummyConfigWidget(ConfigWidget):
         )
 
 
-class DummyDataSource(DataSource):
+class DummyDataSourceController(DataSourceController):
     """
-    Concrete worker that collects data by generating it randomly.
+    Concrete DataSourceController that collects data by generating it randomly.
 
     Parameters
     ----------

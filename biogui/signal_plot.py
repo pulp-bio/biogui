@@ -84,7 +84,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._fs = fs
         self._chSpacing = chSpacing
         self._timer = QTimer(self)
-        self._timer.setInterval(20)  # 50 FPS
+        self._timer.setInterval(33)  # ~30 FPS
         self._timer.timeout.connect(self._refreshPlot)
         self._timer.start()
 

@@ -1,7 +1,8 @@
-"""This package contains the UI modules.
+"""
+Sub-package containing the auto-generated UI modules.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

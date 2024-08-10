@@ -1,9 +1,4 @@
 <RCC>
-  <qresource prefix="images">
-    <file alias="start">images/start.png</file>
-    <file alias="stop">images/stop.png</file>
-    <file alias="waiting">images/waiting.gif</file>
-  </qresource>
   <qresource prefix="icons">
     <file alias="dark/reload">icons/dark/reload.png</file>
     <file alias="light/reload">icons/light/reload.png</file>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SocketConfigWidget</class>
- <widget class="QWidget" name="SocketConfigWidget">
+ <class>TCPConfigWidget</class>
+ <widget class="QWidget" name="TCPConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,11 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Socket Configuration Widget</string>
+   <string>TCP Configuration Widget</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
-    <widget class="QLabel" name="label3">
+    <widget class="QLabel" name="label">
      <property name="text">
       <string>Port:</string>
      </property>

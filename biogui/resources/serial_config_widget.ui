@@ -60,7 +60,7 @@
   <tabstop>baudRateTextField</tabstop>
  </tabstops>
  <resources>
-  <include location="resources.qrc"/>
+  <include location="biogui.qrc"/>
  </resources>
  <connections/>
 </ui>
