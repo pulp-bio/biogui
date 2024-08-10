@@ -24,7 +24,7 @@ import logging
 from PySide6.QtWidgets import QWidget
 
 from ..ui.fifo_config_widget_ui import Ui_FifoConfigView
-from ._base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
 
 
 class FIFOConfigWidget(ConfigWidget, Ui_FifoConfigView):
