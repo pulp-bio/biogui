@@ -1,8 +1,8 @@
 """
-This package contains the code for managing data sources.
+This package contains the code for handling data sources.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigWidget, DataSourceController, DataSourceType
-from .dummy import DummyConfigWidget, DummyDataSourceController
-from .fifo import FIFOConfigWidget, FIFODataSourceController
-from .serial import SerialConfigWidget, SerialDataSourceController
-from .tcp import TCPConfigWidget, TCPDataSourceController
+from .base import ConfigWidget, DataSourceWorker, DataSourceType
+from .dummy import DummyConfigWidget, DummyDataSourceWorker
+from .fifo import FIFOConfigWidget, FIFODataSourceWorker
+from .serial import SerialConfigWidget, SerialDataSourceWorker
+from .tcp import TCPConfigWidget, TCPDataSourceWorker
 
 
 def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
@@ -53,11 +53,11 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
     return configWidgetDict[dataSourceType](parent)
 
 
-def getDataSource(
+def getDataSourceWorker(
     dataSourceType: DataSourceType, packetSize: int, **kwargs
-) -> DataSourceController:
+) -> DataSourceWorker:
     """
-    Factory function for producing DataSourceController objects.
+    Factory function for producing DataSourceWorker objects.
 
     Parameters
     ----------
@@ -70,14 +70,14 @@ def getDataSource(
 
     Returns
     -------
-    DataSource
-        Corresponding DataSource object.
+    DataSourceWorker
+        Corresponding DataSourceWorker object.
     """
     dataSourceDict = {
-        DataSourceType.SERIAL: SerialDataSourceController,
-        DataSourceType.TCP: TCPDataSourceController,
-        DataSourceType.DUMMY: DummyDataSourceController,
-        DataSourceType.FIFO: FIFODataSourceController,
+        DataSourceType.SERIAL: SerialDataSourceWorker,
+        DataSourceType.TCP: TCPDataSourceWorker,
+        DataSourceType.DUMMY: DummyDataSourceWorker,
+        DataSourceType.FIFO: FIFODataSourceWorker,
     }
     return dataSourceDict[dataSourceType](packetSize, **kwargs)
 
@@ -85,7 +85,7 @@ def getDataSource(
 __all__ = [
     "DataSourceType",
     "ConfigWidget",
-    "DataSourceController",
+    "DataSourceWorker",
     "getConfigWidget",
-    "getDataSource",
+    "getDataSourceWorker",
 ]

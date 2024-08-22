@@ -23,7 +23,7 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
 
 
 class DummyConfigWidget(ConfigWidget):
@@ -58,9 +58,9 @@ class DummyConfigWidget(ConfigWidget):
         )
 
 
-class DummyDataSourceController(DataSourceController):
+class DummyDataSourceWorker(DataSourceWorker):
     """
-    Concrete DataSourceController that collects data by generating it randomly.
+    Concrete DataSourceWorker that collects data by generating it randomly.
 
     Parameters
     ----------

@@ -27,7 +27,7 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from ..ui.tcp_config_widget_ui import Ui_TCPConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
 
 
 class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
@@ -79,9 +79,9 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
         )
 
 
-class TCPDataSourceController(DataSourceController):
+class TCPDataSourceWorker(DataSourceWorker):
     """
-    Concrete DataSourceController that collects data from a TCP socket.
+    Concrete DataSourceWorker that collects data from a TCP socket.
 
     Parameters
     ----------
