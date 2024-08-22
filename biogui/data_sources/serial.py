@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QWidget
 from biogui.utils import detectTheme
 
 from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceController, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
@@ -105,9 +105,9 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
         )
 
 
-class SerialDataSourceController(DataSourceController):
+class SerialDataSourceWorker(DataSourceWorker):
     """
-    Concrete DataSourceController that collects data from a serial port.
+    Concrete DataSourceWorker that collects data from a serial port.
 
     Parameters
     ----------
