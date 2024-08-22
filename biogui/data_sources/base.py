@@ -1,5 +1,5 @@
 """
-Abstract base class for data source controllers.
+Abstract base class for data source worker.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
@@ -78,13 +78,13 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
         """
 
 
-class DataSourceControllerMeta(type(QObject), ABCMeta):
+class DataSourceWorkerMeta(type(QObject), ABCMeta):
     """Abstract base class for data source controllers (metaclass)."""
 
 
-class DataSourceController(ABC, QObject, metaclass=DataSourceControllerMeta):
+class DataSourceWorker(ABC, QObject, metaclass=DataSourceWorkerMeta):
     """
-    Abstract base class for data source controllers.
+    Abstract base class for data source workers.
 
     Class attributes
     ----------------
