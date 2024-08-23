@@ -85,115 +85,100 @@
           </layout>
          </item>
          <item>
-          <widget class="QListWidget" name="dataSourceList"/>
+          <widget class="QTreeView" name="dataSourceTree">
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+          </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="signalsGroupBox">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="toolTip">
-            <string>Configure a source first</string>
-           </property>
-           <property name="title">
-            <string/>
-           </property>
-           <property name="flat">
-            <bool>true</bool>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout2" stretch="0,0">
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0,0,0,0">
-              <item>
-               <widget class="QPushButton" name="editSignalButton">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="toolTip">
-                 <string>Edit the selected signal</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="edit-entry">
-                  <normaloff>.</normaloff>.</iconset>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="moveLeftButton">
-                <property name="toolTip">
-                 <string>Move the selected signal left</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="arrow-left">
-                  <normaloff>.</normaloff>.</iconset>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="moveUpButton">
-                <property name="toolTip">
-                 <string>Move the selected signal up</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="arrow-up">
-                  <normaloff>.</normaloff>.</iconset>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="moveDownButton">
-                <property name="toolTip">
-                 <string>Move the selected signal down</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="arrow-down">
-                  <normaloff>.</normaloff>.</iconset>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="moveRightButton">
-                <property name="toolTip">
-                 <string>Move the selected signal right</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="arrow-right">
-                  <normaloff>.</normaloff>.</iconset>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QListWidget" name="sigNameList">
-              <property name="toolTip">
-               <string>The order of the signals must match the one provided by the streaming controller</string>
-              </property>
-              <property name="autoFillBackground">
-               <bool>false</bool>
-              </property>
-              <property name="resizeMode">
-               <enum>QListView::Adjust</enum>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0,0,0,0">
+           <item>
+            <widget class="QPushButton" name="editSignalButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Edit the selected signal</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-entry">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveLeftButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Move the selected signal left</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-left">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveUpButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Move the selected signal up</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-up">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveDownButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Move the selected signal down</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-down">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="moveRightButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Move the selected signal right</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="arrow-right">
+               <normaloff>.</normaloff>.</iconset>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -260,9 +245,7 @@
   <tabstop>stopStreamingButton</tabstop>
   <tabstop>addDataSourceButton</tabstop>
   <tabstop>deleteDataSourceButton</tabstop>
-  <tabstop>dataSourceList</tabstop>
   <tabstop>editSignalButton</tabstop>
-  <tabstop>sigNameList</tabstop>
   <tabstop>scrollArea</tabstop>
  </tabstops>
  <resources>

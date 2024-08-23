@@ -16,10 +16,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QListView,
-    QListWidget, QListWidgetItem, QMainWindow, QMenu,
-    QMenuBar, QPushButton, QScrollArea, QSizePolicy,
-    QSpacerItem, QStatusBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QGroupBox, QHBoxLayout,
+    QHeaderView, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QStatusBar, QTreeView, QVBoxLayout, QWidget)
 from . import biogui_rc
 
 class Ui_MainWindow(object):
@@ -82,20 +82,15 @@ class Ui_MainWindow(object):
 
         self.verticalLayout1.addLayout(self.horizontalLayout3)
 
-        self.dataSourceList = QListWidget(self.streamConfGroupBox)
-        self.dataSourceList.setObjectName(u"dataSourceList")
+        self.dataSourceTree = QTreeView(self.streamConfGroupBox)
+        self.dataSourceTree.setObjectName(u"dataSourceTree")
+        self.dataSourceTree.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        self.verticalLayout1.addWidget(self.dataSourceList)
+        self.verticalLayout1.addWidget(self.dataSourceTree)
 
-        self.signalsGroupBox = QGroupBox(self.streamConfGroupBox)
-        self.signalsGroupBox.setObjectName(u"signalsGroupBox")
-        self.signalsGroupBox.setEnabled(False)
-        self.signalsGroupBox.setFlat(True)
-        self.verticalLayout2 = QVBoxLayout(self.signalsGroupBox)
-        self.verticalLayout2.setObjectName(u"verticalLayout2")
         self.horizontalLayout4 = QHBoxLayout()
         self.horizontalLayout4.setObjectName(u"horizontalLayout4")
-        self.editSignalButton = QPushButton(self.signalsGroupBox)
+        self.editSignalButton = QPushButton(self.streamConfGroupBox)
         self.editSignalButton.setObjectName(u"editSignalButton")
         self.editSignalButton.setEnabled(False)
         icon1 = QIcon()
@@ -109,8 +104,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout4.addWidget(self.editSignalButton)
 
-        self.moveLeftButton = QPushButton(self.signalsGroupBox)
+        self.moveLeftButton = QPushButton(self.streamConfGroupBox)
         self.moveLeftButton.setObjectName(u"moveLeftButton")
+        self.moveLeftButton.setEnabled(False)
         icon2 = QIcon()
         iconThemeName = u"arrow-left"
         if QIcon.hasThemeIcon(iconThemeName):
@@ -122,8 +118,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout4.addWidget(self.moveLeftButton)
 
-        self.moveUpButton = QPushButton(self.signalsGroupBox)
+        self.moveUpButton = QPushButton(self.streamConfGroupBox)
         self.moveUpButton.setObjectName(u"moveUpButton")
+        self.moveUpButton.setEnabled(False)
         icon3 = QIcon()
         iconThemeName = u"arrow-up"
         if QIcon.hasThemeIcon(iconThemeName):
@@ -135,8 +132,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout4.addWidget(self.moveUpButton)
 
-        self.moveDownButton = QPushButton(self.signalsGroupBox)
+        self.moveDownButton = QPushButton(self.streamConfGroupBox)
         self.moveDownButton.setObjectName(u"moveDownButton")
+        self.moveDownButton.setEnabled(False)
         icon4 = QIcon()
         iconThemeName = u"arrow-down"
         if QIcon.hasThemeIcon(iconThemeName):
@@ -148,8 +146,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout4.addWidget(self.moveDownButton)
 
-        self.moveRightButton = QPushButton(self.signalsGroupBox)
+        self.moveRightButton = QPushButton(self.streamConfGroupBox)
         self.moveRightButton.setObjectName(u"moveRightButton")
+        self.moveRightButton.setEnabled(False)
         icon5 = QIcon()
         iconThemeName = u"arrow-right"
         if QIcon.hasThemeIcon(iconThemeName):
@@ -162,17 +161,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout4.addWidget(self.moveRightButton)
 
 
-        self.verticalLayout2.addLayout(self.horizontalLayout4)
-
-        self.sigNameList = QListWidget(self.signalsGroupBox)
-        self.sigNameList.setObjectName(u"sigNameList")
-        self.sigNameList.setAutoFillBackground(False)
-        self.sigNameList.setResizeMode(QListView.Adjust)
-
-        self.verticalLayout2.addWidget(self.sigNameList)
-
-
-        self.verticalLayout1.addWidget(self.signalsGroupBox)
+        self.verticalLayout1.addLayout(self.horizontalLayout4)
 
 
         self.confLayout.addWidget(self.streamConfGroupBox)
@@ -218,10 +207,8 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.startStreamingButton, self.stopStreamingButton)
         QWidget.setTabOrder(self.stopStreamingButton, self.addDataSourceButton)
         QWidget.setTabOrder(self.addDataSourceButton, self.deleteDataSourceButton)
-        QWidget.setTabOrder(self.deleteDataSourceButton, self.dataSourceList)
-        QWidget.setTabOrder(self.dataSourceList, self.editSignalButton)
-        QWidget.setTabOrder(self.editSignalButton, self.sigNameList)
-        QWidget.setTabOrder(self.sigNameList, self.scrollArea)
+        QWidget.setTabOrder(self.deleteDataSourceButton, self.editSignalButton)
+        QWidget.setTabOrder(self.editSignalButton, self.scrollArea)
 
         self.menubar.addAction(self.menuModules.menuAction())
 
@@ -240,10 +227,6 @@ class Ui_MainWindow(object):
         self.deleteDataSourceButton.setToolTip(QCoreApplication.translate("MainWindow", u"Delete selected source", None))
 #endif // QT_CONFIG(tooltip)
         self.deleteDataSourceButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.signalsGroupBox.setToolTip(QCoreApplication.translate("MainWindow", u"Configure a source first", None))
-#endif // QT_CONFIG(tooltip)
-        self.signalsGroupBox.setTitle("")
 #if QT_CONFIG(tooltip)
         self.editSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"Edit the selected signal", None))
 #endif // QT_CONFIG(tooltip)
@@ -264,9 +247,6 @@ class Ui_MainWindow(object):
         self.moveRightButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal right", None))
 #endif // QT_CONFIG(tooltip)
         self.moveRightButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.sigNameList.setToolTip(QCoreApplication.translate("MainWindow", u"The order of the signals must match the one provided by the streaming controller", None))
-#endif // QT_CONFIG(tooltip)
         self.menuModules.setTitle(QCoreApplication.translate("MainWindow", u"Modules", None))
     # retranslateUi
 

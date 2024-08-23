@@ -1,8 +1,8 @@
 """
-Class implementing the streaming controller.
+Controller for streaming from data sources, preprocessing and saving to file.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -304,7 +304,7 @@ class StreamingController(QObject):
 
     Attributes
     ----------
-    _dataSourceWorker : DataSource
+    _dataSourceWorker : DataSourceWorker
         Worker for data acquisition.
     _dataSourceThread : QThread
         The QThread associated to the data source worker.
@@ -337,7 +337,7 @@ class StreamingController(QObject):
         super().__init__(parent)
 
         # Create data source worker and thread
-        self._dataSourceWorker = data_sources.getDataSource(**dataSourceConfig)
+        self._dataSourceWorker = data_sources.getDataSourceWorker(**dataSourceConfig)
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
 
