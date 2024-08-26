@@ -150,7 +150,12 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
 
     @property
     def dataSourceConfig(self) -> dict:
-        """dict: Property for getting the data source configuration."""
+        """
+        dict: Property for getting the data source configuration, namely:
+        - "dataSourceType": the data source type;
+        - "interfaceModule": the interface module;
+        - the type-specific configuration parameters.
+        """
         return self._dataSourceConfig
 
     @property
@@ -224,5 +229,5 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
             return
 
         self._dataSourceConfig["dataSourceType"] = configResult.dataSourceType
-        self._dataSourceConfig.update(configResult.dataSourceConfig)
+        self._dataSourceConfig |= configResult.dataSourceConfig
         self._isValid = True

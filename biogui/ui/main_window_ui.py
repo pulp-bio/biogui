@@ -38,7 +38,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout2.setObjectName(u"horizontalLayout2")
         self.startStreamingButton = QPushButton(self.centralWidget)
         self.startStreamingButton.setObjectName(u"startStreamingButton")
-        self.startStreamingButton.setEnabled(True)
+        self.startStreamingButton.setEnabled(False)
 
         self.horizontalLayout2.addWidget(self.startStreamingButton)
 

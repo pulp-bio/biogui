@@ -70,14 +70,10 @@ class _FileWriterWorker(QObject):
 
     Attributes
     ----------
-    _filePath : str
-        File path.
     _targetSignalName : str
         Target signal name.
     _f : BinaryIO or None
         File object.
-    _firstWrite : bool
-        Whether it's the first time the worker receives data.
     """
 
     def __init__(self, filePath: str, targetSignalName: str) -> None:
@@ -87,8 +83,26 @@ class _FileWriterWorker(QObject):
         self._targetSignalName = targetSignalName
 
         self._f = None
-        self._firstWrite = True
+        self._isFirstWrite = True
         self._trigger = None
+
+    @property
+    def filePath(self) -> str:
+        """str: Property representing the file path."""
+        return self._filePath
+
+    @filePath.setter
+    def filePath(self, filePath: str) -> None:
+        self._filePath = filePath
+
+    @property
+    def isFirstWrite(self) -> bool:
+        """bool: Property representing whether it's the first time the worker receives data."""
+        return self._isFirstWrite
+
+    @isFirstWrite.setter
+    def isFirstWrite(self, isFirstWrite: bool) -> None:
+        self._isFirstWrite = isFirstWrite
 
     @property
     def trigger(self) -> int | None:
@@ -113,11 +127,10 @@ class _FileWriterWorker(QObject):
             return
         data = dataPacket.data
 
-        if self._firstWrite:  # write number of channels
+        if self._isFirstWrite:  # write number of channels
             nCh = data.shape[1] + 1 if self._trigger is not None else data.shape[1]
             self._f.write(struct.pack("<I", nCh))  # type: ignore
-            self._firstWrite = False
-            print(self._trigger)
+            self._isFirstWrite = False
 
         # Add trigger (optionally)
         if self._trigger is not None:
@@ -134,7 +147,7 @@ class _FileWriterWorker(QObject):
     def openFile(self) -> None:
         """Open the file."""
         self._f = open(self._filePath, "wb")
-        self._firstWrite = True
+        self._isFirstWrite = True
 
     def closeFile(self) -> None:
         """Close the file."""
@@ -149,6 +162,13 @@ class _PreprocessWorker(QObject):
     ----------
     decodeFn : DecodeFn
         Decode function.
+    config : dict
+        Dictionary with configuration for each signal, namely:
+        - "fs": the sampling frequency;
+        - "nCh": the number of channels;
+        - "filtType": the filter type (optional);
+        - "freqs": list with the cut-off frequencies (optional);
+        - "filtOrder" the filter order (optional).
 
     Attributes
     ----------
@@ -175,14 +195,19 @@ class _PreprocessWorker(QObject):
     dataReadyFltSig = Signal(DataPacket)
     errorSig = Signal(str)
 
-    def __init__(self, decodeFn: DecodeFn) -> None:
+    def __init__(self, decodeFn: DecodeFn, config: dict) -> None:
         super().__init__()
 
         self._decodeFn = decodeFn
-        self._sigNames: list[str] = []
+        self._sigNames = list(config.keys())
         self._sos: dict = {}
         self._zi: dict = {}
         self._errorOccurred = False
+
+        # Optionally, configure filtering
+        for sigName, sigConfig in config.items():
+            if "filtType" in sigConfig:
+                self.configFilter(sigName, sigConfig)
 
     @property
     def errorOccurred(self):
@@ -193,33 +218,7 @@ class _PreprocessWorker(QObject):
     def errorOccurred(self, errorOccurred: bool):
         self._errorOccurred = errorOccurred
 
-    def addSigName(self, sigName: str) -> None:
-        """
-        Add a signal name to the source.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name to add.
-        """
-        self._sigNames.append(sigName)
-
-    def removeSigName(self, sigName: str) -> None:
-        """
-        Remove a signal name from the source.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name to remove.
-        """
-        self._sigNames.remove(sigName)
-
-        # Remove filters
-        self._sos.pop(sigName, None)
-        self._zi.pop(sigName, None)
-
-    def configFilter(self, sigName: str, filtSettings: dict) -> None:
+    def configFilter(self, sigName: str, sigFiltConfig: dict) -> None:
         """
         Configure a per-signal filter from the given settings.
 
@@ -227,19 +226,24 @@ class _PreprocessWorker(QObject):
         ----------
         sigName : str
             Signal name.
-        filtSettings : dict
+        sigFiltConfig : dict
             Dictionary with the filter settings.
         """
-        freqs = filtSettings["freqs"]
+        # Remove previous filter
+        self._sos.pop(sigName, None)
+        self._zi.pop(sigName, None)
+
+        # Create filter
+        freqs = sigFiltConfig["freqs"]
         sos = signal.butter(
-            N=filtSettings["filtOrder"],
+            N=sigFiltConfig["filtOrder"],
             Wn=freqs if len(freqs) > 1 else freqs[0],
-            fs=filtSettings["fs"],
-            btype=filtSettings["filtType"],
+            fs=sigFiltConfig["fs"],
+            btype=sigFiltConfig["filtType"],
             output="sos",
         )
         self._sos[sigName] = sos
-        self._zi[sigName] = np.zeros((sos.shape[0], 2, filtSettings["nCh"]))
+        self._zi[sigName] = np.zeros((sos.shape[0], 2, sigFiltConfig["nCh"]))
 
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -299,6 +303,14 @@ class StreamingController(QObject):
         Dictionary with the data source configuration.
     decodeFn : DecodeFn
         The decoding function.
+    config: dict
+        Dictionary with configuration for each signal, namely:
+        - "fs": the sampling frequency;
+        - "nCh": the number of channels;
+        - "filtType": the filter type (optional);
+        - "freqs": list with the cut-off frequencies (optional);
+        - "filtOrder" the filter order (optional);
+        - "filePath": the file path (optional).
     parent : QObject or None, default=None
         Parent QObject.
 
@@ -312,10 +324,10 @@ class StreamingController(QObject):
         Worker for data pre-processing.
     _preprocessThread : QThread
         The QThread associated to the pre-processing worker.
-    _fileWriterWorkers : list of _FileWriterWorker
-        List of the (optional) workers for writing data to file.
-    _fileWriterThreads : list of QThread
-        List of the (optional) QThread associated to the file writer worker.
+    _fileWriterWorkers : dict of (str: _FileWriterWorker)
+        Collection of the (optional) workers for writing data to file, indexed by the target signal name.
+    _fileWriterThreads : dict of (str: QThread)
+        Collection of the (optional) QThread associated to the file writer worker, indexed by the target signal name.
 
     Class attributes
     ----------------
@@ -332,6 +344,7 @@ class StreamingController(QObject):
         self,
         dataSourceConfig: dict,
         decodeFn: DecodeFn,
+        config: dict,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -342,7 +355,7 @@ class StreamingController(QObject):
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
 
         # Create pre-processing worker and thread
-        self._preprocessWorker = _PreprocessWorker(decodeFn)
+        self._preprocessWorker = _PreprocessWorker(decodeFn, config)
         self._preprocessThread = QThread(self)
         self._preprocessWorker.moveToThread(self._preprocessThread)
 
@@ -357,8 +370,11 @@ class StreamingController(QObject):
         self._preprocessWorker.errorSig.connect(self._handleErrors)
 
         # Optionally, create file writer worker and thread
-        self._fileWriterWorkers: list[_FileWriterWorker] = []
-        self._fileWriterThreads: list[QThread] = []
+        self._fileWriterWorkers: dict[str, _FileWriterWorker] = {}
+        self._fileWriterThreads: dict[str, QThread] = {}
+        for sigName, sigConfig in config.items():
+            if "filePath" in sigConfig:
+                self.editFileSavingConfig(sigName, sigConfig["filePath"])
 
     def __str__(self) -> str:
         return str(self._dataSourceWorker)
@@ -366,32 +382,10 @@ class StreamingController(QObject):
     @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When error occurs, stop collection and preprocessing and forward the error Qt Signal."""
-        self.stopStreaming()
+        # self.stopStreaming()
         self.errorSig.emit(f'StreamingController "{self.__str__()}": {errMessage}')
 
-    def addSigName(self, sigName: str) -> None:
-        """
-        Add a signal name to the source.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name to add.
-        """
-        self._preprocessWorker.addSigName(sigName)
-
-    def removeSigName(self, sigName: str) -> None:
-        """
-        Remove a signal name from the source.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name to remove.
-        """
-        self._preprocessWorker.removeSigName(sigName)
-
-    def addFiltSettings(self, sigName: str, filtSettings: dict) -> None:
+    def editFiltConfig(self, sigName: str, sigFiltConfig: dict) -> None:
         """
         Configure a per-signal filter from the given settings.
 
@@ -399,12 +393,12 @@ class StreamingController(QObject):
         ----------
         sigName : str
             Signal name.
-        filtSettings : dict
+        sigFiltConfig : dict
             Dictionary with the filter settings.
         """
-        self._preprocessWorker.configFilter(sigName, filtSettings)
+        self._preprocessWorker.configFilter(sigName, sigFiltConfig)
 
-    def addFileSavingSettings(self, sigName: str, filePath: str) -> None:
+    def editFileSavingConfig(self, sigName: str, filePath: str) -> None:
         """
         Configure a per-signal file writer worker and thread.
 
@@ -415,6 +409,12 @@ class StreamingController(QObject):
         filePath : str
             Path to the output file.
         """
+        # If worker already exists, reset it and change path
+        if sigName in self._fileWriterWorkers:
+            self._fileWriterWorkers[sigName].filePath = filePath
+            self._fileWriterWorkers[sigName].isFirstWrite = False
+            return
+
         # Create worker and thread
         fileWriterWorker = _FileWriterWorker(filePath, sigName)
         fileWriterThread = QThread(self)
@@ -425,8 +425,8 @@ class StreamingController(QObject):
         fileWriterThread.finished.connect(fileWriterWorker.closeFile)
         self._preprocessWorker.dataReadyRawSig.connect(fileWriterWorker.write)
 
-        self._fileWriterWorkers.append(fileWriterWorker)
-        self._fileWriterThreads.append(fileWriterThread)
+        self._fileWriterWorkers[sigName] = fileWriterWorker
+        self._fileWriterThreads[sigName] = fileWriterThread
 
     def setTrigger(self, trigger: int) -> None:
         """
@@ -437,14 +437,14 @@ class StreamingController(QObject):
         trigger : int
             Trigger value.
         """
-        for fileWriterWorker in self._fileWriterWorkers:
+        for fileWriterWorker in self._fileWriterWorkers.values():
             fileWriterWorker.trigger = trigger
 
     def startStreaming(self) -> None:
         """Start streaming."""
         self._preprocessWorker.errorOccurred = False  # reset flag
 
-        for fileWriterThread in self._fileWriterThreads:
+        for fileWriterThread in self._fileWriterThreads.values():
             fileWriterThread.start()
 
         self._preprocessThread.start()
@@ -460,7 +460,7 @@ class StreamingController(QObject):
         self._preprocessThread.wait()
 
         for fileWriterWorker, fileWriterThread in zip(
-            self._fileWriterWorkers, self._fileWriterThreads
+            self._fileWriterWorkers.values(), self._fileWriterThreads.values()
         ):
             fileWriterThread.quit()
             fileWriterThread.wait()

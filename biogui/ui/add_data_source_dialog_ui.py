@@ -23,7 +23,7 @@ class Ui_AddDataSourceDialog(object):
     def setupUi(self, AddDataSourceDialog):
         if not AddDataSourceDialog.objectName():
             AddDataSourceDialog.setObjectName(u"AddDataSourceDialog")
-        AddDataSourceDialog.resize(400, 300)
+        AddDataSourceDialog.resize(400, 200)
         self.verticalLayout = QVBoxLayout(AddDataSourceDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()

@@ -20,9 +20,9 @@ limitations under the License.
 import datetime
 import os
 
-from PySide6.QtWidgets import QDialog, QFileDialog, QWidget
-from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtCore import QLocale
+from PySide6.QtGui import QDoubleValidator, QIntValidator
+from PySide6.QtWidgets import QDialog, QFileDialog, QWidget
 
 from biogui.ui.add_signal_dialog_ui import Ui_AddSignalDialog
 
@@ -33,25 +33,31 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
     Parameters
     ----------
-    sourceName : str
-        Name of the source.
     sigName : str
         Name of the signal.
-    nCh : int
-        Number of channels.
     fs : float
         Sampling frequency.
+    nCh : int
+        Number of channels.
     parent : QWidget or None, default=None
         Parent widget.
+    kwargs : dict
+        Optional keyword arguments for pre-filling the form, namely:
+        - "filtType": the filter type (optional);
+        - "freqs": list with the cut-off frequencies (optional);
+        - "filtOrder" the filter order (optional);
+        - "filePath": the file path (optional);
+        - "chSpacing": the channel spacing;
+        - "renderLenghtS": the render length.
     """
 
     def __init__(
         self,
-        sourceName: str,
         sigName: str,
-        nCh: int,
         fs: float,
+        nCh: int,
         parent: QWidget | None = None,
+        **kwargs: dict,
     ) -> None:
         super().__init__(parent)
 
@@ -62,7 +68,6 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
-        self.sourceNameLabel.setText(sourceName)
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
         self.freqLabel.setText(str(fs))
@@ -92,21 +97,29 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         renderLenValidator = QIntValidator(bottom=1, top=8)
         self.renderLenTextField.setValidator(renderLenValidator)
 
-        self._signalConfig = {
-            "source": sourceName,
-            "sigName": sigName,
-            "nCh": nCh,
-            "fs": fs,
-        }
+        self._sigConfig = {"fs": fs, "nCh": nCh}
         self._isValid = False
         self._errMessage = ""
 
         self.destroyed.connect(self.deleteLater)
 
+        # Pre-fill with provided configuration
+        self._prefill(kwargs)
+
     @property
-    def signalConfig(self) -> dict:
-        """dict: Property for getting the dictionary with the signal configuration."""
-        return self._signalConfig
+    def sigConfig(self) -> dict:
+        """
+        dict: Property for getting the dictionary with the signal configuration, namely:
+        - "fs": the sampling frequency;
+        - "nCh": the number of channels;
+        - "filtType": the filter type (optional);
+        - "freqs": list with the cut-off frequencies (optional);
+        - "filtOrder" the filter order (optional);
+        - "filePath": the file path (optional);
+        - "chSpacing": the channel spacing;
+        - "renderLenghtS": the render length.
+        """
+        return self._sigConfig
 
     @property
     def isValid(self) -> bool:
@@ -134,10 +147,10 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self,
             "Select destination directory",
             os.getcwd(),
-            QFileDialog.ShowDirsOnly,
+            QFileDialog.ShowDirsOnly,  # type: ignore
         )
         if outDirPath != "":
-            self._signalConfig["filePath"] = outDirPath
+            self._sigConfig["filePath"] = outDirPath
 
             displayText = (
                 outDirPath
@@ -151,12 +164,10 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         """Validate user input in the form."""
         lo = QLocale()
 
-        nyq_fs = self._signalConfig["fs"] // 2
+        nyq_fs = self._sigConfig["fs"] // 2
 
         # Check filtering settings
         if self.filteringGroupBox.isChecked():
-            self._signalConfig["filtType"] = self.filtTypeComboBox.currentText()
-
             if not self.freq1TextField.hasAcceptableInput():
                 self._isValid = False
                 self._errMessage = 'The "Frequency 1" field is invalid.'
@@ -167,7 +178,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 self._isValid = False
                 self._errMessage = "The 1st critical frequency cannot be higher than Nyquist frequency."
                 return
-            self._signalConfig["freqs"] = [freq1]
+            freqs = [freq1]
 
             if self.freq2TextField.isEnabled():
                 if not self.freq2TextField.hasAcceptableInput():
@@ -184,34 +195,35 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                     self._isValid = False
                     self._errMessage = "The 2nd critical frequency cannot be lower than the 1st critical frequency."
                     return
-                self._signalConfig["freqs"].append(freq2)
+                freqs.append(freq2)
 
             if not self.filtOrderTextField.hasAcceptableInput():
                 self._isValid = False
                 self._errMessage = 'The "filter order" field is invalid.'
                 return
-            self._signalConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[
-                0
-            ]
+
+            self._sigConfig["filtType"] = self.filtTypeComboBox.currentText()
+            self._sigConfig["freqs"] = freqs
+            self._sigConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[0]
 
         # Check file saving settings
         if self.fileSavingGroupBox.isChecked():
-            if "filePath" not in self._signalConfig.keys():
+            if "filePath" not in self._sigConfig.keys():
                 self._isValid = False
                 self._errMessage = "Select an output directory."
                 return
             outFileName = self.fileNameTextField.text()
             if outFileName == "":
                 outFileName = (
-                    f"{self._signalConfig["sigName"]}_{datetime.datetime.now()}".replace(
+                    f"{self.sigNameLabel.text()}_{datetime.datetime.now()}".replace(
                         " ", "_"
                     )
                     .replace(":", "-")
                     .replace(".", "-")
                 )
             outFileName = f"{outFileName}.bin"
-            self._signalConfig["filePath"] = os.path.join(
-                self._signalConfig["filePath"], outFileName
+            self._sigConfig["filePath"] = os.path.join(
+                self._sigConfig["filePath"], outFileName
             )
 
         # Plot settings
@@ -219,11 +231,40 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self._isValid = False
             self._errMessage = 'The "channel spacing" field is invalid.'
             return
-        self._signalConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
+        self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
         if not self.renderLenTextField.hasAcceptableInput():
             self._isValid = False
             self._errMessage = 'The "render length" field is invalid.'
             return
-        self._signalConfig["renderLen"] = lo.toInt(self.renderLenTextField.text())[0]
+        self._sigConfig["renderLengthS"] = lo.toInt(self.renderLenTextField.text())[0]
 
         self._isValid = True
+
+    def _prefill(self, sigConfig):
+        """Pre-fill the form with the provided configuration."""
+        lo = QLocale()
+        if "filtType" in sigConfig:
+            self.filteringGroupBox.setChecked(True)
+            idx = self.filtTypeComboBox.findText(sigConfig["filtType"])
+            self.filtTypeComboBox.setCurrentIndex(idx)
+            freqs = sigConfig["freqs"]
+            self.freq1TextField.setText(lo.toString(freqs[0]))
+            if len(freqs) == 2:
+                self.freq2TextField.setText(lo.toString(freqs[1]))
+            self.filtOrderTextField.setText(lo.toString(sigConfig["filtOrder"]))
+        if "filePath" in sigConfig:
+            self.fileSavingGroupBox.setChecked(True)
+            outDirPath, fileName = os.path.split(sigConfig["filePath"])
+            self._sigConfig["filePath"] = outDirPath
+            # Adjust display text
+            displayText = (
+                outDirPath
+                if len(outDirPath) <= 30
+                else outDirPath[:13] + "..." + outDirPath[-14:]
+            )
+            self.outDirPathLabel.setText(displayText)
+            self.outDirPathLabel.setToolTip(outDirPath)
+            self.fileNameTextField.setText(fileName)
+        if "chSpacing" in sigConfig:
+            self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
+            self.renderLenTextField.setText(lo.toString(sigConfig["renderLengthS"]))
