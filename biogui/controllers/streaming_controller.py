@@ -206,8 +206,7 @@ class _PreprocessWorker(QObject):
 
         # Optionally, configure filtering
         for sigName, sigConfig in config.items():
-            if "filtType" in sigConfig:
-                self.configFilter(sigName, sigConfig)
+            self.configFilter(sigName, sigConfig)
 
     @property
     def errorOccurred(self):
@@ -218,7 +217,7 @@ class _PreprocessWorker(QObject):
     def errorOccurred(self, errorOccurred: bool):
         self._errorOccurred = errorOccurred
 
-    def configFilter(self, sigName: str, sigFiltConfig: dict) -> None:
+    def configFilter(self, sigName: str, sigConfig: dict) -> None:
         """
         Configure a per-signal filter from the given settings.
 
@@ -226,24 +225,31 @@ class _PreprocessWorker(QObject):
         ----------
         sigName : str
             Signal name.
-        sigFiltConfig : dict
-            Dictionary with the filter settings.
+        sigConfig : dict
+            Dictionary with the signal configuration for filtering, namely:
+            - "fs": the sampling frequency;
+            - "nCh": the number of channels;
+            - "filtType": the filter type (optional);
+            - "freqs": list with the cut-off frequencies (optional);
+            - "filtOrder": the filter order (optional).
         """
-        # Remove previous filter
-        self._sos.pop(sigName, None)
-        self._zi.pop(sigName, None)
+        # If configuration is empty, remove previous filter (if present)
+        if "filtType" not in sigConfig:
+            self._sos.pop(sigName, None)
+            self._zi.pop(sigName, None)
+            return
 
         # Create filter
-        freqs = sigFiltConfig["freqs"]
+        freqs = sigConfig["freqs"]
         sos = signal.butter(
-            N=sigFiltConfig["filtOrder"],
+            N=sigConfig["filtOrder"],
             Wn=freqs if len(freqs) > 1 else freqs[0],
-            fs=sigFiltConfig["fs"],
-            btype=sigFiltConfig["filtType"],
+            fs=sigConfig["fs"],
+            btype=sigConfig["filtType"],
             output="sos",
         )
         self._sos[sigName] = sos
-        self._zi[sigName] = np.zeros((sos.shape[0], 2, sigFiltConfig["nCh"]))
+        self._zi[sigName] = np.zeros((sos.shape[0], 2, sigConfig["nCh"]))
 
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -374,7 +380,7 @@ class StreamingController(QObject):
         self._fileWriterThreads: dict[str, QThread] = {}
         for sigName, sigConfig in config.items():
             if "filePath" in sigConfig:
-                self.editFileSavingConfig(sigName, sigConfig["filePath"])
+                self._initFileWriter(sigName, sigConfig["filePath"])
 
     def __str__(self) -> str:
         return str(self._dataSourceWorker)
@@ -382,38 +388,10 @@ class StreamingController(QObject):
     @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When error occurs, stop collection and preprocessing and forward the error Qt Signal."""
-        # self.stopStreaming()
         self.errorSig.emit(f'StreamingController "{self.__str__()}": {errMessage}')
 
-    def editFiltConfig(self, sigName: str, sigFiltConfig: dict) -> None:
-        """
-        Configure a per-signal filter from the given settings.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name.
-        sigFiltConfig : dict
-            Dictionary with the filter settings.
-        """
-        self._preprocessWorker.configFilter(sigName, sigFiltConfig)
-
-    def editFileSavingConfig(self, sigName: str, filePath: str) -> None:
-        """
-        Configure a per-signal file writer worker and thread.
-
-        Parameters
-        ----------
-        sigName : str
-            Signal name.
-        filePath : str
-            Path to the output file.
-        """
-        # If worker already exists, reset it and change path
-        if sigName in self._fileWriterWorkers:
-            self._fileWriterWorkers[sigName].filePath = filePath
-            self._fileWriterWorkers[sigName].isFirstWrite = False
-            return
+    def _initFileWriter(self, sigName: str, filePath: str) -> None:
+        """Initialize the file writer worker and thread."""
 
         # Create worker and thread
         fileWriterWorker = _FileWriterWorker(filePath, sigName)
@@ -427,6 +405,43 @@ class StreamingController(QObject):
 
         self._fileWriterWorkers[sigName] = fileWriterWorker
         self._fileWriterThreads[sigName] = fileWriterThread
+
+    def editConfig(self, sigName: str, sigConfig: dict) -> None:
+        """
+        Configure a per-signal filter and file writer from the given settings.
+
+        Parameters
+        ----------
+        sigName : str
+            Signal name.
+        sigConfig : dict
+            Dictionary with the signal configuration, namely:
+            - "fs": the sampling frequency;
+            - "nCh": the number of channels;
+            - "filtType": the filter type (optional);
+            - "freqs": list with the cut-off frequencies (optional);
+            - "filtOrder": the filter order (optional);
+            - "filePath": the file path (optional).
+        """
+        # 1. Filter settings
+        self._preprocessWorker.configFilter(sigName, sigConfig)
+
+        # 2. File writer settings:
+        # 2.1. If configuration is empty, remove previous worker and thread (if present)
+        if "filePath" not in sigConfig:
+            self._fileWriterWorkers.pop(sigName, None)
+            self._fileWriterThreads.pop(sigName, None)
+            return
+        filePath = sigConfig["filePath"]
+
+        # 2.2. If worker already exists, reset it and change path
+        if sigName in self._fileWriterWorkers:
+            self._fileWriterWorkers[sigName].filePath = filePath
+            self._fileWriterWorkers[sigName].isFirstWrite = False
+            return
+
+        # 2.3. Otherwise, initialize file writer
+        self._initFileWriter(sigName, filePath)
 
     def setTrigger(self, trigger: int) -> None:
         """
