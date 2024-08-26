@@ -23,18 +23,9 @@ from PySide6.QtWidgets import QMainWindow
 from biogui.ui.main_window_ui import Ui_MainWindow
 from biogui.utils import detectTheme
 
-from .signal_plot_widget import SignalPlotWidget
-
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    """
-    Main window.
-
-    Attributes
-    ----------
-    sigPlotWidgets : dict of (str: SignalPlotWidget)
-        Collection of SignalPlotWidget objects, indexed by the name of the signal.
-    """
+    """Main window."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -61,12 +52,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QIcon.fromTheme("arrow-right", QIcon(f":icons/{theme}/right-arrow"))
         )
 
-        self.sigPlotWidgets: dict[str, SignalPlotWidget] = {}
+        self._nSigs = 0
+
+    @property
+    def nSigs(self) -> int:
+        """int: Property denoting the number of signals."""
+        return self._nSigs
+
+    @nSigs.setter
+    def nSigs(self, nSigs: int) -> None:
+        self._nSigs = nSigs
 
     def adjustLayout(self) -> None:
         """Adjust the layout of the plots."""
-        stretches = map(
-            lambda n: 2**n, list(range(len(self.sigPlotWidgets) - 2, -1, -1)) + [0]
-        )
+        stretches = map(lambda n: 2**n, list(range(self._nSigs - 2, -1, -1)) + [0])
         for i, s in enumerate(stretches):
             self.plotsLayout.setStretch(i, s)

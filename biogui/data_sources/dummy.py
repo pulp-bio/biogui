@@ -23,7 +23,7 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
 class DummyConfigWidget(ConfigWidget):

@@ -59,7 +59,7 @@ class ConfigResult:
     errMessage: str
 
 
-class ConfigWidgetMeta(type(QObject), ABCMeta):
+class ConfigWidgetMeta(type(QObject), ABCMeta):  # type: ignore
     """Interface of data source configuration widgets (metaclass)."""
 
 
@@ -78,7 +78,7 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
         """
 
 
-class DataSourceWorkerMeta(type(QObject), ABCMeta):
+class DataSourceWorkerMeta(type(QObject), ABCMeta):  # type: ignore
     """Abstract base class for data source controllers (metaclass)."""
 
 

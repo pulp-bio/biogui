@@ -25,53 +25,39 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label1">
        <property name="text">
-        <string>Source:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label2">
-       <property name="text">
         <string>Name:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label3">
-       <property name="text">
-        <string>Number of channels:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label4">
-       <property name="text">
-        <string>Sampling frequency (in sps):</string>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="1">
-      <widget class="QLabel" name="sourceNameLabel">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
       <widget class="QLabel" name="sigNameLabel">
        <property name="text">
         <string/>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label2">
+       <property name="text">
+        <string>Number of channels:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
       <widget class="QLabel" name="nChLabel">
        <property name="text">
         <string/>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label3">
+       <property name="text">
+        <string>Sampling frequency (in sps):</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
       <widget class="QLabel" name="freqLabel">
        <property name="text">
         <string/>
@@ -99,7 +85,7 @@
      </property>
      <layout class="QFormLayout" name="formLayout2">
       <item row="0" column="0">
-       <widget class="QLabel" name="label5">
+       <widget class="QLabel" name="label4">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
         </property>
@@ -133,7 +119,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="label6">
+       <widget class="QLabel" name="label5">
         <property name="text">
          <string>First critical frequency (in sps):</string>
         </property>
@@ -150,7 +136,7 @@
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="label7">
+       <widget class="QLabel" name="label6">
         <property name="text">
          <string>Second critical frequency (in sps):</string>
         </property>
@@ -170,7 +156,7 @@
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label8">
+       <widget class="QLabel" name="label7">
         <property name="text">
          <string>Filter order:</string>
         </property>
@@ -212,16 +198,16 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="label9">
+       <widget class="QLabel" name="label8">
         <property name="text">
          <string>Directory where the file will be saved:</string>
         </property>
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="label10">
+       <widget class="QLabel" name="label9">
         <property name="text">
-         <string>Path to directoy:</string>
+         <string>Path to directory:</string>
         </property>
        </widget>
       </item>
@@ -233,7 +219,7 @@
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label11">
+       <widget class="QLabel" name="label10">
         <property name="text">
          <string>File name:</string>
         </property>
@@ -250,7 +236,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="chSpacingGroupBox">
+    <widget class="QGroupBox" name="plotGroupBox">
      <property name="toolTip">
       <string/>
      </property>
@@ -271,7 +257,7 @@
      </property>
      <layout class="QFormLayout" name="formLayout4">
       <item row="0" column="0">
-       <widget class="QLabel" name="label14">
+       <widget class="QLabel" name="label11">
         <property name="text">
          <string>Channel spacing (in a.u.):</string>
         </property>
@@ -291,7 +277,7 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="label15">
+       <widget class="QLabel" name="label12">
         <property name="text">
          <string>Render length (in s):</string>
         </property>
