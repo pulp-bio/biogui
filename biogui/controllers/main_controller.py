@@ -346,10 +346,7 @@ class MainController(QObject):
         sigConfig = dialogResult
 
         # Update streaming controller settings
-        self._streamingControllers[dataSource].editFiltConfig(sigName, sigConfig)
-        self._streamingControllers[dataSource].editFileSavingConfig(
-            sigName, sigConfig["filePath"]
-        )
+        self._streamingControllers[dataSource].editConfig(sigName, sigConfig)
 
         # Re-create plot widget
         oldPlotWidget = self._sigPlotWidgets.pop(sigName)

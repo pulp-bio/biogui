@@ -49,6 +49,11 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         - "filePath": the file path (optional);
         - "chSpacing": the channel spacing;
         - "renderLenghtS": the render length.
+
+    Attributes
+    ----------
+    _outDirPath : str or None
+        Path to the output directory.
     """
 
     def __init__(
@@ -98,6 +103,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.renderLenTextField.setValidator(renderLenValidator)
 
         self._sigConfig = {"fs": fs, "nCh": nCh}
+        self._outDirPath = None
         self._isValid = False
         self._errMessage = ""
 
@@ -150,7 +156,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             QFileDialog.ShowDirsOnly,  # type: ignore
         )
         if outDirPath != "":
-            self._sigConfig["filePath"] = outDirPath
+            self._outDirPath = outDirPath
 
             displayText = (
                 outDirPath
@@ -208,7 +214,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         # Check file saving settings
         if self.fileSavingGroupBox.isChecked():
-            if "filePath" not in self._sigConfig.keys():
+            if self._outDirPath is None:
                 self._isValid = False
                 self._errMessage = "Select an output directory."
                 return
@@ -222,9 +228,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                     .replace(".", "-")
                 )
             outFileName = f"{outFileName}.bin"
-            self._sigConfig["filePath"] = os.path.join(
-                self._sigConfig["filePath"], outFileName
-            )
+            self._sigConfig["filePath"] = os.path.join(self._outDirPath, outFileName)
 
         # Plot settings
         if not self.chSpacingTextField.hasAcceptableInput():
@@ -255,7 +259,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         if "filePath" in sigConfig:
             self.fileSavingGroupBox.setChecked(True)
             outDirPath, fileName = os.path.split(sigConfig["filePath"])
-            self._sigConfig["filePath"] = outDirPath
+            self._outDirPath = outDirPath
             # Adjust display text
             displayText = (
                 outDirPath
