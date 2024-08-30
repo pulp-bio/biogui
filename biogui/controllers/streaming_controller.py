@@ -19,6 +19,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import datetime
 import struct
 from collections import namedtuple
 from collections.abc import Sequence
@@ -146,6 +147,14 @@ class _FileWriterWorker(QObject):
 
     def openFile(self) -> None:
         """Open the file."""
+
+        # Add timestamp and extension
+        self._filePath += (
+            f"_{datetime.datetime.now().replace(microsecond=0)}.bin".replace(
+                " ", "_"
+            ).replace(":", "-")
+        )
+
         self._f = open(self._filePath, "wb")
         self._isFirstWrite = True
 

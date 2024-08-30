@@ -19,7 +19,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import datetime
 import os
 
 from PySide6.QtCore import QLocale
@@ -222,14 +221,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 return
             outFileName = self.fileNameTextField.text()
             if outFileName == "":
-                outFileName = (
-                    f"{self.sigNameLabel.text()}_{datetime.datetime.now()}".replace(
-                        " ", "_"
-                    )
-                    .replace(":", "-")
-                    .replace(".", "-")
-                )
-            outFileName = f"{outFileName}.bin"
+                outFileName = self.sigNameLabel.text()
             self._sigConfig["filePath"] = os.path.join(self._outDirPath, outFileName)
 
         # Plot settings
