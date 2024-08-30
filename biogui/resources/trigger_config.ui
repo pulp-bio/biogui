@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AcquisitionConfig</class>
- <widget class="QWidget" name="AcquisitionConfig">
+ <class>TriggerConfig</class>
+ <widget class="QWidget" name="TriggerConfig">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,13 +11,13 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Acquisition Widget</string>
+   <string>Trigger configuration widget</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QGroupBox" name="acquisitionGroupBox">
+    <widget class="QGroupBox" name="triggerGroupBox">
      <property name="title">
-      <string>Configure acquisition</string>
+      <string>Configure triggers</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

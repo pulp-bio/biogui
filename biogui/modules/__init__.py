@@ -1,4 +1,4 @@
-"""This package contains the additional modules that can be added to the MainWindow.
+"""This package contains the pluggable modules.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -16,9 +16,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from ._acquisition import AcquisitionController
+from ._trigger import TriggerController
 
 # from ._svm_inference import SVMInferenceController
 # from ._svm_train import SVMTrainController
 
-__all__ = ["AcquisitionController"]  # , "SVMInferenceController", "SVMTrainController"]
+__all__ = ["TriggerController"]  # , "SVMInferenceController", "SVMTrainController"]

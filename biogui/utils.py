@@ -27,8 +27,8 @@ def detectTheme():
     palette = QApplication.palette()
 
     # Compare the color of the background and text to infer theme
-    textColor = palette.color(QPalette.Text)
-    backgroundColor = palette.color(QPalette.Window)
+    textColor = palette.color(QPalette.Text)  # type: ignore
+    backgroundColor = palette.color(QPalette.Window)  # type: ignore
 
     # Simple heuristic to determine if the theme is light or dark
     isDark = backgroundColor.lightness() < textColor.lightness()

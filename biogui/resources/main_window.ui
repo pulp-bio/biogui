@@ -194,7 +194,7 @@
            <x>0</x>
            <y>0</y>
            <width>374</width>
-           <height>639</height>
+           <height>675</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout3">
@@ -222,23 +222,14 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1920</width>
-     <height>30</height>
-    </rect>
+  <action name="actionConfigureAcq">
+   <property name="checkable">
+    <bool>true</bool>
    </property>
-   <widget class="QMenu" name="menuModules">
-    <property name="title">
-     <string>Modules</string>
-    </property>
-   </widget>
-   <addaction name="menuModules"/>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+   <property name="text">
+    <string>Configure acquisition</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>startStreamingButton</tabstop>

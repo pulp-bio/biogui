@@ -17,6 +17,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from __future__ import annotations
+
 from collections import deque
 
 import numpy as np
@@ -72,7 +74,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         chSpacing: int,
         renderLengthS: int,
         parent: QWidget | None = None,
-        **kwargs: dict
+        **kwargs: dict,
     ) -> None:
         super().__init__(parent)
 

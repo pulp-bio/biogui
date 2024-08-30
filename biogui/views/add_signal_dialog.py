@@ -17,6 +17,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from __future__ import annotations
+
 import datetime
 import os
 
@@ -48,7 +50,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         - "filtOrder" the filter order (optional);
         - "filePath": the file path (optional);
         - "chSpacing": the channel spacing;
-        - "renderLenghtS": the render length.
+        - "renderLengthS": the render length.
 
     Attributes
     ----------
@@ -123,7 +125,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         - "filtOrder" the filter order (optional);
         - "filePath": the file path (optional);
         - "chSpacing": the channel spacing;
-        - "renderLenghtS": the render length.
+        - "renderLengthS": the render length.
         """
         return self._sigConfig
 

@@ -17,9 +17,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QGroupBox, QHBoxLayout,
-    QHeaderView, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QStatusBar, QTreeView, QVBoxLayout, QWidget)
+    QHeaderView, QMainWindow, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QTreeView, QVBoxLayout,
+    QWidget)
 from . import biogui_rc
 
 class Ui_MainWindow(object):
@@ -28,6 +28,9 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1920, 1080)
         MainWindow.setMinimumSize(QSize(1080, 720))
+        self.actionConfigureAcq = QAction(MainWindow)
+        self.actionConfigureAcq.setObjectName(u"actionConfigureAcq")
+        self.actionConfigureAcq.setCheckable(True)
         self.centralWidget = QWidget(MainWindow)
         self.centralWidget.setObjectName(u"centralWidget")
         self.horizontalLayout1 = QHBoxLayout(self.centralWidget)
@@ -171,7 +174,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.moduleContainer = QWidget()
         self.moduleContainer.setObjectName(u"moduleContainer")
-        self.moduleContainer.setGeometry(QRect(0, 0, 374, 639))
+        self.moduleContainer.setGeometry(QRect(0, 0, 374, 675))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -195,22 +198,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout1.setStretch(0, 2)
         self.horizontalLayout1.setStretch(1, 8)
         MainWindow.setCentralWidget(self.centralWidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1920, 30))
-        self.menuModules = QMenu(self.menubar)
-        self.menuModules.setObjectName(u"menuModules")
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
         QWidget.setTabOrder(self.startStreamingButton, self.stopStreamingButton)
         QWidget.setTabOrder(self.stopStreamingButton, self.addDataSourceButton)
         QWidget.setTabOrder(self.addDataSourceButton, self.deleteDataSourceButton)
         QWidget.setTabOrder(self.deleteDataSourceButton, self.editSignalButton)
         QWidget.setTabOrder(self.editSignalButton, self.scrollArea)
-
-        self.menubar.addAction(self.menuModules.menuAction())
 
         self.retranslateUi(MainWindow)
 
@@ -219,6 +211,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"BioGUI", None))
+        self.actionConfigureAcq.setText(QCoreApplication.translate("MainWindow", u"Configure acquisition", None))
         self.startStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Start streaming", None))
         self.stopStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Stop streaming", None))
         self.streamConfGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Configuration", None))
@@ -247,6 +240,5 @@ class Ui_MainWindow(object):
         self.moveRightButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal right", None))
 #endif // QT_CONFIG(tooltip)
         self.moveRightButton.setText("")
-        self.menuModules.setTitle(QCoreApplication.translate("MainWindow", u"Modules", None))
     # retranslateUi
 

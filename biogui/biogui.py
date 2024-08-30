@@ -19,7 +19,7 @@ limitations under the License.
 
 from PySide6.QtWidgets import QApplication
 
-from biogui.controllers import MainController
+from biogui.controllers import MainController, ModuleController
 from biogui.views import MainWindow
 
 
@@ -30,9 +30,11 @@ class BioGUI(QApplication):
     Attributes
     ----------
     _mainWin : MainWindow
-        Instance of MainWindow.
+        Main window of the application.
     _mainController : MainController
-        Instance of MainController.
+        Main controller of the application.
+    _moduleController : ModuleController
+        Controller for pluggable modules.
     """
 
     def __init__(self) -> None:
@@ -40,4 +42,5 @@ class BioGUI(QApplication):
 
         self._mainWin = MainWindow()
         self._mainController = MainController(self._mainWin)
+        self._moduleController = ModuleController(self._mainController, self._mainWin)
         self._mainWin.show()

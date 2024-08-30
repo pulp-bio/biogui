@@ -51,20 +51,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.moveRightButton.setIcon(
             QIcon.fromTheme("arrow-right", QIcon(f":icons/{theme}/right-arrow"))
         )
-
-        self._nSigs = 0
-
-    @property
-    def nSigs(self) -> int:
-        """int: Property denoting the number of signals."""
-        return self._nSigs
-
-    @nSigs.setter
-    def nSigs(self, nSigs: int) -> None:
-        self._nSigs = nSigs
-
-    def adjustLayout(self) -> None:
-        """Adjust the layout of the plots."""
-        stretches = map(lambda n: 2**n, list(range(self._nSigs - 2, -1, -1)) + [0])
-        for i, s in enumerate(stretches):
-            self.plotsLayout.setStretch(i, s)
