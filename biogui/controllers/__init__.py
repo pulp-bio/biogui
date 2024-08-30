@@ -18,5 +18,6 @@ limitations under the License.
 """
 
 from .main_controller import MainController
+from .module_controller import ModuleController
 
-__all__ = ["MainController"]
+__all__ = ["MainController", "ModuleController"]

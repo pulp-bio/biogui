@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>628</height>
+    <height>586</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -165,7 +165,7 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="filtOrderTextField">
         <property name="toolTip">
-         <string>Order of the Butterworth filter (positive integer)</string>
+         <string/>
         </property>
         <property name="placeholderText">
          <string/>
@@ -228,7 +228,7 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="fileNameTextField">
         <property name="toolTip">
-         <string>If empty, a name based on the timestamp will be employed</string>
+         <string>If empty, the signal name will be used</string>
         </property>
        </widget>
       </item>
