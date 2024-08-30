@@ -17,9 +17,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from __future__ import annotations
+
 from PySide6.QtCore import QModelIndex, QObject, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtWidgets import QMessageBox
 
 from biogui.views import (
     AddDataSourceDialog,
@@ -49,8 +51,6 @@ class MainController(QObject):
     ----------
     _mainWin : MainWindow
         Instance of MainWindow.
-    _streamingControllers : dict of (str: StreamingController)
-        Collection of StreamingController objects, indexed by the name of the corresponding DataSource.
     _sigPlotWidgets : dict of (str: SignalPlotWidget)
         Collection of SignalPlotWidget objects, indexed by the name of the corresponding signal.
     _config : dict
@@ -90,16 +90,13 @@ class MainController(QObject):
 
         self._connectSignals()
 
-    def addConfWidget(self, widget: QWidget) -> None:
+    @property
+    def streamingControllers(self) -> dict[str, StreamingController]:
         """
-        Add a widget to configure pluggable modules.
-
-        Parameters
-        ----------
-        widget : QWidget
-            Widget to display.
+        dict of (str: StreamingController): Property representing a collection of
+        StreamingController objects, indexed by the name of the corresponding DataSource.
         """
-        self._mainWin.moduleContainer.layout().addWidget(widget)
+        return self._streamingControllers.copy()
 
     def _connectSignals(self) -> None:
         """Connect Qt signals and slots."""
@@ -216,10 +213,6 @@ class MainController(QObject):
 
         # Emit signal to inform pluggable modules that a new source has been added
         self.newSourceAddedSig.emit(streamingController)
-
-        # Re-adjust layout
-        self._mainWin.nSigs += len(config)
-        self._mainWin.adjustLayout()
 
         # Enable start button
         self._mainWin.startStreamingButton.setEnabled(True)
