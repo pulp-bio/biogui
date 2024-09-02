@@ -149,13 +149,14 @@ class _FileWriterWorker(QObject):
         """Open the file."""
 
         # Add timestamp and extension
-        self._filePath += (
-            f"_{datetime.datetime.now().replace(microsecond=0)}.bin".replace(
+        filePath = (
+            self._filePath
+            + f"_{datetime.datetime.now().replace(microsecond=0)}.bin".replace(
                 " ", "_"
             ).replace(":", "-")
         )
 
-        self._f = open(self._filePath, "wb")
+        self._f = open(filePath, "wb")
         self._isFirstWrite = True
 
     def closeFile(self) -> None:
