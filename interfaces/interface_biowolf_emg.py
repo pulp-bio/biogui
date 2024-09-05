@@ -22,7 +22,7 @@ from collections import namedtuple
 
 import numpy as np
 
-packetSize: int = 972
+packetSize: int = 243
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [b"="]
@@ -60,18 +60,16 @@ def decodeFn(data: bytes) -> SigsPacket:
     gain = 6.0
     nBit = 24
 
-    emg = np.zeros(shape=(0, 16), dtype=np.int32)
-    for i in range(4):  # additional buffering of 4
-        dataTmp = bytearray(data)[i * 243 + 2 : (i + 1) * 243 - 1]
-
-        # Convert 24-bit to 32-bit integer
-        pos = 0
-        for _ in range(len(dataTmp) // 3):
-            prefix = 255 if dataTmp[pos] > 127 else 0
-            dataTmp.insert(pos, prefix)
-            pos += 4
-        emgTmp = np.asarray(struct.unpack(f">{5 * 16}i", dataTmp), dtype=np.int32)
-        emg = np.concatenate([emg, emgTmp.reshape(5, 16)])
+    # Convert 24-bit to 32-bit integer
+    dataTmp = bytearray(data)[2:242]
+    pos = 0
+    for _ in range(len(dataTmp) // 3):
+        prefix = 255 if dataTmp[pos] > 127 else 0
+        dataTmp.insert(pos, prefix)
+        pos += 4
+    emg = np.asarray(struct.unpack(f">{5 * 16}i", dataTmp), dtype=np.int32).reshape(
+        5, 16
+    )
 
     # Convert ADC readings to uV
     emg = emg * (vRef / gain / 2**nBit)  # V
