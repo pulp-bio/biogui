@@ -39,15 +39,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editSignalButton.setIcon(
             QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
         )
-        self.moveLeftButton.setIcon(
-            QIcon.fromTheme("arrow-left", QIcon(f":icons/{theme}/left-arrow"))
-        )
-        self.moveUpButton.setIcon(
-            QIcon.fromTheme("arrow-up", QIcon(f":icons/{theme}/up-arrow"))
-        )
-        self.moveDownButton.setIcon(
-            QIcon.fromTheme("arrow-down", QIcon(f":icons/{theme}/down-arrow"))
-        )
-        self.moveRightButton.setIcon(
-            QIcon.fromTheme("arrow-right", QIcon(f":icons/{theme}/right-arrow"))
-        )

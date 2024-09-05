@@ -194,6 +194,7 @@ class MainController(QObject):
                 sigName, **config[sigName], parent=self._mainWin
             )
             self._mainWin.plotsLayout.addWidget(sigPlotWidget)
+
             self._sigPlotWidgets[sigName] = sigPlotWidget
 
         # Save configuration
@@ -363,36 +364,6 @@ class MainController(QObject):
         if self.dataSourceModel.hasChildren(idx):  # data source
             self._mainWin.deleteDataSourceButton.setEnabled(True)
             self._mainWin.editSignalButton.setEnabled(False)
-            self._mainWin.moveLeftButton.setEnabled(False)
-            self._mainWin.moveUpButton.setEnabled(False)
-            self._mainWin.moveDownButton.setEnabled(False)
-            self._mainWin.moveRightButton.setEnabled(False)
         else:  # signal
             self._mainWin.deleteDataSourceButton.setEnabled(False)
             self._mainWin.editSignalButton.setEnabled(True)
-            self._mainWin.moveLeftButton.setEnabled(True)
-            self._mainWin.moveUpButton.setEnabled(True)
-            self._mainWin.moveDownButton.setEnabled(True)
-            self._mainWin.moveRightButton.setEnabled(True)
-
-    def _moveSignal(self, up: bool) -> None:
-        """Move signal up/down."""
-        # Get the indexes of the elements to swap
-        # idxFrom = self._mainWin.signalList.currentRow()
-        # idxTo = (
-        #     max(0, idxFrom - 1)
-        #     if up
-        #     else min(len(self._mainWin.sigPlotWidgets) - 1, idxFrom + 1)
-        # )
-        # if idxFrom == idxTo:
-        #     return
-        #
-        # # Swap list items and plot widgets
-        # item = self._mainWin.signalList.takeItem(idxFrom)
-        # self._mainWin.signalList.insertItem(idxTo, item)
-        # plotWidget = self._mainWin.sigPlotWidgets[item.text()]
-        # self._mainWin.plotsLayout.removeWidget(plotWidget)
-        # self._mainWin.plotsLayout.insertWidget(idxTo, plotWidget)
-        #
-        # # Re-adjust layout
-        # self._mainWin.adjustLayout()
