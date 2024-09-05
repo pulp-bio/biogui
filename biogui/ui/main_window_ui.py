@@ -81,7 +81,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout3.addWidget(self.deleteDataSourceButton)
 
         self.horizontalLayout3.setStretch(0, 9)
-        self.horizontalLayout3.setStretch(1, 1)
 
         self.verticalLayout1.addLayout(self.horizontalLayout3)
 
@@ -93,6 +92,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout4 = QHBoxLayout()
         self.horizontalLayout4.setObjectName(u"horizontalLayout4")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout4.addItem(self.horizontalSpacer)
+
         self.editSignalButton = QPushButton(self.streamConfGroupBox)
         self.editSignalButton.setObjectName(u"editSignalButton")
         self.editSignalButton.setEnabled(False)
@@ -106,62 +109,6 @@ class Ui_MainWindow(object):
         self.editSignalButton.setIcon(icon1)
 
         self.horizontalLayout4.addWidget(self.editSignalButton)
-
-        self.moveLeftButton = QPushButton(self.streamConfGroupBox)
-        self.moveLeftButton.setObjectName(u"moveLeftButton")
-        self.moveLeftButton.setEnabled(False)
-        icon2 = QIcon()
-        iconThemeName = u"arrow-left"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon2 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon2.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.moveLeftButton.setIcon(icon2)
-
-        self.horizontalLayout4.addWidget(self.moveLeftButton)
-
-        self.moveUpButton = QPushButton(self.streamConfGroupBox)
-        self.moveUpButton.setObjectName(u"moveUpButton")
-        self.moveUpButton.setEnabled(False)
-        icon3 = QIcon()
-        iconThemeName = u"arrow-up"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon3 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon3.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.moveUpButton.setIcon(icon3)
-
-        self.horizontalLayout4.addWidget(self.moveUpButton)
-
-        self.moveDownButton = QPushButton(self.streamConfGroupBox)
-        self.moveDownButton.setObjectName(u"moveDownButton")
-        self.moveDownButton.setEnabled(False)
-        icon4 = QIcon()
-        iconThemeName = u"arrow-down"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon4 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon4.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.moveDownButton.setIcon(icon4)
-
-        self.horizontalLayout4.addWidget(self.moveDownButton)
-
-        self.moveRightButton = QPushButton(self.streamConfGroupBox)
-        self.moveRightButton.setObjectName(u"moveRightButton")
-        self.moveRightButton.setEnabled(False)
-        icon5 = QIcon()
-        iconThemeName = u"arrow-right"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon5 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon5.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.moveRightButton.setIcon(icon5)
-
-        self.horizontalLayout4.addWidget(self.moveRightButton)
 
 
         self.verticalLayout1.addLayout(self.horizontalLayout4)
@@ -224,21 +171,5 @@ class Ui_MainWindow(object):
         self.editSignalButton.setToolTip(QCoreApplication.translate("MainWindow", u"Edit the selected signal", None))
 #endif // QT_CONFIG(tooltip)
         self.editSignalButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveLeftButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal left", None))
-#endif // QT_CONFIG(tooltip)
-        self.moveLeftButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveUpButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal up", None))
-#endif // QT_CONFIG(tooltip)
-        self.moveUpButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveDownButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal down", None))
-#endif // QT_CONFIG(tooltip)
-        self.moveDownButton.setText("")
-#if QT_CONFIG(tooltip)
-        self.moveRightButton.setToolTip(QCoreApplication.translate("MainWindow", u"Move the selected signal right", None))
-#endif // QT_CONFIG(tooltip)
-        self.moveRightButton.setText("")
     # retranslateUi
 

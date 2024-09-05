@@ -57,7 +57,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,1">
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,0">
            <item>
             <widget class="QPushButton" name="addDataSourceButton">
              <property name="text">
@@ -92,7 +92,20 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0,0,0,0">
+          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0">
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
            <item>
             <widget class="QPushButton" name="editSignalButton">
              <property name="enabled">
@@ -106,74 +119,6 @@
              </property>
              <property name="icon">
               <iconset theme="edit-entry">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveLeftButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move the selected signal left</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-left">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveUpButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move the selected signal up</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-up">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveDownButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move the selected signal down</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-down">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="moveRightButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Move the selected signal right</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="arrow-right">
                <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
