@@ -1,5 +1,5 @@
 """
-This module contains the BioGAP interface for sEMG.
+This module contains the OTBIO Sessantaquattro+ interface for sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -22,23 +22,51 @@ from collections import namedtuple
 
 import numpy as np
 
-packetSize: int = 234
+
+def createCommand(start=1):
+    """Internal function to create start/stop commands."""
+    rec = 0
+    trig = 0
+    ext = 0
+    hpf = 1
+    hres = 0
+    mode = 0
+    nch = 3
+    fsamp = 2
+    getset = 0
+
+    command = 0
+    command = command + start
+    command = command + rec * 2
+    command = command + trig * 4
+    command = command + ext * 16
+    command = command + hpf * 64
+    command = command + hres * 128
+    command = command + mode * 256
+    command = command + nch * 2048
+    command = command + fsamp * 8192
+    command = command + getset * 32768
+
+    return command
+
+
+packetSize: int = 144
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [
-    bytes([20, 1, 50]),
-    (18).to_bytes(),
-    bytes([6, 0, 1, 4, 0, 13, 10]),
+    createCommand(1).to_bytes(2, byteorder="big"),
 ]
 """Sequence of commands to start the board."""
 
-stopSeq: list[bytes] = [(19).to_bytes()]
+stopSeq: list[bytes] = [
+    createCommand(0).to_bytes(2, byteorder="big"),
+]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [500]
+fs: list[float] = [2000]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [8]
+nCh: list[int] = [64]
 """Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "emg")
@@ -47,7 +75,7 @@ SigsPacket = namedtuple("SigsPacket", "emg")
 
 def decodeFn(data: bytes) -> SigsPacket:
     """
-    Function to decode the binary data received from BioGAP into a single sEMG signal.
+    Function to decode the binary data received from OTBIO Sessantaquattro+ into a single sEMG signal.
 
     Parameters
     ----------
@@ -59,34 +87,15 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the EMG packet with shape (nSamp, nCh).
     """
-    nSamp = 7
+    # Conversion factor for mV
+    mVConvF = 2.86e-4
 
-    # ADC parameters
-    vRef = 2.5
-    gain = 6.0
-    nBit = 24
-
-    dataTmp = bytearray(
-        data[2:26]
-        + data[34:58]
-        + data[66:90]
-        + data[98:122]
-        + data[130:154]
-        + data[162:186]
-        + data[194:218]
-    )
-    # Convert 24-bit to 32-bit integer
-    pos = 0
-    for _ in range(len(dataTmp) // 3):
-        prefix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, prefix)
-        pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * 8}i", dataTmp), dtype=np.int32)
+    # Convert 16-bit to 32-bit integer
+    emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
 
     # Reshape and convert ADC readings to uV
-    emg = emg.reshape(nSamp, 8)
-    emg = emg * (vRef / gain / 2**nBit)  # V
-    emg *= 1_000_000  # uV
+    emg = emg.reshape(1, 64)
+    emg = emg * mVConvF  # mV
     emg = emg.astype(np.float32)
 
     return SigsPacket(emg=emg)
