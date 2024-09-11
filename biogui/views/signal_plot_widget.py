@@ -62,10 +62,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Spacing between each channel in the plot.
     _timer : QTimer
         Timer for plot refreshing.
-    _xQueue : deque
-        Queue for the X values.
-    _yQueue : deque
-        Queue for the Y values.
     _plots : list of PlotItem
         List containing the references to the PlotItem objects.
     """
