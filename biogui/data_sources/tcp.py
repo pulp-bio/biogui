@@ -27,7 +27,7 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from ..ui.tcp_config_widget_ui import Ui_TCPConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
 class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
@@ -206,5 +206,4 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._exitAcceptLoopFlag = True
         self._stopReadingFlag = True
