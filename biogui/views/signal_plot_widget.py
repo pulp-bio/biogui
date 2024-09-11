@@ -23,7 +23,7 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QTimer, Slot
+from PySide6.QtCore import QLocale, QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
 from ..ui.signal_plots_widget_ui import Ui_SignalPlotsWidget
@@ -60,8 +60,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Number of channels.
     _chSpacing : int
         Spacing between each channel in the plot.
-    _timer : QTimer
+    _plotTimer : QTimer
         Timer for plot refreshing.
+    _spsTimer : QTimer
+        Timer for sampling rate refreshing.
+    _sampCounter : int
+        Counter of the samples received, used to compute sampling rate.
+    _timePassed : float
+        Tracker of the time passed.
     _plots : list of PlotItem
         List containing the references to the PlotItem objects.
     """
@@ -83,10 +89,16 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._fs = fs
         self._nCh = nCh
         self._chSpacing = chSpacing
-        self._timer = QTimer(self)
-        self._timer.setInterval(33)  # ~30 FPS
-        self._timer.timeout.connect(self._refreshPlot)
-        self._timer.start()
+
+        # Configure timers
+        self._plotTimer = QTimer(self)
+        self._plotTimer.setInterval(10)  # 10 FPS
+        self._plotTimer.timeout.connect(self._refreshPlot)
+        self._spsTimer = QTimer(self)
+        self._spsTimer.setInterval(1000)
+        self._spsTimer.timeout.connect(self._refreshSamplingRate)
+        self._sampCounter = 0
+        self._timePassed = 0.0
 
         # Initialize queues
         renderLength = int(round(renderLengthS * fs))
@@ -120,8 +132,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         # Reset graph
         self.graphWidget.clear()
         self.graphWidget.setTitle(sigName)
-        self.graphWidget.setLabel("bottom", "Time (s)")
         self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
+        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
 
         # Get colormap
@@ -139,6 +151,16 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
                 )
             )
 
+    def startTimers(self) -> None:
+        """Start the timers for plot refresh."""
+        self._plotTimer.start()
+        self._spsTimer.start()
+
+    def stopTimers(self) -> None:
+        """Start the timers for plot refresh."""
+        self._plotTimer.stop()
+        self._spsTimer.stop()
+
     @Slot(np.ndarray)
     def addData(self, data: np.ndarray) -> None:
         """
@@ -149,6 +171,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         data : ndarray
             Data to plot.
         """
+        self._sampCounter += data.shape[0]
+        self._timePassed += data.shape[0] / self._fs
+
         for samples in data:
             self._xQueue.append(self._xQueue[-1] + 1 / self._fs)
             self._yQueue.append(samples)
@@ -163,3 +188,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
                 ys[i] + self._chSpacing * (self._nCh - i),
                 skipFiniteCheck=True,
             )
+
+        self.timeLabel.setText(f"{QLocale().toString(self._timePassed, 'f', 2)} s")  # type: ignore
+
+    def _refreshSamplingRate(self) -> None:
+        """Refresh the sampling rate."""
+        self.spsLabel.setText(f"{self._sampCounter} sps")
+        self._sampCounter = 0

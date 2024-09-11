@@ -188,11 +188,13 @@ class MainController(QObject):
         )
         self._streamingControllers[str(streamingController)] = streamingController
 
-        # Create plot widget and controller
+        # Create plot widget
         for sigName in config.keys():
             sigPlotWidget = SignalPlotWidget(
                 sigName, **config[sigName], parent=self._mainWin
             )
+            self.startStreamingSig.connect(sigPlotWidget.startTimers)
+            self.stopStreamingSig.connect(sigPlotWidget.stopTimers)
             self._mainWin.plotsLayout.addWidget(sigPlotWidget)
 
             self._sigPlotWidgets[sigName] = sigPlotWidget
