@@ -92,7 +92,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Configure timers
         self._plotTimer = QTimer(self)
-        self._plotTimer.setInterval(10)  # 10 FPS
+        self._plotTimer.setInterval(50)  # 20 FPS
         self._plotTimer.timeout.connect(self._refreshPlot)
         self._spsTimer = QTimer(self)
         self._spsTimer.setInterval(1000)
@@ -147,7 +147,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
             pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
             self._plots.append(
                 self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._chSpacing * i, pen=pen
+                    self._xQueue, ys[i] + self._chSpacing * (self._nCh - i), pen=pen
                 )
             )
 
