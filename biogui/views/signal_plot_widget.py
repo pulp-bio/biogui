@@ -90,14 +90,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._nCh = nCh
 
         # check if we are receiving Manus data
-        if (sigName == 'manus_ergo' or sigName=='Manus_raw'):
+        if sigName == "manus_ergo" or sigName == "Manus_raw":
             # timestamps are saved as last channel, remove it from the plot
-            self._nCh = nCh -2                              
+            self._nCh = nCh - 2
         self._chSpacing = chSpacing
 
         # Configure timers
         self._plotTimer = QTimer(self)
-        self._plotTimer.setInterval(100)  # 10 FPS
+        self._plotTimer.setInterval(50)  # 20 FPS
         self._plotTimer.timeout.connect(self._refreshPlot)
         self._spsTimer = QTimer(self)
         self._spsTimer.setInterval(1000)
@@ -152,7 +152,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
             pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
             self._plots.append(
                 self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._chSpacing * i, pen=pen
+                    self._xQueue, ys[i] + self._chSpacing * (self._nCh - i), pen=pen
                 )
             )
 

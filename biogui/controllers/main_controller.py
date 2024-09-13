@@ -353,11 +353,14 @@ class MainController(QObject):
             xQueue=oldPlotWidget.xQueue,  # type: ignore
             yQueue=oldPlotWidget.yQueue,  # type: ignore
         )
-        self._sigPlotWidgets[sigName] = newPlotWidget
+        self.startStreamingSig.connect(newPlotWidget.startTimers)
+        self.stopStreamingSig.connect(newPlotWidget.stopTimers)
         self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
         oldPlotWidget.deleteLater()
         self.startStreamingSig.connect(newPlotWidget.startTimers)
         self.stopStreamingSig.connect(newPlotWidget.stopTimers)
+
+        self._sigPlotWidgets[sigName] = newPlotWidget
 
         # Save new settings
         self._config[dataSource][sigName] = sigConfig
