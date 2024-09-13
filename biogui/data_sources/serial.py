@@ -25,12 +25,13 @@ import time
 import serial
 import serial.tools.list_ports
 from PySide6.QtGui import QIcon, QIntValidator
+from PySide6.QtSerialPort import QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
 from biogui.utils import detectTheme
 
 from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
 class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
@@ -101,7 +102,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
         self.serialPortsComboBox.addItems(
-            [info[0] for info in serial.tools.list_ports.comports()]
+            [portInfo.portName() for portInfo in QSerialPortInfo.availablePorts()]
         )
 
 
