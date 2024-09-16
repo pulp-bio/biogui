@@ -1,16 +1,10 @@
 {
     "gestures": {
-        "open hand": "open_hand.png",
-        "fist (power grip)": "fist.png",
-        "index pointed": "index_pointed.png",
-        "ok (thumb up)": "ok.png",
-        "pinch": "pinch.png",
-        "wrist supination": "wrist_supination.png",
-        "wrist pronation": "wrist_pronation.png"
+        "fist (power grip)": "fist.png"
     },
-    "nReps": 6,
+    "nReps": 1,
     "durationGesture": 4000,
-    "durationStart": 8000,
-    "durationRest": 2000,
+    "durationStart": 10000,
+    "durationRest":4000,
     "imageFolder": "acquisitions/gestures_images"
 }
