@@ -92,7 +92,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Configure timers
         self._plotTimer = QTimer(self)
-        self._plotTimer.setInterval(10)  # 10 FPS
+        self._plotTimer.setInterval(100)  # 10 FPS
         self._plotTimer.timeout.connect(self._refreshPlot)
         self._spsTimer = QTimer(self)
         self._spsTimer.setInterval(1000)

@@ -356,6 +356,8 @@ class MainController(QObject):
         self._sigPlotWidgets[sigName] = newPlotWidget
         self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
         oldPlotWidget.deleteLater()
+        self.startStreamingSig.connect(newPlotWidget.startTimers)
+        self.stopStreamingSig.connect(newPlotWidget.stopTimers)
 
         # Save new settings
         self._config[dataSource][sigName] = sigConfig

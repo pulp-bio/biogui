@@ -333,7 +333,7 @@ class TriggerController(QObject):
         if self._confWidget.triggerGroupBox.isChecked() and self._confWidget.config:
             # Set initial trigger
             for streamingController in self._streamingControllers:
-                streamingController.setTrigger(0)
+                streamingController.setTrigger(-1)
 
             # Gestures
             for i, k in enumerate(self._confWidget.config["gestures"].keys()):
