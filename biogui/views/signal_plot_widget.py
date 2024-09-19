@@ -64,10 +64,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Timer for plot refreshing.
     _spsTimer : QTimer
         Timer for sampling rate refreshing.
-    _sampCounter : int
-        Counter of the samples received, used to compute sampling rate.
-    _timePassed : float
-        Tracker of the time passed.
+    _timeTracker : int
+        Tracker for the time passed.
+    _spsTracker : int
+        Tracker for the actual sampling rate.
     _plots : list of PlotItem
         List containing the references to the PlotItem objects.
     """
@@ -95,6 +95,17 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
             self._nCh = nCh - 2
         self._chSpacing = chSpacing
 
+        # Set up queue
+        renderLength = int(round(renderLengthS * fs))
+        self._dataQueue = deque(maxlen=renderLength)
+
+        # Fill queue
+        if "dataQueue" in kwargs:
+            self._dataQueue.extend(kwargs["dataQueue"])
+        else:
+            for _ in range(renderLength):  # type: ignore
+                self._dataQueue.append(np.zeros(self._nCh))
+
         # Configure timers
         self._plotTimer = QTimer(self)
         self._plotTimer.setInterval(50)  # 20 FPS
@@ -102,35 +113,17 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._spsTimer = QTimer(self)
         self._spsTimer.setInterval(1000)
         self._spsTimer.timeout.connect(self._refreshSamplingRate)
-        self._sampCounter = 0
-        self._timePassed = 0.0
-
-        # Initialize queues
-        renderLength = int(round(renderLengthS * fs))
-        self._xQueue = deque(maxlen=renderLength)
-        self._yQueue = deque(maxlen=renderLength)
-        for i in range(-self._xQueue.maxlen, 0):  # type: ignore
-            self._xQueue.append(i / self._fs)
-            self._yQueue.append(np.zeros(self._nCh))
-
-        # Pre-fill queues
-        if "xQueue" in kwargs and "yQueue" in kwargs:
-            self._xQueue.extend(kwargs["xQueue"])
-            self._yQueue.extend(kwargs["yQueue"])
+        self._timeTracker = 0
+        self._spsTracker = 0
 
         # Initialize plots
         self._plots = []
         self._initializePlots(sigName)
 
     @property
-    def xQueue(self) -> deque:
-        """deque: Property representing the queue for the X values."""
-        return self._xQueue
-
-    @property
-    def yQueue(self) -> deque:
-        """deque: Property representing the queue for the Y values."""
-        return self._yQueue
+    def dataQueue(self) -> deque:
+        """deque: Property representing the queue with the values to plot."""
+        return self._dataQueue
 
     def _initializePlots(self, sigName: str) -> None:
         """Render the initial plot."""
@@ -147,12 +140,12 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         lut = cm.getLookupTable(nPts=self._nCh, mode="qcolor")  # type: ignore
 
         # Plot placeholder data
-        ys = np.asarray(self._yQueue).T
+        ys = np.asarray(self._dataQueue).T
         for i in range(self._nCh):
             pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
             self._plots.append(
                 self.graphWidget.plot(
-                    self._xQueue, ys[i] + self._chSpacing * (self._nCh - i), pen=pen
+                    ys[i] + self._chSpacing * (self._nCh - i), pen=pen
                 )
             )
 
@@ -176,27 +169,25 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         data : ndarray
             Data to plot.
         """
-        self._sampCounter += data.shape[0]
-        self._timePassed += data.shape[0] / self._fs
+        self._timeTracker += data.shape[0]
+        self._spsTracker += data.shape[0]
 
         for samples in data:
-            self._xQueue.append(self._xQueue[-1] + 1 / self._fs)
-            self._yQueue.append(samples)
+            self._dataQueue.append(samples)
 
     def _refreshPlot(self) -> None:
         """Plot the given data."""
+        if self._dataQueue:
+            ys = np.asarray(self._dataQueue).T
+            for i in range(self._nCh):
+                self._plots[i].setData(
+                    ys[i] + self._chSpacing * (self._nCh - i),
+                    skipFiniteCheck=True,
+                )
 
-        ys = np.asarray(self._yQueue).T
-        for i in range(self._nCh):
-            self._plots[i].setData(
-                self._xQueue,
-                ys[i] + self._chSpacing * (self._nCh - i),
-                skipFiniteCheck=True,
-            )
-
-        self.timeLabel.setText(f"{QLocale().toString(self._timePassed, 'f', 2)} s")  # type: ignore
+            self.timeLabel.setText(f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s")  # type: ignore
 
     def _refreshSamplingRate(self) -> None:
         """Refresh the sampling rate."""
-        self.spsLabel.setText(f"{self._sampCounter} sps")
-        self._sampCounter = 0
+        self.spsLabel.setText(f"{self._spsTracker} sps")
+        self._spsTracker = 0
