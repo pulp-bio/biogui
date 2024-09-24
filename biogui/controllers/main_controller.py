@@ -350,8 +350,7 @@ class MainController(QObject):
             sigName,
             **sigConfig,
             parent=self._mainWin,
-            xQueue=oldPlotWidget.xQueue,  # type: ignore
-            yQueue=oldPlotWidget.yQueue,  # type: ignore
+            dataQueue=oldPlotWidget.dataQueue,  # type: ignore
         )
         self.startStreamingSig.connect(newPlotWidget.startTimers)
         self.stopStreamingSig.connect(newPlotWidget.stopTimers)
