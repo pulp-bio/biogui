@@ -30,15 +30,15 @@ stopSeq: list[bytes] = []
 fs: list[float] = [120]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [20]
+nCh: list[int] = [4]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "manus")
+SigsPacket = namedtuple("SigsPacket", "manus_raw")
 """Named tuple containing the Manus data packet."""
 
 rawDataSize: int=15
 """Number of packets in Each Package recevied from TCP (start_id + 11 values (node_id - 3positions - 4quaternions - 3scales) + 2 timestamps + stop_id)"""
-packetSize: int = 4
+packetSize: int = 4 * rawDataSize
 """Number of bytes in each packet (all data transmitted as floats)."""
 
 
@@ -57,6 +57,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
+    print(f'Data from Raw Port:{data}')
     start_raw = struct.unpack('<1f', data[:4])  
     #print(f'Start of raw data: {start_raw}')
     # Read the 11 floats (for glove data) [4:84]
@@ -74,6 +75,9 @@ def decodeFn(data: bytes) -> SigsPacket:
     #print(f'{seconds_as_double:.6f}')
     # Read the last float (stop of ergo data communication)
     stop_raw = struct.unpack('<1f', data[56:60])  
-    quats_and_ts = rots + (seconds_as_double,)
-
-    return SigsPacket(manus=quats_and_ts)
+    #quats_and_ts = rots + (seconds_as_double,)
+    #quats_and_ts = np.append(np.array(rots), seconds_as_double)
+    quats_and_ts = np.append(np.array(rots), float_values)
+    # reshape for plotting utils
+    quats_and_ts = quats_and_ts.reshape(1, 6)
+    return SigsPacket(manus_raw=quats_and_ts)
