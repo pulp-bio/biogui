@@ -30,15 +30,15 @@ stopSeq: list[bytes] = []
 fs: list[float] = [120]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [20]
+nCh: list[int] = [21]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "manus")
+SigsPacket = namedtuple("SigsPacket", "manus_ergo")
 """Named tuple containing the Manus data packet."""
 
 ergoDataSize: int=24
 """Number of packets in Each Package recevied from TCP (start_id + 20 angles + 2 timestamps + stop_id)"""
-packetSize: int = 4
+packetSize: int = 4 * ergoDataSize
 """Number of bytes in each packet (all data transmitted as floats)."""
 num_joint_angles: int=20
 """Number of joint angles transmitted from the Manus SDK (20 for single Hand)"""
@@ -58,6 +58,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
+    #print(f'Data from Ergo Port:{data}')
     # First, read the first float (start of ergo data communication)
     start_ergo = struct.unpack('<1f', data[:4])  
     #print(f'Start of ergonomic data: {start_ergo}')
@@ -73,7 +74,11 @@ def decodeFn(data: bytes) -> SigsPacket:
     # Read the last float (stop of ergo data communication)
     stop_ergo = struct.unpack('<1f', data[92:96])  
     # Prepare the joint data for logging
-    joints = glove_data
-    joints_and_ts = joints + (seconds_as_double,)
-
-    return SigsPacket(manus=joints_and_ts)
+    joints = np.array(glove_data)
+    #joints_and_ts = joints + (seconds_as_double,)
+    #joints_and_ts = np.append(joints, seconds_as_double)           OLD CODE
+    joints_and_ts = np.append(joints, float_values)
+    #reshape in a format for plotting utils
+    joints_and_ts = joints_and_ts.reshape(1, 22)
+    print(joints_and_ts)
+    return SigsPacket(manus_ergo=joints_and_ts)
