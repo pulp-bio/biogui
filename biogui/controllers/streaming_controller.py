@@ -82,7 +82,6 @@ class _FileWriterWorker(QObject):
 
         self._filePath = filePath
         self._targetSignalName = targetSignalName
-
         self._f = None
         self._isFirstWrite = True
         self._trigger = None
@@ -142,7 +141,6 @@ class _FileWriterWorker(QObject):
                 ],
                 axis=1,
             ).astype("float32")
-
         self._f.write(data.tobytes())  # type: ignore
 
     def openFile(self) -> None:
