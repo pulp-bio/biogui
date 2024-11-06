@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>586</height>
+    <height>588</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -250,10 +250,10 @@
       <bool>false</bool>
      </property>
      <property name="checkable">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="checked">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <layout class="QFormLayout" name="formLayout4">
       <item row="0" column="0">
@@ -314,7 +314,9 @@
   <tabstop>fileSavingGroupBox</tabstop>
   <tabstop>browseOutDirButton</tabstop>
   <tabstop>fileNameTextField</tabstop>
+  <tabstop>plotGroupBox</tabstop>
   <tabstop>chSpacingTextField</tabstop>
+  <tabstop>renderLenTextField</tabstop>
  </tabstops>
  <resources/>
  <connections>
