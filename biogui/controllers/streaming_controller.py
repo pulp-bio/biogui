@@ -140,7 +140,7 @@ class _FileWriterWorker(QObject):
                     np.repeat(self._trigger, data.shape[0]).reshape(-1, 1),
                 ],
                 axis=1,
-            ).astype("float32")
+            )#.astype("float32")
         self._f.write(data.tobytes())  # type: ignore
 
     def openFile(self) -> None:

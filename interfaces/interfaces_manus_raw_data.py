@@ -57,7 +57,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
-    print(f'Data from Raw Port:{data}')
+    #print(f'Data from Raw Port:{data}')
     start_raw = struct.unpack('<1f', data[:4])  
     #print(f'Start of raw data: {start_raw}')
     # Read the 11 floats (for glove data) [4:84]
