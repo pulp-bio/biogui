@@ -347,20 +347,28 @@ class MainController(QObject):
         # Update streaming controller settings
         self._streamingControllers[dataSource].editConfig(sigName, sigConfig)
 
-        # Re-create plot widget
-        if sigName in self._sigPlotWidgets:
+        # Handle plot widget:
+        # - case 1: ON -> ON
+        # - case 2: ON -> OFF
+        # - case 3: OFF -> ON
+        # - case 4: OFF -> OFF (no need to be handled)
+        if sigName in self._sigPlotWidgets:  # case 1 & 2
             oldPlotWidget = self._sigPlotWidgets.pop(sigName)
-            newPlotWidget = SignalPlotWidget(
-                sigName,
-                **sigConfig,
-                parent=self._mainWin,
-                dataQueue=oldPlotWidget.dataQueue,  # type: ignore
-            )
-            self.startStreamingSig.connect(newPlotWidget.startTimers)
-            self.stopStreamingSig.connect(newPlotWidget.stopTimers)
-            self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
+
+            if "chSpacing" in sigConfig:  # case 1
+                newPlotWidget = SignalPlotWidget(
+                    sigName,
+                    **sigConfig,
+                    parent=self._mainWin,
+                    dataQueue=oldPlotWidget.dataQueue,  # type: ignore
+                )
+                self.startStreamingSig.connect(newPlotWidget.startTimers)
+                self.stopStreamingSig.connect(newPlotWidget.stopTimers)
+                self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
+                self._sigPlotWidgets[sigName] = newPlotWidget
+
             oldPlotWidget.deleteLater()
-        else:
+        elif "chSpacing" in sigConfig:  # case 3
             newPlotWidget = SignalPlotWidget(
                 sigName,
                 **sigConfig,
@@ -369,8 +377,7 @@ class MainController(QObject):
             self.startStreamingSig.connect(newPlotWidget.startTimers)
             self.stopStreamingSig.connect(newPlotWidget.stopTimers)
             self._mainWin.plotsLayout.addWidget(newPlotWidget)
-
-        self._sigPlotWidgets[sigName] = newPlotWidget
+            self._sigPlotWidgets[sigName] = newPlotWidget
 
         # Save new settings
         self._config[dataSource][sigName] = sigConfig
