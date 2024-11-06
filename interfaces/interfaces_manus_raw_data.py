@@ -34,7 +34,7 @@ stopSeq: list[bytes] = []
 fs: list[float] = [120]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [4]
+nCh: list[int] = [6]
 """Sequence of integers representing the number of channels of each signal."""
 
 SigsPacket = namedtuple("SigsPacket", "manusRaw")
