@@ -69,7 +69,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     # Read the quaternions [20:36]
     rawData[0, :4] = np.asarray(struct.unpack("<4f", data[20:36]), dtype=np.float32)
 
-    # Read timestamp as two separate floats [84:92]
-    rawData[0, 4:] = np.asarray(struct.unpack("<2f", data[84:92]), dtype=np.float32)
+    # Read timestamp as two separate floats [48:56]
+    rawData[0, 4:] = np.asarray(struct.unpack("<2f", data[48:56]), dtype=np.float32)
 
     return SigsPacket(manusRaw=rawData)
