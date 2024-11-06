@@ -253,6 +253,9 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             if len(freqs) == 2:
                 self.freq2TextField.setText(lo.toString(freqs[1]))
             self.filtOrderTextField.setText(lo.toString(sigConfig["filtOrder"]))
+        else:
+            self.fileSavingGroupBox.setChecked(False)
+
         if "filePath" in sigConfig:
             self.fileSavingGroupBox.setChecked(True)
             outDirPath, fileName = os.path.split(sigConfig["filePath"])
@@ -266,7 +269,12 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self.outDirPathLabel.setText(displayText)
             self.outDirPathLabel.setToolTip(outDirPath)
             self.fileNameTextField.setText(fileName)
+        else:
+            self.fileSavingGroupBox.setChecked(False)
+
         if "chSpacing" in sigConfig:
             self.plotGroupBox.setChecked(True)
             self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
             self.renderLenTextField.setText(lo.toString(sigConfig["renderLengthS"]))
+        else:
+            self.plotGroupBox.setChecked(False)
