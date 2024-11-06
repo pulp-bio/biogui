@@ -310,9 +310,10 @@ class MainController(QObject):
         for row in range(itemToRemove.rowCount()):
             sigNameToRemove = itemToRemove.child(row).text()
             # Remove plot widget
-            plotWidgetToRemove = self._sigPlotWidgets.pop(sigNameToRemove)
-            self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
-            plotWidgetToRemove.deleteLater()
+            if sigNameToRemove in self._sigPlotWidgets:
+                plotWidgetToRemove = self._sigPlotWidgets.pop(sigNameToRemove)
+                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
+                plotWidgetToRemove.deleteLater()
 
         # Delete streaming controller and config
         del self._streamingControllers[dataSourceToRemove]
@@ -347,19 +348,27 @@ class MainController(QObject):
         self._streamingControllers[dataSource].editConfig(sigName, sigConfig)
 
         # Re-create plot widget
-        oldPlotWidget = self._sigPlotWidgets.pop(sigName)
-        newPlotWidget = SignalPlotWidget(
-            sigName,
-            **sigConfig,
-            parent=self._mainWin,
-            dataQueue=oldPlotWidget.dataQueue,  # type: ignore
-        )
-        self.startStreamingSig.connect(newPlotWidget.startTimers)
-        self.stopStreamingSig.connect(newPlotWidget.stopTimers)
-        self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
-        oldPlotWidget.deleteLater()
-        self.startStreamingSig.connect(newPlotWidget.startTimers)
-        self.stopStreamingSig.connect(newPlotWidget.stopTimers)
+        if sigName in self._sigPlotWidgets:
+            oldPlotWidget = self._sigPlotWidgets.pop(sigName)
+            newPlotWidget = SignalPlotWidget(
+                sigName,
+                **sigConfig,
+                parent=self._mainWin,
+                dataQueue=oldPlotWidget.dataQueue,  # type: ignore
+            )
+            self.startStreamingSig.connect(newPlotWidget.startTimers)
+            self.stopStreamingSig.connect(newPlotWidget.stopTimers)
+            self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
+            oldPlotWidget.deleteLater()
+        else:
+            newPlotWidget = SignalPlotWidget(
+                sigName,
+                **sigConfig,
+                parent=self._mainWin,
+            )
+            self.startStreamingSig.connect(newPlotWidget.startTimers)
+            self.stopStreamingSig.connect(newPlotWidget.stopTimers)
+            self._mainWin.plotsLayout.addWidget(newPlotWidget)
 
         self._sigPlotWidgets[sigName] = newPlotWidget
 
