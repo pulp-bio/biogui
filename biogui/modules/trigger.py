@@ -100,7 +100,7 @@ class _GesturesWidget(QWidget):
         self.setWindowTitle("Gesture Viewer")
         self.resize(480, 480)
 
-        self._pixmap = QPixmap(":/images/start.png")
+        self._pixmap = QPixmap(":/images/rest.png")
         self._pixmap = self._pixmap.scaled(self.width(), self.height())
         self._label = QLabel(self)
         self._label.setPixmap(self._pixmap)
@@ -130,7 +130,7 @@ class _GesturesWidget(QWidget):
         if image == "start":
             imagePath = ":/images/start"
         elif image == "stop":
-            imagePath = ":/images/stop"
+            imagePath = ":/images/rest"
         else:
             imagePath = os.path.join(self._imageFolder, image)
 
@@ -304,7 +304,7 @@ class TriggerController(QObject):
             self._timer.start(self._confWidget.config["durationRest"])
 
             new_trigger = 0
-            image = "stop"
+            image = "rest"
 
             self._restFlag = False
 
@@ -317,7 +317,7 @@ class TriggerController(QObject):
                 image = self._confWidget.config["gestures"][gestureLabel]
             else:
                 new_trigger = 0
-                image = "stop"
+                image = "rest"
 
             self._gestCounter += 1
             self._restFlag = True

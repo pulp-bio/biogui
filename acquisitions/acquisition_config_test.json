@@ -2,13 +2,9 @@
     "gestures": {
         "open hand": "open_hand.png",
         "fist (power grip)": "fist.png",
-        "index pointed": "index_pointed.png",
-        "ok (thumb up)": "ok.png",
-        "pinch": "pinch.png",
-        "wrist supination": "wrist_supination.png",
-        "wrist pronation": "wrist_pronation.png"
+        "index pointed": "index_pointed.png"
     },
-    "nReps": 1,
+    "nReps": 3,
     "durationGesture": 4000,
     "durationStart": 8000,
     "durationRest": 2000,

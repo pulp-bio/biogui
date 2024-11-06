@@ -80,5 +80,5 @@ def decodeFn(data: bytes) -> SigsPacket:
     joints_and_ts = np.append(joints, float_values)
     #reshape in a format for plotting utils
     joints_and_ts = joints_and_ts.reshape(1, 22)
-    print(joints_and_ts)
+    #print(joints_and_ts)
     return SigsPacket(manus_ergo=joints_and_ts)
