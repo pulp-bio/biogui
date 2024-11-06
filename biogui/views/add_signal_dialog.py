@@ -111,7 +111,8 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.destroyed.connect(self.deleteLater)
 
         # Pre-fill with provided configuration
-        self._prefill(kwargs)
+        if kwargs:
+            self._prefill(kwargs)
 
     @property
     def sigConfig(self) -> dict:
