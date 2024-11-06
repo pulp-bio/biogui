@@ -90,7 +90,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._nCh = nCh
 
         # check if we are receiving Manus data
-        if sigName == "manus_ergo" or sigName == "Manus_raw":
+        if sigName == "manusErgo" or sigName == "manusRaw":
             # timestamps are saved as last channel, remove it from the plot
             self._nCh = nCh - 2
         self._chSpacing = chSpacing
