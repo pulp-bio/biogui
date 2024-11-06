@@ -224,17 +224,20 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 outFileName = self.sigNameLabel.text()
             self._sigConfig["filePath"] = os.path.join(self._outDirPath, outFileName)
 
-        # Plot settings
-        if not self.chSpacingTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "channel spacing" field is invalid.'
-            return
-        self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
-        if not self.renderLenTextField.hasAcceptableInput():
-            self._isValid = False
-            self._errMessage = 'The "render length" field is invalid.'
-            return
-        self._sigConfig["renderLengthS"] = lo.toInt(self.renderLenTextField.text())[0]
+        # Check plot settings
+        if self.plotGroupBox.isChecked():
+            if not self.chSpacingTextField.hasAcceptableInput():
+                self._isValid = False
+                self._errMessage = 'The "channel spacing" field is invalid.'
+                return
+            self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
+            if not self.renderLenTextField.hasAcceptableInput():
+                self._isValid = False
+                self._errMessage = 'The "render length" field is invalid.'
+                return
+            self._sigConfig["renderLengthS"] = lo.toInt(self.renderLenTextField.text())[
+                0
+            ]
 
         self._isValid = True
 
@@ -264,5 +267,6 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self.outDirPathLabel.setToolTip(outDirPath)
             self.fileNameTextField.setText(fileName)
         if "chSpacing" in sigConfig:
+            self.plotGroupBox.setChecked(True)
             self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
             self.renderLenTextField.setText(lo.toString(sigConfig["renderLengthS"]))

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'add_signal_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -25,7 +25,7 @@ class Ui_AddSignalDialog(object):
         if not AddSignalDialog.objectName():
             AddSignalDialog.setObjectName(u"AddSignalDialog")
         AddSignalDialog.setWindowModality(Qt.WindowModal)
-        AddSignalDialog.resize(500, 586)
+        AddSignalDialog.resize(500, 588)
         AddSignalDialog.setModal(False)
         self.verticalLayout = QVBoxLayout(AddSignalDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -164,8 +164,8 @@ class Ui_AddSignalDialog(object):
         self.plotGroupBox.setObjectName(u"plotGroupBox")
         self.plotGroupBox.setAlignment(Qt.AlignCenter)
         self.plotGroupBox.setFlat(False)
-        self.plotGroupBox.setCheckable(False)
-        self.plotGroupBox.setChecked(False)
+        self.plotGroupBox.setCheckable(True)
+        self.plotGroupBox.setChecked(True)
         self.formLayout4 = QFormLayout(self.plotGroupBox)
         self.formLayout4.setObjectName(u"formLayout4")
         self.label11 = QLabel(self.plotGroupBox)
@@ -205,7 +205,9 @@ class Ui_AddSignalDialog(object):
         QWidget.setTabOrder(self.filtOrderTextField, self.fileSavingGroupBox)
         QWidget.setTabOrder(self.fileSavingGroupBox, self.browseOutDirButton)
         QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
-        QWidget.setTabOrder(self.fileNameTextField, self.chSpacingTextField)
+        QWidget.setTabOrder(self.fileNameTextField, self.plotGroupBox)
+        QWidget.setTabOrder(self.plotGroupBox, self.chSpacingTextField)
+        QWidget.setTabOrder(self.chSpacingTextField, self.renderLenTextField)
 
         self.retranslateUi(AddSignalDialog)
         self.buttonBox.accepted.connect(AddSignalDialog.accept)

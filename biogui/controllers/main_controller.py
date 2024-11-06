@@ -149,7 +149,8 @@ class MainController(QObject):
         dataPacket : DataPacket
             Data to plot.
         """
-        self._sigPlotWidgets[dataPacket.id].addData(dataPacket.data)
+        if dataPacket.id in self._sigPlotWidgets:
+            self._sigPlotWidgets[dataPacket.id].addData(dataPacket.data)
 
     @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
@@ -189,15 +190,16 @@ class MainController(QObject):
         self._streamingControllers[str(streamingController)] = streamingController
 
         # Create plot widget
-        for sigName in config.keys():
-            sigPlotWidget = SignalPlotWidget(
-                sigName, **config[sigName], parent=self._mainWin
-            )
-            self.startStreamingSig.connect(sigPlotWidget.startTimers)
-            self.stopStreamingSig.connect(sigPlotWidget.stopTimers)
-            self._mainWin.plotsLayout.addWidget(sigPlotWidget)
+        for sigName, sigConfig in config.items():
+            if "chSpacing" in sigConfig:
+                sigPlotWidget = SignalPlotWidget(
+                    sigName, **sigConfig, parent=self._mainWin
+                )
+                self.startStreamingSig.connect(sigPlotWidget.startTimers)
+                self.stopStreamingSig.connect(sigPlotWidget.stopTimers)
+                self._mainWin.plotsLayout.addWidget(sigPlotWidget)
 
-            self._sigPlotWidgets[sigName] = sigPlotWidget
+                self._sigPlotWidgets[sigName] = sigPlotWidget
 
         # Save configuration
         self._config[str(streamingController)] = config
@@ -212,7 +214,7 @@ class MainController(QObject):
         # Update UI data source tree
         dataSourceNode = QStandardItem(str(streamingController))
         self.dataSourceModel.appendRow(dataSourceNode)
-        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in config.keys()])
+        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in config])
 
         # Emit signal to inform pluggable modules that a new source has been added
         self.newSourceAddedSig.emit(streamingController)
