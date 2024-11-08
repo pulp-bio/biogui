@@ -163,9 +163,9 @@ class _FileWriterWorker(QObject):
         self._f.close()  # type: ignore
 
 
-class _PreprocessWorker(QObject):
+class _Preprocessor(QObject):
     """
-    Worker that preprocess the binary data it receives.
+    Component to preprocess binary data.
 
     Parameters
     ----------
@@ -335,10 +335,8 @@ class StreamingController(QObject):
         Worker for data acquisition.
     _dataSourceThread : QThread
         The QThread associated to the data source worker.
-    _preprocessWorker : _PreprocessWorker
-        Worker for data pre-processing.
-    _preprocessThread : QThread
-        The QThread associated to the pre-processing worker.
+    _preprocessor : _Preprocessor
+        Component for data pre-processing.
     _fileWriterWorkers : dict of (str: _FileWriterWorker)
         Collection of the (optional) workers for writing data to file, indexed by the target signal name.
     _fileWriterThreads : dict of (str: QThread)
@@ -369,20 +367,18 @@ class StreamingController(QObject):
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
 
-        # Create pre-processing worker and thread
-        self._preprocessWorker = _PreprocessWorker(decodeFn, config)
-        self._preprocessThread = QThread(self)
-        self._preprocessWorker.moveToThread(self._preprocessThread)
+        # Create pre-processos
+        self._preprocessor = _Preprocessor(decodeFn, config)
 
         # Handle signals
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
-        self._dataSourceWorker.dataReadySig.connect(self._preprocessWorker.preprocess)
+        self._dataSourceWorker.dataReadySig.connect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorSig.connect(self._handleErrors)
-        self._preprocessWorker.dataReadyFltSig.connect(
+        self._preprocessor.dataReadyFltSig.connect(
             lambda d: self.dataReadySig.emit(d)
         )  # forward filtered data
-        self._preprocessWorker.errorSig.connect(self._handleErrors)
+        self._preprocessor.errorSig.connect(self._handleErrors)
 
         # Optionally, create file writer worker and thread
         self._fileWriterWorkers: dict[str, _FileWriterWorker] = {}
@@ -410,7 +406,7 @@ class StreamingController(QObject):
         # Handle signals
         fileWriterThread.started.connect(fileWriterWorker.openFile)
         fileWriterThread.finished.connect(fileWriterWorker.closeFile)
-        self._preprocessWorker.dataReadyRawSig.connect(fileWriterWorker.write)
+        self._preprocessor.dataReadyRawSig.connect(fileWriterWorker.write)
 
         self._fileWriterWorkers[sigName] = fileWriterWorker
         self._fileWriterThreads[sigName] = fileWriterThread
@@ -433,7 +429,7 @@ class StreamingController(QObject):
             - "filePath": the file path (optional).
         """
         # 1. Filter settings
-        self._preprocessWorker.configFilter(sigName, sigConfig)
+        self._preprocessor.configFilter(sigName, sigConfig)
 
         # 2. File writer settings:
         # 2.1. If configuration is empty, remove previous worker and thread (if present)
@@ -466,12 +462,11 @@ class StreamingController(QObject):
 
     def startStreaming(self) -> None:
         """Start streaming."""
-        self._preprocessWorker.errorOccurred = False  # reset flag
+        self._preprocessor.errorOccurred = False  # reset flag
 
         for fileWriterThread in self._fileWriterThreads.values():
             fileWriterThread.start()
 
-        self._preprocessThread.start()
         self._dataSourceThread.start()
 
     def stopStreaming(self) -> None:
@@ -480,8 +475,6 @@ class StreamingController(QObject):
 
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
-        self._preprocessThread.quit()
-        self._preprocessThread.wait()
 
         for fileWriterWorker, fileWriterThread in zip(
             self._fileWriterWorkers.values(), self._fileWriterThreads.values()
