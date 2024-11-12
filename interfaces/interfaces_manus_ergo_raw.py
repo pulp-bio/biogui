@@ -31,13 +31,13 @@ startSeq: list[bytes] = [b"A"]
 stopSeq: list[bytes] = []
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [120]
+fs: list[float] = [120, 120, 120]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [28]
+nCh: list[int] = [24, 2, 2]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "manusData")
+SigsPacket = namedtuple("SigsPacket", "manusData tsErgo tsRaw")
 """Named tuple containing the Manus data packet."""
 
 
@@ -64,22 +64,22 @@ def decodeFn(data: bytes) -> SigsPacket:
     # -  3 for scale
     # -  2 for raw timestamp (double)
 
-    manusData = np.zeros(shape=(1, 28), dtype=np.float32)
+    manusData = np.zeros(shape=(1, 24), dtype=np.float32)
 
     # Read the 20 angles [0:80]
     manusData[0, :20] = np.asarray(struct.unpack("<20f", data[:80]), dtype=np.float32)
 
     # Read timestamp as two separate floats [80:88]
-    manusData[0, 20:22] = np.asarray(
-        struct.unpack("<2f", data[80:88]), dtype=np.float32
+    tsErgo = np.asarray(struct.unpack("<2f", data[80:88]), dtype=np.float32).reshape(
+        1, 2
     )
 
     # Read the quaternions [104:120]
-    manusData[0, 22:26] = np.asarray(
+    manusData[0, 20:24] = np.asarray(
         struct.unpack("<4f", data[104:120]), dtype=np.float32
     )
 
     # Read timestamp as two separate floats [132:140]
-    manusData[0, 26:] = np.asarray(struct.unpack("<2f", data[132:]), dtype=np.float32)
+    tsRaw = np.asarray(struct.unpack("<2f", data[132:]), dtype=np.float32).reshape(1, 2)
 
-    return SigsPacket(manusData=manusData)
+    return SigsPacket(manusData=manusData, tsErgo=tsErgo, tsRaw=tsRaw)
