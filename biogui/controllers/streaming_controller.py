@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import datetime
 import struct
+import time
 from collections import namedtuple
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -75,6 +76,8 @@ class _FileWriterWorker(QObject):
         Target signal name.
     _f : BinaryIO or None
         File object.
+    _baseTs : float
+        Base timestamp.
     """
 
     def __init__(self, filePath: str, targetSignalName: str) -> None:
@@ -85,6 +88,7 @@ class _FileWriterWorker(QObject):
         self._f = None
         self._isFirstWrite = True
         self._trigger = None
+        self._baseTs = time.time()
 
     @property
     def filePath(self) -> str:
@@ -128,7 +132,7 @@ class _FileWriterWorker(QObject):
         data = dataPacket.data
 
         if self._isFirstWrite:  # write number of channels
-            nCh = data.shape[1] + 1 if self._trigger is not None else data.shape[1]
+            nCh = data.shape[1] + 2 if self._trigger is not None else data.shape[1] + 1
             self._f.write(struct.pack("<I", nCh))  # type: ignore
             self._isFirstWrite = False
 
@@ -141,6 +145,16 @@ class _FileWriterWorker(QObject):
                 ],
                 axis=1,
             ).astype("float32")
+
+        # Add timestamp
+        ts = time.time() - self._baseTs
+        data = np.concatenate(
+            [
+                data,
+                np.repeat(ts, data.shape[0]).reshape(-1, 1),
+            ],
+            axis=1,
+        ).astype("float32")
 
         self._f.write(data.tobytes())  # type: ignore
 
