@@ -76,6 +76,10 @@ def main():
     sig = np.frombuffer(bSig, dtype="float32").reshape(-1, nCh).T
     nSamp = sig.shape[1]
 
+    # Read timestamp
+    ts, sig = sig[-1], sig[:-1]
+    nCh -= 1
+
     # Handle trigger
     if args["trigger"]:
         trigger, sig = sig[-1], sig[:-1]
@@ -93,18 +97,22 @@ def main():
     t = np.arange(nSamp) / fs
     if args["trigger"]:
         _, axes = plt.subplots(
-            nrows=nCh + 1, sharex="all", figsize=(16, 20), layout="constrained"
+            nrows=nCh + 2, sharex="all", figsize=(16, 20), layout="constrained"
         )
         for i in range(nCh):
             axes[i].plot(t, sig[i])
+        axes[-2].set_title("Timestamp")
+        axes[-2].plot(t, ts)
         axes[-1].set_title("Trigger")
         axes[-1].plot(t, trigger)
     else:
         _, axes = plt.subplots(
-            nrows=nCh, sharex="all", figsize=(16, 20), layout="constrained"
+            nrows=nCh + 1, sharex="all", figsize=(16, 20), layout="constrained"
         )
         for i in range(nCh):
             axes[i].plot(t, sig[i])
+        axes[-1].set_title("Timestamp")
+        axes[-1].plot(t, ts)
 
     plt.show()
 
