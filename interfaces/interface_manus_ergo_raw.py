@@ -1,5 +1,5 @@
 """
-This module contains the Manus interface to retrieve raw data.
+This module contains the Manus interface to retrieve ergonomics data.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
@@ -22,22 +22,22 @@ from collections import namedtuple
 
 import numpy as np
 
-packetSize: int = 60
+packetSize: int = 132
 """Number of bytes in each packet (all data transmitted as floats)."""
 
-startSeq: list[bytes] = [b"A"]
+startSeq: list[bytes] = []
 """Sequence of commands to start the board."""
 
-stopSeq: list[bytes] = []
+stopSeq: list[bytes] = [b"S"]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [120]
+fs: list[float] = [120, 120]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [6]
+nCh: list[int] = [24, 2]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "manusRaw")
+SigsPacket = namedtuple("SigsPacket", "manusData tsRaw")
 """Named tuple containing the Manus data packet."""
 
 
@@ -48,28 +48,32 @@ def decodeFn(data: bytes) -> SigsPacket:
     Parameters
     ----------
     data : bytes
-        A packet of bytes
+        A packet of bytes.
 
     Returns
     -------
     SigsPacket
         Named tuple containing the Manus data packet with shape (nSamp, nCh).
     """
-    # 15 floats:
-    # - 1 for startId
-    # - 1 for nodeId
-    # - 3 for position
-    # - 4 for quaternion
-    # - 3 for scale
-    # - 2 for timestamp (double)
-    # - 1 for stopId
+    # 35 floats:
+    # - 20 for angles
+    # -  1 for nodeId
+    # -  3 for position
+    # -  4 for quaternion
+    # -  3 for scale
+    # -  2 for raw timestamp (double)
 
-    rawData = np.zeros(shape=(1, 6), dtype=np.float32)
+    manusData = np.zeros(shape=(1, 24), dtype=np.float32)
 
-    # Read the quaternions [20:36]
-    rawData[0, :4] = np.asarray(struct.unpack("<4f", data[20:36]), dtype=np.float32)
+    # Read the 20 angles [0:80]
+    manusData[0, :20] = np.asarray(struct.unpack("<20f", data[:80]), dtype=np.float32)
 
-    # Read timestamp as two separate floats [48:56]
-    rawData[0, 4:] = np.asarray(struct.unpack("<2f", data[48:56]), dtype=np.float32)
+    # Read the quaternions [96:112]
+    manusData[0, 20:24] = np.asarray(
+        struct.unpack("<4f", data[96:112]), dtype=np.float32
+    )
 
-    return SigsPacket(manusRaw=rawData)
+    # Read timestamp as two separate floats [124:132]
+    tsRaw = np.asarray(struct.unpack("<2f", data[124:]), dtype=np.float32).reshape(1, 2)
+
+    return SigsPacket(manusData=manusData, tsRaw=tsRaw)
