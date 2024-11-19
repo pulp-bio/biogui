@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import socket
+import time
 from asyncio import IncompleteReadError
 
 from PySide6.QtGui import QIntValidator
@@ -192,6 +193,7 @@ class TCPDataSourceWorker(DataSourceWorker):
                 # Stop command
                 for c in self._stopSeq:
                     conn.sendall(c)
+                    time.sleep(0.2)
 
                 # Close connection and socket
                 conn.shutdown(socket.SHUT_RDWR)
@@ -202,8 +204,10 @@ class TCPDataSourceWorker(DataSourceWorker):
 
                 self._exitAcceptLoopFlag = True
             except socket.timeout:
+                time.sleep(0.5)
                 pass
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        self._exitAcceptLoopFlag = True
         self._stopReadingFlag = True
