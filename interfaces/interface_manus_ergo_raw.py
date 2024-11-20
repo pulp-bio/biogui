@@ -38,7 +38,7 @@ fs: list[float] = [120, 120]
 nCh: list[int] = [24, 1]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "manusData ts")
+SigsPacket = namedtuple("SigsPacket", "manusData manusTs")
 """Named tuple containing the MANUS data packet."""
 
 
@@ -75,6 +75,8 @@ def decodeFn(data: bytes) -> SigsPacket:
     )
 
     # Read timestamp [124:128]
-    ts = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(1, 1)
+    manusTs = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(
+        1, 1
+    )
 
-    return SigsPacket(manusData=manusData, ts=ts)
+    return SigsPacket(manusData=manusData, manusTs=manusTs)
