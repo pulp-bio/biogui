@@ -144,7 +144,7 @@ class _FileWriterWorker(QObject):
                     np.repeat(self._trigger, data.shape[0]).reshape(-1, 1),
                 ],
                 axis=1,
-            ).astype("float32")
+            ).astype(np.float32)
 
         # Add timestamp
         ts = time.time() - self._baseTs
@@ -154,7 +154,7 @@ class _FileWriterWorker(QObject):
                 np.repeat(ts, data.shape[0]).reshape(-1, 1),
             ],
             axis=1,
-        ).astype("float32")
+        ).astype(np.float32)
 
         self._f.write(data.tobytes())  # type: ignore
 
@@ -225,20 +225,10 @@ class _Preprocessor(QObject):
         self._sigNames = list(config.keys())
         self._sos: dict = {}
         self._zi: dict = {}
-        self._errorOccurred = False
 
         # Optionally, configure filtering
         for sigName, sigConfig in config.items():
             self.configFilter(sigName, sigConfig)
-
-    @property
-    def errorOccurred(self):
-        """bool: Whether an error has occurred or not (useful to limit the number of error signals emitted)."""
-        return self._errorOccurred
-
-    @errorOccurred.setter
-    def errorOccurred(self, errorOccurred: bool):
-        self._errorOccurred = errorOccurred
 
     def configFilter(self, sigName: str, sigConfig: dict) -> None:
         """
@@ -287,19 +277,15 @@ class _Preprocessor(QObject):
         try:
             dataDecList = self._decodeFn(data)
         except (Exception,) as e:
-            if not self._errorOccurred:
-                self.errorSig.emit(
-                    f"The provided decode function failed with the following exception:\n{e}."
-                )
-                self._errorOccurred = True
+            self.errorSig.emit(
+                f"The provided decode function failed with the following exception:\n{e}."
+            )
             return
 
         if len(dataDecList) != len(self._sigNames):
-            if not self._errorOccurred:
-                self.errorSig.emit(
-                    "The provided decode function and configured signals do not match."
-                )
-                self._errorOccurred = True
+            self.errorSig.emit(
+                "The provided decode function and configured signals do not match."
+            )
             return
 
         for sigName, dataDec in zip(self._sigNames, dataDecList):
@@ -312,11 +298,9 @@ class _Preprocessor(QObject):
                         self._sos[sigName], dataDec, axis=0, zi=self._zi[sigName]
                     )
                 except ValueError:
-                    if not self._errorOccurred:
-                        self.errorSig.emit(
-                            "An error occurred during filtering, check the settings."
-                        )
-                        self._errorOccurred = True
+                    self.errorSig.emit(
+                        "An error occurred during filtering, check the settings."
+                    )
                     return
 
             self.dataReadyFltSig.emit(DataPacket(sigName, dataDec))
@@ -380,19 +364,11 @@ class StreamingController(QObject):
         self._dataSourceWorker = data_sources.getDataSourceWorker(**dataSourceConfig)
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
-
-        # Create pre-processos
-        self._preprocessor = _Preprocessor(decodeFn, config)
-
-        # Handle signals
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
-        self._dataSourceWorker.dataReadySig.connect(self._preprocessor.preprocess)
-        self._dataSourceWorker.errorSig.connect(self._handleErrors)
-        self._preprocessor.dataReadyFltSig.connect(
-            lambda d: self.dataReadySig.emit(d)
-        )  # forward filtered data
-        self._preprocessor.errorSig.connect(self._handleErrors)
+
+        # Create pre-processor
+        self._preprocessor = _Preprocessor(decodeFn, config)
 
         # Optionally, create file writer worker and thread
         self._fileWriterWorkers: dict[str, _FileWriterWorker] = {}
@@ -416,11 +392,8 @@ class StreamingController(QObject):
         fileWriterWorker = _FileWriterWorker(filePath, sigName)
         fileWriterThread = QThread(self)
         fileWriterWorker.moveToThread(fileWriterThread)
-
-        # Handle signals
         fileWriterThread.started.connect(fileWriterWorker.openFile)
         fileWriterThread.finished.connect(fileWriterWorker.closeFile)
-        self._preprocessor.dataReadyRawSig.connect(fileWriterWorker.write)
 
         self._fileWriterWorkers[sigName] = fileWriterWorker
         self._fileWriterThreads[sigName] = fileWriterThread
@@ -476,7 +449,13 @@ class StreamingController(QObject):
 
     def startStreaming(self) -> None:
         """Start streaming."""
-        self._preprocessor.errorOccurred = False  # reset flag
+        # Create connections
+        self._dataSourceWorker.dataReadySig.connect(self._preprocessor.preprocess)
+        self._dataSourceWorker.errorSig.connect(self._handleErrors)
+        self._preprocessor.dataReadyFltSig.connect(lambda d: self.dataReadySig.emit(d))
+        self._preprocessor.errorSig.connect(self._handleErrors)
+        for fileWriterWorker in self._fileWriterWorkers.values():
+            self._preprocessor.dataReadyRawSig.connect(fileWriterWorker.write)
 
         for fileWriterThread in self._fileWriterThreads.values():
             fileWriterThread.start()
@@ -496,3 +475,10 @@ class StreamingController(QObject):
             fileWriterThread.quit()
             fileWriterThread.wait()
             fileWriterWorker.trigger = None
+
+        # Destroy connection
+        self._dataSourceWorker.dataReadySig.disconnect()
+        self._dataSourceWorker.errorSig.disconnect()
+        self._preprocessor.dataReadyFltSig.disconnect()
+        self._preprocessor.dataReadyRawSig.disconnect()
+        self._preprocessor.errorSig.disconnect()
