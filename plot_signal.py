@@ -31,32 +31,32 @@ def main():
     parser.add_argument(
         "-p",
         "--path",
-        required=True,
         type=str,
+        required=True,
         help="Path to the .bin file",
     )
     parser.add_argument(
         "--fs",
-        required=True,
         type=float,
+        required=True,
         help="Sampling frequency",
     )
     parser.add_argument(
         "--filtType",
-        required=False,
         type=str,
+        required=False,
         help='Filter type ("lowpass", "highpass", "bandpass")',
     )
     parser.add_argument(
         "--f1",
-        required=False,
         type=float,
+        required=False,
         help="1st cut-off frequency",
     )
     parser.add_argument(
         "--f2",
-        required=False,
         type=float,
+        required=False,
         help="2nd cut-off frequency",
     )
     parser.add_argument(
