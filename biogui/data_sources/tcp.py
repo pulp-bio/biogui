@@ -195,6 +195,13 @@ class TCPDataSourceWorker(DataSourceWorker):
                     conn.sendall(c)
                     time.sleep(0.2)
 
+                # Flush input buffer
+                while True:
+                    data = conn.recv(self._packetSize)
+                    if not data:
+                        break
+                    logging.info("Flushing...")
+
                 # Close connection and socket
                 conn.shutdown(socket.SHUT_RDWR)
                 conn.close()
