@@ -158,16 +158,6 @@ class _FileWriterWorker(QObject):
             axis=1,
         ).astype(np.float32)
 
-        # Add timestamp
-        ts = time.time() - self._baseTs
-        data = np.concatenate(
-            [
-                data,
-                np.repeat(ts, data.shape[0]).reshape(-1, 1),
-            ],
-            axis=1,
-        ).astype("float32")
-
         self._f.write(data.tobytes())  # type: ignore
 
     def openFile(self) -> None:

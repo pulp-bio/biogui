@@ -1,68 +1,3 @@
-<<<<<<<< HEAD:interfaces/interface_manus.py
-"""
-This module contains the Manus interface for kinematic data.
-
-
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
-import struct
-from collections import namedtuple
-
-import numpy as np
-
-packetSize: int = 160
-"""Number of bytes in each package."""
-
-startSeq: list[bytes] = [b"A"]
-"""Sequence of commands to start the board."""
-
-stopSeq: list[bytes] = []
-"""Sequence of commands to stop the board."""
-
-fs: list[float] = [120]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [20]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "manus")
-"""Named tuple containing the Manus data packet."""
-
-
-def decodeFn(data: bytes) -> SigsPacket:
-    """
-    Function to decode the binary data received from Manus.
-
-    Parameters
-    ----------
-    data : bytes
-        A packet of bytes.
-
-    Returns
-    -------
-    SigsPacket
-        Named tuple containing the Manus data packet with shape (nSamp, nCh).
-    """
-    joints = np.asarray(struct.unpack(f"<{40}f", data), dtype=np.float32)
-
-    # Reshape and convert ADC readings to uV
-    joints = joints.reshape(1, 40)[:, 20:]
-
-    return SigsPacket(manus=joints)
-========
 """
 This module contains the Manus interface to retrieve
 both ergonomics and raw data from MANUS gloves.
@@ -144,13 +79,4 @@ def decodeFn(data: bytes) -> SigsPacket:
         1, 1
     )
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    return SigsPacket(manusData=manusData, tsRaw=tsRaw)
->>>>>>>> f7d8538 (Removed one timestamp from MANUS interface file; added stop command.):interfaces/interface_manus_ergo_raw.py
-=======
-    return SigsPacket(manusData=manusData, ts=ts)
->>>>>>> a1ae0b4 (Fixed bug that caused old data packets to hang in the Qt connection queues)
-=======
     return SigsPacket(manusData=manusData, manusTs=manusTs)
->>>>>>> 29d50dd (Renamed timestamp)
