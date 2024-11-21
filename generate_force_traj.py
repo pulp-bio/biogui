@@ -20,18 +20,18 @@ limitations under the License.
 import argparse
 import socket
 import struct
+import threading
 import time
 
 import numpy as np
 import serial
-from matplotlib import pyplot as plt
 
 BAUD_RATE = 115200
 BUFFER_SIZE = 4
 
 
-def main():
-    # Input
+def _parse_input() -> tuple:
+    """Parse the input arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mvc",
@@ -79,12 +79,13 @@ def main():
     )
     parser.add_argument(
         "--server_port",
-        default=3333,
+        default=3334,
         type=int,
         required=False,
         help="Port of the TCP socket",
     )
     args = vars(parser.parse_args())
+
     mvc = args["mvc"]
     p_mvc = args["p_mvc"]
     slope = args["slope"]
@@ -94,9 +95,13 @@ def main():
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    # Trajectories characteristics
-    rest_duration_s = 5  # s
-    plateau_duration_s = 20  # s
+    return mvc, p_mvc, slope, fs, gap_width, serial_port, server_addr, server_port
+
+
+def _gen_trajectories(
+    p_mvc, slope, fs, gap_width, rest_duration_s, plateau_duration_s
+) -> tuple[np.ndarray]:
+    """Generate trapezoidal trajectories."""
     ramp_duration_s = p_mvc / slope
     rest_duration = rest_duration_s * fs
     plateau_duration = plateau_duration_s * fs
@@ -114,31 +119,68 @@ def main():
     traj_low = traj_low.astype(np.float32)
     traj_high = traj_high.astype(np.float32)
 
-    # Scale trajectories
+    return traj_low, traj_high
+
+
+def _listen_for_stop(client_socket, stop_event):
+    """Listen for a "stop" command from the server."""
+    try:
+        while not stop_event.is_set():
+            data = client_socket.recv(1)
+            if data.lower() == b":":
+                print('Received "stop" command from server. Stopping transmission.')
+                stop_event.set()
+                break
+    except Exception as e:
+        print(f"Error while listening for stop command: {e}")
+
+
+def main():
+    # Input arguments
+    mvc, p_mvc, slope, fs, gap_width, serial_port, server_addr, server_port = (
+        _parse_input()
+    )
+
+    # Trapezoidal trajectories
+    traj_low, traj_high = _gen_trajectories(
+        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=20
+    )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
 
-    t = np.arange(traj.size) / fs
-    plt.plot(t, traj_low)
-    plt.plot(t, traj_high)
-    plt.grid()
-    plt.show()
-
     try:
+        # Create TCP client socket
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                client_socket.connect((server_addr, server_port))
+                break
+            except ConnectionRefusedError:
+                print("Connection refused, retrying in a second...")
+                time.sleep(1)
+        print(f"Connected to server at {server_addr}:{server_port}")
+
         # Open serial port
         ser = serial.Serial(serial_port, BAUD_RATE, timeout=100)
         print(f"Serial port {serial_port} opened with baud rate {BAUD_RATE}")
 
-        # Create TCP client socket
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((server_addr, server_port))
-        client_socket.setblocking(False)
-        print(f"Connected to server at {server_addr}:{server_port}")
+        # Wait for start command
+        cmd = client_socket.recv(1)
+        print(f"Received start command {cmd}")
+        ser.write(cmd)
 
-        ser.write(b"=")
+        # Start a thread to listen for the stop command
+        stop_event = threading.Event()  # Event to stop the transmission
+        listener_thread = threading.Thread(
+            target=_listen_for_stop, args=(client_socket, stop_event)
+        )
+        listener_thread.start()
 
         i = 0
         while True:
+            if stop_event.is_set():
+                break  # Stop sending if stop event is triggered
+
             # Read data from serial port
             serial_data = ser.read(BUFFER_SIZE)
             if serial_data:
@@ -149,23 +191,24 @@ def main():
                 client_socket.sendall(struct.pack("<2f", traj_low[i], traj_high[i]))
                 i += 1
 
+                # Repeat trajectory
                 if i == traj_low.size:
                     i = 0
 
-            # Read stop command
-
+        # Wait for the listener thread to finish
+        listener_thread.join()
+        print("Stopped by server.")
     except KeyboardInterrupt:
         print("\nExiting program...")
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
         # Close resources
+        client_socket.close()
+        print("Client socket closed.")
         if "ser" in locals() and ser.is_open:
             ser.close()
             print("Serial port closed.")
-        if "client_socket" in locals():
-            client_socket.close()
-            print("Client socket closed.")
 
 
 if __name__ == "__main__":

@@ -26,13 +26,13 @@ import numpy as np
 packetSize: int = 12
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = []
+startSeq: list[bytes] = [b"="]
 """Sequence of commands to start the board."""
 
-stopSeq: list[bytes] = []
+stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [30]
+fs: list[float] = [120]
 """Sequence of floats representing the sampling rate of each signal."""
 
 nCh: list[int] = [3]

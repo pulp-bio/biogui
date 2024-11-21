@@ -129,7 +129,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
         if sigName == "force":
-            self.graphWidget.setYRange(0, 5)
+            self.graphWidget.setYRange(0, 2.5)
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
