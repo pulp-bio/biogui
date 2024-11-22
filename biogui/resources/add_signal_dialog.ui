@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>588</height>
+    <height>702</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -190,17 +190,17 @@
       <bool>false</bool>
      </property>
      <layout class="QFormLayout" name="formLayout3">
-      <item row="1" column="1">
-       <widget class="QPushButton" name="browseOutDirButton">
-        <property name="text">
-         <string>Browse</string>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label8">
         <property name="text">
          <string>Directory where the file will be saved:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="browseOutDirButton">
+        <property name="text">
+         <string>Browse</string>
         </property>
        </widget>
       </item>
@@ -259,11 +259,25 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label11">
         <property name="text">
-         <string>Channel spacing (in a.u.):</string>
+         <string>Render length (in s):</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
+       <widget class="QLineEdit" name="renderLenTextField">
+        <property name="text">
+         <string>4</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label12">
+        <property name="text">
+         <string>Channel spacing (in a.u.):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
        <widget class="QLineEdit" name="chSpacingTextField">
         <property name="toolTip">
          <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
@@ -276,17 +290,58 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label12">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label13">
         <property name="text">
-         <string>Render length (in s):</string>
+         <string>Range mode:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="renderLenTextField">
+      <item row="2" column="1">
+       <widget class="QComboBox" name="rangeModeComboBox">
+        <item>
+         <property name="text">
+          <string>Automatic</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Manual</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label14">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
-         <string>4</string>
+         <string>Minimum range (in a.u.):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="minRangeTextField">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label15">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Maximum range (in a.u.):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="maxRangeTextField">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -315,8 +370,11 @@
   <tabstop>browseOutDirButton</tabstop>
   <tabstop>fileNameTextField</tabstop>
   <tabstop>plotGroupBox</tabstop>
-  <tabstop>chSpacingTextField</tabstop>
   <tabstop>renderLenTextField</tabstop>
+  <tabstop>chSpacingTextField</tabstop>
+  <tabstop>rangeModeComboBox</tabstop>
+  <tabstop>minRangeTextField</tabstop>
+  <tabstop>maxRangeTextField</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -327,8 +385,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>254</x>
+     <y>695</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -343,8 +401,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>322</x>
+     <y>695</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
