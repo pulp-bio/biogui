@@ -89,7 +89,7 @@ class _FileWriterWorker(QObject):
         self._f = None
         self._isFirstWrite = True
         self._trigger = None
-        self._baseTs = time.time()
+        self._baseTs = 0.0
 
     @property
     def filePath(self) -> str:
@@ -136,6 +136,7 @@ class _FileWriterWorker(QObject):
             nCh = data.shape[1] + 2 if self._trigger is not None else data.shape[1] + 1
             self._f.write(struct.pack("<I", nCh))  # type: ignore
             self._isFirstWrite = False
+            self._baseTs = time.time()
 
         # Add trigger (optionally)
         if self._trigger is not None:
@@ -156,16 +157,6 @@ class _FileWriterWorker(QObject):
             ],
             axis=1,
         ).astype(np.float32)
-
-        # Add timestamp
-        ts = time.time() - self._baseTs
-        data = np.concatenate(
-            [
-                data,
-                np.repeat(ts, data.shape[0]).reshape(-1, 1),
-            ],
-            axis=1,
-        ).astype("float32")
 
         self._f.write(data.tobytes())  # type: ignore
 
