@@ -41,10 +41,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    chSpacing : int
-        Spacing between each channel in the plot.
     renderLengthS : int
         Length of the window in the plot (in s).
+    chSpacing : int
+        Spacing between each channel in the plot.
     parent : QWidget or None
         Parent widget.
     **kwargs : dict
@@ -77,8 +77,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        chSpacing: int,
         renderLengthS: int,
+        chSpacing: int,
         parent: QWidget | None = None,
         **kwargs: dict,
     ) -> None:
@@ -113,14 +113,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Initialize plots
         self._plots = []
-        self._initializePlots(sigName)
+        self._initializePlots(sigName, **kwargs)
 
     @property
     def dataQueue(self) -> deque:
         """deque: Property representing the queue with the values to plot."""
         return self._dataQueue
 
-    def _initializePlots(self, sigName: str) -> None:
+    def _initializePlots(self, sigName: str, **kwargs) -> None:
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
@@ -128,8 +128,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
         self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
-        if sigName == "force":
-            self.graphWidget.setYRange(0, 2.5)
+
+        # Set range
+        if "minRange" in kwargs and "maxRange" in kwargs:
+            print(kwargs["minRange"], kwargs["maxRange"])
+            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
