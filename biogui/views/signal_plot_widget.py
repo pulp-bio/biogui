@@ -131,7 +131,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Set range
         if "minRange" in kwargs and "maxRange" in kwargs:
-            print(kwargs["minRange"], kwargs["maxRange"])
             self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])
 
         # Get colormap
