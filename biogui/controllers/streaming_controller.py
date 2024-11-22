@@ -482,5 +482,6 @@ class StreamingController(QObject):
         self._dataSourceWorker.dataReadySig.disconnect()
         self._dataSourceWorker.errorSig.disconnect()
         self._preprocessor.dataReadyFltSig.disconnect()
-        self._preprocessor.dataReadyRawSig.disconnect()
+        if self._fileWriterWorkers:
+            self._preprocessor.dataReadyRawSig.disconnect()
         self._preprocessor.errorSig.disconnect()

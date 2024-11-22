@@ -191,7 +191,7 @@ class MainController(QObject):
 
         # Create plot widget
         for sigName, sigConfig in config.items():
-            if "chSpacing" in sigConfig:
+            if "renderLengthS" in sigConfig:
                 sigPlotWidget = SignalPlotWidget(
                     sigName, **sigConfig, parent=self._mainWin
                 )
@@ -264,6 +264,7 @@ class MainController(QObject):
         fs: float,
         nCh: int,
         addSignalDialog: AddSignalDialog | None = None,
+        editMode: bool = False,
         **kwargs: dict,
     ) -> dict | None:
         """Get the signal configuration from the user."""
@@ -273,6 +274,7 @@ class MainController(QObject):
                 fs,
                 nCh,
                 self._mainWin,
+                editMode,
                 **kwargs,
             )
 
@@ -294,6 +296,7 @@ class MainController(QObject):
                 fs,
                 nCh,
                 addSignalDialog,
+                editMode,
                 **kwargs,
             )  # re-open dialog
 
@@ -337,7 +340,7 @@ class MainController(QObject):
 
         # Open the dialog
         dialogResult = self._getSignalConfig(
-            sigName, **self._config[dataSource][sigName]
+            sigName, **self._config[dataSource][sigName], editMode=True
         )
         if dialogResult is None:
             return
@@ -355,7 +358,7 @@ class MainController(QObject):
         if sigName in self._sigPlotWidgets:  # case 1 & 2
             oldPlotWidget = self._sigPlotWidgets.pop(sigName)
 
-            if "chSpacing" in sigConfig:  # case 1
+            if "renderLengthS" in sigConfig:  # case 1
                 newPlotWidget = SignalPlotWidget(
                     sigName,
                     **sigConfig,
@@ -368,7 +371,7 @@ class MainController(QObject):
                 self._sigPlotWidgets[sigName] = newPlotWidget
 
             oldPlotWidget.deleteLater()
-        elif "chSpacing" in sigConfig:  # case 3
+        elif "renderLengthS" in sigConfig:  # case 3
             newPlotWidget = SignalPlotWidget(
                 sigName,
                 **sigConfig,
