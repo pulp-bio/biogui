@@ -15,17 +15,17 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QFormLayout, QFrame, QGroupBox,
-    QLabel, QLineEdit, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QComboBox,
+    QDialog, QDialogButtonBox, QFormLayout, QFrame,
+    QGroupBox, QLabel, QLineEdit, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_AddSignalDialog(object):
     def setupUi(self, AddSignalDialog):
         if not AddSignalDialog.objectName():
             AddSignalDialog.setObjectName(u"AddSignalDialog")
         AddSignalDialog.setWindowModality(Qt.WindowModal)
-        AddSignalDialog.resize(500, 702)
+        AddSignalDialog.resize(500, 730)
         AddSignalDialog.setModal(False)
         self.verticalLayout = QVBoxLayout(AddSignalDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -191,38 +191,43 @@ class Ui_AddSignalDialog(object):
         self.label13 = QLabel(self.plotGroupBox)
         self.label13.setObjectName(u"label13")
 
-        self.formLayout4.setWidget(2, QFormLayout.LabelRole, self.label13)
+        self.formLayout4.setWidget(3, QFormLayout.LabelRole, self.label13)
 
         self.rangeModeComboBox = QComboBox(self.plotGroupBox)
         self.rangeModeComboBox.addItem("")
         self.rangeModeComboBox.addItem("")
         self.rangeModeComboBox.setObjectName(u"rangeModeComboBox")
 
-        self.formLayout4.setWidget(2, QFormLayout.FieldRole, self.rangeModeComboBox)
+        self.formLayout4.setWidget(3, QFormLayout.FieldRole, self.rangeModeComboBox)
 
         self.label14 = QLabel(self.plotGroupBox)
         self.label14.setObjectName(u"label14")
         self.label14.setEnabled(False)
 
-        self.formLayout4.setWidget(3, QFormLayout.LabelRole, self.label14)
+        self.formLayout4.setWidget(4, QFormLayout.LabelRole, self.label14)
 
         self.minRangeTextField = QLineEdit(self.plotGroupBox)
         self.minRangeTextField.setObjectName(u"minRangeTextField")
         self.minRangeTextField.setEnabled(False)
 
-        self.formLayout4.setWidget(3, QFormLayout.FieldRole, self.minRangeTextField)
+        self.formLayout4.setWidget(4, QFormLayout.FieldRole, self.minRangeTextField)
 
         self.label15 = QLabel(self.plotGroupBox)
         self.label15.setObjectName(u"label15")
         self.label15.setEnabled(False)
 
-        self.formLayout4.setWidget(4, QFormLayout.LabelRole, self.label15)
+        self.formLayout4.setWidget(5, QFormLayout.LabelRole, self.label15)
 
         self.maxRangeTextField = QLineEdit(self.plotGroupBox)
         self.maxRangeTextField.setObjectName(u"maxRangeTextField")
         self.maxRangeTextField.setEnabled(False)
 
-        self.formLayout4.setWidget(4, QFormLayout.FieldRole, self.maxRangeTextField)
+        self.formLayout4.setWidget(5, QFormLayout.FieldRole, self.maxRangeTextField)
+
+        self.showYAxisCheckBox = QCheckBox(self.plotGroupBox)
+        self.showYAxisCheckBox.setObjectName(u"showYAxisCheckBox")
+
+        self.formLayout4.setWidget(2, QFormLayout.FieldRole, self.showYAxisCheckBox)
 
 
         self.verticalLayout.addWidget(self.plotGroupBox)
@@ -244,7 +249,8 @@ class Ui_AddSignalDialog(object):
         QWidget.setTabOrder(self.fileNameTextField, self.plotGroupBox)
         QWidget.setTabOrder(self.plotGroupBox, self.renderLenTextField)
         QWidget.setTabOrder(self.renderLenTextField, self.chSpacingTextField)
-        QWidget.setTabOrder(self.chSpacingTextField, self.rangeModeComboBox)
+        QWidget.setTabOrder(self.chSpacingTextField, self.showYAxisCheckBox)
+        QWidget.setTabOrder(self.showYAxisCheckBox, self.rangeModeComboBox)
         QWidget.setTabOrder(self.rangeModeComboBox, self.minRangeTextField)
         QWidget.setTabOrder(self.minRangeTextField, self.maxRangeTextField)
 
@@ -315,5 +321,6 @@ class Ui_AddSignalDialog(object):
 
         self.label14.setText(QCoreApplication.translate("AddSignalDialog", u"Minimum range (in a.u.):", None))
         self.label15.setText(QCoreApplication.translate("AddSignalDialog", u"Maximum range (in a.u.):", None))
+        self.showYAxisCheckBox.setText(QCoreApplication.translate("AddSignalDialog", u"Show Y axis", None))
     # retranslateUi
 

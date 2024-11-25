@@ -261,6 +261,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
                 self._errMessage = 'The "channel spacing" field is invalid.'
                 return
             self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
+            self._sigConfig["showYAxis"] = self.showYAxisCheckBox.isChecked()
             if self.rangeModeComboBox.currentText() == "Manual":
                 if not self.minRangeTextField.hasAcceptableInput():
                     self._isValid = False
@@ -319,6 +320,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self.plotGroupBox.setChecked(True)
             self.renderLenTextField.setText(lo.toString(sigConfig["renderLengthS"]))
             self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
+            self.showYAxisCheckBox.setChecked(sigConfig["showYAxis"])
             if "minRange" in sigConfig and "maxRange" in sigConfig:
                 self.rangeModeComboBox.setCurrentText("Manual")
                 self.minRangeTextField.setText(lo.toString(sigConfig["minRange"]))
