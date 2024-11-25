@@ -45,6 +45,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Length of the window in the plot (in s).
     chSpacing : int
         Spacing between each channel in the plot.
+    showYAxis : bool
+        Whether to show the Y axis or not.
     parent : QWidget or None
         Parent widget.
     **kwargs : dict
@@ -79,6 +81,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         nCh: int,
         renderLengthS: int,
         chSpacing: int,
+        showYAxis: bool,
         parent: QWidget | None = None,
         **kwargs: dict,
     ) -> None:
@@ -113,21 +116,22 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Initialize plots
         self._plots = []
-        self._initializePlots(sigName, **kwargs)
+        self._initializePlots(sigName, showYAxis, **kwargs)
 
     @property
     def dataQueue(self) -> deque:
         """deque: Property representing the queue with the values to plot."""
         return self._dataQueue
 
-    def _initializePlots(self, sigName: str, **kwargs) -> None:
+    def _initializePlots(self, sigName: str, showYAxis: bool, **kwargs) -> None:
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
         self.graphWidget.setTitle(sigName)
-        self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
-        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
+        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+        if not showYAxis:
+            self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
 
         # Set range
         if "minRange" in kwargs and "maxRange" in kwargs:
@@ -150,6 +154,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
     def startTimers(self) -> None:
         """Start the timers for plot refresh."""
+        self._timeTracker = 0
+        self._spsTracker = 0
+
         self._plotTimer.start()
         self._spsTimer.start()
 
