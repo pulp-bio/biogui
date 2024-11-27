@@ -94,6 +94,17 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
             None,
             'The selected Python module does not contain a "decodeFn" function.',
         )
+    nSigs = len(module.SigsPacket._fields)
+    if nSigs != len(module.fs):
+        return (
+            None,
+            "There is a mismatch between the provided number of signals and the sampling rates.",
+        )
+    if nSigs != len(module.nCh):
+        return (
+            None,
+            "There is a mismatch between the provided number of signals and the numbers of channels.",
+        )
 
     return (
         InterfaceModule(
