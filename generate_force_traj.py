@@ -22,12 +22,13 @@ import socket
 import struct
 import threading
 import time
+from asyncio import IncompleteReadError
+from collections import deque
 
 import numpy as np
-import serial
 
 BAUD_RATE = 115200
-BUFFER_SIZE = 4
+BUFFER_SIZE = 1
 
 
 def _parse_input() -> tuple:
@@ -65,10 +66,11 @@ def _parse_input() -> tuple:
         help="Width of the gap (in %MVC) between the two trajectories",
     )
     parser.add_argument(
-        "--serial_port",
-        type=str,
-        required=True,
-        help="Serial port of the force sensors",
+        "--emg_port",
+        default=45454,
+        type=int,
+        required=False,
+        help="Receiving port for EMG data",
     )
     parser.add_argument(
         "--server_addr",
@@ -91,16 +93,16 @@ def _parse_input() -> tuple:
     slope = args["slope"]
     fs = args["fs"]
     gap_width = args["gap_width"]
-    serial_port = args["serial_port"]
+    emg_port = args["emg_port"]
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    return mvc, p_mvc, slope, fs, gap_width, serial_port, server_addr, server_port
+    return mvc, p_mvc, slope, fs, gap_width, emg_port, server_addr, server_port
 
 
 def _gen_trajectories(
     p_mvc, slope, fs, gap_width, rest_duration_s, plateau_duration_s
-) -> tuple[np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
     ramp_duration_s = p_mvc / slope
     rest_duration = rest_duration_s * fs
@@ -137,7 +139,7 @@ def _listen_for_stop(client_socket, stop_event):
 
 def main():
     # Input arguments
-    mvc, p_mvc, slope, fs, gap_width, serial_port, server_addr, server_port = (
+    mvc, p_mvc, slope, fs, gap_width, emg_port, server_addr, server_port = (
         _parse_input()
     )
 
@@ -147,6 +149,8 @@ def main():
     )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
+
+    envelope_buff = deque(maxlen=int(round(BUFFER_SIZE * fs)))
 
     try:
         # Create TCP client socket
@@ -160,14 +164,21 @@ def main():
                 time.sleep(1)
         print(f"Connected to server at {server_addr}:{server_port}")
 
-        # Open serial port
-        ser = serial.Serial(serial_port, BAUD_RATE, timeout=100)
-        print(f"Serial port {serial_port} opened with baud rate {BAUD_RATE}")
+        # Create TCP server socket
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(("", emg_port))
+        server_socket.listen()
+        print(f"Waiting for TCP connection on port {emg_port}...")
+
+        conn, (addr, _) = server_socket.accept()
+        print(f"Connection from {addr}")
 
         # Wait for start command
         cmd = client_socket.recv(1)
         print(f"Received start command {cmd}")
-        ser.write(cmd)
+        conn.sendall(cmd)
 
         # Start a thread to listen for the stop command
         stop_event = threading.Event()  # Event to stop the transmission
@@ -182,18 +193,44 @@ def main():
                 break  # Stop sending if stop event is triggered
 
             # Read data from serial port
-            serial_data = ser.read(BUFFER_SIZE)
-            if serial_data:
-                # Send data to TCP server
-                client_socket.sendall(serial_data)
+            try:
+                data = bytearray(144)
+                pos = 0
+                while pos < 144:
+                    nRead = conn.recv_into(memoryview(data)[pos:])
+                    if nRead == 0:
+                        raise IncompleteReadError(bytes(data[:pos]), 144)
+                    pos += nRead
+            except socket.timeout:
+                print("TCP communication failed.")
+                return
+            except IncompleteReadError as e:
+                print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
+                return
 
-                # Send trajectory values
-                client_socket.sendall(struct.pack("<2f", traj_low[i], traj_high[i]))
-                i += 1
+            # Conversion factor for mV
+            mVConvF = 2.86e-4
 
-                # Repeat trajectory
-                if i == traj_low.size:
-                    i = 0
+            # Convert 16-bit to 32-bit integer
+            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
+
+            # Reshape and convert ADC readings to uV
+            emg = emg.reshape(1, 64)
+            emg = emg * mVConvF  # mV
+            emg = emg.astype(np.float32)
+
+            envelope_buff
+
+            # Send data to TCP server
+            client_socket.sendall(data)
+
+            # Send trajectory values
+            client_socket.sendall(struct.pack("<2f", traj_low[i], traj_high[i]))
+            i += 1
+
+            # Repeat trajectory
+            if i == traj_low.size:
+                i = 0
 
         # Wait for the listener thread to finish
         listener_thread.join()
@@ -206,9 +243,9 @@ def main():
         # Close resources
         client_socket.close()
         print("Client socket closed.")
-        if "ser" in locals() and ser.is_open:
-            ser.close()
-            print("Serial port closed.")
+        if "server_socket" in locals():
+            server_socket.close()
+            print("Server socket closed.")
 
 
 if __name__ == "__main__":
