@@ -221,7 +221,7 @@ def main():
             mVConvF = 2.86e-4
             # Convert 16-bit to 32-bit integer
             emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
-            # Reshape and convert ADC readings to uV
+            # Reshape and convert ADC readings to mV
             emg = emg.reshape(1, 64)
             emg = emg * mVConvF  # mV
             emg = emg.astype(np.float32)
