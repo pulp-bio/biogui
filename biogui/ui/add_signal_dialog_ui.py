@@ -15,17 +15,17 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QFormLayout, QFrame, QGroupBox,
-    QLabel, QLineEdit, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QComboBox,
+    QDialog, QDialogButtonBox, QFormLayout, QFrame,
+    QGroupBox, QLabel, QLineEdit, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_AddSignalDialog(object):
     def setupUi(self, AddSignalDialog):
         if not AddSignalDialog.objectName():
             AddSignalDialog.setObjectName(u"AddSignalDialog")
         AddSignalDialog.setWindowModality(Qt.WindowModal)
-        AddSignalDialog.resize(500, 588)
+        AddSignalDialog.resize(500, 730)
         AddSignalDialog.setModal(False)
         self.verticalLayout = QVBoxLayout(AddSignalDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -127,15 +127,15 @@ class Ui_AddSignalDialog(object):
         self.fileSavingGroupBox.setChecked(False)
         self.formLayout3 = QFormLayout(self.fileSavingGroupBox)
         self.formLayout3.setObjectName(u"formLayout3")
-        self.browseOutDirButton = QPushButton(self.fileSavingGroupBox)
-        self.browseOutDirButton.setObjectName(u"browseOutDirButton")
-
-        self.formLayout3.setWidget(1, QFormLayout.FieldRole, self.browseOutDirButton)
-
         self.label8 = QLabel(self.fileSavingGroupBox)
         self.label8.setObjectName(u"label8")
 
         self.formLayout3.setWidget(1, QFormLayout.LabelRole, self.label8)
+
+        self.browseOutDirButton = QPushButton(self.fileSavingGroupBox)
+        self.browseOutDirButton.setObjectName(u"browseOutDirButton")
+
+        self.formLayout3.setWidget(1, QFormLayout.FieldRole, self.browseOutDirButton)
 
         self.label9 = QLabel(self.fileSavingGroupBox)
         self.label9.setObjectName(u"label9")
@@ -173,20 +173,61 @@ class Ui_AddSignalDialog(object):
 
         self.formLayout4.setWidget(0, QFormLayout.LabelRole, self.label11)
 
-        self.chSpacingTextField = QLineEdit(self.plotGroupBox)
-        self.chSpacingTextField.setObjectName(u"chSpacingTextField")
+        self.renderLenTextField = QLineEdit(self.plotGroupBox)
+        self.renderLenTextField.setObjectName(u"renderLenTextField")
 
-        self.formLayout4.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
+        self.formLayout4.setWidget(0, QFormLayout.FieldRole, self.renderLenTextField)
 
         self.label12 = QLabel(self.plotGroupBox)
         self.label12.setObjectName(u"label12")
 
         self.formLayout4.setWidget(1, QFormLayout.LabelRole, self.label12)
 
-        self.renderLenTextField = QLineEdit(self.plotGroupBox)
-        self.renderLenTextField.setObjectName(u"renderLenTextField")
+        self.chSpacingTextField = QLineEdit(self.plotGroupBox)
+        self.chSpacingTextField.setObjectName(u"chSpacingTextField")
 
-        self.formLayout4.setWidget(1, QFormLayout.FieldRole, self.renderLenTextField)
+        self.formLayout4.setWidget(1, QFormLayout.FieldRole, self.chSpacingTextField)
+
+        self.label13 = QLabel(self.plotGroupBox)
+        self.label13.setObjectName(u"label13")
+
+        self.formLayout4.setWidget(3, QFormLayout.LabelRole, self.label13)
+
+        self.rangeModeComboBox = QComboBox(self.plotGroupBox)
+        self.rangeModeComboBox.addItem("")
+        self.rangeModeComboBox.addItem("")
+        self.rangeModeComboBox.setObjectName(u"rangeModeComboBox")
+
+        self.formLayout4.setWidget(3, QFormLayout.FieldRole, self.rangeModeComboBox)
+
+        self.label14 = QLabel(self.plotGroupBox)
+        self.label14.setObjectName(u"label14")
+        self.label14.setEnabled(False)
+
+        self.formLayout4.setWidget(4, QFormLayout.LabelRole, self.label14)
+
+        self.minRangeTextField = QLineEdit(self.plotGroupBox)
+        self.minRangeTextField.setObjectName(u"minRangeTextField")
+        self.minRangeTextField.setEnabled(False)
+
+        self.formLayout4.setWidget(4, QFormLayout.FieldRole, self.minRangeTextField)
+
+        self.label15 = QLabel(self.plotGroupBox)
+        self.label15.setObjectName(u"label15")
+        self.label15.setEnabled(False)
+
+        self.formLayout4.setWidget(5, QFormLayout.LabelRole, self.label15)
+
+        self.maxRangeTextField = QLineEdit(self.plotGroupBox)
+        self.maxRangeTextField.setObjectName(u"maxRangeTextField")
+        self.maxRangeTextField.setEnabled(False)
+
+        self.formLayout4.setWidget(5, QFormLayout.FieldRole, self.maxRangeTextField)
+
+        self.showYAxisCheckBox = QCheckBox(self.plotGroupBox)
+        self.showYAxisCheckBox.setObjectName(u"showYAxisCheckBox")
+
+        self.formLayout4.setWidget(2, QFormLayout.FieldRole, self.showYAxisCheckBox)
 
 
         self.verticalLayout.addWidget(self.plotGroupBox)
@@ -206,8 +247,12 @@ class Ui_AddSignalDialog(object):
         QWidget.setTabOrder(self.fileSavingGroupBox, self.browseOutDirButton)
         QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
         QWidget.setTabOrder(self.fileNameTextField, self.plotGroupBox)
-        QWidget.setTabOrder(self.plotGroupBox, self.chSpacingTextField)
-        QWidget.setTabOrder(self.chSpacingTextField, self.renderLenTextField)
+        QWidget.setTabOrder(self.plotGroupBox, self.renderLenTextField)
+        QWidget.setTabOrder(self.renderLenTextField, self.chSpacingTextField)
+        QWidget.setTabOrder(self.chSpacingTextField, self.showYAxisCheckBox)
+        QWidget.setTabOrder(self.showYAxisCheckBox, self.rangeModeComboBox)
+        QWidget.setTabOrder(self.rangeModeComboBox, self.minRangeTextField)
+        QWidget.setTabOrder(self.minRangeTextField, self.maxRangeTextField)
 
         self.retranslateUi(AddSignalDialog)
         self.buttonBox.accepted.connect(AddSignalDialog.accept)
@@ -250,8 +295,8 @@ class Ui_AddSignalDialog(object):
 #endif // QT_CONFIG(tooltip)
         self.filtOrderTextField.setPlaceholderText("")
         self.fileSavingGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure file saving", None))
-        self.browseOutDirButton.setText(QCoreApplication.translate("AddSignalDialog", u"Browse", None))
         self.label8.setText(QCoreApplication.translate("AddSignalDialog", u"Directory where the file will be saved:", None))
+        self.browseOutDirButton.setText(QCoreApplication.translate("AddSignalDialog", u"Browse", None))
         self.label9.setText(QCoreApplication.translate("AddSignalDialog", u"Path to directory:", None))
         self.outDirPathLabel.setText("")
         self.label10.setText(QCoreApplication.translate("AddSignalDialog", u"File name:", None))
@@ -262,13 +307,20 @@ class Ui_AddSignalDialog(object):
         self.plotGroupBox.setToolTip("")
 #endif // QT_CONFIG(tooltip)
         self.plotGroupBox.setTitle(QCoreApplication.translate("AddSignalDialog", u"Configure plot", None))
-        self.label11.setText(QCoreApplication.translate("AddSignalDialog", u"Channel spacing (in a.u.):", None))
+        self.label11.setText(QCoreApplication.translate("AddSignalDialog", u"Render length (in s):", None))
+        self.renderLenTextField.setText(QCoreApplication.translate("AddSignalDialog", u"4", None))
+        self.label12.setText(QCoreApplication.translate("AddSignalDialog", u"Channel spacing (in a.u.):", None))
 #if QT_CONFIG(tooltip)
         self.chSpacingTextField.setToolTip(QCoreApplication.translate("AddSignalDialog", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
 #endif // QT_CONFIG(tooltip)
         self.chSpacingTextField.setText(QCoreApplication.translate("AddSignalDialog", u"100", None))
         self.chSpacingTextField.setPlaceholderText("")
-        self.label12.setText(QCoreApplication.translate("AddSignalDialog", u"Render length (in s):", None))
-        self.renderLenTextField.setText(QCoreApplication.translate("AddSignalDialog", u"4", None))
+        self.label13.setText(QCoreApplication.translate("AddSignalDialog", u"Range mode:", None))
+        self.rangeModeComboBox.setItemText(0, QCoreApplication.translate("AddSignalDialog", u"Automatic", None))
+        self.rangeModeComboBox.setItemText(1, QCoreApplication.translate("AddSignalDialog", u"Manual", None))
+
+        self.label14.setText(QCoreApplication.translate("AddSignalDialog", u"Minimum range (in a.u.):", None))
+        self.label15.setText(QCoreApplication.translate("AddSignalDialog", u"Maximum range (in a.u.):", None))
+        self.showYAxisCheckBox.setText(QCoreApplication.translate("AddSignalDialog", u"Show Y axis", None))
     # retranslateUi
 

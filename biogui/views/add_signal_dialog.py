@@ -63,6 +63,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         fs: float,
         nCh: int,
         parent: QWidget | None = None,
+        editMode: bool = False,
         **kwargs: dict,
     ) -> None:
         super().__init__(parent)
@@ -73,6 +74,11 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.buttonBox.rejected.connect(self.close)
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
+        self.rangeModeComboBox.currentIndexChanged.connect(self._onRangeModeChange)
+        if nCh == 1:
+            self.label12.setEnabled(False)
+            self.chSpacingTextField.setEnabled(False)
+            self.chSpacingTextField.setText("0")
 
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
@@ -98,10 +104,13 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         orderValidator = QIntValidator(bottom=minOrd, top=maxOrd)
         self.filtOrderTextField.setValidator(orderValidator)
 
+        renderLenValidator = QIntValidator(bottom=1, top=10)
+        self.renderLenTextField.setValidator(renderLenValidator)
         chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
         self.chSpacingTextField.setValidator(chSpacingValidator)
-        renderLenValidator = QIntValidator(bottom=1, top=8)
-        self.renderLenTextField.setValidator(renderLenValidator)
+        rangeValidator = QDoubleValidator(bottom=-1e308, top=1e308, decimals=nDec)
+        self.minRangeTextField.setValidator(rangeValidator)
+        self.maxRangeTextField.setValidator(rangeValidator)
 
         self._sigConfig = {"fs": fs, "nCh": nCh}
         self._outDirPath = None
@@ -111,7 +120,7 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         self.destroyed.connect(self.deleteLater)
 
         # Pre-fill with provided configuration
-        if kwargs:
+        if editMode:
             self._prefill(kwargs)
 
     @property
@@ -167,6 +176,19 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             )
             self.outDirPathLabel.setText(displayText)
             self.outDirPathLabel.setToolTip(outDirPath)
+
+    def _onRangeModeChange(self) -> None:
+        """Detect if range mode has changed"""
+        if self.rangeModeComboBox.currentText() == "Automatic":
+            self.label14.setEnabled(False)
+            self.minRangeTextField.setEnabled(False)
+            self.label15.setEnabled(False)
+            self.maxRangeTextField.setEnabled(False)
+        else:
+            self.label14.setEnabled(True)
+            self.minRangeTextField.setEnabled(True)
+            self.label15.setEnabled(True)
+            self.maxRangeTextField.setEnabled(True)
 
     def _formValidationHandler(self) -> None:
         """Validate user input in the form."""
@@ -227,11 +249,6 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         # Check plot settings
         if self.plotGroupBox.isChecked():
-            if not self.chSpacingTextField.hasAcceptableInput():
-                self._isValid = False
-                self._errMessage = 'The "channel spacing" field is invalid.'
-                return
-            self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
             if not self.renderLenTextField.hasAcceptableInput():
                 self._isValid = False
                 self._errMessage = 'The "render length" field is invalid.'
@@ -239,6 +256,32 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self._sigConfig["renderLengthS"] = lo.toInt(self.renderLenTextField.text())[
                 0
             ]
+            if not self.chSpacingTextField.hasAcceptableInput():
+                self._isValid = False
+                self._errMessage = 'The "channel spacing" field is invalid.'
+                return
+            self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
+            self._sigConfig["showYAxis"] = self.showYAxisCheckBox.isChecked()
+            if self.rangeModeComboBox.currentText() == "Manual":
+                if not self.minRangeTextField.hasAcceptableInput():
+                    self._isValid = False
+                    self._errMessage = 'The "minimum range" field is invalid.'
+                    return
+                minRange = lo.toFloat(self.minRangeTextField.text())[0]
+                if not self.maxRangeTextField.hasAcceptableInput():
+                    self._isValid = False
+                    self._errMessage = 'The "maximum range" field is invalid.'
+                    return
+                maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
+                if maxRange <= minRange:
+                    self._isValid = False
+                    self._errMessage = (
+                        "The maximum range cannot be lower than the minimum range."
+                    )
+                    return
+
+                self._sigConfig["minRange"] = minRange
+                self._sigConfig["maxRange"] = maxRange
 
         self._isValid = True
 
@@ -273,9 +316,24 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         else:
             self.fileSavingGroupBox.setChecked(False)
 
-        if "chSpacing" in sigConfig:
+        if "renderLengthS" in sigConfig:
             self.plotGroupBox.setChecked(True)
-            self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
             self.renderLenTextField.setText(lo.toString(sigConfig["renderLengthS"]))
+            self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
+            self.showYAxisCheckBox.setChecked(sigConfig["showYAxis"])
+            if "minRange" in sigConfig and "maxRange" in sigConfig:
+                self.rangeModeComboBox.setCurrentText("Manual")
+                self.minRangeTextField.setText(lo.toString(sigConfig["minRange"]))
+                self.maxRangeTextField.setText(lo.toString(sigConfig["maxRange"]))
+                self.label14.setEnabled(True)
+                self.minRangeTextField.setEnabled(True)
+                self.label15.setEnabled(True)
+                self.maxRangeTextField.setEnabled(True)
+            else:
+                self.rangeModeComboBox.setCurrentText("Automatic")
+                self.label14.setEnabled(False)
+                self.minRangeTextField.setEnabled(False)
+                self.label15.setEnabled(False)
+                self.maxRangeTextField.setEnabled(False)
         else:
             self.plotGroupBox.setChecked(False)
