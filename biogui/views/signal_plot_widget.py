@@ -41,10 +41,12 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    chSpacing : int
-        Spacing between each channel in the plot.
     renderLengthS : int
         Length of the window in the plot (in s).
+    chSpacing : int
+        Spacing between each channel in the plot.
+    showYAxis : bool
+        Whether to show the Y axis or not.
     parent : QWidget or None
         Parent widget.
     **kwargs : dict
@@ -77,8 +79,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        chSpacing: int,
         renderLengthS: int,
+        chSpacing: int,
+        showYAxis: bool,
         parent: QWidget | None = None,
         **kwargs: dict,
     ) -> None:
@@ -113,21 +116,26 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Initialize plots
         self._plots = []
-        self._initializePlots(sigName)
+        self._initializePlots(sigName, showYAxis, **kwargs)
 
     @property
     def dataQueue(self) -> deque:
         """deque: Property representing the queue with the values to plot."""
         return self._dataQueue
 
-    def _initializePlots(self, sigName: str) -> None:
+    def _initializePlots(self, sigName: str, showYAxis: bool, **kwargs) -> None:
         """Render the initial plot."""
         # Reset graph
         self.graphWidget.clear()
         self.graphWidget.setTitle(sigName)
-        self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
-        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
+        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+        if not showYAxis:
+            self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
+
+        # Set range
+        if "minRange" in kwargs and "maxRange" in kwargs:
+            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
@@ -146,6 +154,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
     def startTimers(self) -> None:
         """Start the timers for plot refresh."""
+        self._timeTracker = 0
+        self._spsTracker = 0
+
         self._plotTimer.start()
         self._spsTimer.start()
 
