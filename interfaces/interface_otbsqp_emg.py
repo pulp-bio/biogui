@@ -1,5 +1,6 @@
 """
-This module contains the OTBIO Sessantaquattro+ interface for sEMG.
+This module contains the OTBioelettronica Sessantaquattro+
+interface for HD-sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,13 +28,21 @@ def createCommand(start=1):
     """Internal function to create start/stop commands."""
     rec = 0
     trig = 0
+    # 0 = standard range, 1 = 2x range, 2 = 4x range, 3 = 8x range
     ext = 0
+    # 0 = no filter, 1 = filter
     hpf = 1
+    # 0 = 16 bit, 1 = 24 bit
     hres = 0
+    # 0 = monopolar, 1 = bipolar, 2 = differential,
+    # 3 = accelerometers, 6 = impedance check, 7 = test mode
     mode = 0
+    # 0 = 8 channels, 1 = 16 channels, 2 = 32 channels, 3 = 64 channels
     nch = 3
+    # if mode != 3: 0 = 500 sps, 1 = 1000 sps, 2 = 2000 sps
+    # if mode == 3: 0 = 2000 sps, 1 = 4000 sps, 2 = 8000 sps
     fsamp = 2
-    getset = 0
+    # getset = 0
 
     command = 0
     command = command + start
@@ -45,7 +54,7 @@ def createCommand(start=1):
     command = command + mode * 256
     command = command + nch * 2048
     command = command + fsamp * 8192
-    command = command + getset * 32768
+    # command = command + getset * 32768
 
     return command
 
@@ -63,19 +72,20 @@ stopSeq: list[bytes] = [
 ]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [2000]
+fs: list[float] = [2000, 2000, 2000]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [64]
+nCh: list[int] = [64, 2, 4]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "emg")
+SigsPacket = namedtuple("SigsPacket", "emg aux imu")
 """Named tuple containing the EMG packet."""
 
 
 def decodeFn(data: bytes) -> SigsPacket:
     """
-    Function to decode the binary data received from OTBIO Sessantaquattro+ into a single sEMG signal.
+    Function to decode the binary data received
+    from the OTBioelettronica Sessantaquattro+.
 
     Parameters
     ----------
@@ -85,17 +95,29 @@ def decodeFn(data: bytes) -> SigsPacket:
     Returns
     -------
     SigsPacket
-        Named tuple containing the EMG packet with shape (nSamp, nCh).
+        Named tuple containing the data packets with shape (nSamp, nCh).
     """
-    # Conversion factor for mV
-    mVConvF = 2.86e-4
+    # 72 shorts:
+    # - 64 for EMG data
+    # - 2 for AUX
+    # - 4 for IMU
+    # - 1 for SyncStation trigger
+    # - 1 for sample counter
 
-    # Convert 16-bit to 32-bit integer
-    emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
+    # Get EMG data
+    emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32).reshape(1, 64)
 
-    # Reshape and convert ADC readings to mV
-    emg = emg.reshape(1, 64)
-    emg = emg * mVConvF  # mV
-    emg = emg.astype(np.float32)
+    # Convert ADC readings to mV
+    mVConvF = 2.86e-4  # conversion factor
+    emg = (emg * mVConvF).astype(np.float32)
 
-    return SigsPacket(emg=emg)
+    # Get AUX data
+    aux = np.asarray(struct.unpack(">2h", data[128:132]), dtype=np.float32).reshape(
+        -1, 2
+    )
+    # Get IMU data
+    imu = np.asarray(struct.unpack(">4h", data[132:140]), dtype=np.float32).reshape(
+        -1, 4
+    )
+
+    return SigsPacket(emg=emg, aux=aux, imu=imu)
