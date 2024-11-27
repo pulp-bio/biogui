@@ -26,6 +26,7 @@ from asyncio import IncompleteReadError
 from collections import deque
 
 import numpy as np
+from scipy import signal
 
 BAUD_RATE = 115200
 BUFFER_SIZE = 1
@@ -128,11 +129,10 @@ def _listen_for_stop(client_socket, stop_event):
     """Listen for a "stop" command from the server."""
     try:
         while not stop_event.is_set():
-            data = client_socket.recv(1)
-            if data.lower() == b":":
-                print('Received "stop" command from server. Stopping transmission.')
-                stop_event.set()
-                break
+            cmd = client_socket.recv(2)
+            print(f'Received "{cmd}" command from server. Stopping transmission.')
+            stop_event.set()
+            break
     except Exception as e:
         print(f"Error while listening for stop command: {e}")
 
@@ -150,7 +150,16 @@ def main():
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
 
-    envelope_buff = deque(maxlen=int(round(BUFFER_SIZE * fs)))
+    # Filter
+    buffer = deque(maxlen=int(round(BUFFER_SIZE * fs)))
+    sos = signal.butter(
+        N=10,
+        Wn=(20, 500),
+        fs=fs,
+        btype="bandpass",
+        output="sos",
+    )
+    zi = np.zeros((sos.shape[0], 2, 64))
 
     try:
         # Create TCP client socket
@@ -176,8 +185,8 @@ def main():
         print(f"Connection from {addr}")
 
         # Wait for start command
-        cmd = client_socket.recv(1)
-        print(f"Received start command {cmd}")
+        cmd = client_socket.recv(2)
+        print(f'Received "{cmd}" command from server. Starting transmission.')
         conn.sendall(cmd)
 
         # Start a thread to listen for the stop command
@@ -210,22 +219,28 @@ def main():
 
             # Conversion factor for mV
             mVConvF = 2.86e-4
-
             # Convert 16-bit to 32-bit integer
             emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
-
             # Reshape and convert ADC readings to uV
             emg = emg.reshape(1, 64)
             emg = emg * mVConvF  # mV
             emg = emg.astype(np.float32)
 
-            envelope_buff
+            # Filter
+            emg_flt, zi = signal.sosfilt(sos, emg, axis=0, zi=zi)
+
+            # Update buffer
+            buffer.append(emg_flt[0])
+
+            # Compute envelope
+            env = np.sqrt(np.mean(np.asarray(buffer) ** 2, axis=0))
+            env = env.mean().item()  # average along channels
 
             # Send data to TCP server
-            client_socket.sendall(data)
+            client_socket.sendall(emg.tobytes())
 
             # Send trajectory values
-            client_socket.sendall(struct.pack("<2f", traj_low[i], traj_high[i]))
+            client_socket.sendall(struct.pack("<3f", env, traj_low[i], traj_high[i]))
             i += 1
 
             # Repeat trajectory

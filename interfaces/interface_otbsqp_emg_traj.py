@@ -1,8 +1,9 @@
 """
-This module contains the OTBIO Sessantaquattro+ interface for sEMG.
+This module contains the OTBIO Sessantaquattro+ interface for HD-sEMG
+with trajectories based on the envelope.
 
 
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,7 +51,7 @@ def createCommand(start=1):
     return command
 
 
-packetSize: int = 152
+packetSize: int = 268
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [
@@ -63,13 +64,13 @@ stopSeq: list[bytes] = [
 ]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [2000]
+fs: list[float] = [2000, 2000]
 """Sequence of floats representing the sampling rate of each signal."""
 
 nCh: list[int] = [64]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "emg")
+SigsPacket = namedtuple("SigsPacket", "emg traj")
 """Named tuple containing the EMG packet."""
 
 
@@ -87,19 +88,12 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the EMG packet with shape (nSamp, nCh).
     """
-    # Conversion factor for mV
-    mVConvF = 2.86e-4
-
-    # Convert 16-bit to 32-bit integer
-    emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
-
-    # Reshape and convert ADC readings to uV
-    emg = emg.reshape(1, 64)
-    emg = emg * mVConvF  # mV
-    emg = emg.astype(np.float32)
+    # Read EMG
+    emg = np.asarray(struct.unpack("<64f", data[:256]), dtype=np.float32).reshape(
+        -1, 64
+    )
 
     # Read trajectories
-    traj = np.zeros(shape=(1, 3), dtype=np.float32)
-    traj[:, 0] = 
+    traj = np.asarray(struct.unpack("<3f", data[256:]), dtype=np.float32).reshape(-1, 3)
 
-    return SigsPacket(emg=emg)
+    return SigsPacket(emg=emg, traj=traj)
