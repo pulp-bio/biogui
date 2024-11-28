@@ -42,7 +42,6 @@ def createCommand(start=1):
     # if mode != 3: 0 = 500 sps, 1 = 1000 sps, 2 = 2000 sps
     # if mode == 3: 0 = 2000 sps, 1 = 4000 sps, 2 = 8000 sps
     fsamp = 2
-    # getset = 0
 
     command = 0
     command = command + start
@@ -54,7 +53,6 @@ def createCommand(start=1):
     command = command + mode * 256
     command = command + nch * 2048
     command = command + fsamp * 8192
-    # command = command + getset * 32768
 
     return command
 
