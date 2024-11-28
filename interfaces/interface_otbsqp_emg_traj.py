@@ -118,10 +118,14 @@ def decodeFn(data: bytes) -> SigsPacket:
         dtype=np.float32,
     ).reshape(-1, 1)
 
-    # Get force
-    force = np.asarray(
-        struct.unpack(f"<{buf_size * 3}f", data[buf_size * 4 * (69) :]),
-        dtype=np.float32,
-    ).reshape(-1, 3)
+    # Get force and trajectories
+    force = np.zeros(shape=(buf_size, 3), dtype=np.float32)
+    force[:, 0] = np.asarray(
+        struct.unpack(f"<{buf_size}f", data[buf_size * 4 * 69 : buf_size * 4 * 70])
+    )
+    force[:, 1] = np.asarray(
+        struct.unpack(f"<{buf_size}f", data[buf_size * 4 * 70 : buf_size * 4 * 71])
+    )
+    force[:, 2] = np.asarray(struct.unpack(f"<{buf_size}f", data[buf_size * 4 * 71 :]))
 
     return SigsPacket(emg=emg, imu=imu, trigger=trigger, force=force)
