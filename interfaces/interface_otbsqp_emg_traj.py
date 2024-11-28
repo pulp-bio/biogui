@@ -57,7 +57,7 @@ def createCommand(start=1):
     return command
 
 
-packetSize: int = 280
+packetSize: int = 9216
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [
@@ -70,13 +70,13 @@ stopSeq: list[bytes] = [
 ]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [2000, 2000, 2000]
+fs: list[float] = [2000, 2000, 2000, 2000]
 """Sequence of floats representing the sampling rate of each signal."""
 
-nCh: list[int] = [64, 2, 4]
+nCh: list[int] = [64, 4, 1, 3]
 """Sequence of integers representing the number of channels of each signal."""
 
-SigsPacket = namedtuple("SigsPacket", "emg aux imu")
+SigsPacket = namedtuple("SigsPacket", "emg imu trigger force")
 """Named tuple containing the EMG packet."""
 
 
@@ -94,30 +94,34 @@ def decodeFn(data: bytes) -> SigsPacket:
     SigsPacket
         Named tuple containing the EMG packet with shape (nSamp, nCh).
     """
-    # 72 shorts:
-    # - 64 for EMG data
-    # - 2 for AUX
-    # - 4 for IMU
-    # - 1 for SyncStation trigger
-    # - 1 for sample counter
+    buf_size = 32
 
     # Get EMG data
-    emg = np.asarray(struct.unpack("<64f", data[:256]), dtype=np.int32).reshape(1, 64)
+    emg = np.asarray(
+        struct.unpack(f"<{buf_size * 64}f", data[: buf_size * 4 * 64]),
+        dtype=np.int32,
+    ).reshape(-1, 64)
 
     # Convert ADC readings to mV
     mVConvF = 2.86e-4  # conversion factor
     emg = (emg * mVConvF).astype(np.float32)
 
-    # Get AUX data
-    aux = np.asarray(struct.unpack("<2f", data[256:264]), dtype=np.float32).reshape(
-        -1, 2
-    )
     # Get IMU data
-    imu = np.asarray(struct.unpack("<4f", data[264:280]), dtype=np.float32).reshape(
-        -1, 4
-    )
+    imu = np.asarray(
+        struct.unpack(f"<{buf_size * 4}f", data[buf_size * 4 * 64 : buf_size * 4 * 68]),
+        dtype=np.float32,
+    ).reshape(-1, 4)
 
-    # Get trajectories
-    # traj = np.asarray(struct.unpack("<3f", data[144:]), dtype=np.float32).reshape(-1, 3)
+    # Get trigger
+    trigger = np.asarray(
+        struct.unpack(f"<{buf_size}f", data[buf_size * 4 * 68 : buf_size * 4 * 69]),
+        dtype=np.float32,
+    ).reshape(-1, 1)
 
-    return SigsPacket(emg=emg, aux=aux, imu=imu)  # , traj=traj)
+    # Get force
+    force = np.asarray(
+        struct.unpack(f"<{buf_size * 3}f", data[buf_size * 4 * (69) :]),
+        dtype=np.float32,
+    ).reshape(-1, 3)
+
+    return SigsPacket(emg=emg, imu=imu, trigger=trigger, force=force)

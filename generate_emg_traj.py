@@ -23,13 +23,10 @@ import struct
 import threading
 import time
 from asyncio import IncompleteReadError
-from collections import deque
 
 import numpy as np
-from scipy import signal
 
-BAUD_RATE = 115200
-BUFFER_SIZE = 1
+BUFFER_SIZE = 32
 
 
 def _parse_input() -> tuple:
@@ -106,9 +103,9 @@ def _gen_trajectories(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
     ramp_duration_s = p_mvc / slope
-    rest_duration = rest_duration_s * fs
-    plateau_duration = plateau_duration_s * fs
-    ramp_duration = ramp_duration_s * fs
+    rest_duration = int(round(rest_duration_s * fs))
+    plateau_duration = int(round(plateau_duration_s * fs))
+    ramp_duration = int(round(ramp_duration_s * fs))
 
     # Create trajectories
     t_ramp = np.arange(ramp_duration) / fs
@@ -143,23 +140,16 @@ def main():
         _parse_input()
     )
 
-    # Trapezoidal trajectories
+    emg_buffer = np.zeros(shape=(BUFFER_SIZE, 64), dtype=np.float32)
+    aux_buffer = np.zeros(shape=(BUFFER_SIZE, 2), dtype=np.float32)
+    imu_buffer = np.zeros(shape=(BUFFER_SIZE, 4), dtype=np.float32)
+
+    # Trapezoidal trajectories (50 Hz)
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=20
+        p_mvc, slope, fs, gap_width, rest_duration_s=1, plateau_duration_s=6
     )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
-
-    # Filter
-    buffer = deque(maxlen=int(round(BUFFER_SIZE * fs)))
-    sos = signal.butter(
-        N=10,
-        Wn=(20, 500),
-        fs=fs,
-        btype="bandpass",
-        output="sos",
-    )
-    zi = np.zeros((sos.shape[0], 2, 64))
 
     try:
         # Create TCP client socket
@@ -196,12 +186,12 @@ def main():
         )
         listener_thread.start()
 
-        i = 0
+        i, buf_count = 0, 0
         while True:
             if stop_event.is_set():
                 break  # Stop sending if stop event is triggered
 
-            # Read data from serial port
+            # Read data from server socket
             try:
                 data = bytearray(144)
                 pos = 0
@@ -218,45 +208,36 @@ def main():
                 return
 
             # Get EMG data
-            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32).reshape(
-                1, 64
-            )
+            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
 
             # Convert ADC readings to mV
             mVConvF = 2.86e-4  # conversion factor
             emg = (emg * mVConvF).astype(np.float32)
+            emg_buffer[buf_count] = emg
 
             # Get AUX data
-            aux = np.asarray(
-                struct.unpack(">2h", data[128:132]), dtype=np.float32
-            ).reshape(-1, 2)
+            aux = np.asarray(struct.unpack(">2h", data[128:132]), dtype=np.float32)
+            aux_buffer[buf_count] = aux
             # Get IMU data
-            imu = np.asarray(
-                struct.unpack(">4h", data[132:140]), dtype=np.float32
-            ).reshape(-1, 4)
+            imu = np.asarray(struct.unpack(">4h", data[132:140]), dtype=np.float32)
+            imu_buffer[buf_count] = imu
 
-            # Filter
-            # emg_flt, zi = signal.sosfilt(sos, emg, axis=0, zi=zi)
+            buf_count += 1
+            if buf_count == BUFFER_SIZE:
+                buf_count = 0
 
-            # Update buffer
-            # buffer.append(emg_flt[0])
+                # Send data to TCP server
+                client_socket.sendall(emg_buffer.tobytes())
+                client_socket.sendall(imu_buffer.tobytes())
+                client_socket.sendall(aux_buffer[:, 1].tobytes())  # trigger
+                client_socket.sendall(aux_buffer[:, 0].tobytes())  # force
+                client_socket.sendall(traj_low[i : i + BUFFER_SIZE].tobytes())
+                client_socket.sendall(traj_high[i : i + BUFFER_SIZE].tobytes())
+                i += BUFFER_SIZE
 
-            # Compute envelope
-            # env = np.sqrt(np.mean(np.asarray(buffer) ** 2, axis=0))[32:]
-            # env = env.mean().item()  # average along channels
-
-            # Send data to TCP server
-            client_socket.sendall(emg.tobytes())
-            client_socket.sendall(aux.tobytes())
-            client_socket.sendall(imu.tobytes())
-
-            # Send trajectory values
-            # client_socket.sendall(struct.pack("<3f", env, traj_low[i], traj_high[i]))
-            i += 1
-
-            # Repeat trajectory
-            if i == traj_low.size:
-                i = 0
+                # Repeat trajectory
+                if i >= traj_low.size:
+                    i = 0
 
         # Wait for the listener thread to finish
         listener_thread.join()
