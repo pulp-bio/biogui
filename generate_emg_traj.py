@@ -217,30 +217,41 @@ def main():
                 print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
                 return
 
-            # Conversion factor for mV
-            mVConvF = 2.86e-4
-            # Convert 16-bit to 32-bit integer
-            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
-            # Reshape and convert ADC readings to mV
-            emg = emg.reshape(1, 64)
-            emg = emg * mVConvF  # mV
-            emg = emg.astype(np.float32)
+            # Get EMG data
+            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32).reshape(
+                1, 64
+            )
+
+            # Convert ADC readings to mV
+            mVConvF = 2.86e-4  # conversion factor
+            emg = (emg * mVConvF).astype(np.float32)
+
+            # Get AUX data
+            aux = np.asarray(
+                struct.unpack(">2h", data[128:132]), dtype=np.float32
+            ).reshape(-1, 2)
+            # Get IMU data
+            imu = np.asarray(
+                struct.unpack(">4h", data[132:140]), dtype=np.float32
+            ).reshape(-1, 4)
 
             # Filter
-            emg_flt, zi = signal.sosfilt(sos, emg, axis=0, zi=zi)
+            # emg_flt, zi = signal.sosfilt(sos, emg, axis=0, zi=zi)
 
             # Update buffer
-            buffer.append(emg_flt[0])
+            # buffer.append(emg_flt[0])
 
             # Compute envelope
-            env = np.sqrt(np.mean(np.asarray(buffer) ** 2, axis=0))
-            env = env.mean().item()  # average along channels
+            # env = np.sqrt(np.mean(np.asarray(buffer) ** 2, axis=0))[32:]
+            # env = env.mean().item()  # average along channels
 
             # Send data to TCP server
             client_socket.sendall(emg.tobytes())
+            client_socket.sendall(aux.tobytes())
+            client_socket.sendall(imu.tobytes())
 
             # Send trajectory values
-            client_socket.sendall(struct.pack("<3f", env, traj_low[i], traj_high[i]))
+            # client_socket.sendall(struct.pack("<3f", env, traj_low[i], traj_high[i]))
             i += 1
 
             # Repeat trajectory
