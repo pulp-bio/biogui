@@ -29,18 +29,18 @@ class BioGUI(QApplication):
 
     Attributes
     ----------
-    _mainWin : MainWindow
+    mainWin : MainWindow
         Main window of the application.
-    _mainController : MainController
+    mainController : MainController
         Main controller of the application.
-    _moduleController : ModuleController
+    moduleController : ModuleController
         Controller for pluggable modules.
     """
 
     def __init__(self) -> None:
         super().__init__()
 
-        self._mainWin = MainWindow()
-        self._mainController = MainController(self._mainWin)
-        self._moduleController = ModuleController(self._mainController, self._mainWin)
-        self._mainWin.show()
+        self.mainWin = MainWindow()
+        self.mainController = MainController(self.mainWin)
+        self.moduleController = ModuleController(self.mainController, self.mainWin)
+        self.mainWin.show()
