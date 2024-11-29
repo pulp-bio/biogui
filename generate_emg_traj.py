@@ -42,14 +42,14 @@ def _parse_input() -> tuple:
         "--p_mvc",
         type=int,
         required=True,
-        help="Value of the MVC (in %)",
+        help="Target percentage of MVC",
     )
     parser.add_argument(
         "-s",
         "--slope",
         type=int,
         required=True,
-        help="Slope of the ramps (in %MVC/s)",
+        help="Slope of the ramps (in MVC percentage over seconds)",
     )
     parser.add_argument(
         "--fs",
@@ -61,7 +61,7 @@ def _parse_input() -> tuple:
         "--gap_width",
         type=int,
         required=True,
-        help="Width of the gap (in %MVC) between the two trajectories",
+        help="Width of the gap (in MVC percentage) between the two trajectories",
     )
     parser.add_argument(
         "--emg_port",
