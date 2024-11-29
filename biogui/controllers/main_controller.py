@@ -109,10 +109,10 @@ class MainController(QObject):
         self._mainWin.dataSourceTree.clicked.connect(self._enableButtons)
 
         # Streaming
-        self._mainWin.startStreamingButton.clicked.connect(self._startStreaming)
-        self._mainWin.stopStreamingButton.clicked.connect(self._stopStreaming)
+        self._mainWin.startStreamingButton.clicked.connect(self.startStreaming)
+        self._mainWin.stopStreamingButton.clicked.connect(self.stopStreaming)
 
-    def _startStreaming(self) -> None:
+    def startStreaming(self) -> None:
         """Start streaming."""
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(False)
@@ -126,7 +126,7 @@ class MainController(QObject):
         # Emit "start" Qt Signal (for pluggable modules)
         self.startStreamingSig.emit()
 
-    def _stopStreaming(self) -> None:
+    def stopStreaming(self) -> None:
         """Stop streaming."""
         # Stop all StreamingController objects
         for streamController in self._streamingControllers.values():
@@ -155,7 +155,7 @@ class MainController(QObject):
     @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When an error occurs, display an alert and stop streaming."""
-        self._stopStreaming()
+        self.stopStreaming()
         QMessageBox.critical(
             self._mainWin,
             "Streaming error",
