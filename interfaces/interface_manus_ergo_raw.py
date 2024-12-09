@@ -62,7 +62,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     # -  3 for position
     # -  4 for quaternion
     # -  3 for scale
-    # -  2 for raw timestamp (double)
+    # -  1 for timestamp
 
     manusData = np.zeros(shape=(1, 24), dtype=np.float32)
 
