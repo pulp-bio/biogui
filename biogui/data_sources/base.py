@@ -88,14 +88,14 @@ class DataSourceWorker(ABC, QObject, metaclass=DataSourceWorkerMeta):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
-    dataReadySig = Signal(bytes)
-    errorSig = Signal(str)
+    dataPacketReady = Signal(bytes)
+    errorOccurred = Signal(str)
 
     @abstractmethod
     def startCollecting(self) -> None:

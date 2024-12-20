@@ -18,7 +18,6 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
@@ -30,24 +29,18 @@ startSeq: list[bytes] = [
     (18).to_bytes(),
     bytes([6, 0, 1, 4, 0, 13, 10]),
 ]
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = [(19).to_bytes()]
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [500]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [8]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "emg")
-"""Named tuple containing the EMG packet."""
+sigInfo: dict = {"emg": {"fs": 500, "nCh": 8}}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from BioGAP into a single sEMG signal.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -56,10 +49,11 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the EMG packet with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
-    nSamp = 7
+    nSamp, nCh = 7, sigInfo["emg"]["nCh"]
 
     # ADC parameters
     vRef = 2.5
@@ -81,12 +75,13 @@ def decodeFn(data: bytes) -> SigsPacket:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    emg = np.asarray(struct.unpack(f">{nSamp * 8}i", dataTmp), dtype=np.int32)
+    emg_adc = np.asarray(
+        struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32
+    ).reshape(nSamp, nCh)
 
-    # Reshape and convert ADC readings to uV
-    emg = emg.reshape(nSamp, 8)
-    emg = emg * (vRef / gain / 2**nBit)  # V
-    emg *= 1_000_000  # uV
+    # ADC readings to mV
+    emg = emg_adc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    emg *= 1_000  # mV
     emg = emg.astype(np.float32)
 
-    return SigsPacket(emg=emg)
+    return {"emg": emg}

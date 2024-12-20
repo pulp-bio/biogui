@@ -139,9 +139,9 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -184,11 +184,11 @@ class SerialDataSourceWorker(DataSourceWorker):
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self.errorSig.emit("Serial communication failed.")
+                self.errorOccurred.emit("Serial communication failed.")
                 logging.error("DataWorker: serial communication failed.")
                 break
 
-            self.dataReadySig.emit(data)
+            self.dataPacketReady.emit(data)
 
         # Stop command
         for c in self._stopSeq:

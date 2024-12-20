@@ -88,9 +88,9 @@ class DummyDataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -135,7 +135,7 @@ class DummyDataSourceWorker(DataSourceWorker):
 
         # Concatenate and emit bytes
         data = np.concatenate((data1.flatten(), data2.flatten()))
-        self.dataReadySig.emit(data.tobytes())
+        self.dataPacketReady.emit(data.tobytes())
 
         # Update mean
         self._mean += self._prng.normal(scale=50.0)
