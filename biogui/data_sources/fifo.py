@@ -24,7 +24,7 @@ import logging
 from PySide6.QtWidgets import QWidget
 
 from ..ui.fifo_config_widget_ui import Ui_FifoConfigView
-from .base import ConfigResult, ConfigWidget, DataSourceWorker, DataSourceType
+from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
 class FIFOConfigWidget(ConfigWidget, Ui_FifoConfigView):
@@ -97,9 +97,9 @@ class FIFODataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -131,7 +131,7 @@ class FIFODataSourceWorker(DataSourceWorker):
             while not self._stopReadingFlag:
                 data = f.read(self._packetSize)
 
-                self.dataReadySig.emit(data)
+                self.dataPacketReady.emit(data)
 
         logging.info("DataWorker: data reading stopped.")
 

@@ -19,7 +19,6 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
@@ -65,27 +64,24 @@ packetSize: int = 144
 startSeq: list[bytes] = [
     createCommand(1).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = [
     createCommand(0).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [2000, 2000, 2000]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [64, 2, 4]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "emg aux imu")
-"""Named tuple containing the EMG packet."""
+sigInfo: dict = {
+    "emg": {"fs": 2000, "nCh": 64},
+    "aux": {"fs": 2000, "nCh": 2},
+    "imu": {"fs": 2000, "nCh": 4},
+}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received
-    from the OTBioelettronica Sessantaquattro+.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -94,8 +90,9 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the data packets with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     # 72 shorts:
     # - 64 for EMG data
@@ -120,4 +117,4 @@ def decodeFn(data: bytes) -> SigsPacket:
         -1, 4
     )
 
-    return SigsPacket(emg=emg, aux=aux, imu=imu)
+    return {"emg": emg, "aux": aux, "imu": imu}

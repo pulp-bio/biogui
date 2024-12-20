@@ -112,9 +112,9 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -179,7 +179,7 @@ class TCPDataSourceWorker(DataSourceWorker):
                                 )
                             pos += nRead
                     except socket.timeout:
-                        self.errorSig.emit("TCP communication failed.")
+                        self.errorOccurred.emit("TCP communication failed.")
                         logging.error("DataWorker: TCP communication failed.")
                         return
                     except IncompleteReadError as e:
@@ -188,7 +188,7 @@ class TCPDataSourceWorker(DataSourceWorker):
                         )
                         return
 
-                    self.dataReadySig.emit(data)
+                    self.dataPacketReady.emit(data)
 
                 # Stop command
                 for c in self._stopSeq:

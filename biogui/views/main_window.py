@@ -17,6 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow
 
@@ -25,7 +26,20 @@ from biogui.utils import detectTheme
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    """Main window."""
+    """Main window.
+
+    Attributes
+    ----------
+    renderLenMs : int
+        Length of the window in the plot (in ms).
+
+    Class attributes
+    ----------------
+    renderLenChanged : Signal
+        Qt Signal emitted when the render length changes.
+    """
+
+    renderLenChanged = Signal(int)
 
     def __init__(self) -> None:
         super().__init__()
@@ -36,6 +50,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
-        self.editSignalButton.setIcon(
+        self.editButton.setIcon(
             QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
         )
+
+        # Set default render length to 5 s
+        self.renderLenComboBox.setCurrentText("5 s")
+        self.renderLenMs = 5000
+        self.renderLenComboBox.currentTextChanged.connect(self._onRenderLenChange)
+
+    @Slot(str)
+    def _onRenderLenChange(self, renderLen: str):
+        """Detect if render length has changed."""
+        renderLenMap = {
+            "100 ms": 100,
+            "200 ms": 200,
+            "500 ms": 500,
+            "1 s": 1000,
+            "2 s": 2000,
+            "5 s": 5000,
+            "10 s": 10000,
+        }
+
+        self.renderLenMs = renderLenMap[renderLen]
+        self.renderLenChanged.emit(renderLenMap[renderLen])

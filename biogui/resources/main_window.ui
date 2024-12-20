@@ -57,11 +57,27 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout1" stretch="0,0,0">
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="9,0">
+          <layout class="QHBoxLayout" name="horizontalLayout3" stretch="1,0,0">
            <item>
             <widget class="QPushButton" name="addDataSourceButton">
              <property name="text">
               <string>Add data source</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="editButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Edit the selected signal</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="edit-entry"/>
              </property>
             </widget>
            </item>
@@ -92,7 +108,7 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0">
+          <layout class="QHBoxLayout" name="horizontalLayout4" stretch="0,0,0">
            <item>
             <spacer name="horizontalSpacer">
              <property name="orientation">
@@ -107,20 +123,49 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="editSignalButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="toolTip">
-              <string>Edit the selected signal</string>
-             </property>
+            <widget class="QLabel" name="label">
              <property name="text">
-              <string/>
+              <string>Render length:</string>
              </property>
-             <property name="icon">
-              <iconset theme="edit-entry">
-               <normaloff>.</normaloff>.</iconset>
-             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="renderLenComboBox">
+             <item>
+              <property name="text">
+               <string>100 ms</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>200 ms</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>500 ms</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>1 s</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>2 s</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>5 s</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>10 s</string>
+              </property>
+             </item>
             </widget>
            </item>
           </layout>
@@ -181,7 +226,6 @@
   <tabstop>stopStreamingButton</tabstop>
   <tabstop>addDataSourceButton</tabstop>
   <tabstop>deleteDataSourceButton</tabstop>
-  <tabstop>editSignalButton</tabstop>
   <tabstop>scrollArea</tabstop>
  </tabstops>
  <resources>

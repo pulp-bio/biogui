@@ -17,33 +17,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from collections import namedtuple
-from collections.abc import Sequence
-
 import numpy as np
 
 packetSize: int = 224
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = []
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [500]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [8]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "emg")
-"""Named tuple containing the EMG packet."""
+sigInfo: dict = {"emg": {"fs": 500, "nCh": 8}}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> Sequence[np.ndarray]:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from GAP via ROS2 into a single sEMG signal.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -52,11 +43,12 @@ def decodeFn(data: bytes) -> Sequence[np.ndarray]:
 
     Returns
     -------
-    Sequence of ndarray
-        Sequence of corresponding signals with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     dataTmp = np.frombuffer(data, dtype=np.float32)
     nSamp, nCh = 7, 8
     sig = dataTmp[: nSamp * nCh].reshape(nSamp, nCh)
 
-    return [sig]
+    return {"emg": sig}

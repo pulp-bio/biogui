@@ -1,5 +1,5 @@
 """
-Dialog to add a new signal.
+Widget for configuring signals.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
@@ -21,14 +21,14 @@ from __future__ import annotations
 
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtWidgets import QDialog, QWidget
+from PySide6.QtWidgets import QWidget
 
-from biogui.ui.add_signal_dialog_ui import Ui_AddSignalDialog
+from biogui.ui.configure_signal_widget_ui import Ui_ConfigureSignalWidget
 
 
-class AddSignalDialog(QDialog, Ui_AddSignalDialog):
+class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
     """
-    Dialog for adding a new signal to plot.
+    Widget for configuring a signal.
 
     Parameters
     ----------
@@ -38,19 +38,10 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         Sampling frequency.
     nCh : int
         Number of channels.
-    edit : bool
-        Whether to open the dialog in edit mode.
+    prefillConfig : dict or None
+        Dictionary containing the configuration to prefill the form (if available).
     parent : QWidget or None, default=None
         Parent widget.
-    kwargs : dict
-        Optional keyword arguments for pre-filling the form, namely:
-        - "filtType": the filter type (optional);
-        - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional);
-        - "chSpacing": the channel spacing;
-        - "showYAxis": whether to show the Y axis (optional);
-        - "minRange": minimum of the Y range (optional);
-        - "maxRange": maximum of the Y range (optional).
     """
 
     def __init__(
@@ -58,20 +49,16 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         sigName: str,
         fs: float,
         nCh: int,
-        edit: bool,
+        prefillConfig: dict | None,
         parent: QWidget | None = None,
-        **kwargs: dict,
     ) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
+
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
         self.freqLabel.setText(str(fs))
-
-        self.buttonBox.accepted.connect(self._formValidationHandler)
-        self.buttonBox.rejected.connect(self.close)
-        self.destroyed.connect(self.deleteLater)
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.rangeModeComboBox.currentIndexChanged.connect(self._onRangeModeChange)
         if nCh == 1:
@@ -81,37 +68,33 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
 
         # Validation rules
         nDec = 3
-        minFreq, maxFreq = 1 * 10 ** (-nDec), 20_000.0
-        minOrd, maxOrd = 1, 20
-
-        self.freq1TextField.setToolTip(
-            f"Float between {minFreq:.3f} and {maxFreq / 2:.3f}"
+        freqValidator = QDoubleValidator(
+            bottom=1 * 10 ** (-nDec), top=1e308, decimals=nDec
         )
-        self.freq2TextField.setToolTip(
-            f"Float between {minFreq:.3f} and {maxFreq / 2:.3f}"
-        )
-        freqValidator = QDoubleValidator(bottom=minFreq, top=maxFreq / 2, decimals=nDec)
         freqValidator.setNotation(QDoubleValidator.StandardNotation)  # type: ignore
         self.freq1TextField.setValidator(freqValidator)
         self.freq2TextField.setValidator(freqValidator)
-
-        self.filtOrderTextField.setToolTip(f"Integer between {minOrd} and {maxOrd}")
-        orderValidator = QIntValidator(bottom=minOrd, top=maxOrd)
+        orderValidator = QIntValidator(bottom=1, top=2147483647)
         self.filtOrderTextField.setValidator(orderValidator)
-
         chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
         self.chSpacingTextField.setValidator(chSpacingValidator)
         rangeValidator = QDoubleValidator(bottom=-1e308, top=1e308, decimals=nDec)
         self.minRangeTextField.setValidator(rangeValidator)
         self.maxRangeTextField.setValidator(rangeValidator)
 
+        self._sigName = sigName
         self._sigConfig = {"fs": fs, "nCh": nCh}
-        self._isValid = False
-        self._errMessage = ""
 
         # Pre-fill with provided configuration
-        if edit:
-            self._prefill(kwargs)
+        if prefillConfig is not None:
+            self._prefill(prefillConfig)
+
+        self.destroyed.connect(self.deleteLater)
+
+    @property
+    def sigName(self) -> str:
+        """str: Property for getting the signal name."""
+        return self._sigName
 
     @property
     def sigConfig(self) -> dict:
@@ -128,16 +111,6 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         - "maxRange": maximum of the Y range (optional).
         """
         return self._sigConfig
-
-    @property
-    def isValid(self) -> bool:
-        """bool: Property representing whether the form is valid."""
-        return self._isValid
-
-    @property
-    def errMessage(self) -> str:
-        """str: Property for getting the error message if the form is not valid."""
-        return self._errMessage
 
     def _onFiltTypeChange(self) -> None:
         """Detect if filter type has changed."""
@@ -162,8 +135,17 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
             self.label11.setEnabled(True)
             self.maxRangeTextField.setEnabled(True)
 
-    def _formValidationHandler(self) -> None:
-        """Validate user input in the form."""
+    def validateForm(self) -> tuple[bool, str]:
+        """
+        Validate user input in the form.
+
+        Returns
+        -------
+        bool
+            Whether the configuration is valid.
+        str
+            Error message (if relevant.)
+        """
         lo = QLocale()
 
         nyq_fs = self._sigConfig["fs"] // 2
@@ -171,38 +153,35 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         # Check filtering settings
         if self.filteringGroupBox.isChecked():
             if not self.freq1TextField.hasAcceptableInput():
-                self._isValid = False
-                self._errMessage = 'The "Frequency 1" field is invalid.'
-                return
+                return False, 'The "Frequency 1" field is invalid.'
             freq1 = lo.toFloat(self.freq1TextField.text())[0]
 
             if freq1 >= nyq_fs:
-                self._isValid = False
-                self._errMessage = "The 1st critical frequency cannot be higher than Nyquist frequency."
-                return
+                return (
+                    False,
+                    "The 1st critical frequency cannot be higher than Nyquist frequency.",
+                )
             freqs = [freq1]
 
             if self.freq2TextField.isEnabled():
                 if not self.freq2TextField.hasAcceptableInput():
-                    self._isValid = False
-                    self._errMessage = 'The "Frequency 2" field is invalid.'
-                    return
+                    return False, 'The "Frequency 2" field is invalid.'
                 freq2 = lo.toFloat(self.freq2TextField.text())[0]
 
                 if freq2 >= nyq_fs:
-                    self._isValid = False
-                    self._errMessage = "The 2nd critical frequency cannot be higher than Nyquist frequency."
-                    return
+                    return (
+                        False,
+                        "The 2nd critical frequency cannot be higher than Nyquist frequency.",
+                    )
                 if freq2 <= freq1:
-                    self._isValid = False
-                    self._errMessage = "The 2nd critical frequency cannot be lower than the 1st critical frequency."
-                    return
+                    return (
+                        False,
+                        "The 2nd critical frequency cannot be lower than the 1st critical frequency.",
+                    )
                 freqs.append(freq2)
 
             if not self.filtOrderTextField.hasAcceptableInput():
-                self._isValid = False
-                self._errMessage = 'The "filter order" field is invalid.'
-                return
+                return False, 'The "filter order" field is invalid.'
 
             self._sigConfig["filtType"] = self.filtTypeComboBox.currentText()
             self._sigConfig["freqs"] = freqs
@@ -211,33 +190,26 @@ class AddSignalDialog(QDialog, Ui_AddSignalDialog):
         # Check plot settings
         if self.plotGroupBox.isChecked():
             if not self.chSpacingTextField.hasAcceptableInput():
-                self._isValid = False
-                self._errMessage = 'The "channel spacing" field is invalid.'
-                return
+                return False, 'The "channel spacing" field is invalid.'
             self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
             self._sigConfig["showYAxis"] = self.showYAxisCheckBox.isChecked()
             if self.rangeModeComboBox.currentText() == "Manual":
                 if not self.minRangeTextField.hasAcceptableInput():
-                    self._isValid = False
-                    self._errMessage = 'The "minimum range" field is invalid.'
-                    return
+                    return False, 'The "minimum range" field is invalid.'
                 minRange = lo.toFloat(self.minRangeTextField.text())[0]
                 if not self.maxRangeTextField.hasAcceptableInput():
-                    self._isValid = False
-                    self._errMessage = 'The "maximum range" field is invalid.'
-                    return
+                    return False, 'The "maximum range" field is invalid.'
                 maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
                 if maxRange <= minRange:
-                    self._isValid = False
-                    self._errMessage = (
-                        "The maximum range cannot be lower than the minimum range."
+                    return (
+                        False,
+                        "The maximum range cannot be lower than the minimum range.",
                     )
-                    return
 
                 self._sigConfig["minRange"] = minRange
                 self._sigConfig["maxRange"] = maxRange
 
-        self._isValid = True
+        return True, ""
 
     def _prefill(self, sigConfig: dict):
         """Pre-fill the form with the provided configuration."""

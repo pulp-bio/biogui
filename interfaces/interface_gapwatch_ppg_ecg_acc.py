@@ -18,7 +18,6 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
@@ -26,24 +25,22 @@ packetSize: int = 204
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = []
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [128, 128, 12.8]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [1, 1, 3]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "ppg, ecg, acc")
-"""Named tuple containing the PPG, ECG and accelerometer packets."""
+sigInfo: dict = {
+    "ppg": {"fs": 128, "nCh": 1},
+    "ecg": {"fs": 128, "nCh": 1},
+    "acc": {"fs": 12.8, "nCh": 3},
+}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from GAPWatch into PPG, ECG and accelerometer signals.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -52,10 +49,10 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the PPG, ECG and accelerometer packets, each with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
-
     # Split bytes into PPG, ECG and accelerometer
     ppgBytes = bytearray(data[:30] + data[68:98] + data[136:166])
     ecgBytes1 = bytearray(data[30:60] + data[98:128] + data[166:196])
@@ -100,4 +97,4 @@ def decodeFn(data: bytes) -> SigsPacket:
     acc = acc * accConvFactor  # mg
     acc = acc.astype(np.float32)
 
-    return SigsPacket(ppg=ppg, ecg=ecg, acc=acc)
+    return {"ppg": ppg, "ecg": ecg, "acc": acc}

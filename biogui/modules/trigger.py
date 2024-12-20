@@ -23,13 +23,14 @@ import json
 import logging
 import os
 
-from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
 from biogui.controllers import MainController
 from biogui.controllers.streaming_controller import StreamingController
 from biogui.ui.trigger_config_ui import Ui_TriggerConfig
+from biogui.utils import instanceSlot
 from biogui.views import MainWindow
 
 
@@ -88,11 +89,11 @@ class _GesturesWidget(QWidget):
 
     Class attributes
     ----------------
-    closeSig : Signal
+    widgetClosed : Signal
         Qt signal emitted when the widget is closed.
     """
 
-    closeSig = Signal()
+    widgetClosed = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -138,7 +139,7 @@ class _GesturesWidget(QWidget):
         self._label.setPixmap(pixmap)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        self.closeSig.emit()
+        self.widgetClosed.emit()
         event.accept()
 
 
@@ -223,7 +224,7 @@ class TriggerController(QObject):
         self._confWidget.triggerGroupBox.clicked.connect(self._checkHandler)
 
         self._gestWidget = _GesturesWidget()
-        self._gestWidget.closeSig.connect(self._actualStopTriggerGen)
+        self._gestWidget.widgetClosed.connect(self._actualStopTriggerGen)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
@@ -246,17 +247,17 @@ class TriggerController(QObject):
             Reference to the main window.
         """
         # Make connections with MainWindow
-        mainWin.moduleContainer.layout().addWidget(self._confWidget)
-        mainController.startStreamingSig.connect(self._startTriggerGen)
-        mainController.stopStreamingSig.connect(self._stopTriggerGen)
-        mainController.closeSig.connect(self._stopTriggerGen)
+        mainWin.moduleContainer.layout().addWidget(self._confWidget)  # type: ignore
+        mainController.streamingStarted.connect(self._startTriggerGen)
+        mainController.streamingStopped.connect(self._stopTriggerGen)
+        mainController.appClosed.connect(self._stopTriggerGen)
 
         # Add already configured StreamingControllers
         for streamingController in mainController.streamingControllers.values():
             self._streamingControllers.append(streamingController)
 
         # Subscribe to NewSourceAdded Signal
-        mainController.newSourceAddedSig.connect(self._addNewSource)
+        mainController.newSourceAdded.connect(self._addNewSource)
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
@@ -270,19 +271,19 @@ class TriggerController(QObject):
             Reference to the main window.
         """
         # Undo connections with MainWindow
-        mainWin.moduleContainer.layout().removeWidget(self._confWidget)
+        mainWin.moduleContainer.layout().removeWidget(self._confWidget)  # type: ignore
         self._confWidget.deleteLater()
-        mainController.startStreamingSig.disconnect(self._startTriggerGen)
-        mainController.stopStreamingSig.disconnect(self._stopTriggerGen)
-        mainController.closeSig.disconnect(self._stopTriggerGen)
+        mainController.streamingStarted.disconnect(self._startTriggerGen)
+        mainController.streamingStopped.disconnect(self._stopTriggerGen)
+        mainController.appClosed.disconnect(self._stopTriggerGen)
 
         # Unsubscribe to NewSourceAdded Qt Signal
-        mainController.newSourceAddedSig.disconnect(self._addNewSource)
+        mainController.newSourceAdded.disconnect(self._addNewSource)
 
         # Delete references to StreamingController objects
         self._streamingControllers.clear()
 
-    @Slot(StreamingController)
+    @instanceSlot(StreamingController)
     def _addNewSource(self, streamingController: StreamingController) -> None:
         """Store the reference to new StreamingController objects when they are added."""
         self._streamingControllers.append(streamingController)
