@@ -253,6 +253,12 @@ class _Preprocessor(QObject):
             )
             return
 
+        if dataDec.keys() != self._fs.keys():
+            self.errorOccurred.emit(
+                "The provided decode function and configured signals do not match."
+            )
+            return
+
         rawSignals = []
         signals = []
         for sigName, sigData in dataDec.items():
