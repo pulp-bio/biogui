@@ -68,9 +68,17 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
 
         # Validation rules
         nDec = 3
-        freqValidator = QDoubleValidator(
-            bottom=1 * 10 ** (-nDec), top=1e308, decimals=nDec
+        minFreq = 10 ** (-nDec)
+        maxFreq = round(fs / 2 - minFreq, nDec)  # Nyquist frequency
+        lo = QLocale()
+        self.freq1TextField.setToolTip(
+            f"Float between {lo.toString(minFreq)} and {lo.toString(maxFreq)}"
         )
+        self.freq2TextField.setToolTip(
+            f"Float between {lo.toString(minFreq)} and {lo.toString(maxFreq)}"
+        )
+
+        freqValidator = QDoubleValidator(bottom=minFreq, top=maxFreq, decimals=nDec)
         freqValidator.setNotation(QDoubleValidator.StandardNotation)  # type: ignore
         self.freq1TextField.setValidator(freqValidator)
         self.freq2TextField.setValidator(freqValidator)
@@ -148,19 +156,11 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
         """
         lo = QLocale()
 
-        nyq_fs = self._sigConfig["fs"] // 2
-
         # Check filtering settings
         if self.filteringGroupBox.isChecked():
             if not self.freq1TextField.hasAcceptableInput():
                 return False, 'The "Frequency 1" field is invalid.'
             freq1 = lo.toFloat(self.freq1TextField.text())[0]
-
-            if freq1 >= nyq_fs:
-                return (
-                    False,
-                    "The 1st critical frequency cannot be higher than Nyquist frequency.",
-                )
             freqs = [freq1]
 
             if self.freq2TextField.isEnabled():
@@ -168,11 +168,6 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
                     return False, 'The "Frequency 2" field is invalid.'
                 freq2 = lo.toFloat(self.freq2TextField.text())[0]
 
-                if freq2 >= nyq_fs:
-                    return (
-                        False,
-                        "The 2nd critical frequency cannot be higher than Nyquist frequency.",
-                    )
                 if freq2 <= freq1:
                     return (
                         False,
