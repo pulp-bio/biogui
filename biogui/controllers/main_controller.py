@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from biogui.views import (
     AddDataSourceDialog,
+    ConfigureSignalDialog,
     ConfigureSignalsWizard,
     MainWindow,
     SignalPlotWidget,
@@ -179,9 +180,11 @@ class MainController(QObject):
     def _addDataSourceHandler(self) -> None:
         """Handler for adding a new data source."""
         # Open the dialog to get data source configuration
-        dataSourceConfig = self._getDataSourceConfig()
-        if dataSourceConfig is None:
+        addDataSourceDialog = AddDataSourceDialog(self._mainWin)
+        accepted = addDataSourceDialog.exec()
+        if not accepted:
             return
+        dataSourceConfig = addDataSourceDialog.dataSourceConfig
 
         # Get the configurations of all the signals
         configureSignalsWizard = ConfigureSignalsWizard(
@@ -302,13 +305,14 @@ class MainController(QObject):
         dataSource = itemToEdit.parent().text()
 
         # Open the dialog
-        dialogResult = self._getSignalConfig(
-            sigName, **self._config[dataSource]["sigConfig"][sigName], edit=True
+        sigConfig = self._config[dataSource]["sigsConfigs"][sigName]
+        configureSignalDialog = ConfigureSignalDialog(
+            sigName, **sigConfig, parent=self._mainWin
         )
-        if dialogResult is None:
+        accepted = configureSignalDialog.exec()
+        if not accepted:
             return
-        # Unpack result
-        sigConfig = dialogResult
+        sigConfig = configureSignalDialog.sigConfig
 
         # Update streaming controller settings
         self._streamingControllers[dataSource].editSigConfig(sigName, sigConfig)
@@ -350,33 +354,4 @@ class MainController(QObject):
             self._sigPlotWidgets[sigName] = newPlotWidget
 
         # Save new settings
-        self._config[dataSource]["sigConfig"][sigName] = sigConfig
-
-    def _getDataSourceConfig(
-        self,
-        edit: bool = False,
-        addDataSourceDialog: AddDataSourceDialog | None = None,
-        **kwargs: dict,
-    ) -> dict | None:
-        """Get the data source configuration from the user."""
-        if addDataSourceDialog is None:
-            addDataSourceDialog = AddDataSourceDialog(edit, self._mainWin, **kwargs)
-
-        accepted = addDataSourceDialog.exec()
-        if not accepted:
-            return None
-
-        # Check if input is valid
-        if not addDataSourceDialog.isValid:
-            QMessageBox.critical(
-                self._mainWin,
-                "Invalid source",
-                addDataSourceDialog.errMessage,
-                buttons=QMessageBox.Retry,  # type: ignore
-                defaultButton=QMessageBox.Retry,  # type: ignore
-            )
-            return self._getDataSourceConfig(
-                edit, addDataSourceDialog, **kwargs
-            )  # re-open dialog
-
-        return addDataSourceDialog.dataSourceConfig
+        self._config[dataSource]["sigsConfigs"][sigName] = sigConfig

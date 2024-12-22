@@ -38,10 +38,13 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    prefillConfig : dict or None
-        Dictionary containing the configuration to prefill the form (if available).
     parent : QWidget or None, default=None
         Parent widget.
+    edit : bool, default=False
+        Whether to open the dialog in edit mode and prefill the form
+        with the configuration provided via the keyword arguments.
+    kwargs : dict
+        Keyword arguments.
     """
 
     def __init__(
@@ -49,8 +52,9 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        prefillConfig: dict | None,
         parent: QWidget | None = None,
+        edit: bool = False,
+        **kwargs,
     ) -> None:
         super().__init__(parent)
 
@@ -94,8 +98,8 @@ class ConfigureSignalWidget(QWidget, Ui_ConfigureSignalWidget):
         self._sigConfig = {"fs": fs, "nCh": nCh}
 
         # Pre-fill with provided configuration
-        if prefillConfig is not None:
-            self._prefill(prefillConfig)
+        if edit:
+            self._prefill(kwargs)
 
         self.destroyed.connect(self.deleteLater)
 
