@@ -54,9 +54,7 @@ class ConfigureSignalWizardPage(QWizardPage):
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = ConfigureSignalWidget(
-            sigName, fs, nCh, prefillConfig=None, parent=parent
-        )
+        self._configWidget = ConfigureSignalWidget(sigName, fs, nCh, parent=parent)
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)
         self.setLayout(layout)
@@ -83,6 +81,7 @@ class ConfigureSignalWizardPage(QWizardPage):
         return self._configWidget.sigConfig
 
     def validatePage(self) -> bool:
+        """Validate the page."""
         isValid, errMessage = self._configWidget.validateForm()
         if not isValid:
             QMessageBox.critical(

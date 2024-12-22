@@ -104,8 +104,6 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
 
     Parameters
     ----------
-    edit : bool
-        Whether to open the dialog in edit mode.
     parent : QWidget or None, default=None
         Parent widget.
     kwargs : dict
@@ -126,9 +124,7 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
         Path to the output directory.
     """
 
-    def __init__(
-        self, edit: bool, parent: QWidget | None = None, **kwargs: dict
-    ) -> None:
+    def __init__(self, parent: QWidget | None = None, **kwargs: dict) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
@@ -136,9 +132,8 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
             list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
         )
 
-        self.buttonBox.accepted.connect(self._addSourceHandler)
-        self.buttonBox.rejected.connect(self.close)
-        self.destroyed.connect(self.deleteLater)
+        self.buttonBox.accepted.connect(self._validateDialog)
+        self.buttonBox.rejected.connect(self.reject)
         self.browseInterfaceModuleButton.clicked.connect(self._browseInterfaceModule)
         self.sourceComboBox.currentTextChanged.connect(self._onSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
@@ -151,13 +146,13 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
 
         self._dataSourceConfig = {}
         self._outDirPath = None
-        self._isValid = False
-        self._errMessage = ""
 
         # Pre-fill with provided configuration
-        self.browseInterfaceModuleButton.setEnabled(not edit)
-        if edit:
+        # self.browseInterfaceModuleButton.setEnabled(not edit)
+        if kwargs:
             self._prefill(kwargs)
+
+        self.destroyed.connect(self.deleteLater)
 
     @property
     def dataSourceConfig(self) -> dict:
@@ -170,16 +165,6 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
         - "filePath": the file path (optional).
         """
         return self._dataSourceConfig
-
-    @property
-    def isValid(self) -> bool:
-        """bool: Property representing whether the form is valid."""
-        return self._isValid
-
-    @property
-    def errMessage(self) -> str:
-        """str: Property for getting the error message if the form is not valid."""
-        return self._errMessage
 
     def _browseInterfaceModule(self) -> None:
         """Browse files to select the module containing the decode function."""
@@ -244,25 +229,40 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
         )
         self.sourceConfigContainer.addWidget(self._configWidget)
 
-    def _addSourceHandler(self) -> None:
+    def _validateDialog(self) -> None:
         """Validate user input in the form."""
         # Interface module
         if "interfaceModule" not in self._dataSourceConfig:
-            self._isValid = False
-            self._errMessage = "No interface was provided."
+            QMessageBox.critical(
+                self,
+                "Invalid signal configuration",
+                "No interface was provided.",
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
             return
 
         # Data source type
         if self.sourceComboBox.currentText() == "":
-            self._isValid = False
-            self._errMessage = 'The "source" field is invalid.'
+            QMessageBox.critical(
+                self,
+                "Invalid signal configuration",
+                'The "source" field is invalid.',
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
             return
 
         # Data source-specific config
         configResult = self._configWidget.validateConfig()
         if not configResult.isValid:
-            self._isValid = False
-            self._errMessage = configResult.errMessage
+            QMessageBox.critical(
+                self,
+                "Invalid signal configuration",
+                configResult.errMessage,
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
             return
         self._dataSourceConfig["dataSourceType"] = configResult.dataSourceType
         self._dataSourceConfig |= configResult.dataSourceConfig
@@ -270,19 +270,29 @@ class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
         # File saving
         if self.fileSavingGroupBox.isChecked():
             if self._outDirPath is None:
-                self._isValid = False
-                self._errMessage = "Select an output directory."
+                QMessageBox.critical(
+                    self,
+                    "Invalid signal configuration",
+                    "Select an output directory.",
+                    buttons=QMessageBox.Retry,  # type: ignore
+                    defaultButton=QMessageBox.Retry,  # type: ignore
+                )
                 return
             outFileName = self.fileNameTextField.text()
             if outFileName == "":
-                self._isValid = False
-                self._errMessage = "Insert a file name."
+                QMessageBox.critical(
+                    self,
+                    "Invalid signal configuration",
+                    "Insert a file name.",
+                    buttons=QMessageBox.Retry,  # type: ignore
+                    defaultButton=QMessageBox.Retry,  # type: ignore
+                )
                 return
             self._dataSourceConfig["filePath"] = os.path.join(
                 self._outDirPath, outFileName
             )
 
-        self._isValid = True
+        self.accept()
 
     def _prefill(self, dataSourceConfig: dict):
         """Pre-fill the form with the provided configuration."""

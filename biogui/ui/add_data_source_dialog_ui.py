@@ -122,8 +122,6 @@ class Ui_AddDataSourceDialog(object):
         QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
 
         self.retranslateUi(AddDataSourceDialog)
-        self.buttonBox.accepted.connect(AddDataSourceDialog.accept)
-        self.buttonBox.rejected.connect(AddDataSourceDialog.reject)
 
         QMetaObject.connectSlotsByName(AddDataSourceDialog)
     # setupUi
