@@ -25,7 +25,7 @@ import os
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources
-from biogui.ui.add_data_source_dialog_ui import Ui_AddDataSourceDialog
+from biogui.ui.data_source_config_dialog_ui import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule
 
 
@@ -98,7 +98,7 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
     )
 
 
-class AddDataSourceDialog(QDialog, Ui_AddDataSourceDialog):
+class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
     """
     Dialog for adding a new data source.
 

@@ -29,11 +29,11 @@ from PySide6.QtWidgets import QWidget
 
 from biogui.utils import detectTheme
 
-from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
+from ..ui.serial_data_source_config_widget_ui import Ui_SerialDataSourceConfigWidget
 from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
-class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
+class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
     """
     Widget to configure the serial source.
 

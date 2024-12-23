@@ -17,16 +17,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .add_data_source_dialog import AddDataSourceDialog
-from .configure_signal_dialog import ConfigureSignalDialog
-from .configure_signals_wizard import ConfigureSignalsWizard
+from .data_source_config_dialog import DataSourceConfigDialog
 from .main_window import MainWindow
-from .signal_plot_widget import SignalPlotWidget
+from .plot_widget import SignalPlotWidget
+from .signal_config_dialog import SignalConfigDialog
+from .signal_config_wizard import SignalConfigWizard
 
 __all__ = [
     "MainWindow",
-    "AddDataSourceDialog",
-    "ConfigureSignalDialog",
-    "ConfigureSignalsWizard",
+    "DataSourceConfigDialog",
+    "SignalConfigDialog",
+    "SignalConfigWizard",
     "SignalPlotWidget",
 ]
