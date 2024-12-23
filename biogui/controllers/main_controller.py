@@ -180,7 +180,7 @@ class MainController(QObject):
     def _addDataSourceHandler(self) -> None:
         """Handler for adding a new data source."""
         # Open the dialog to get data source configuration
-        dataSourceConfigDialog = DataSourceConfigDialog(self._mainWin)
+        dataSourceConfigDialog = DataSourceConfigDialog(parent=self._mainWin)
         accepted = dataSourceConfigDialog.exec()
         if not accepted:
             return
@@ -286,9 +286,9 @@ class MainController(QObject):
             for k, v in self._config[dataSourceToEdit].items()
             if k != "sigsConfigs"
         }
-        print(dataSourceConfig)
+        # print(dataSourceConfig.keys())
         dataSourceConfigDialog = DataSourceConfigDialog(
-            self._mainWin, **dataSourceConfig
+            **dataSourceConfig, parent=self._mainWin
         )
         accepted = dataSourceConfigDialog.exec()
         if not accepted:

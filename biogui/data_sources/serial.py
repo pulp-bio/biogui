@@ -24,6 +24,7 @@ import time
 
 import serial
 import serial.tools.list_ports
+from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon, QIntValidator
 from PySide6.QtWidgets import QWidget
 
@@ -91,11 +92,24 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
                 "serialPortName": serialPortName,
-                "baudRate": int(self.baudRateTextField.text()),
+                "baudRate": QLocale().toInt(self.baudRateTextField.text())[0],
             },
             isValid=True,
             errMessage="",
         )
+
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+        if "serialPortName" in config:
+            self.serialPortsComboBox.setCurrentText(config["serialPortName"])
+        if "baudRate" in config:
+            self.baudRateTextField.setText(QLocale().toString(config["baudRate"]))
 
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""

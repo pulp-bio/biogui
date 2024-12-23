@@ -29,7 +29,7 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
 from biogui.controllers import MainController
 from biogui.controllers.streaming_controller import StreamingController
-from biogui.ui.trigger_config_ui import Ui_TriggerConfig
+from biogui.ui.trigger_config_widget_ui import Ui_TriggerConfigWidget
 from biogui.utils import instanceSlot
 from biogui.views import MainWindow
 
@@ -143,7 +143,7 @@ class _GesturesWidget(QWidget):
         event.accept()
 
 
-class _TriggerConfigWidget(QWidget, Ui_TriggerConfig):
+class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
     """Widget providing configuration options for the trigger."""
 
     def __init__(self) -> None:

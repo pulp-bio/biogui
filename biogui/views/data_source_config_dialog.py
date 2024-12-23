@@ -104,6 +104,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     Parameters
     ----------
+    dataSourceType : DataSourceType, default=None
+        Data source type.
     parent : QWidget or None, default=None
         Parent widget.
     kwargs : dict
@@ -124,25 +126,32 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         Path to the output directory.
     """
 
-    def __init__(self, parent: QWidget | None = None, **kwargs: dict) -> None:
+    def __init__(
+        self,
+        dataSourceType: data_sources.DataSourceType | None = None,
+        parent: QWidget | None = None,
+        **kwargs: dict,
+    ) -> None:
         super().__init__(parent)
 
         self.setupUi(self)
-        self.sourceComboBox.addItems(
-            list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
+
+        # Create data source configuration widget
+        dataSources = list(
+            map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
         )
+        if dataSourceType is None:
+            dataSourceType = data_sources.DataSourceType(dataSources[0])
+        self.dataSourceComboBox.addItems(dataSources)
+        self.dataSourceComboBox.setCurrentText(dataSourceType.value)
+        self._configWidget = data_sources.getConfigWidget(dataSourceType, self)
+        self.sourceConfigContainer.addWidget(self._configWidget)
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
         self.browseInterfaceModuleButton.clicked.connect(self._browseInterfaceModule)
-        self.sourceComboBox.currentTextChanged.connect(self._onSourceChange)
+        self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
-
-        # Source type (default is serial port)
-        self._configWidget = data_sources.getConfigWidget(
-            data_sources.DataSourceType.SERIAL, self
-        )
-        self.sourceConfigContainer.addWidget(self._configWidget)
 
         self._dataSourceConfig = {}
         self._outDirPath = None
@@ -217,15 +226,15 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.outDirPathLabel.setText(displayText)
             self.outDirPathLabel.setToolTip(outDirPath)
 
-    def _onSourceChange(self) -> None:
-        """Detect if source type has changed."""
+    def _onDataSourceChange(self) -> None:
+        """Detect if data source type has changed."""
         # Clear container
         self.sourceConfigContainer.removeWidget(self._configWidget)
         self._configWidget.deleteLater()
 
         # Add new widget
         self._configWidget = data_sources.getConfigWidget(
-            data_sources.DataSourceType(self.sourceComboBox.currentText()), self
+            data_sources.DataSourceType(self.dataSourceComboBox.currentText()), self
         )
         self.sourceConfigContainer.addWidget(self._configWidget)
 
@@ -243,7 +252,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             return
 
         # Data source type
-        if self.sourceComboBox.currentText() == "":
+        if self.dataSourceComboBox.currentText() == "":
             QMessageBox.critical(
                 self,
                 "Invalid signal configuration",
@@ -297,12 +306,19 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
     def _prefill(self, dataSourceConfig: dict):
         """Pre-fill the form with the provided configuration."""
         # Interface module
-        self.interfaceModulePathLabel.setText(dataSourceConfig["interfacePath"])
-        self._dataSourceConfig["interfacePath"] = dataSourceConfig["interfacePath"]
-        self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
+        interfacePath = dataSourceConfig["interfacePath"]
+        displayText = (
+            interfacePath
+            if len(interfacePath) <= 40
+            else interfacePath[:17] + "..." + interfacePath[-20:]
+        )
+        self.interfaceModulePathLabel.setText(displayText)
+        self.interfaceModulePathLabel.setToolTip(interfacePath)
+        # self._dataSourceConfig["interfacePath"] = dataSourceConfig["interfacePath"]
+        # self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
-        # Data source type
-        self.sourceComboBox.setCurrentText(self._dataSourceConfig["dataSourceType"])
+        # Data source-specific config
+        self._configWidget.prefill(dataSourceConfig)
 
         # File saving
         if "filePath" in dataSourceConfig:
@@ -312,8 +328,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             # Adjust display text
             displayText = (
                 outDirPath
-                if len(outDirPath) <= 30
-                else outDirPath[:13] + "..." + outDirPath[-14:]
+                if len(outDirPath) <= 40
+                else outDirPath[:17] + "..." + outDirPath[-20:]
             )
             self.outDirPathLabel.setText(displayText)
             self.outDirPathLabel.setToolTip(outDirPath)

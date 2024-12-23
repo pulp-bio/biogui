@@ -77,6 +77,16 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
             Configuration result.
         """
 
+    @abstractmethod
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+
 
 class DataSourceWorkerMeta(type(QObject), ABCMeta):  # type: ignore
     """Abstract base class for data source controllers (metaclass)."""

@@ -29,7 +29,7 @@
      <item row="0" column="1">
       <widget class="QPushButton" name="browseInterfaceModuleButton">
        <property name="toolTip">
-        <string>The module must contain a function called &quot;decodeFn&quot; that converts bytes into a sequence of signals</string>
+        <string>The module must contain specific fields</string>
        </property>
        <property name="text">
         <string>Browse</string>
@@ -53,14 +53,14 @@
      <item row="2" column="0">
       <widget class="QLabel" name="label3">
        <property name="text">
-        <string>Source:</string>
+        <string>Data source:</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
-      <widget class="QComboBox" name="sourceComboBox">
+      <widget class="QComboBox" name="dataSourceComboBox">
        <property name="toolTip">
-        <string>List of available serial ports</string>
+        <string>List of available data sources</string>
        </property>
       </widget>
      </item>
@@ -125,7 +125,7 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="fileNameTextField">
         <property name="toolTip">
-         <string>If empty, the signal name will be used</string>
+         <string>A timestamp corresponding to the start of the acquisition will be appended to the signal name</string>
         </property>
        </widget>
       </item>
@@ -146,7 +146,7 @@
  </widget>
  <tabstops>
   <tabstop>browseInterfaceModuleButton</tabstop>
-  <tabstop>sourceComboBox</tabstop>
+  <tabstop>dataSourceComboBox</tabstop>
   <tabstop>fileSavingGroupBox</tabstop>
   <tabstop>browseOutDirButton</tabstop>
   <tabstop>fileNameTextField</tabstop>
