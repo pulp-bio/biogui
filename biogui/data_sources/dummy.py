@@ -57,6 +57,15 @@ class DummyConfigWidget(ConfigWidget):
             errMessage="",
         )
 
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+
 
 class DummyDataSourceWorker(DataSourceWorker):
     """

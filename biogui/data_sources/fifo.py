@@ -68,6 +68,17 @@ class FIFOConfigWidget(ConfigWidget, Ui_FifoDataSourceConfigWidget):
             errMessage="",
         )
 
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+        if "fifoPath" in config:
+            self.fifoPathTextField.setText(config["fifoPath"])
+
 
 class FIFODataSourceWorker(DataSourceWorker):
     """

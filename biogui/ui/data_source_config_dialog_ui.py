@@ -55,10 +55,10 @@ class Ui_DataSourceConfigDialog(object):
 
         self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label3)
 
-        self.sourceComboBox = QComboBox(DataSourceConfigDialog)
-        self.sourceComboBox.setObjectName(u"sourceComboBox")
+        self.dataSourceComboBox = QComboBox(DataSourceConfigDialog)
+        self.dataSourceComboBox.setObjectName(u"dataSourceComboBox")
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.sourceComboBox)
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.dataSourceComboBox)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -116,8 +116,8 @@ class Ui_DataSourceConfigDialog(object):
 
         self.verticalLayout.addWidget(self.buttonBox)
 
-        QWidget.setTabOrder(self.browseInterfaceModuleButton, self.sourceComboBox)
-        QWidget.setTabOrder(self.sourceComboBox, self.fileSavingGroupBox)
+        QWidget.setTabOrder(self.browseInterfaceModuleButton, self.dataSourceComboBox)
+        QWidget.setTabOrder(self.dataSourceComboBox, self.fileSavingGroupBox)
         QWidget.setTabOrder(self.fileSavingGroupBox, self.browseOutDirButton)
         QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
 
@@ -130,14 +130,14 @@ class Ui_DataSourceConfigDialog(object):
         DataSourceConfigDialog.setWindowTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Data Source Configuration", None))
         self.label1.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Interface module:", None))
 #if QT_CONFIG(tooltip)
-        self.browseInterfaceModuleButton.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"The module must contain a function called \"decodeFn\" that converts bytes into a sequence of signals", None))
+        self.browseInterfaceModuleButton.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"The module must contain specific fields", None))
 #endif // QT_CONFIG(tooltip)
         self.browseInterfaceModuleButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse", None))
         self.label2.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Path to module:", None))
         self.interfaceModulePathLabel.setText("")
-        self.label3.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Source:", None))
+        self.label3.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Data source:", None))
 #if QT_CONFIG(tooltip)
-        self.sourceComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"List of available serial ports", None))
+        self.dataSourceComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"List of available data sources", None))
 #endif // QT_CONFIG(tooltip)
         self.fileSavingGroupBox.setTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Configure file saving", None))
         self.label4.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Output directory:", None))
@@ -146,7 +146,7 @@ class Ui_DataSourceConfigDialog(object):
         self.outDirPathLabel.setText("")
         self.label6.setText(QCoreApplication.translate("DataSourceConfigDialog", u"File name:", None))
 #if QT_CONFIG(tooltip)
-        self.fileNameTextField.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"If empty, the signal name will be used", None))
+        self.fileNameTextField.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"A timestamp corresponding to the start of the acquisition will be appended to the signal name", None))
 #endif // QT_CONFIG(tooltip)
     # retranslateUi
 

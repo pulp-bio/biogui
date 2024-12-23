@@ -24,6 +24,7 @@ import socket
 import time
 from asyncio import IncompleteReadError
 
+from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
@@ -47,8 +48,11 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
         self.setupUi(self)
 
         # Validation rules
+        lo = QLocale()
         minPort, maxPort = 1024, 49151
-        self.portTextField.setToolTip(f"Integer between {minPort} and {maxPort}")
+        self.portTextField.setToolTip(
+            f"Integer between {lo.toString(minPort)} and {lo.toString(maxPort)}"
+        )
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.portTextField.setValidator(portValidator)
 
@@ -78,6 +82,17 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
             isValid=True,
             errMessage="",
         )
+
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+        if "socketPort" in config:
+            self.portTextField.setText(QLocale().toString(config["socketPort"]))
 
 
 class TCPDataSourceWorker(DataSourceWorker):

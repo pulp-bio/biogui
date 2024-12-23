@@ -24,7 +24,11 @@
    <item row="0" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
      <item>
-      <widget class="QComboBox" name="serialPortsComboBox"/>
+      <widget class="QComboBox" name="serialPortsComboBox">
+       <property name="toolTip">
+        <string>List of available serial ports</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="rescanSerialPortsButton">
