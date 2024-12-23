@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SerialConfigWidget</class>
- <widget class="QWidget" name="SerialConfigWidget">
+ <class>SerialDataSourceConfigWidget</class>
+ <widget class="QWidget" name="SerialDataSourceConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Serial Configuration Widget</string>
+   <string>Serial Data Source Configuration</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
@@ -35,8 +35,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="view-refresh">
-         <normaloff>.</normaloff>.</iconset>
+        <iconset theme="view-refresh"/>
        </property>
       </widget>
      </item>

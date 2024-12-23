@@ -23,11 +23,11 @@ import logging
 
 from PySide6.QtWidgets import QWidget
 
-from ..ui.fifo_config_widget_ui import Ui_FifoConfigView
+from ..ui.fifo_data_source_config_widget_ui import Ui_FifoDataSourceConfigWidget
 from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
-class FIFOConfigWidget(ConfigWidget, Ui_FifoConfigView):
+class FIFOConfigWidget(ConfigWidget, Ui_FifoDataSourceConfigWidget):
     """
     Widget to configure the FIFO source.
 

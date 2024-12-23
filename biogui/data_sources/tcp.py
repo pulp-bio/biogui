@@ -27,11 +27,11 @@ from asyncio import IncompleteReadError
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from ..ui.tcp_config_widget_ui import Ui_TCPConfigWidget
+from ..ui.tcp_data_source_config_widget_ui import Ui_TCPDataSourceConfigWidget
 from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
-class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
+class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
     """
     Widget to configure the socket source.
 

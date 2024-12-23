@@ -26,11 +26,11 @@ import pyqtgraph as pg
 from PySide6.QtCore import QLocale, QTimer
 from PySide6.QtWidgets import QWidget
 
-from ..ui.signal_plots_widget_ui import Ui_SignalPlotsWidget
+from ..ui.signal_plot_widget_ui import Ui_SignalPlotWidget
 from ..utils import instanceSlot
 
 
-class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
+class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     """
     Widget showing the real-time plot of a signal.
 

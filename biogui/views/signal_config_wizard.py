@@ -21,10 +21,10 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QWidget, QWizard, QWizardPage
 
-from .configure_signal_widget import ConfigureSignalWidget
+from .signal_config_widget import SignalConfigWidget
 
 
-class ConfigureSignalWizardPage(QWizardPage):
+class SignalConfigWizardPage(QWizardPage):
     """
     Wizard page for configuring a signal.
 
@@ -54,7 +54,7 @@ class ConfigureSignalWizardPage(QWizardPage):
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = ConfigureSignalWidget(sigName, fs, nCh, parent=parent)
+        self._configWidget = SignalConfigWidget(sigName, fs, nCh, parent=parent)
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)
         self.setLayout(layout)
@@ -96,7 +96,7 @@ class ConfigureSignalWizardPage(QWizardPage):
         return True
 
 
-class ConfigureSignalsWizard(QWizard):
+class SignalConfigWizard(QWizard):
     """
     Wizard for configuring signals.
 
@@ -121,7 +121,7 @@ class ConfigureSignalsWizard(QWizard):
         # Populate wizard
         for sigName in sigInfo:
             self.addPage(
-                ConfigureSignalWizardPage(sigName, **sigInfo[sigName], parent=self)
+                SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self)
             )
 
         finishButton = self.button(QWizard.FinishButton)  # type: ignore
@@ -152,6 +152,6 @@ class ConfigureSignalsWizard(QWizard):
         # Iterate through all pages in the wizard
         for pageId in self.pageIds():
             page = self.page(pageId)
-            if isinstance(page, ConfigureSignalWizardPage):
+            if isinstance(page, SignalConfigWizardPage):
                 # Merge the configuration from each page
                 self._sigsConfigs[page.sigName] = page.sigConfig

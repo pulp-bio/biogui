@@ -27,10 +27,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .configure_signal_widget import ConfigureSignalWidget
+from .signal_config_widget import SignalConfigWidget
 
 
-class ConfigureSignalDialog(QDialog):
+class SignalConfigDialog(QDialog):
     """
     Dialog for configuring a signal.
 
@@ -58,7 +58,7 @@ class ConfigureSignalDialog(QDialog):
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = ConfigureSignalWidget(
+        self._configWidget = SignalConfigWidget(
             sigName, fs, nCh, parent=parent, edit=True, **kwargs
         )
         self.buttonBox = QDialogButtonBox(
