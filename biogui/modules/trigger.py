@@ -28,9 +28,7 @@ from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
 from biogui.controllers import MainController
-from biogui.controllers.streaming_controller import StreamingController
 from biogui.ui.trigger_config_widget_ui import Ui_TriggerConfigWidget
-from biogui.utils import instanceSlot
 from biogui.views import MainWindow
 
 
@@ -205,8 +203,8 @@ class TriggerController(QObject):
         Instance of _GesturesWidget.
     _timer : QTimer
         Timer.
-    _streamControllers : list of StreamingController
-        List containing the references to the streaming controllers.
+    _streamControllers : dict of (str: StreamingController)
+        Reference to the streaming controller dictionary.
     _gesturesId : dict of str: int
         Dictionary containing pairs of gesture labels and integer indexes.
     _gesturesLabels : list of str
@@ -229,7 +227,7 @@ class TriggerController(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
 
-        self._streamingControllers = []
+        self._streamingControllers = {}
         self._gesturesId = {}
         self._gesturesLabels = []
         self._gestCounter = 0
@@ -252,12 +250,8 @@ class TriggerController(QObject):
         mainController.streamingStopped.connect(self._stopTriggerGen)
         mainController.appClosed.connect(self._stopTriggerGen)
 
-        # Add already configured StreamingControllers
-        for streamingController in mainController.streamingControllers.values():
-            self._streamingControllers.append(streamingController)
-
-        # Subscribe to NewSourceAdded Signal
-        mainController.newSourceAdded.connect(self._addNewSource)
+        # Get reference to StreamingControllers
+        self._streamingControllers = mainController.streamingControllers
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
@@ -277,22 +271,11 @@ class TriggerController(QObject):
         mainController.streamingStopped.disconnect(self._stopTriggerGen)
         mainController.appClosed.disconnect(self._stopTriggerGen)
 
-        # Unsubscribe to NewSourceAdded Qt Signal
-        mainController.newSourceAdded.disconnect(self._addNewSource)
-
-        # Delete references to StreamingController objects
-        self._streamingControllers.clear()
-
-    @instanceSlot(StreamingController)
-    def _addNewSource(self, streamingController: StreamingController) -> None:
-        """Store the reference to new StreamingController objects when they are added."""
-        self._streamingControllers.append(streamingController)
-
     def _checkHandler(self, checked: bool) -> None:
-        """Handler for detecting wheter the groupbox has been checked or not."""
+        """Handler for detecting whether the groupbox has been checked or not."""
         if not checked:
             # Reset trigger
-            for streamingController in self._streamingControllers:
+            for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(None)
 
     def _updateTriggerAndImage(self) -> None:
@@ -323,7 +306,7 @@ class TriggerController(QObject):
             self._gestCounter += 1
             self._restFlag = True
 
-        for streamingController in self._streamingControllers:
+        for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(new_trigger)
         self._gestWidget.renderImage(image)
         logging.info(f"Trigger updated: {new_trigger}.")
@@ -333,7 +316,7 @@ class TriggerController(QObject):
         self._confWidget.triggerGroupBox.setEnabled(False)
         if self._confWidget.triggerGroupBox.isChecked() and self._confWidget.config:
             # Set initial trigger
-            for streamingController in self._streamingControllers:
+            for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(0)
 
             # Gestures

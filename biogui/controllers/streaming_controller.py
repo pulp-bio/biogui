@@ -421,13 +421,13 @@ class StreamingController(QObject):
         """
         self._preprocessor.configFilter(sigName, sigConfig)
 
-    def setTrigger(self, trigger: int) -> None:
+    def setTrigger(self, trigger: int | None) -> None:
         """
         Set the trigger for each file writer worker.
 
         Parameters
         ----------
-        trigger : int
+        trigger : int or None
             Trigger value.
         """
         if self._fileWriterWorker:

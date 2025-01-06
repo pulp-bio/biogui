@@ -67,6 +67,7 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
         ConfigResult
             Configuration result.
         """
+        lo = QLocale()
         if not self.portTextField.hasAcceptableInput():
             return ConfigResult(
                 dataSourceType=DataSourceType.TCP,
@@ -74,8 +75,8 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
                 isValid=False,
                 errMessage='The "port" field is invalid.',
             )
+        socketPort = lo.toInt(self.portTextField.text())[0]
 
-        socketPort = int(self.portTextField.text())
         return ConfigResult(
             dataSourceType=DataSourceType.TCP,
             dataSourceConfig={"socketPort": socketPort},

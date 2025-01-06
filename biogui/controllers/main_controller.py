@@ -19,6 +19,8 @@ limitations under the License.
 
 from __future__ import annotations
 
+from types import MappingProxyType
+
 from PySide6.QtCore import QModelIndex, QObject, Signal
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
@@ -48,6 +50,8 @@ class MainController(QObject):
     ----------
     _mainWin : MainWindow
         Instance of MainWindow.
+    _streamingControllers : dict of (str: StreamingController)
+        Collection of StreamingController objects, indexed by the name of the corresponding data source.
     _signalPlotWidgets : dict of (str: SignalPlotWidget)
         Collection of SignalPlotWidget objects, indexed by the name of the corresponding signal.
     _config : dict
@@ -63,15 +67,12 @@ class MainController(QObject):
         Qt Signal emitted when the application is closed.
     signalReady : Signal
         Qt Signal emitted when a signal is ready for visualization.
-    newSourceAdded : Signal
-        Qt Signal emitted when a new source is added.
     """
 
     streamingStarted = Signal()
     streamingStopped = Signal()
     appClosed = Signal()
     signalReady = Signal(SigData)
-    newSourceAdded = Signal(StreamingController)
 
     def __init__(self, mainWin: MainWindow) -> None:
         super().__init__()
@@ -88,12 +89,11 @@ class MainController(QObject):
         self._connectSignals()
 
     @property
-    def streamingControllers(self) -> dict[str, StreamingController]:
+    def streamingControllers(self) -> MappingProxyType:
         """
-        dict of (str: StreamingController): Property representing a collection of
-        StreamingController objects, indexed by the name of the corresponding DataSource.
+        MappingProxyType: Property representing a read-only view of the StreamingController dictionary.
         """
-        return self._streamingControllers.copy()
+        return MappingProxyType(self._streamingControllers)
 
     def _connectSignals(self) -> None:
         """Connect Qt signals and slots."""
@@ -136,6 +136,71 @@ class MainController(QObject):
         self._mainWin.streamConfGroupBox.setEnabled(True)
         self._mainWin.startStreamingButton.setEnabled(True)
         self._mainWin.stopStreamingButton.setEnabled(False)
+
+    def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
+        """Add a data source, given its configuration."""
+        # Create streaming controller
+        dataSourceWorkerArgs = dataSourceConfig.copy()
+        del dataSourceWorkerArgs["interfacePath"]
+        interfaceModule = dataSourceWorkerArgs.pop("interfaceModule")
+        filePath = dataSourceWorkerArgs.pop("filePath", None)
+        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
+        dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
+        dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
+        streamingController = StreamingController(
+            dataSourceWorkerArgs, interfaceModule.decodeFn, filePath, sigsConfigs, self
+        )
+        self._streamingControllers[str(streamingController)] = streamingController
+
+        # Create plot widget
+        for iSigName, iSigConfig in sigsConfigs.items():
+            if "chSpacing" in iSigConfig:
+                signalPlotWidget = SignalPlotWidget(
+                    iSigName,
+                    **iSigConfig,
+                    renderLenMs=self._mainWin.renderLenMs,
+                    parent=self._mainWin,
+                )
+                self.streamingStarted.connect(signalPlotWidget.startTimers)
+                self.streamingStopped.connect(signalPlotWidget.stopTimers)
+                self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
+                self._mainWin.plotsLayout.addWidget(signalPlotWidget)
+
+                self._signalPlotWidgets[iSigName] = signalPlotWidget
+
+        # Save configuration
+        dataSourceConfig["sigsConfigs"] = sigsConfigs
+        self._config[str(streamingController)] = dataSourceConfig
+
+        # Configure Qt Signals
+        streamingController.signalReady.connect(self._plotData)
+        streamingController.errorOccurred.connect(self._handleErrors)
+        streamingController.signalReady.connect(lambda d: self.signalReady.emit(d))
+
+        # Update UI data source tree
+        dataSourceNode = QStandardItem(str(streamingController))
+        self.dataSourceModel.appendRow(dataSourceNode)
+        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in sigsConfigs])
+
+    def _deleteDataSource(self, dataSourceItem: QStandardItem) -> None:
+        """Delete a data source, given data source item."""
+        dataSource = dataSourceItem.text()
+
+        # Remove every signal associated with the data source
+        for row in range(dataSourceItem.rowCount()):
+            sigName = dataSourceItem.child(row).text()
+            # Remove plot widget
+            if sigName in self._signalPlotWidgets:
+                plotWidgetToRemove = self._signalPlotWidgets.pop(sigName)
+                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
+                plotWidgetToRemove.deleteLater()
+
+        # Delete streaming controller and config
+        del self._streamingControllers[dataSource]
+        del self._config[dataSource]
+
+        # Update UI data source tree
+        self.dataSourceModel.removeRow(dataSourceItem.row())
 
     @instanceSlot(list)
     def _plotData(self, dataPacket: list[SigData]):
@@ -195,51 +260,8 @@ class MainController(QObject):
             return
         sigsConfigs = signalConfigWizard.sigsConfigs
 
-        # Create streaming controller
-        dataSourceWorkerArgs = dataSourceConfig.copy()
-        del dataSourceWorkerArgs["interfacePath"]
-        interfaceModule = dataSourceWorkerArgs.pop("interfaceModule")
-        filePath = dataSourceWorkerArgs.pop("filePath", None)
-        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
-        dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
-        dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
-        streamingController = StreamingController(
-            dataSourceWorkerArgs, interfaceModule.decodeFn, filePath, sigsConfigs, self
-        )
-        self._streamingControllers[str(streamingController)] = streamingController
-
-        # Create plot widget
-        for iSigName, iSigConfig in sigsConfigs.items():
-            if "chSpacing" in iSigConfig:
-                signalPlotWidget = SignalPlotWidget(
-                    iSigName,
-                    **iSigConfig,
-                    renderLenMs=self._mainWin.renderLenMs,
-                    parent=self._mainWin,
-                )
-                self.streamingStarted.connect(signalPlotWidget.startTimers)
-                self.streamingStopped.connect(signalPlotWidget.stopTimers)
-                self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
-                self._mainWin.plotsLayout.addWidget(signalPlotWidget)
-
-                self._signalPlotWidgets[iSigName] = signalPlotWidget
-
-        # Save configuration
-        dataSourceConfig["sigsConfigs"] = sigsConfigs
-        self._config[str(streamingController)] = dataSourceConfig
-
-        # Configure Qt Signals
-        streamingController.signalReady.connect(self._plotData)
-        streamingController.errorOccurred.connect(self._handleErrors)
-        streamingController.signalReady.connect(lambda d: self.signalReady.emit(d))
-
-        # Update UI data source tree
-        dataSourceNode = QStandardItem(str(streamingController))
-        self.dataSourceModel.appendRow(dataSourceNode)
-        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in sigsConfigs])
-
-        # Emit signal to inform pluggable modules that a new source has been added
-        self.newSourceAdded.emit(streamingController)
+        # Add the data source
+        self._addDataSource(dataSourceConfig, sigsConfigs)
 
         # Enable start button
         self._mainWin.startStreamingButton.setEnabled(True)
@@ -249,23 +271,9 @@ class MainController(QObject):
         # Get index and corresponding item
         idxToRemove = self._mainWin.dataSourceTree.currentIndex()
         itemToRemove = self.dataSourceModel.itemFromIndex(idxToRemove)
-        dataSourceToRemove = itemToRemove.text()
 
-        # Remove every signal associated with the data source
-        for row in range(itemToRemove.rowCount()):
-            sigNameToRemove = itemToRemove.child(row).text()
-            # Remove plot widget
-            if sigNameToRemove in self._signalPlotWidgets:
-                plotWidgetToRemove = self._signalPlotWidgets.pop(sigNameToRemove)
-                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
-                plotWidgetToRemove.deleteLater()
-
-        # Delete streaming controller and config
-        del self._streamingControllers[dataSourceToRemove]
-        del self._config[dataSourceToRemove]
-
-        # Update UI data source tree
-        self.dataSourceModel.removeRow(itemToRemove.row())
+        # Delete the data source
+        self._deleteDataSource(itemToRemove)
 
         # Disable start button, source deletion and signal configuration depending on the number of remaining sources
         if len(self._streamingControllers) == 0:
@@ -281,27 +289,49 @@ class MainController(QObject):
         dataSourceToEdit = itemToEdit.text()
 
         # Open the dialog
-        dataSourceConfig = {
-            k: v
-            for k, v in self._config[dataSourceToEdit].items()
-            if k != "sigsConfigs"
-        }
-        # print(dataSourceConfig.keys())
+        oldDataSourceConfig = self._config[dataSourceToEdit]
         dataSourceConfigDialog = DataSourceConfigDialog(
-            **dataSourceConfig, parent=self._mainWin
+            **{k: v for k, v in oldDataSourceConfig.items() if k != "sigsConfigs"},
+            parent=self._mainWin,
         )
         accepted = dataSourceConfigDialog.exec()
         if not accepted:
             return
-        if dialogResult is None:
+        newDataSourceConfig = dataSourceConfigDialog.dataSourceConfig
+        print(newDataSourceConfig)
+
+        if (
+            newDataSourceConfig["interfaceModule"].sigInfo.keys()
+            != oldDataSourceConfig["interfaceModule"].sigInfo.keys()
+        ):  # signals are different -> delete the whole StreamingController and add a new one from scratch
+            QMessageBox.warning(
+                self._mainWin,
+                "Signal configuration reset",
+                "The names of the signals are different from the previously "
+                "configured ones, the configuration will be reset.",
+                buttons=QMessageBox.Ok,  # type: ignore
+                defaultButton=QMessageBox.Ok,  # type: ignore
+            )
+
+            # Get the configurations of all the signals
+            signalConfigWizard = SignalConfigWizard(
+                newDataSourceConfig["interfaceModule"].sigInfo, self._mainWin
+            )
+            completed = signalConfigWizard.exec()
+            if not completed:
+                return
+            sigsConfigs = signalConfigWizard.sigsConfigs
+
+            # Remove old configuration and add the new one
+            self._deleteDataSource(itemToEdit)
+            self._addDataSource(newDataSourceConfig, sigsConfigs)
+
             return
-        # Unpack result
-        newDataSourceConfig, _, _ = dialogResult
 
         # Update streaming controller settings
-        self._streamingControllers[dataSourceToEdit].editDataSourceConfig(
-            newDataSourceConfig
-        )
+        # self._streamingControllers[dataSourceToEdit].editDataSourceConfig(
+        #     newDataSourceConfig
+        # )
 
     def _editSignalHandler(self) -> None:
         """Handler for editing the signal configuration."""

@@ -307,6 +307,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         """Pre-fill the form with the provided configuration."""
         # Interface module
         interfacePath = dataSourceConfig["interfacePath"]
+        self._dataSourceConfig["interfacePath"] = interfacePath
+        self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
         displayText = (
             interfacePath
             if len(interfacePath) <= 40
@@ -314,8 +316,6 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         )
         self.interfaceModulePathLabel.setText(displayText)
         self.interfaceModulePathLabel.setToolTip(interfacePath)
-        # self._dataSourceConfig["interfacePath"] = dataSourceConfig["interfacePath"]
-        # self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
         # Data source-specific config
         self._configWidget.prefill(dataSourceConfig)
