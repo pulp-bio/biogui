@@ -225,7 +225,6 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         else:
             self.filteringGroupBox.setChecked(False)
 
-        print(sigConfig.keys())
         if "chSpacing" in sigConfig:
             self.plotGroupBox.setChecked(True)
             self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
