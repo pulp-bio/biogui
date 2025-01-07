@@ -87,6 +87,17 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
             Dictionary with the configuration.
         """
 
+    @abstractmethod
+    def getFieldsInTabOrder(self) -> list[QWidget]:
+        """
+        Get the list of fields in tab order.
+
+        Returns
+        -------
+        list of QWidgets
+            List of the QWidgets in tab order.
+        """
+
 
 class DataSourceWorkerMeta(type(QObject), ABCMeta):  # type: ignore
     """Abstract base class for data source controllers (metaclass)."""

@@ -112,6 +112,21 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
         if "baudRate" in config:
             self.baudRateTextField.setText(QLocale().toString(config["baudRate"]))
 
+    def getFieldsInTabOrder(self) -> list[QWidget]:
+        """
+        Get the list of fields in tab order.
+
+        Returns
+        -------
+        list of QWidgets
+            List of the QWidgets in tab order.
+        """
+        return [
+            self.serialPortsComboBox,
+            self.rescanSerialPortsButton,
+            self.baudRateTextField,
+        ]
+
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
