@@ -90,14 +90,14 @@ class MainController(QObject):
         Qt Signal emitted when streaming stops.
     appClosed : Signal
         Qt Signal emitted when the application is closed.
-    signalReady : Signal
-        Qt Signal emitted when a signal is ready for visualization.
+    signalsReady : Signal
+        Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
     """
 
     streamingStarted = Signal()
     streamingStopped = Signal()
     appClosed = Signal()
-    signalReady = Signal(SigData)
+    signalsReady = Signal(SigData)
 
     def __init__(self, mainWin: MainWindow) -> None:
         super().__init__()
@@ -136,6 +136,8 @@ class MainController(QObject):
 
     def startStreaming(self) -> None:
         """Start streaming."""
+        print("Plots:", self._signalPlotWidgets)
+        print("Config:", self._config)
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(False)
         self._mainWin.stopStreamingButton.setEnabled(True)
@@ -194,16 +196,18 @@ class MainController(QObject):
                 self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
                 self._mainWin.plotsLayout.addWidget(signalPlotWidget)
 
-                self._signalPlotWidgets[iSigName] = signalPlotWidget
+                self._signalPlotWidgets[f"{str(streamingController)}%{iSigName}"] = (
+                    signalPlotWidget
+                )
 
         # Save configuration
         dataSourceConfig["sigsConfigs"] = sigsConfigs
         self._config[str(streamingController)] = dataSourceConfig
 
         # Configure Qt Signals
-        streamingController.signalReady.connect(self._plotData)
+        streamingController.signalsReady.connect(self._plotData)
         streamingController.errorOccurred.connect(self._handleErrors)
-        streamingController.signalReady.connect(lambda d: self.signalReady.emit(d))
+        streamingController.signalsReady.connect(lambda d: self.signalsReady.emit(d))
 
         # Update UI data source tree
         dataSourceNode = QStandardItem(str(streamingController))
@@ -218,8 +222,9 @@ class MainController(QObject):
         for row in range(dataSourceItem.rowCount()):
             sigName = dataSourceItem.child(row).text()
             # Remove plot widget
-            if sigName in self._signalPlotWidgets:
-                plotWidgetToRemove = self._signalPlotWidgets.pop(sigName)
+            plotId = f"{dataSource}%{sigName}"
+            if plotId in self._signalPlotWidgets:
+                plotWidgetToRemove = self._signalPlotWidgets.pop(plotId)
                 self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
                 plotWidgetToRemove.deleteLater()
 
@@ -236,12 +241,14 @@ class MainController(QObject):
 
         Parameters
         ----------
-        dataPacket : DataPacket
+        dataPacket : tuple of (str, list of SigData)
             Data to plot.
         """
+        ctrlId = str(self.sender())
         for sigData in dataPacket:
-            if sigData.sigName in self._signalPlotWidgets:
-                self._signalPlotWidgets[sigData.sigName].addData(sigData.data)
+            plotId = f"{ctrlId}%{sigData.sigName}"
+            if plotId in self._signalPlotWidgets:
+                self._signalPlotWidgets[plotId].addData(sigData.data)
 
     @instanceSlot(str)
     def _handleErrors(self, errMessage: str) -> None:
@@ -382,12 +389,33 @@ class MainController(QObject):
 
         # Update streaming controller and store new settings
         streamingController = self._streamingControllers.pop(dataSourceToEdit)
-        del self._config[str(streamingController)]
+        oldCtrlId = str(streamingController)
+        del self._config[oldCtrlId]
         streamingController.editDataSourceConfig(newDataSourceConfig)
-        self._streamingControllers[str(streamingController)] = streamingController
-        self._config[str(streamingController)] = newDataSourceConfig
+        newCtrlId = str(streamingController)
+        self._streamingControllers[newCtrlId] = streamingController
+        self._config[newCtrlId] = newDataSourceConfig
 
         # Update plot widgets
+        for sigName, sigConfig in sigsConfigs.items():
+            oldPlotId = f"{oldCtrlId}%{sigName}"
+            newPlotId = f"{newCtrlId}%{sigName}"
+            oldSignalPlotWidget = self._signalPlotWidgets.pop(oldPlotId)
+            newSignalPlotWidget = SignalPlotWidget(
+                sigName,
+                **sigConfig,
+                renderLenMs=self._mainWin.renderLenMs,
+                parent=self._mainWin,
+            )
+            self.streamingStarted.connect(newSignalPlotWidget.startTimers)
+            self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
+            self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
+            self._mainWin.plotsLayout.replaceWidget(
+                oldSignalPlotWidget, newSignalPlotWidget
+            )
+            self._signalPlotWidgets[newPlotId] = newSignalPlotWidget
+
+            oldSignalPlotWidget.deleteLater()
 
     def _editSignalHandler(self) -> None:
         """Handler for editing the signal configuration."""
@@ -415,8 +443,9 @@ class MainController(QObject):
         # - case 2: ON -> OFF
         # - case 3: OFF -> ON
         # - case 4: OFF -> OFF (no need to be handled)
-        if sigName in self._signalPlotWidgets:  # case 1 & 2
-            oldSignalPlotWidget = self._signalPlotWidgets.pop(sigName)
+        plotId = f"{str(self._streamingControllers[dataSource])}%{sigName}"
+        if plotId in self._signalPlotWidgets:  # case 1 & 2
+            oldSignalPlotWidget = self._signalPlotWidgets.pop(plotId)
 
             if "chSpacing" in sigConfig:  # case 1
                 newSignalPlotWidget = SignalPlotWidget(
@@ -432,7 +461,7 @@ class MainController(QObject):
                 self._mainWin.plotsLayout.replaceWidget(
                     oldSignalPlotWidget, newSignalPlotWidget
                 )
-                self._signalPlotWidgets[sigName] = newSignalPlotWidget
+                self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
         elif "chSpacing" in sigConfig:  # case 3
@@ -446,7 +475,7 @@ class MainController(QObject):
             self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
             self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
             self._mainWin.plotsLayout.addWidget(newSignalPlotWidget)
-            self._signalPlotWidgets[sigName] = newSignalPlotWidget
+            self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
         # Save new settings
         self._config[dataSource]["sigsConfigs"][sigName] = sigConfig
