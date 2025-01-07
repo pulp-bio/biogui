@@ -77,6 +77,16 @@ class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
             Configuration result.
         """
 
+    @abstractmethod
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+
 
 class DataSourceWorkerMeta(type(QObject), ABCMeta):  # type: ignore
     """Abstract base class for data source controllers (metaclass)."""
@@ -88,14 +98,14 @@ class DataSourceWorker(ABC, QObject, metaclass=DataSourceWorkerMeta):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
-    dataReadySig = Signal(bytes)
-    errorSig = Signal(str)
+    dataPacketReady = Signal(bytes)
+    errorOccurred = Signal(str)
 
     @abstractmethod
     def startCollecting(self) -> None:

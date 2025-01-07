@@ -17,8 +17,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from collections import namedtuple
+from dataclasses import dataclass
+from typing import Callable, TypeAlias
+
+import numpy as np
+from PySide6.QtCore import Slot
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication
+
+DecodeFn: TypeAlias = Callable[[bytes], dict[str, np.ndarray]]
+"""Type representing the decode function that translates the binary data received from the device into signals."""
+
+InterfaceModule = namedtuple(
+    "InterfaceModule", "packetSize, startSeq, stopSeq, sigInfo, decodeFn"
+)
+"""Type representing the interface module to communicate with the data source."""
+
+
+@dataclass
+class SigData:
+    """
+    Dataclass describing a signal.
+
+    Attributes
+    ----------
+    sigName : str
+        Signal name.
+    fs : float
+        Sampling frequency.
+    data : ndarray
+        Data with shape (nSamp, nCh).
+    """
+
+    sigName: str
+    fs: float
+    data: np.ndarray
+
+
+def instanceSlot(*args, **kwargs):
+    """Wrapper of the Slot Qt decorator for instance methods."""
+
+    def decorator(func):
+        return Slot(*args, **kwargs)(func)
+
+    return decorator
 
 
 def detectTheme():

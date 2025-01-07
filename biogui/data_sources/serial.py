@@ -23,17 +23,19 @@ import logging
 import time
 
 import serial
+import serial.serialutil
 import serial.tools.list_ports
+from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon, QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from biogui.utils import detectTheme
 
-from ..ui.serial_config_widget_ui import Ui_SerialConfigWidget
+from ..ui.serial_data_source_config_widget_ui import Ui_SerialDataSourceConfigWidget
 from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
-class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
+class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
     """
     Widget to configure the serial source.
 
@@ -91,11 +93,24 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialConfigWidget):
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
                 "serialPortName": serialPortName,
-                "baudRate": int(self.baudRateTextField.text()),
+                "baudRate": QLocale().toInt(self.baudRateTextField.text())[0],
             },
             isValid=True,
             errMessage="",
         )
+
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+        if "serialPortName" in config:
+            self.serialPortsComboBox.setCurrentText(config["serialPortName"])
+        if "baudRate" in config:
+            self.baudRateTextField.setText(QLocale().toString(config["baudRate"]))
 
     def _rescanSerialPorts(self) -> None:
         """Rescan the serial ports to update the combo box."""
@@ -139,9 +154,9 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -170,7 +185,14 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._stopReadingFlag = False
 
         # Open serial port
-        ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+        try:
+            ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+        except serial.serialutil.SerialException as e:
+            self.errorOccurred.emit(
+                f"Cannot open serial port due to the following exception:\n{e}."
+            )
+            logging.error("DataWorker: serial communication failed.")
+            return
 
         logging.info("DataWorker: serial communication started.")
 
@@ -184,11 +206,11 @@ class SerialDataSourceWorker(DataSourceWorker):
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self.errorSig.emit("Serial communication failed.")
-                logging.error("DataWorker: serial communication failed.")
+                self.errorOccurred.emit("No data received.")
+                logging.error("DataWorker: no data received.")
                 break
 
-            self.dataReadySig.emit(data)
+            self.dataPacketReady.emit(data)
 
         # Stop command
         for c in self._stopSeq:
