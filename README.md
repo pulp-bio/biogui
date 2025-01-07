@@ -22,15 +22,16 @@ To enable the communication between the GUI and a board, one must provide a Pyth
 - `packetSize`: integer representing the number of bytes to be read;
 - `startSeq`: sequence of commands to start the board, expressed as a list of bytes;
 - `stopSeq`: sequence of commands to stop the board, expressed as a list of bytes;
-- `fs`: list of sampling frequencies, one for each signal to read from the board;
-- `nCh`: list of numbers of channels, one for each signal to read from the board;
-- `SigsPacket`: named tuple containing one field for each signal to read from the board;
+- `sigInfo`: dictionary containing, for each signal, a sub-dictionary with its sampling rate (`fs`) and number of channels (`nCh`);
 - `decodeFn`: function that decodes each packet of byte read from the board into the specified signals.
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
 
 ### Execution
 Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py), which launches the main window.
+
+### Utilities
+In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
 
 ## Authors
 This work was realized mainly at the [Energy-Efficient Embedded Systems Laboratory (EEES Lab)](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/eees) 
