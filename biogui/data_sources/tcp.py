@@ -24,14 +24,15 @@ import socket
 import time
 from asyncio import IncompleteReadError
 
+from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
-from ..ui.tcp_config_widget_ui import Ui_TCPConfigWidget
+from ..ui.tcp_data_source_config_widget_ui import Ui_TCPDataSourceConfigWidget
 from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
 
 
-class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
+class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
     """
     Widget to configure the socket source.
 
@@ -47,8 +48,11 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
         self.setupUi(self)
 
         # Validation rules
+        lo = QLocale()
         minPort, maxPort = 1024, 49151
-        self.portTextField.setToolTip(f"Integer between {minPort} and {maxPort}")
+        self.portTextField.setToolTip(
+            f"Integer between {lo.toString(minPort)} and {lo.toString(maxPort)}"
+        )
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.portTextField.setValidator(portValidator)
 
@@ -63,6 +67,7 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
         ConfigResult
             Configuration result.
         """
+        lo = QLocale()
         if not self.portTextField.hasAcceptableInput():
             return ConfigResult(
                 dataSourceType=DataSourceType.TCP,
@@ -70,14 +75,25 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPConfigWidget):
                 isValid=False,
                 errMessage='The "port" field is invalid.',
             )
+        socketPort = lo.toInt(self.portTextField.text())[0]
 
-        socketPort = int(self.portTextField.text())
         return ConfigResult(
             dataSourceType=DataSourceType.TCP,
             dataSourceConfig={"socketPort": socketPort},
             isValid=True,
             errMessage="",
         )
+
+    def prefill(self, config: dict) -> None:
+        """Pre-fill the form with the provided configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Dictionary with the configuration.
+        """
+        if "socketPort" in config:
+            self.portTextField.setText(QLocale().toString(config["socketPort"]))
 
 
 class TCPDataSourceWorker(DataSourceWorker):
@@ -112,9 +128,9 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     Class attributes
     ----------------
-    dataReadySig : Signal
+    dataPacketReady : Signal
         Qt Signal emitted when new data is collected.
-    errorSig : Signal
+    errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
@@ -179,8 +195,8 @@ class TCPDataSourceWorker(DataSourceWorker):
                                 )
                             pos += nRead
                     except socket.timeout:
-                        self.errorSig.emit("TCP communication failed.")
-                        logging.error("DataWorker: TCP communication failed.")
+                        self.errorOccurred.emit("No data received.")
+                        logging.error("DataWorker: no data received.")
                         return
                     except IncompleteReadError as e:
                         logging.error(
@@ -188,7 +204,7 @@ class TCPDataSourceWorker(DataSourceWorker):
                         )
                         return
 
-                    self.dataReadySig.emit(data)
+                    self.dataPacketReady.emit(data)
 
                 # Stop command
                 for c in self._stopSeq:

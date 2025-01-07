@@ -19,7 +19,6 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
@@ -32,19 +31,13 @@ startSeq: list[bytes] = [b"="]
 stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the board."""
 
-fs: list[float] = [120]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [3]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "force")
-"""Named tuple containing the EMG packet."""
+sigInfo: dict = {"force": {"fs": 120, "nCh": 3}}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from the FlexiForce script into force values.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -53,8 +46,9 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the data with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     force = np.zeros(shape=(1, 3), dtype=np.float32)
 
@@ -64,4 +58,4 @@ def decodeFn(data: bytes) -> SigsPacket:
     # Read trajectories
     force[0, 1:] = np.asarray(struct.unpack("<2f", data[4:]), dtype=np.float32)
 
-    return SigsPacket(force=force)
+    return {"force": force}

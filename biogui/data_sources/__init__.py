@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigWidget, DataSourceWorker, DataSourceType
+from .base import ConfigWidget, DataSourceType, DataSourceWorker
 from .dummy import DummyConfigWidget, DummyDataSourceWorker
 from .fifo import FIFOConfigWidget, FIFODataSourceWorker
 from .serial import SerialConfigWidget, SerialDataSourceWorker
@@ -54,7 +54,11 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
 
 
 def getDataSourceWorker(
-    dataSourceType: DataSourceType, packetSize: int, **kwargs
+    dataSourceType: DataSourceType,
+    packetSize: int,
+    startSeq: list[bytes],
+    stopSeq: list[bytes],
+    **kwargs,
 ) -> DataSourceWorker:
     """
     Factory function for producing DataSourceWorker objects.
@@ -65,6 +69,10 @@ def getDataSourceWorker(
         Type of the data source.
     packetSize : int
         Number of bytes in the packet.
+    startSeq : list of bytes
+        Sequence of commands to start the source.
+    stopSeq : list of bytes
+        Sequence of commands to stop the source.
     kwargs : dict
         Keyword arguments.
 
@@ -79,7 +87,7 @@ def getDataSourceWorker(
         DataSourceType.DUMMY: DummyDataSourceWorker,
         DataSourceType.FIFO: FIFODataSourceWorker,
     }
-    return dataSourceDict[dataSourceType](packetSize, **kwargs)
+    return dataSourceDict[dataSourceType](packetSize, startSeq, stopSeq, **kwargs)
 
 
 __all__ = [
