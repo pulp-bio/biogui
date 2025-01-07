@@ -1,5 +1,6 @@
 """
-This module contains the GAPWatch interface for sEMG.
+This module contains the FlexiForce interface for force data,
+together with synthetic force trajectories.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -21,16 +22,16 @@ import struct
 
 import numpy as np
 
-packetSize: int = 720
+packetSize: int = 12
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = []
-"""Sequence of commands to start the device."""
+startSeq: list[bytes] = [b"="]
+"""Sequence of commands to start the board."""
 
-stopSeq: list[bytes] = []
-"""Sequence of commands to stop the device."""
+stopSeq: list[bytes] = [b":"]
+"""Sequence of commands to stop the board."""
 
-sigInfo: dict = {"emg": {"fs": 4000, "nCh": 16}}
+sigInfo: dict = {"force": {"fs": 120, "nCh": 3}}
 """Dictionary containing the signals information."""
 
 
@@ -49,27 +50,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSamp, nCh = 15, sigInfo["emg"]["nCh"]
+    force = np.zeros(shape=(1, 3), dtype=np.float32)
 
-    # ADC parameters
-    vRef = 4
-    gain = 6
-    nBit = 24
+    # Read force data
+    force[0, 0] = struct.unpack("<f", data[:4])[0]
 
-    dataTmp = bytearray(data)
-    # Convert 24-bit to 32-bit integer
-    pos = 0
-    for _ in range(len(dataTmp) // 3):
-        prefix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, prefix)
-        pos += 4
-    emgAdc = np.asarray(
-        struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, nCh)
+    # Read trajectories
+    force[0, 1:] = np.asarray(struct.unpack("<2f", data[4:]), dtype=np.float32)
 
-    # ADC readings to mV
-    emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
-    emg *= 1_000  # mV
-    emg = emg.astype(np.float32)
-
-    return {"emg": emg}
+    return {"force": force}

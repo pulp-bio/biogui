@@ -1,15 +1,10 @@
 {
     "gestures": {
-        "thumb extension": "fist.png",
-        "index flexion": "index_pointed.png",
-        "index extension": "index_pointed.png",
-        "middle flexion": "pinch.png",
-        "ring flexion": "pinch.png",
-        "little flexion": "pinch.png",
-        "wrist extension": "pinch.png",
-        "wrist flexion": "pinch.png"
+        "fist (power grip)": "fist.png"
     },
     "nReps": 1,
-    "durationMs": 6000,
+    "durationGesture": 4000,
+    "durationStart": 8000,
+    "durationRest": 2000,
     "imageFolder": "acquisitions/gestures_images"
 }
