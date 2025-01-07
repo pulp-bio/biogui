@@ -136,8 +136,6 @@ class MainController(QObject):
 
     def startStreaming(self) -> None:
         """Start streaming."""
-        print("Plots:", self._signalPlotWidgets)
-        print("Config:", self._config)
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(False)
         self._mainWin.stopStreamingButton.setEnabled(True)
