@@ -19,9 +19,9 @@ limitations under the License.
 
 from .data_source_config_dialog import DataSourceConfigDialog
 from .main_window import MainWindow
-from .plot_widget import SignalPlotWidget
 from .signal_config_dialog import SignalConfigDialog
 from .signal_config_wizard import SignalConfigWizard
+from .signal_plot_widget import SignalPlotWidget
 
 __all__ = [
     "MainWindow",

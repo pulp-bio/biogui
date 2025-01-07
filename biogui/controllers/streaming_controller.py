@@ -324,13 +324,13 @@ class StreamingController(QObject):
 
     Class attributes
     ----------------
-    signalReady : Signal
-        Qt Signal emitted when a signal is ready for visualization.
+    signalsReady : Signal
+        Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
     errorOccurred : Signal
         Qt Signal emitted when an error occurs.
     """
 
-    signalReady = Signal(SigData)
+    signalsReady = Signal(list)
     errorOccurred = Signal(str)
 
     def __init__(
@@ -468,7 +468,7 @@ class StreamingController(QObject):
         """Start streaming."""
         self._dataSourceWorker.dataPacketReady.connect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorOccurred.connect(self._handleErrors)
-        self._preprocessor.signalsReady.connect(lambda d: self.signalReady.emit(d))
+        self._preprocessor.signalsReady.connect(lambda d: self.signalsReady.emit(d))
         self._preprocessor.errorOccurred.connect(self._handleErrors)
 
         if self._fileWriterWorker is not None and self._fileWriterThread is not None:
