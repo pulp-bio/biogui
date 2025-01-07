@@ -66,6 +66,17 @@ class DummyConfigWidget(ConfigWidget):
             Dictionary with the configuration.
         """
 
+    def getFieldsInTabOrder(self) -> list[QWidget]:
+        """
+        Get the list of fields in tab order.
+
+        Returns
+        -------
+        list of QWidgets
+            List of the QWidgets in tab order.
+        """
+        return []
+
 
 class DummyDataSourceWorker(DataSourceWorker):
     """

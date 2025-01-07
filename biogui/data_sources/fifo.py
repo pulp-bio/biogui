@@ -79,6 +79,17 @@ class FIFOConfigWidget(ConfigWidget, Ui_FifoDataSourceConfigWidget):
         if "fifoPath" in config:
             self.fifoPathTextField.setText(config["fifoPath"])
 
+    def getFieldsInTabOrder(self) -> list[QWidget]:
+        """
+        Get the list of fields in tab order.
+
+        Returns
+        -------
+        list of QWidgets
+            List of the QWidgets in tab order.
+        """
+        return [self.fifoPathTextField]
+
 
 class FIFODataSourceWorker(DataSourceWorker):
     """
