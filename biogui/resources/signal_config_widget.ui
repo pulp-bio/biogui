@@ -1,25 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AddSignalDialog</class>
- <widget class="QDialog" name="AddSignalDialog">
-  <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
-  </property>
+ <class>SignalConfigWidget</class>
+ <widget class="QWidget" name="SignalConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>730</height>
+    <width>400</width>
+    <height>500</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Add signal</string>
+   <string>Signal Configuration</string>
   </property>
-  <property name="modal">
-   <bool>false</bool>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QFormLayout" name="formLayout1">
      <item row="0" column="0">
@@ -176,66 +170,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="fileSavingGroupBox">
-     <property name="title">
-      <string>Configure file saving</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-     <layout class="QFormLayout" name="formLayout3">
-      <item row="1" column="0">
-       <widget class="QLabel" name="label8">
-        <property name="text">
-         <string>Directory where the file will be saved:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QPushButton" name="browseOutDirButton">
-        <property name="text">
-         <string>Browse</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label9">
-        <property name="text">
-         <string>Path to directory:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="outDirPathLabel">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label10">
-        <property name="text">
-         <string>File name:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="fileNameTextField">
-        <property name="toolTip">
-         <string>If empty, the signal name will be used</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <widget class="QGroupBox" name="plotGroupBox">
      <property name="toolTip">
       <string/>
@@ -257,47 +191,40 @@
      </property>
      <layout class="QFormLayout" name="formLayout4">
       <item row="0" column="0">
-       <widget class="QLabel" name="label11">
-        <property name="text">
-         <string>Render length (in s):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="renderLenTextField">
-        <property name="text">
-         <string>4</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label12">
+       <widget class="QLabel" name="label8">
         <property name="text">
          <string>Channel spacing (in a.u.):</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="0" column="1">
        <widget class="QLineEdit" name="chSpacingTextField">
         <property name="toolTip">
          <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
         </property>
         <property name="text">
-         <string>100</string>
+         <string>0</string>
         </property>
         <property name="placeholderText">
          <string/>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label13">
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="showYAxisCheckBox">
+        <property name="text">
+         <string>Show Y axis</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label9">
         <property name="text">
          <string>Range mode:</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="2" column="1">
        <widget class="QComboBox" name="rangeModeComboBox">
         <item>
          <property name="text">
@@ -311,8 +238,8 @@
         </item>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label14">
+      <item row="3" column="0">
+       <widget class="QLabel" name="label10">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -321,15 +248,15 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="3" column="1">
        <widget class="QLineEdit" name="minRangeTextField">
         <property name="enabled">
          <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label15">
+      <item row="4" column="0">
+       <widget class="QLabel" name="label11">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -338,31 +265,14 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="4" column="1">
        <widget class="QLineEdit" name="maxRangeTextField">
         <property name="enabled">
          <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QCheckBox" name="showYAxisCheckBox">
-        <property name="text">
-         <string>Show Y axis</string>
-        </property>
-       </widget>
-      </item>
      </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
     </widget>
    </item>
   </layout>
@@ -373,11 +283,7 @@
   <tabstop>freq1TextField</tabstop>
   <tabstop>freq2TextField</tabstop>
   <tabstop>filtOrderTextField</tabstop>
-  <tabstop>fileSavingGroupBox</tabstop>
-  <tabstop>browseOutDirButton</tabstop>
-  <tabstop>fileNameTextField</tabstop>
   <tabstop>plotGroupBox</tabstop>
-  <tabstop>renderLenTextField</tabstop>
   <tabstop>chSpacingTextField</tabstop>
   <tabstop>showYAxisCheckBox</tabstop>
   <tabstop>rangeModeComboBox</tabstop>
@@ -385,38 +291,5 @@
   <tabstop>maxRangeTextField</tabstop>
  </tabstops>
  <resources/>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>AddSignalDialog</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>254</x>
-     <y>695</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>AddSignalDialog</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>322</x>
-     <y>695</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

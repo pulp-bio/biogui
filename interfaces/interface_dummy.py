@@ -17,32 +17,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from collections import namedtuple
-
 import numpy as np
 
 packetSize: int = 0
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = []
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [128, 51.2]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [4, 2]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "sig1, sig2")
-"""Named tuple containing the packets for the two dummy signals."""
+sigInfo: dict = {"sig1": {"fs": 128, "nCh": 4}, "sig2": {"fs": 51.2, "nCh": 2}}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data generated into two dummy signals.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -51,12 +43,13 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the two dummy signals.
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     dataTmp = np.frombuffer(data, dtype=np.float32)
     nSamp1, nSamp2 = 10, 4
     sig1 = dataTmp[: nSamp1 * 4].reshape(nSamp1, 4)
     sig2 = dataTmp[nSamp1 * 4 :].reshape(nSamp2, 2)
 
-    return SigsPacket(sig1=sig1, sig2=sig2)
+    return {"sig1": sig1, "sig2": sig2}

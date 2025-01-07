@@ -17,9 +17,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .add_data_source_dialog import AddDataSourceDialog
-from .add_signal_dialog import AddSignalDialog
+from .data_source_config_dialog import DataSourceConfigDialog
 from .main_window import MainWindow
+from .signal_config_dialog import SignalConfigDialog
+from .signal_config_wizard import SignalConfigWizard
 from .signal_plot_widget import SignalPlotWidget
 
-__all__ = ["MainWindow", "AddDataSourceDialog", "AddSignalDialog", "SignalPlotWidget"]
+__all__ = [
+    "MainWindow",
+    "DataSourceConfigDialog",
+    "SignalConfigDialog",
+    "SignalConfigWizard",
+    "SignalPlotWidget",
+]

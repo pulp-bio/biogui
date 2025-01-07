@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FifoConfigView</class>
- <widget class="QWidget" name="FifoConfigView">
+ <class>TCPDataSourceConfigWidget</class>
+ <widget class="QWidget" name="TCPDataSourceConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,18 +11,18 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>FIFO Configuration Widget</string>
+   <string>TCP Data Source Configuration</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Path to FIFO:</string>
+      <string>Port:</string>
      </property>
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QLineEdit" name="fifoPathTextField"/>
+    <widget class="QLineEdit" name="portTextField"/>
    </item>
   </layout>
  </widget>

@@ -19,40 +19,66 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
 
 def createCommand(start=1):
     """Internal function to create start/stop commands."""
-    rec = 0
-    trig = 0
-    # 0 = standard range, 1 = 2x range, 2 = 4x range, 3 = 8x range
-    ext = 0
-    # 0 = no filter, 1 = filter
-    hpf = 1
-    # 0 = 16 bit, 1 = 24 bit
-    hres = 0
-    # 0 = monopolar, 1 = bipolar, 2 = differential,
-    # 3 = accelerometers, 6 = impedance check, 7 = test mode
-    mode = 0
-    # 0 = 8 channels, 1 = 16 channels, 2 = 32 channels, 3 = 64 channels
-    nch = 3
-    # if mode != 3: 0 = 500 sps, 1 = 1000 sps, 2 = 2000 sps
-    # if mode == 3: 0 = 2000 sps, 1 = 4000 sps, 2 = 8000 sps
-    fsamp = 2
+    # The command comprises 2 control bytes. For further details, please refer to the manual:
+    # https://otbioelettronica.it/download/182/sessantaquattro/2943/sessantaquattro-tcp-communication-protocol
 
-    command = 0
-    command = command + start
-    command = command + rec * 2
-    command = command + trig * 4
-    command = command + ext * 16
-    command = command + hpf * 64
-    command = command + hres * 128
-    command = command + mode * 256
-    command = command + nch * 2048
-    command = command + fsamp * 8192
+    # Bit 0
+    go = start
+    # Bit 1
+    rec = 0
+    # Bits 3-2
+    trig = 0
+    # Bit 5-4:
+    # - gain = 0:
+    #   - hres = 0 -> preamp gain is 8;
+    #   - hres = 1 -> preamp gain is 2;
+    # - gain = 1 -> preamp gain is 4;
+    # - gain = 2 -> preamp gain is 6;
+    # - gain = 3 -> preamp gain is 8.
+    gain = 0
+    # Bit 6:
+    # - hpf = 0 -> no high pass filter
+    # - hpf = 1 -> high pass filter with EMA (cut-off of fs / 190 = 10.5 Hz)
+    hpf = 1
+    # Bit 7:
+    # - hres = 0 -> 16 bits
+    # - hres = 1 -> 24 bits
+    hres = 0
+
+    # Bits 2-0:
+    # - mode = 0 -> monopolar;
+    # - mode = 1 -> bipolar (AD8x1SP);
+    # - mode = 2 -> differential;
+    # - mode = 3 -> accelerometers;
+    # - mode = 4 -> bipolar (AD4x8SP);
+    # - mode = 5 -> impedance check advanced;
+    # - mode = 6 -> impedance check;
+    # - mode = 7 -> test mode (i.e., ramps).
+    mode = 0
+    # Bits 4-3:
+    # nch = 0 -> 8 channels;
+    # nch = 1 -> 16 channels;
+    # nch = 2 -> 32 channels;
+    # nch = 3 -> 64 channels.
+    nch = 3
+    # Bits 6-5:
+    # - fsamp = 0 -> 500 sps;
+    # - fsamp = 1 -> 1000 sps;
+    # - fsamp = 2 -> 2000 sps;
+    # - fsamp = 3 -> 4000 sps (only for reduced number of channels);
+    fsamp = 2
+    # Bit 7
+    getset = 0
+
+    # Build command
+    command = go + rec * 2 + trig * 4 + gain * 16 + hpf * 64 + hres * 128
+    command += mode * 256 + nch * 2048 + fsamp * 8192 + getset * 32768
 
     return command
 
@@ -63,27 +89,24 @@ packetSize: int = 144
 startSeq: list[bytes] = [
     createCommand(1).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = [
     createCommand(0).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [2000, 2000, 2000]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [64, 2, 4]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "emg aux imu")
-"""Named tuple containing the EMG packet."""
+sigInfo: dict = {
+    "emg": {"fs": 2000, "nCh": 64},
+    "aux": {"fs": 2000, "nCh": 2},
+    "imu": {"fs": 2000, "nCh": 4},
+}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received
-    from the OTBioelettronica Sessantaquattro+.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -92,8 +115,9 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the data packets with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     # 72 shorts:
     # - 64 for EMG data
@@ -118,4 +142,4 @@ def decodeFn(data: bytes) -> SigsPacket:
         -1, 4
     )
 
-    return SigsPacket(emg=emg, aux=aux, imu=imu)
+    return {"emg": emg, "aux": aux, "imu": imu}
