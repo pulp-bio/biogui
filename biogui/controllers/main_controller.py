@@ -37,6 +37,31 @@ from ..utils import SigData, instanceSlot
 from .streaming_controller import StreamingController
 
 
+def validateFreqSettings(sigConfig, fs):
+    """
+    Validate the frequency settings given the sampling rate.
+
+    Parameters
+    ----------
+    sigConfig : dict
+        Signal configuration.
+    fs : float
+        Sampling rate.
+
+    Returns
+    -------
+    bool
+        Whether the frequency settings are compatible with the sampling rate.
+    """
+    freqSettingsValid = True
+    if "freqs" in sigConfig:
+        for freq in sigConfig["freqs"]:
+            if freq >= fs / 2:
+                freqSettingsValid = False
+                break
+    return freqSettingsValid
+
+
 class MainController(QObject):
     """
     Main controller of BioGUI.
@@ -140,10 +165,13 @@ class MainController(QObject):
     def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
         """Add a data source, given its configuration."""
         # Create streaming controller
-        dataSourceWorkerArgs = dataSourceConfig.copy()
-        del dataSourceWorkerArgs["interfacePath"]
-        interfaceModule = dataSourceWorkerArgs.pop("interfaceModule")
-        filePath = dataSourceWorkerArgs.pop("filePath", None)
+        dataSourceWorkerArgs = {
+            k: v
+            for k, v in dataSourceConfig.items()
+            if k not in ("interfacePath", "interfaceModule", "filePath")
+        }
+        interfaceModule = dataSourceConfig["interfaceModule"]
+        filePath = dataSourceConfig.get("filePath", None)
         dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
@@ -298,7 +326,6 @@ class MainController(QObject):
         if not accepted:
             return
         newDataSourceConfig = dataSourceConfigDialog.dataSourceConfig
-        print(newDataSourceConfig)
 
         if (
             newDataSourceConfig["interfaceModule"].sigInfo.keys()
@@ -328,10 +355,39 @@ class MainController(QObject):
 
             return
 
-        # Update streaming controller settings
-        # self._streamingControllers[dataSourceToEdit].editDataSourceConfig(
-        #     newDataSourceConfig
-        # )
+        # Update signal configuration with the new info
+        sigsConfigs = oldDataSourceConfig["sigsConfigs"]
+        sigInfo = newDataSourceConfig["interfaceModule"].sigInfo
+        for sigName in sigsConfigs:
+            sigsConfigs[sigName]["fs"] = sigInfo[sigName]["fs"]
+            sigsConfigs[sigName]["nCh"] = sigInfo[sigName]["nCh"]
+            if sigsConfigs[sigName]["nCh"] == 1:
+                sigsConfigs[sigName]["chSpacing"] = 0
+
+            # Check if filtering settings are still valid
+            if not validateFreqSettings(sigsConfigs[sigName], sigInfo[sigName]["fs"]):
+                QMessageBox.warning(
+                    self._mainWin,
+                    "Signal configuration reset",
+                    f"The previous filtering settings of {sigName} are not compatible "
+                    "with the new sampling rate, filtering will be disabled.",
+                    buttons=QMessageBox.Ok,  # type: ignore
+                    defaultButton=QMessageBox.Ok,  # type: ignore
+                )
+                # Delete settings
+                del sigsConfigs[sigName]["filtType"]
+                del sigsConfigs[sigName]["freqs"]
+                del sigsConfigs[sigName]["filtOrder"]
+        newDataSourceConfig["sigsConfigs"] = sigsConfigs
+
+        # Update streaming controller and store new settings
+        streamingController = self._streamingControllers.pop(dataSourceToEdit)
+        del self._config[str(streamingController)]
+        streamingController.editDataSourceConfig(newDataSourceConfig)
+        self._streamingControllers[str(streamingController)] = streamingController
+        self._config[str(streamingController)] = newDataSourceConfig
+
+        # Update plot widgets
 
     def _editSignalHandler(self) -> None:
         """Handler for editing the signal configuration."""
