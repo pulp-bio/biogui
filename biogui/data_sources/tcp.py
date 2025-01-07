@@ -95,6 +95,17 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
         if "socketPort" in config:
             self.portTextField.setText(QLocale().toString(config["socketPort"]))
 
+    def getFieldsInTabOrder(self) -> list[QWidget]:
+        """
+        Get the list of fields in tab order.
+
+        Returns
+        -------
+        list of QWidgets
+            List of the QWidgets in tab order.
+        """
+        return [self.portTextField]
+
 
 class TCPDataSourceWorker(DataSourceWorker):
     """

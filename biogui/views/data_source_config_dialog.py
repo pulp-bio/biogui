@@ -146,6 +146,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.dataSourceComboBox.setCurrentText(dataSourceType.value)
         self._configWidget = data_sources.getConfigWidget(dataSourceType, self)
         self.sourceConfigContainer.addWidget(self._configWidget)
+        self._updateTabOrder()
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
@@ -174,6 +175,20 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         - "filePath": the file path (optional).
         """
         return self._dataSourceConfig
+
+    def _updateTabOrder(self) -> None:
+        """Update the tab order when the data source widget changes."""
+        self.setTabOrder(self.browseInterfaceModuleButton, self.dataSourceComboBox)
+
+        tabOrderedFields = self._configWidget.getFieldsInTabOrder()
+        if not tabOrderedFields:
+            self.setTabOrder(self.dataSourceComboBox, self.fileSavingGroupBox)
+            return
+
+        self.setTabOrder(self.dataSourceComboBox, tabOrderedFields[0])
+        for i in range(1, len(tabOrderedFields)):
+            self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
+        self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
     def _browseInterfaceModule(self) -> None:
         """Browse files to select the module containing the decode function."""
@@ -237,6 +252,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             data_sources.DataSourceType(self.dataSourceComboBox.currentText()), self
         )
         self.sourceConfigContainer.addWidget(self._configWidget)
+
+        # Update tab order
+        self._updateTabOrder()
 
     def _validateDialog(self) -> None:
         """Validate user input in the form."""
