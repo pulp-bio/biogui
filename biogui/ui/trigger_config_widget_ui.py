@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'trigger_config.ui'
+## Form generated from reading UI file 'trigger_config_widget.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.7.2
 ##
@@ -18,14 +18,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFormLayout, QGroupBox, QLabel,
     QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
-class Ui_TriggerConfig(object):
-    def setupUi(self, TriggerConfig):
-        if not TriggerConfig.objectName():
-            TriggerConfig.setObjectName(u"TriggerConfig")
-        TriggerConfig.resize(400, 132)
-        self.verticalLayout = QVBoxLayout(TriggerConfig)
+class Ui_TriggerConfigWidget(object):
+    def setupUi(self, TriggerConfigWidget):
+        if not TriggerConfigWidget.objectName():
+            TriggerConfigWidget.setObjectName(u"TriggerConfigWidget")
+        TriggerConfigWidget.resize(400, 132)
+        self.verticalLayout = QVBoxLayout(TriggerConfigWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.triggerGroupBox = QGroupBox(TriggerConfig)
+        self.triggerGroupBox = QGroupBox(TriggerConfigWidget)
         self.triggerGroupBox.setObjectName(u"triggerGroupBox")
         self.triggerGroupBox.setAlignment(Qt.AlignCenter)
         self.triggerGroupBox.setCheckable(True)
@@ -56,17 +56,17 @@ class Ui_TriggerConfig(object):
         self.verticalLayout.addWidget(self.triggerGroupBox)
 
 
-        self.retranslateUi(TriggerConfig)
+        self.retranslateUi(TriggerConfigWidget)
 
-        QMetaObject.connectSlotsByName(TriggerConfig)
+        QMetaObject.connectSlotsByName(TriggerConfigWidget)
     # setupUi
 
-    def retranslateUi(self, TriggerConfig):
-        TriggerConfig.setWindowTitle(QCoreApplication.translate("TriggerConfig", u"Trigger configuration widget", None))
-        self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfig", u"Configure triggers", None))
-        self.label1.setText(QCoreApplication.translate("TriggerConfig", u"JSON with configuration:", None))
-        self.browseJSONButton.setText(QCoreApplication.translate("TriggerConfig", u"Browse", None))
-        self.label2.setText(QCoreApplication.translate("TriggerConfig", u"Path to JSON:", None))
+    def retranslateUi(self, TriggerConfigWidget):
+        TriggerConfigWidget.setWindowTitle(QCoreApplication.translate("TriggerConfigWidget", u"Trigger Configuration Widget", None))
+        self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfigWidget", u"Configure triggers", None))
+        self.label1.setText(QCoreApplication.translate("TriggerConfigWidget", u"JSON with configuration:", None))
+        self.browseJSONButton.setText(QCoreApplication.translate("TriggerConfigWidget", u"Browse", None))
+        self.label2.setText(QCoreApplication.translate("TriggerConfigWidget", u"Path to JSON:", None))
         self.configJSONPathLabel.setText("")
     # retranslateUi
 
