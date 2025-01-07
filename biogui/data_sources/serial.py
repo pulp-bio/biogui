@@ -23,6 +23,7 @@ import logging
 import time
 
 import serial
+import serial.serialutil
 import serial.tools.list_ports
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon, QIntValidator
@@ -184,7 +185,14 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._stopReadingFlag = False
 
         # Open serial port
-        ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+        try:
+            ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+        except serial.serialutil.SerialException as e:
+            self.errorOccurred.emit(
+                f"Cannot open serial port due to the following exception:\n{e}."
+            )
+            logging.error("DataWorker: serial communication failed.")
+            return
 
         logging.info("DataWorker: serial communication started.")
 
@@ -198,8 +206,8 @@ class SerialDataSourceWorker(DataSourceWorker):
 
             # Check number of bytes read
             if len(data) != self._packetSize:
-                self.errorOccurred.emit("Serial communication failed.")
-                logging.error("DataWorker: serial communication failed.")
+                self.errorOccurred.emit("No data received.")
+                logging.error("DataWorker: no data received.")
                 break
 
             self.dataPacketReady.emit(data)

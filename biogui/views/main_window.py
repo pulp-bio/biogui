@@ -17,12 +17,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from PySide6.QtCore import Signal, Slot
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow
 
 from biogui.ui.main_window_ui import Ui_MainWindow
-from biogui.utils import detectTheme
+from biogui.utils import detectTheme, instanceSlot
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -59,7 +59,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.renderLenMs = 5000
         self.renderLenComboBox.currentTextChanged.connect(self._onRenderLenChange)
 
-    @Slot(str)
+    @instanceSlot(str)
     def _onRenderLenChange(self, renderLen: str):
         """Detect if render length has changed."""
         renderLenMap = {

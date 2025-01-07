@@ -195,8 +195,8 @@ class TCPDataSourceWorker(DataSourceWorker):
                                 )
                             pos += nRead
                     except socket.timeout:
-                        self.errorOccurred.emit("TCP communication failed.")
-                        logging.error("DataWorker: TCP communication failed.")
+                        self.errorOccurred.emit("No data received.")
+                        logging.error("DataWorker: no data received.")
                         return
                     except IncompleteReadError as e:
                         logging.error(

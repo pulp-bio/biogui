@@ -299,14 +299,13 @@ class StreamingController(QObject):
         The decoding function.
     filePath : str or None
         The file path where the data will be saved (if specified).
-    sigsConfigs: dict
+    sigsConfigs : dict
         Dictionary with the configuration for each signal, namely:
         - "fs": the sampling frequency;
         - "nCh": the number of channels;
         - "filtType": the filter type (optional);
         - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional);
-        - "filePath": the file path (optional).
+        - "filtOrder" the filter order (optional).
     parent : QObject or None, default=None
         Parent QObject.
 
@@ -371,7 +370,9 @@ class StreamingController(QObject):
     @instanceSlot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When error occurs, stop collection and preprocessing and forward the error Qt Signal."""
-        self.errorOccurred.emit(f'StreamingController "{self.__str__()}": {errMessage}')
+        self.errorOccurred.emit(
+            f'StreamingController "{self.__str__()}" raised the following error:\n\n{errMessage}'
+        )
 
     def editDataSourceConfig(self, dataSourceConfig: dict) -> None:
         """
@@ -384,24 +385,54 @@ class StreamingController(QObject):
             - "dataSourceType": the data source type;
             - "interfaceModule": the interface module;
             - the data source type-specific configuration parameters;
-            - "filePath": the file path (optional).
+            - "filePath": the file path (optional);
+            - "sigsConfigs": dictionary with signal configuration.
         """
-        # 2. File writer settings:
-        # 2.1. If configuration is empty, remove previous worker and thread (if present)
-        # if "filePath" not in sigConfig:
-        #     self._fileWriterWorkers.pop(sigName, None)
-        #     self._fileWriterThreads.pop(sigName, None)
-        #     return
-        # filePath = sigConfig["filePath"]
+        # Unpack config
+        dataSourceWorkerArgs = {
+            k: v
+            for k, v in dataSourceConfig.items()
+            if k not in ("interfacePath", "interfaceModule", "filePath", "sigsConfigs")
+        }
+        interfaceModule = dataSourceConfig["interfaceModule"]
+        filePath = dataSourceConfig.get("filePath", None)
+        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
+        dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
+        dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
 
-        # # 2.2. If worker already exists, reset it and change path
-        # if sigName in self._fileWriterWorkers:
-        #     self._fileWriterWorkers[sigName].filePath = filePath
-        #     self._fileWriterWorkers[sigName].isFirstWrite = False
-        #     return
+        # 1. Data source settings
+        self._dataSourceWorker = data_sources.getDataSourceWorker(
+            **dataSourceWorkerArgs
+        )
+        self._dataSourceThread = QThread(self)
+        self._dataSourceWorker.moveToThread(self._dataSourceThread)
+        self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
+        self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
 
-        # # 2.3. Otherwise, initialize file writer
-        # self._initFileWriter(filePath)
+        # 2. Pre-processing settings
+        self._preprocessor = _Preprocessor(
+            interfaceModule.decodeFn, dataSourceConfig["sigsConfigs"]
+        )
+
+        # 3. File writer settings:
+        # 3.1. If configuration is empty, remove previous worker and thread (if present)
+        if filePath is None:
+            self._fileWriterWorker = None
+            self._fileWriterThread = None
+            return
+
+        # 3.2. If worker already exists, reset it and change path
+        if self._fileWriterWorker is not None:
+            self._fileWriterWorker.filePath = filePath
+            self._fileWriterWorker.isFirstWrite = False
+            return
+
+        # 3.3. Otherwise, initialize file writer
+        self._fileWriterWorker = _FileWriterWorker(filePath)
+        self._fileWriterThread = QThread(self)
+        self._fileWriterWorker.moveToThread(self._fileWriterThread)
+        self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
+        self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)
 
     def editSigConfig(self, sigName: str, sigConfig: dict) -> None:
         """
@@ -430,7 +461,7 @@ class StreamingController(QObject):
         trigger : int or None
             Trigger value.
         """
-        if self._fileWriterWorker:
+        if self._fileWriterWorker is not None:
             self._fileWriterWorker.trigger = trigger
 
     def startStreaming(self) -> None:
@@ -440,7 +471,7 @@ class StreamingController(QObject):
         self._preprocessor.signalsReady.connect(lambda d: self.signalReady.emit(d))
         self._preprocessor.errorOccurred.connect(self._handleErrors)
 
-        if self._fileWriterWorker and self._fileWriterThread:
+        if self._fileWriterWorker is not None and self._fileWriterThread is not None:
             self._preprocessor.rawSignalsReady.connect(self._fileWriterWorker.write)
             self._fileWriterThread.start()
 
@@ -452,7 +483,7 @@ class StreamingController(QObject):
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
 
-        if self._fileWriterWorker and self._fileWriterThread:
+        if self._fileWriterWorker is not None and self._fileWriterThread is not None:
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
             self._fileWriterWorker.trigger = None
