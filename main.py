@@ -42,14 +42,14 @@ class SocketListener(QObject):
 
     Class attributes
     ----------------
-    startSignal : Signal
+    startCmdRecv : Signal
         Qt Signal emitted when the socket receive a start command.
-    stopSignal : Signal
+    stopCmdRecv : Signal
         Qt Signal emitted when the socket receive a stop command.
     """
 
-    startSignal = Signal()
-    stopSignal = Signal()
+    startCmdRecv = Signal()
+    stopCmdRecv = Signal()
 
     def __init__(self, port: int, parent=None):
         super().__init__(parent)
@@ -74,10 +74,10 @@ class SocketListener(QObject):
                         data = conn.recv(1024).strip()
                         if data == b"start":
                             logging.info("SocketListener: start command received.")
-                            self.startSignal.emit()
+                            self.startCmdRecv.emit()
                         elif data == b"stop":
                             logging.info("SocketListener: stop command received.")
-                            self.stopSignal.emit()
+                            self.stopCmdRecv.emit()
                         # Close the connection
                         conn.close()
                 except socket.timeout:
@@ -131,8 +131,8 @@ if __name__ == "__main__":
         # Connect signals
         thread.started.connect(socketListener.run)
         thread.finished.connect(thread.deleteLater)
-        socketListener.startSignal.connect(app.mainController.startStreaming)
-        socketListener.stopSignal.connect(app.mainController.stopStreaming)
+        socketListener.startCmdRecv.connect(app.mainController.startStreaming)
+        socketListener.stopCmdRecv.connect(app.mainController.stopStreaming)
         app.aboutToQuit.connect(onAppExit)
 
         # Start the thread

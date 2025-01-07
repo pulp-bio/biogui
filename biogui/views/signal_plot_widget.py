@@ -23,13 +23,14 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QLocale, QTimer, Slot
+from PySide6.QtCore import QLocale, QTimer
 from PySide6.QtWidgets import QWidget
 
-from ..ui.signal_plots_widget_ui import Ui_SignalPlotsWidget
+from ..ui.signal_plot_widget_ui import Ui_SignalPlotWidget
+from ..utils import instanceSlot
 
 
-class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
+class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     """
     Widget showing the real-time plot of a signal.
 
@@ -41,12 +42,12 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    renderLengthS : int
-        Length of the window in the plot (in s).
     chSpacing : int
         Spacing between each channel in the plot.
     showYAxis : bool
         Whether to show the Y axis or not.
+    renderLenMs : int
+        Length of the window in the plot (in ms).
     parent : QWidget or None
         Parent widget.
     **kwargs : dict
@@ -79,11 +80,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        renderLengthS: int,
         chSpacing: int,
         showYAxis: bool,
+        renderLenMs: int,
         parent: QWidget | None = None,
-        **kwargs: dict,
+        **kwargs: dict[str, float],
     ) -> None:
         super().__init__(parent)
 
@@ -94,19 +95,19 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._chSpacing = chSpacing
 
         # Set up queue
-        renderLength = int(round(renderLengthS * fs))
-        self._dataQueue = deque(maxlen=renderLength)
+        renderLen = int(round(renderLenMs / 1000 * fs))
+        self._dataQueue = deque(maxlen=renderLen)
 
         # Fill queue
         if "dataQueue" in kwargs:
             self._dataQueue.extend(kwargs["dataQueue"])
         else:
-            for _ in range(renderLength):  # type: ignore
+            for _ in range(renderLen):
                 self._dataQueue.append(np.zeros(self._nCh))
 
         # Configure timers
         self._plotTimer = QTimer(self)
-        self._plotTimer.setInterval(50)  # 20 FPS
+        self._plotTimer.setInterval(33)  # 30 FPS
         self._plotTimer.timeout.connect(self._refreshPlot)
         self._spsTimer = QTimer(self)
         self._spsTimer.setInterval(1000)
@@ -116,26 +117,23 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
 
         # Initialize plots
         self._plots = []
-        self._initializePlots(sigName, showYAxis, **kwargs)
+        self.graphWidget.setTitle(sigName)
+        self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
+        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+        if not showYAxis:
+            self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
+        if "minRange" in kwargs and "maxRange" in kwargs:
+            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])  # type: ignore
+        self._renderPlots()
 
     @property
     def dataQueue(self) -> deque:
         """deque: Property representing the queue with the values to plot."""
         return self._dataQueue
 
-    def _initializePlots(self, sigName: str, showYAxis: bool, **kwargs) -> None:
+    def _renderPlots(self) -> None:
         """Render the initial plot."""
-        # Reset graph
         self.graphWidget.clear()
-        self.graphWidget.setTitle(sigName)
-        self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
-        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
-        if not showYAxis:
-            self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
-
-        # Set range
-        if "minRange" in kwargs and "maxRange" in kwargs:
-            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
@@ -152,6 +150,22 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
                 )
             )
 
+    @instanceSlot(int)
+    def reInitPlot(self, renderLenMs) -> None:
+        """Re-initialize the plot when the render length changes."""
+
+        # Fill new queue
+        renderLen = int(round(renderLenMs / 1000 * self._fs))
+        newDataQueue = deque(maxlen=renderLen)
+        for _ in range(renderLen):
+            newDataQueue.append(np.zeros(self._nCh))
+        newDataQueue.extend(self._dataQueue)
+        self._dataQueue = newDataQueue
+
+        # Re-render plots
+        self._plots = []
+        self._renderPlots()
+
     def startTimers(self) -> None:
         """Start the timers for plot refresh."""
         self._timeTracker = 0
@@ -165,7 +179,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotsWidget):
         self._plotTimer.stop()
         self._spsTimer.stop()
 
-    @Slot(np.ndarray)
+    @instanceSlot(np.ndarray)
     def addData(self, data: np.ndarray) -> None:
         """
         Add the given data to the internal queues.

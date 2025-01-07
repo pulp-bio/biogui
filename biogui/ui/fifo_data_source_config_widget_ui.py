@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'fifo_config_widget.ui'
+## Form generated from reading UI file 'fifo_data_source_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -18,31 +18,31 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFormLayout, QLabel, QLineEdit,
     QSizePolicy, QWidget)
 
-class Ui_FifoConfigView(object):
-    def setupUi(self, FifoConfigView):
-        if not FifoConfigView.objectName():
-            FifoConfigView.setObjectName(u"FifoConfigView")
-        FifoConfigView.resize(400, 300)
-        self.formLayout = QFormLayout(FifoConfigView)
+class Ui_FifoDataSourceConfigWidget(object):
+    def setupUi(self, FifoDataSourceConfigWidget):
+        if not FifoDataSourceConfigWidget.objectName():
+            FifoDataSourceConfigWidget.setObjectName(u"FifoDataSourceConfigWidget")
+        FifoDataSourceConfigWidget.resize(400, 300)
+        self.formLayout = QFormLayout(FifoDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
-        self.label = QLabel(FifoConfigView)
+        self.label = QLabel(FifoDataSourceConfigWidget)
         self.label.setObjectName(u"label")
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
 
-        self.fifoPathTextField = QLineEdit(FifoConfigView)
+        self.fifoPathTextField = QLineEdit(FifoDataSourceConfigWidget)
         self.fifoPathTextField.setObjectName(u"fifoPathTextField")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.fifoPathTextField)
 
 
-        self.retranslateUi(FifoConfigView)
+        self.retranslateUi(FifoDataSourceConfigWidget)
 
-        QMetaObject.connectSlotsByName(FifoConfigView)
+        QMetaObject.connectSlotsByName(FifoDataSourceConfigWidget)
     # setupUi
 
-    def retranslateUi(self, FifoConfigView):
-        FifoConfigView.setWindowTitle(QCoreApplication.translate("FifoConfigView", u"FIFO Configuration Widget", None))
-        self.label.setText(QCoreApplication.translate("FifoConfigView", u"Path to FIFO:", None))
+    def retranslateUi(self, FifoDataSourceConfigWidget):
+        FifoDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("FifoDataSourceConfigWidget", u"FIFO Configuration Widget", None))
+        self.label.setText(QCoreApplication.translate("FifoDataSourceConfigWidget", u"Path to FIFO:", None))
     # retranslateUi
 
