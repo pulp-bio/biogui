@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SerialConfigWidget</class>
- <widget class="QWidget" name="SerialConfigWidget">
+ <class>SerialDataSourceConfigWidget</class>
+ <widget class="QWidget" name="SerialDataSourceConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Serial Configuration Widget</string>
+   <string>Serial Data Source Configuration</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
@@ -24,7 +24,11 @@
    <item row="0" column="1">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
      <item>
-      <widget class="QComboBox" name="serialPortsComboBox"/>
+      <widget class="QComboBox" name="serialPortsComboBox">
+       <property name="toolTip">
+        <string>List of available serial ports</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="rescanSerialPortsButton">
@@ -35,8 +39,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset theme="view-refresh">
-         <normaloff>.</normaloff>.</iconset>
+        <iconset theme="view-refresh"/>
        </property>
       </widget>
      </item>

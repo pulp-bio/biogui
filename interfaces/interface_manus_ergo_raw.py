@@ -19,7 +19,6 @@ limitations under the License.
 """
 
 import struct
-from collections import namedtuple
 
 import numpy as np
 
@@ -27,24 +26,18 @@ packetSize: int = 128
 """Number of bytes in each packet (all data transmitted as floats)."""
 
 startSeq: list[bytes] = []
-"""Sequence of commands to start the board."""
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = [b"S"]
-"""Sequence of commands to stop the board."""
+"""Sequence of commands to stop the device."""
 
-fs: list[float] = [120, 120]
-"""Sequence of floats representing the sampling rate of each signal."""
-
-nCh: list[int] = [24, 1]
-"""Sequence of integers representing the number of channels of each signal."""
-
-SigsPacket = namedtuple("SigsPacket", "manusData manusTs")
-"""Named tuple containing the MANUS data packet."""
+sigInfo: dict = {"manusData": {"fs": 120, "nCh": 24}, "manusTs": {"fs": 120, "nCh": 1}}
+"""Dictionary containing the signals information."""
 
 
-def decodeFn(data: bytes) -> SigsPacket:
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from MANUS.
+    Function to decode the binary data received from the device into signals.
 
     Parameters
     ----------
@@ -53,8 +46,9 @@ def decodeFn(data: bytes) -> SigsPacket:
 
     Returns
     -------
-    SigsPacket
-        Named tuple containing the MANUS data packet with shape (nSamp, nCh).
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
     """
     # 35 floats:
     # - 20 for angles
@@ -62,7 +56,7 @@ def decodeFn(data: bytes) -> SigsPacket:
     # -  3 for position
     # -  4 for quaternion
     # -  3 for scale
-    # -  2 for raw timestamp (double)
+    # -  1 for timestamp
 
     manusData = np.zeros(shape=(1, 24), dtype=np.float32)
 
@@ -79,4 +73,4 @@ def decodeFn(data: bytes) -> SigsPacket:
         1, 1
     )
 
-    return SigsPacket(manusData=manusData, manusTs=manusTs)
+    return {"manusData": manusData, "manusTs": manusTs}

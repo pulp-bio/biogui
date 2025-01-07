@@ -19,23 +19,47 @@ limitations under the License.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QModelIndex, QObject, Signal, Slot
+from types import MappingProxyType
+
+from PySide6.QtCore import QModelIndex, QObject, Signal
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
 
 from biogui.views import (
-    AddDataSourceDialog,
-    AddSignalDialog,
+    DataSourceConfigDialog,
     MainWindow,
+    SignalConfigDialog,
+    SignalConfigWizard,
     SignalPlotWidget,
 )
 
-from .streaming_controller import (
-    DataPacket,
-    DecodeFn,
-    InterfaceModule,
-    StreamingController,
-)
+from ..utils import SigData, instanceSlot
+from .streaming_controller import StreamingController
+
+
+def validateFreqSettings(sigConfig, fs):
+    """
+    Validate the frequency settings given the sampling rate.
+
+    Parameters
+    ----------
+    sigConfig : dict
+        Signal configuration.
+    fs : float
+        Sampling rate.
+
+    Returns
+    -------
+    bool
+        Whether the frequency settings are compatible with the sampling rate.
+    """
+    freqSettingsValid = True
+    if "freqs" in sigConfig:
+        for freq in sigConfig["freqs"]:
+            if freq >= fs / 2:
+                freqSettingsValid = False
+                break
+    return freqSettingsValid
 
 
 class MainController(QObject):
@@ -51,36 +75,35 @@ class MainController(QObject):
     ----------
     _mainWin : MainWindow
         Instance of MainWindow.
-    _sigPlotWidgets : dict of (str: SignalPlotWidget)
+    _streamingControllers : dict of (str: StreamingController)
+        Collection of StreamingController objects, indexed by the name of the corresponding data source.
+    _signalPlotWidgets : dict of (str: SignalPlotWidget)
         Collection of SignalPlotWidget objects, indexed by the name of the corresponding signal.
     _config : dict
         Configuration of the signals.
 
     Class attributes
     ----------------
-    startStreamingSig : Signal
+    streamingStarted : Signal
         Qt Signal emitted when streaming starts.
-    stopStreamingSig : Signal
+    streamingStopped : Signal
         Qt Signal emitted when streaming stops.
-    closeSig : Signal
+    appClosed : Signal
         Qt Signal emitted when the application is closed.
-    dataReadySig : Signal
-        Qt Signal emitted when new filtered data is available.
-    newSourceAddedSig : Signal
-        Qt Signal emitted when a new source is added.
+    signalsReady : Signal
+        Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
     """
 
-    startStreamingSig = Signal()
-    stopStreamingSig = Signal()
-    closeSig = Signal()
-    dataReadySig = Signal(DataPacket)
-    newSourceAddedSig = Signal(StreamingController)
+    streamingStarted = Signal()
+    streamingStopped = Signal()
+    appClosed = Signal()
+    signalsReady = Signal(SigData)
 
     def __init__(self, mainWin: MainWindow) -> None:
         super().__init__()
         self._mainWin = mainWin
         self._streamingControllers: dict[str, StreamingController] = {}
-        self._sigPlotWidgets: dict[str, SignalPlotWidget] = {}
+        self._signalPlotWidgets: dict[str, SignalPlotWidget] = {}
         self._config: dict = {}
 
         # Setup UI data source tree
@@ -91,12 +114,11 @@ class MainController(QObject):
         self._connectSignals()
 
     @property
-    def streamingControllers(self) -> dict[str, StreamingController]:
+    def streamingControllers(self) -> MappingProxyType:
         """
-        dict of (str: StreamingController): Property representing a collection of
-        StreamingController objects, indexed by the name of the corresponding DataSource.
+        MappingProxyType: Property representing a read-only view of the StreamingController dictionary.
         """
-        return self._streamingControllers.copy()
+        return MappingProxyType(self._streamingControllers)
 
     def _connectSignals(self) -> None:
         """Connect Qt signals and slots."""
@@ -105,14 +127,14 @@ class MainController(QObject):
         self._mainWin.deleteDataSourceButton.clicked.connect(
             self._deleteDataSourceHandler
         )
-        self._mainWin.editSignalButton.clicked.connect(self._editSignalHandler)
-        self._mainWin.dataSourceTree.clicked.connect(self._enableButtons)
+        self._mainWin.editButton.clicked.connect(self._editDataSourceHandler)
+        self._mainWin.dataSourceTree.clicked.connect(self._selectionHandler)
 
         # Streaming
-        self._mainWin.startStreamingButton.clicked.connect(self._startStreaming)
-        self._mainWin.stopStreamingButton.clicked.connect(self._stopStreaming)
+        self._mainWin.startStreamingButton.clicked.connect(self.startStreaming)
+        self._mainWin.stopStreamingButton.clicked.connect(self.stopStreaming)
 
-    def _startStreaming(self) -> None:
+    def startStreaming(self) -> None:
         """Start streaming."""
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(False)
@@ -124,38 +146,112 @@ class MainController(QObject):
             streamController.startStreaming()
 
         # Emit "start" Qt Signal (for pluggable modules)
-        self.startStreamingSig.emit()
+        self.streamingStarted.emit()
 
-    def _stopStreaming(self) -> None:
+    def stopStreaming(self) -> None:
         """Stop streaming."""
         # Stop all StreamingController objects
         for streamController in self._streamingControllers.values():
             streamController.stopStreaming()
 
         # Emit "stop" Qt Signal (for pluggable modules)
-        self.stopStreamingSig.emit()
+        self.streamingStopped.emit()
 
         # Handle UI elements
         self._mainWin.streamConfGroupBox.setEnabled(True)
         self._mainWin.startStreamingButton.setEnabled(True)
         self._mainWin.stopStreamingButton.setEnabled(False)
 
-    @Slot(DataPacket)
-    def _plotData(self, dataPacket: DataPacket):
+    def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
+        """Add a data source, given its configuration."""
+        # Create streaming controller
+        dataSourceWorkerArgs = {
+            k: v
+            for k, v in dataSourceConfig.items()
+            if k not in ("interfacePath", "interfaceModule", "filePath")
+        }
+        interfaceModule = dataSourceConfig["interfaceModule"]
+        filePath = dataSourceConfig.get("filePath", None)
+        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
+        dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
+        dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
+        streamingController = StreamingController(
+            dataSourceWorkerArgs, interfaceModule.decodeFn, filePath, sigsConfigs, self
+        )
+        self._streamingControllers[str(streamingController)] = streamingController
+
+        # Create plot widget
+        for iSigName, iSigConfig in sigsConfigs.items():
+            if "chSpacing" in iSigConfig:
+                signalPlotWidget = SignalPlotWidget(
+                    iSigName,
+                    **iSigConfig,
+                    renderLenMs=self._mainWin.renderLenMs,
+                    parent=self._mainWin,
+                )
+                self.streamingStarted.connect(signalPlotWidget.startTimers)
+                self.streamingStopped.connect(signalPlotWidget.stopTimers)
+                self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
+                self._mainWin.plotsLayout.addWidget(signalPlotWidget)
+
+                self._signalPlotWidgets[f"{str(streamingController)}%{iSigName}"] = (
+                    signalPlotWidget
+                )
+
+        # Save configuration
+        dataSourceConfig["sigsConfigs"] = sigsConfigs
+        self._config[str(streamingController)] = dataSourceConfig
+
+        # Configure Qt Signals
+        streamingController.signalsReady.connect(self._plotData)
+        streamingController.errorOccurred.connect(self._handleErrors)
+        streamingController.signalsReady.connect(lambda d: self.signalsReady.emit(d))
+
+        # Update UI data source tree
+        dataSourceNode = QStandardItem(str(streamingController))
+        self.dataSourceModel.appendRow(dataSourceNode)
+        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in sigsConfigs])
+
+    def _deleteDataSource(self, dataSourceItem: QStandardItem) -> None:
+        """Delete a data source, given data source item."""
+        dataSource = dataSourceItem.text()
+
+        # Remove every signal associated with the data source
+        for row in range(dataSourceItem.rowCount()):
+            sigName = dataSourceItem.child(row).text()
+            # Remove plot widget
+            plotId = f"{dataSource}%{sigName}"
+            if plotId in self._signalPlotWidgets:
+                plotWidgetToRemove = self._signalPlotWidgets.pop(plotId)
+                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
+                plotWidgetToRemove.deleteLater()
+
+        # Delete streaming controller and config
+        del self._streamingControllers[dataSource]
+        del self._config[dataSource]
+
+        # Update UI data source tree
+        self.dataSourceModel.removeRow(dataSourceItem.row())
+
+    @instanceSlot(list)
+    def _plotData(self, dataPacket: list[SigData]):
         """Plot the given data on the corresponding plot.
 
         Parameters
         ----------
-        dataPacket : DataPacket
+        dataPacket : tuple of (str, list of SigData)
             Data to plot.
         """
-        if dataPacket.id in self._sigPlotWidgets:
-            self._sigPlotWidgets[dataPacket.id].addData(dataPacket.data)
+        ctrlId = str(self.sender())
+        for sigData in dataPacket:
+            plotId = f"{ctrlId}%{sigData.sigName}"
+            if plotId in self._signalPlotWidgets:
+                self._signalPlotWidgets[plotId].addData(sigData.data)
 
-    @Slot(str)
+    @instanceSlot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When an error occurs, display an alert and stop streaming."""
-        self._stopStreaming()
+        self.stopStreaming()
         QMessageBox.critical(
             self._mainWin,
             "Streaming error",
@@ -164,171 +260,160 @@ class MainController(QObject):
             defaultButton=QMessageBox.Retry,  # type: ignore
         )
 
+    @instanceSlot(QModelIndex)
+    def _selectionHandler(self, idx: QModelIndex):
+        """Enable buttons to configure sources or signals."""
+        # Disconnect handler for editing
+        self._mainWin.editButton.clicked.disconnect()
+        self._mainWin.editButton.setEnabled(True)
+
+        # Enable buttons and connect handler depending on the selection
+        if self.dataSourceModel.hasChildren(idx):  # data source
+            self._mainWin.deleteDataSourceButton.setEnabled(True)
+            self._mainWin.editButton.clicked.connect(self._editDataSourceHandler)
+        else:  # signal
+            self._mainWin.deleteDataSourceButton.setEnabled(False)
+            self._mainWin.editButton.clicked.connect(self._editSignalHandler)
+
     def _addDataSourceHandler(self) -> None:
         """Handler for adding a new data source."""
-        # Open the dialog
-        dialogResult = self._getDataSourceConfig()
-        if dialogResult is None:
+        # Open the dialog to get data source configuration
+        dataSourceConfigDialog = DataSourceConfigDialog(parent=self._mainWin)
+        accepted = dataSourceConfigDialog.exec()
+        if not accepted:
             return
-        # Unpack result
-        dataSourceConfig, sigsInfo, decodeFn = dialogResult
+        dataSourceConfig = dataSourceConfigDialog.dataSourceConfig
 
-        # Add signals
-        config = {}
-        for sigName, sigInfo in sigsInfo.items():
-            # Open the dialog
-            dialogResult = self._getSignalConfig(sigName, sigInfo["fs"], sigInfo["nCh"])
-            if dialogResult is None:
-                return
-            # Unpack result
-            config[sigName] = dialogResult
-
-        # Create streaming controller
-        streamingController = StreamingController(
-            dataSourceConfig, decodeFn, config, self
+        # Get the configurations of all the signals
+        signalConfigWizard = SignalConfigWizard(
+            dataSourceConfig["interfaceModule"].sigInfo, self._mainWin
         )
-        self._streamingControllers[str(streamingController)] = streamingController
+        completed = signalConfigWizard.exec()
+        if not completed:
+            return
+        sigsConfigs = signalConfigWizard.sigsConfigs
 
-        # Create plot widget
-        for sigName, sigConfig in config.items():
-            if "renderLengthS" in sigConfig:
-                sigPlotWidget = SignalPlotWidget(
-                    sigName, **sigConfig, parent=self._mainWin
-                )
-                self.startStreamingSig.connect(sigPlotWidget.startTimers)
-                self.stopStreamingSig.connect(sigPlotWidget.stopTimers)
-                self._mainWin.plotsLayout.addWidget(sigPlotWidget)
-
-                self._sigPlotWidgets[sigName] = sigPlotWidget
-
-        # Save configuration
-        self._config[str(streamingController)] = config
-
-        # Configure Qt Signals
-        streamingController.dataReadySig.connect(self._plotData)
-        streamingController.errorSig.connect(self._handleErrors)
-        streamingController.dataReadySig.connect(
-            lambda d: self.dataReadySig.emit(d)
-        )  # forward Qt Signal for filtered data
-
-        # Update UI data source tree
-        dataSourceNode = QStandardItem(str(streamingController))
-        self.dataSourceModel.appendRow(dataSourceNode)
-        dataSourceNode.appendRows([QStandardItem(sigName) for sigName in config])
-
-        # Emit signal to inform pluggable modules that a new source has been added
-        self.newSourceAddedSig.emit(streamingController)
+        # Add the data source
+        self._addDataSource(dataSourceConfig, sigsConfigs)
 
         # Enable start button
         self._mainWin.startStreamingButton.setEnabled(True)
-
-    def _getDataSourceConfig(
-        self, addDataSourceDialog: AddDataSourceDialog | None = None
-    ) -> tuple[dict, dict, DecodeFn] | None:
-        """Get the data source configuration from the user."""
-        if addDataSourceDialog is None:
-            addDataSourceDialog = AddDataSourceDialog(self._mainWin)
-
-        accepted = addDataSourceDialog.exec()
-        if not accepted:
-            return None
-
-        # Check if input is valid
-        if not addDataSourceDialog.isValid:
-            QMessageBox.critical(
-                self._mainWin,
-                "Invalid source",
-                addDataSourceDialog.errMessage,
-                buttons=QMessageBox.Retry,  # type: ignore
-                defaultButton=QMessageBox.Retry,  # type: ignore
-            )
-            return self._getDataSourceConfig(addDataSourceDialog)  # re-open dialog
-
-        # Read configuration
-        dataSourceConfig = addDataSourceDialog.dataSourceConfig
-        interfaceModule: InterfaceModule = dataSourceConfig.pop("interfaceModule")
-        dataSourceConfig["packetSize"] = interfaceModule.packetSize
-        dataSourceConfig["startSeq"] = interfaceModule.startSeq
-        dataSourceConfig["stopSeq"] = interfaceModule.stopSeq
-        sigsInfo = {}
-        for sigName, fs, nCh in zip(
-            interfaceModule.sigNames, interfaceModule.fs, interfaceModule.nCh
-        ):
-            sigsInfo[sigName] = {"fs": fs, "nCh": nCh}
-
-        return dataSourceConfig, sigsInfo, interfaceModule.decodeFn
-
-    def _getSignalConfig(
-        self,
-        sigName: str,
-        fs: float,
-        nCh: int,
-        addSignalDialog: AddSignalDialog | None = None,
-        editMode: bool = False,
-        **kwargs: dict,
-    ) -> dict | None:
-        """Get the signal configuration from the user."""
-        if addSignalDialog is None:
-            addSignalDialog = AddSignalDialog(
-                sigName,
-                fs,
-                nCh,
-                self._mainWin,
-                editMode,
-                **kwargs,
-            )
-
-        accepted = addSignalDialog.exec()
-        if not accepted:
-            return None
-
-        # Check if input is valid
-        if not addSignalDialog.isValid:
-            QMessageBox.critical(
-                self._mainWin,
-                "Invalid signal",
-                addSignalDialog.errMessage,
-                buttons=QMessageBox.Retry,  # type: ignore
-                defaultButton=QMessageBox.Retry,  # type: ignore
-            )
-            return self._getSignalConfig(
-                sigName,
-                fs,
-                nCh,
-                addSignalDialog,
-                editMode,
-                **kwargs,
-            )  # re-open dialog
-
-        return addSignalDialog.sigConfig
 
     def _deleteDataSourceHandler(self) -> None:
         """Handler to remove the selected data source."""
         # Get index and corresponding item
         idxToRemove = self._mainWin.dataSourceTree.currentIndex()
         itemToRemove = self.dataSourceModel.itemFromIndex(idxToRemove)
-        dataSourceToRemove = itemToRemove.text()
 
-        # Remove every signal associated with the data source
-        for row in range(itemToRemove.rowCount()):
-            sigNameToRemove = itemToRemove.child(row).text()
-            # Remove plot widget
-            if sigNameToRemove in self._sigPlotWidgets:
-                plotWidgetToRemove = self._sigPlotWidgets.pop(sigNameToRemove)
-                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
-                plotWidgetToRemove.deleteLater()
-
-        # Delete streaming controller and config
-        del self._streamingControllers[dataSourceToRemove]
-        del self._config[dataSourceToRemove]
-
-        # Update UI data source tree
-        self.dataSourceModel.removeRow(itemToRemove.row())
+        # Delete the data source
+        self._deleteDataSource(itemToRemove)
 
         # Disable start button, source deletion and signal configuration depending on the number of remaining sources
         if len(self._streamingControllers) == 0:
             self._mainWin.startStreamingButton.setEnabled(False)
+            self._mainWin.editButton.setEnabled(False)
             self._mainWin.deleteDataSourceButton.setEnabled(False)
+
+    def _editDataSourceHandler(self) -> None:
+        """Handler for editing the data source configuration."""
+        # Get index and corresponding item
+        idxToEdit = self._mainWin.dataSourceTree.currentIndex()
+        itemToEdit = self.dataSourceModel.itemFromIndex(idxToEdit)
+        dataSourceToEdit = itemToEdit.text()
+
+        # Open the dialog
+        oldDataSourceConfig = self._config[dataSourceToEdit]
+        dataSourceConfigDialog = DataSourceConfigDialog(
+            **{k: v for k, v in oldDataSourceConfig.items() if k != "sigsConfigs"},
+            parent=self._mainWin,
+        )
+        accepted = dataSourceConfigDialog.exec()
+        if not accepted:
+            return
+        newDataSourceConfig = dataSourceConfigDialog.dataSourceConfig
+
+        if (
+            newDataSourceConfig["interfaceModule"].sigInfo.keys()
+            != oldDataSourceConfig["interfaceModule"].sigInfo.keys()
+        ):  # signals are different -> delete the whole StreamingController and add a new one from scratch
+            QMessageBox.warning(
+                self._mainWin,
+                "Signal configuration reset",
+                "The names of the signals are different from the previously "
+                "configured ones, the configuration will be reset.",
+                buttons=QMessageBox.Ok,  # type: ignore
+                defaultButton=QMessageBox.Ok,  # type: ignore
+            )
+
+            # Get the configurations of all the signals
+            signalConfigWizard = SignalConfigWizard(
+                newDataSourceConfig["interfaceModule"].sigInfo, self._mainWin
+            )
+            completed = signalConfigWizard.exec()
+            if not completed:
+                return
+            sigsConfigs = signalConfigWizard.sigsConfigs
+
+            # Remove old configuration and add the new one
+            self._deleteDataSource(itemToEdit)
+            self._addDataSource(newDataSourceConfig, sigsConfigs)
+
+            return
+
+        # Update signal configuration with the new info
+        sigsConfigs = oldDataSourceConfig["sigsConfigs"]
+        sigInfo = newDataSourceConfig["interfaceModule"].sigInfo
+        for sigName in sigsConfigs:
+            sigsConfigs[sigName]["fs"] = sigInfo[sigName]["fs"]
+            sigsConfigs[sigName]["nCh"] = sigInfo[sigName]["nCh"]
+            if sigsConfigs[sigName]["nCh"] == 1:
+                sigsConfigs[sigName]["chSpacing"] = 0
+
+            # Check if filtering settings are still valid
+            if not validateFreqSettings(sigsConfigs[sigName], sigInfo[sigName]["fs"]):
+                QMessageBox.warning(
+                    self._mainWin,
+                    "Signal configuration reset",
+                    f"The previous filtering settings of {sigName} are not compatible "
+                    "with the new sampling rate, filtering will be disabled.",
+                    buttons=QMessageBox.Ok,  # type: ignore
+                    defaultButton=QMessageBox.Ok,  # type: ignore
+                )
+                # Delete settings
+                del sigsConfigs[sigName]["filtType"]
+                del sigsConfigs[sigName]["freqs"]
+                del sigsConfigs[sigName]["filtOrder"]
+        newDataSourceConfig["sigsConfigs"] = sigsConfigs
+
+        # Update streaming controller and store new settings
+        streamingController = self._streamingControllers.pop(dataSourceToEdit)
+        oldCtrlId = str(streamingController)
+        del self._config[oldCtrlId]
+        streamingController.editDataSourceConfig(newDataSourceConfig)
+        newCtrlId = str(streamingController)
+        self._streamingControllers[newCtrlId] = streamingController
+        self._config[newCtrlId] = newDataSourceConfig
+
+        # Update plot widgets
+        for sigName, sigConfig in sigsConfigs.items():
+            oldPlotId = f"{oldCtrlId}%{sigName}"
+            newPlotId = f"{newCtrlId}%{sigName}"
+            oldSignalPlotWidget = self._signalPlotWidgets.pop(oldPlotId)
+            newSignalPlotWidget = SignalPlotWidget(
+                sigName,
+                **sigConfig,
+                renderLenMs=self._mainWin.renderLenMs,
+                parent=self._mainWin,
+            )
+            self.streamingStarted.connect(newSignalPlotWidget.startTimers)
+            self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
+            self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
+            self._mainWin.plotsLayout.replaceWidget(
+                oldSignalPlotWidget, newSignalPlotWidget
+            )
+            self._signalPlotWidgets[newPlotId] = newSignalPlotWidget
+
+            oldSignalPlotWidget.deleteLater()
 
     def _editSignalHandler(self) -> None:
         """Handler for editing the signal configuration."""
@@ -339,58 +424,56 @@ class MainController(QObject):
         dataSource = itemToEdit.parent().text()
 
         # Open the dialog
-        dialogResult = self._getSignalConfig(
-            sigName, **self._config[dataSource][sigName], editMode=True
+        sigConfig = self._config[dataSource]["sigsConfigs"][sigName]
+        signalConfigDialog = SignalConfigDialog(
+            sigName, **sigConfig, parent=self._mainWin
         )
-        if dialogResult is None:
+        accepted = signalConfigDialog.exec()
+        if not accepted:
             return
-        # Unpack result
-        sigConfig = dialogResult
+        sigConfig = signalConfigDialog.sigConfig
 
         # Update streaming controller settings
-        self._streamingControllers[dataSource].editConfig(sigName, sigConfig)
+        self._streamingControllers[dataSource].editSigConfig(sigName, sigConfig)
 
         # Handle plot widget:
         # - case 1: ON -> ON
         # - case 2: ON -> OFF
         # - case 3: OFF -> ON
         # - case 4: OFF -> OFF (no need to be handled)
-        if sigName in self._sigPlotWidgets:  # case 1 & 2
-            oldPlotWidget = self._sigPlotWidgets.pop(sigName)
+        plotId = f"{str(self._streamingControllers[dataSource])}%{sigName}"
+        if plotId in self._signalPlotWidgets:  # case 1 & 2
+            oldSignalPlotWidget = self._signalPlotWidgets.pop(plotId)
 
-            if "renderLengthS" in sigConfig:  # case 1
-                newPlotWidget = SignalPlotWidget(
+            if "chSpacing" in sigConfig:  # case 1
+                newSignalPlotWidget = SignalPlotWidget(
                     sigName,
                     **sigConfig,
+                    renderLenMs=self._mainWin.renderLenMs,
                     parent=self._mainWin,
-                    dataQueue=oldPlotWidget.dataQueue,  # type: ignore
+                    dataQueue=oldSignalPlotWidget.dataQueue,  # type: ignore
                 )
-                self.startStreamingSig.connect(newPlotWidget.startTimers)
-                self.stopStreamingSig.connect(newPlotWidget.stopTimers)
-                self._mainWin.plotsLayout.replaceWidget(oldPlotWidget, newPlotWidget)
-                self._sigPlotWidgets[sigName] = newPlotWidget
+                self.streamingStarted.connect(newSignalPlotWidget.startTimers)
+                self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
+                self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
+                self._mainWin.plotsLayout.replaceWidget(
+                    oldSignalPlotWidget, newSignalPlotWidget
+                )
+                self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
-            oldPlotWidget.deleteLater()
-        elif "renderLengthS" in sigConfig:  # case 3
-            newPlotWidget = SignalPlotWidget(
+            oldSignalPlotWidget.deleteLater()
+        elif "chSpacing" in sigConfig:  # case 3
+            newSignalPlotWidget = SignalPlotWidget(
                 sigName,
                 **sigConfig,
+                renderLenMs=self._mainWin.renderLenMs,
                 parent=self._mainWin,
             )
-            self.startStreamingSig.connect(newPlotWidget.startTimers)
-            self.stopStreamingSig.connect(newPlotWidget.stopTimers)
-            self._mainWin.plotsLayout.addWidget(newPlotWidget)
-            self._sigPlotWidgets[sigName] = newPlotWidget
+            self.streamingStarted.connect(newSignalPlotWidget.startTimers)
+            self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
+            self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
+            self._mainWin.plotsLayout.addWidget(newSignalPlotWidget)
+            self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
         # Save new settings
-        self._config[dataSource][sigName] = sigConfig
-
-    @Slot(QModelIndex)
-    def _enableButtons(self, idx: QModelIndex):
-        """Enable buttons to configure sources or signals."""
-        if self.dataSourceModel.hasChildren(idx):  # data source
-            self._mainWin.deleteDataSourceButton.setEnabled(True)
-            self._mainWin.editSignalButton.setEnabled(False)
-        else:  # signal
-            self._mainWin.deleteDataSourceButton.setEnabled(False)
-            self._mainWin.editSignalButton.setEnabled(True)
+        self._config[dataSource]["sigsConfigs"][sigName] = sigConfig
