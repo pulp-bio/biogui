@@ -24,10 +24,15 @@ import logging
 from PySide6.QtWidgets import QWidget
 
 from ..ui.fifo_data_source_config_widget_ui import Ui_FifoDataSourceConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
+from .base import (
+    DataSourceConfigResult,
+    DataSourceConfigWidget,
+    DataSourceType,
+    DataSourceWorker,
+)
 
 
-class FIFOConfigWidget(ConfigWidget, Ui_FifoDataSourceConfigWidget):
+class FIFOConfigWidget(DataSourceConfigWidget, Ui_FifoDataSourceConfigWidget):
     """
     Widget to configure the FIFO source.
 
@@ -44,24 +49,24 @@ class FIFOConfigWidget(ConfigWidget, Ui_FifoDataSourceConfigWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def validateConfig(self) -> ConfigResult:
+    def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
 
         Returns
         -------
-        ConfigResult
+        DataSourceConfigResult
             Configuration result.
         """
         if self.fifoPathTextField.text() == "":
-            return ConfigResult(
+            return DataSourceConfigResult(
                 dataSourceType=DataSourceType.FIFO,
                 dataSourceConfig={},
                 isValid=False,
                 errMessage='The "path to FIFO" field is empty.',
             )
 
-        return ConfigResult(
+        return DataSourceConfigResult(
             dataSourceType=DataSourceType.FIFO,
             dataSourceConfig={"fifoPath": self.fifoPathTextField.text()},
             isValid=True,
