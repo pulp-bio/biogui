@@ -21,16 +21,18 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigWidget, DataSourceType, DataSourceWorker
+from .base import DataSourceConfigWidget, DataSourceType, DataSourceWorker
 from .dummy import DummyConfigWidget, DummyDataSourceWorker
 from .fifo import FIFOConfigWidget, FIFODataSourceWorker
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
 
 
-def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWidget:
+def getConfigWidget(
+    dataSourceType: DataSourceType, parent: QWidget
+) -> DataSourceConfigWidget:
     """
-    Factory function for producing DataConfigWidget objects.
+    Factory function for producing DataSourceConfigWidget objects.
 
     Parameters
     ----------
@@ -41,7 +43,7 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> ConfigWi
 
     Returns
     -------
-    ConfigWidget
+    DataSourceConfigWidget
         The corresponding DataSourceConfigWidget object.
     """
     configWidgetDict = {
@@ -92,7 +94,7 @@ def getDataSourceWorker(
 
 __all__ = [
     "DataSourceType",
-    "ConfigWidget",
+    "DataSourceConfigWidget",
     "DataSourceWorker",
     "getConfigWidget",
     "getDataSourceWorker",

@@ -23,10 +23,15 @@ import numpy as np
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
 
-from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
+from .base import (
+    DataSourceConfigResult,
+    DataSourceConfigWidget,
+    DataSourceType,
+    DataSourceWorker,
+)
 
 
-class DummyConfigWidget(ConfigWidget):
+class DummyConfigWidget(DataSourceConfigWidget):
     """
     Empty widget for the dummy source.
 
@@ -41,16 +46,16 @@ class DummyConfigWidget(ConfigWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def validateConfig(self) -> ConfigResult:
+    def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
 
         Returns
         -------
-        ConfigResult
+        DataSourceConfigResult
             Configuration result.
         """
-        return ConfigResult(
+        return DataSourceConfigResult(
             dataSourceType=DataSourceType.DUMMY,
             dataSourceConfig={},
             isValid=True,

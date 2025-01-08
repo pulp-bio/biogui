@@ -37,7 +37,7 @@ class DataSourceType(Enum):
 
 
 @dataclass
-class ConfigResult:
+class DataSourceConfigResult:
     """
     Dataclass representing the result configuration.
 
@@ -59,21 +59,21 @@ class ConfigResult:
     errMessage: str
 
 
-class ConfigWidgetMeta(type(QObject), ABCMeta):  # type: ignore
+class DataSourceConfigWidgetMeta(type(QObject), ABCMeta):  # type: ignore
     """Interface of data source configuration widgets (metaclass)."""
 
 
-class ConfigWidget(ABC, QWidget, metaclass=ConfigWidgetMeta):
+class DataSourceConfigWidget(ABC, QWidget, metaclass=DataSourceConfigWidgetMeta):
     """Interface for data source configuration widgets."""
 
     @abstractmethod
-    def validateConfig(self) -> ConfigResult:
+    def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
 
         Returns
         -------
-        ConfigResult
+        DataSourceConfigResult
             Configuration result.
         """
 

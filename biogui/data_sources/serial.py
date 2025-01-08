@@ -32,10 +32,15 @@ from PySide6.QtWidgets import QWidget
 from biogui.utils import detectTheme
 
 from ..ui.serial_data_source_config_widget_ui import Ui_SerialDataSourceConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
+from .base import (
+    DataSourceConfigResult,
+    DataSourceConfigWidget,
+    DataSourceType,
+    DataSourceWorker,
+)
 
 
-class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
+class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget):
     """
     Widget to configure the serial source.
 
@@ -63,17 +68,17 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def validateConfig(self) -> ConfigResult:
+    def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
 
         Returns
         -------
-        ConfigResult
+        DataSourceConfigResult
             Configuration result.
         """
         if self.serialPortsComboBox.currentText() == "":
-            return ConfigResult(
+            return DataSourceConfigResult(
                 dataSourceType=DataSourceType.SERIAL,
                 dataSourceConfig={},
                 isValid=False,
@@ -81,7 +86,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
             )
 
         if not self.baudRateTextField.hasAcceptableInput():
-            return ConfigResult(
+            return DataSourceConfigResult(
                 dataSourceType=DataSourceType.SERIAL,
                 dataSourceConfig={},
                 isValid=False,
@@ -89,7 +94,7 @@ class SerialConfigWidget(ConfigWidget, Ui_SerialDataSourceConfigWidget):
             )
 
         serialPortName = self.serialPortsComboBox.currentText()
-        return ConfigResult(
+        return DataSourceConfigResult(
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
                 "serialPortName": serialPortName,
