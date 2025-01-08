@@ -67,7 +67,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="sourceConfigContainer"/>
+    <layout class="QVBoxLayout" name="dataSourceConfigContainer"/>
    </item>
    <item>
     <widget class="QGroupBox" name="fileSavingGroupBox">

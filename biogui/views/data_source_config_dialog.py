@@ -145,7 +145,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.dataSourceComboBox.addItems(dataSources)
         self.dataSourceComboBox.setCurrentText(dataSourceType.value)
         self._configWidget = data_sources.getConfigWidget(dataSourceType, self)
-        self.sourceConfigContainer.addWidget(self._configWidget)
+        self.dataSourceConfigContainer.addWidget(self._configWidget)
         self._updateTabOrder()
 
         self.buttonBox.accepted.connect(self._validateDialog)
@@ -244,14 +244,14 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
     def _onDataSourceChange(self) -> None:
         """Detect if data source type has changed."""
         # Clear container
-        self.sourceConfigContainer.removeWidget(self._configWidget)
+        self.dataSourceConfigContainer.removeWidget(self._configWidget)
         self._configWidget.deleteLater()
 
         # Add new widget
         self._configWidget = data_sources.getConfigWidget(
             data_sources.DataSourceType(self.dataSourceComboBox.currentText()), self
         )
-        self.sourceConfigContainer.addWidget(self._configWidget)
+        self.dataSourceConfigContainer.addWidget(self._configWidget)
 
         # Update tab order
         self._updateTabOrder()

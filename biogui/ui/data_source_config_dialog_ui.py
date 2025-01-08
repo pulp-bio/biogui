@@ -63,10 +63,10 @@ class Ui_DataSourceConfigDialog(object):
 
         self.verticalLayout.addLayout(self.formLayout)
 
-        self.sourceConfigContainer = QVBoxLayout()
-        self.sourceConfigContainer.setObjectName(u"sourceConfigContainer")
+        self.dataSourceConfigContainer = QVBoxLayout()
+        self.dataSourceConfigContainer.setObjectName(u"dataSourceConfigContainer")
 
-        self.verticalLayout.addLayout(self.sourceConfigContainer)
+        self.verticalLayout.addLayout(self.dataSourceConfigContainer)
 
         self.fileSavingGroupBox = QGroupBox(DataSourceConfigDialog)
         self.fileSavingGroupBox.setObjectName(u"fileSavingGroupBox")
