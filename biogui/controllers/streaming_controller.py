@@ -161,7 +161,9 @@ class _Preprocessor(QObject):
         - "nCh": the number of channels;
         - "filtType": the filter type (optional);
         - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional).
+        - "filtOrder" the filter order (optional);
+        - "notchFreq": frequency of the notch filter (optional);
+        - "qFactor": quality factor of the notch filter (optional).
 
     Attributes
     ----------
@@ -169,10 +171,14 @@ class _Preprocessor(QObject):
         Decode function.
     _fs : dict of (str: float)
         Dictionary with the sampling frequency for each signal.
-    _sos : dict
-        Dictionary with filters.
-    _zi : dict
-        Dictionary with filter states.
+    _sosButter : dict
+        Dictionary with Butterworth filter parameters.
+    _ziButter : dict
+        Dictionary with Butterworth filter states.
+    _baNotch : dict
+        Dictionary with powerline noise filter parameters.
+    _ziNotch : dict
+        Dictionary with powerline noise filter states.
 
     Class attributes
     ----------------
@@ -193,8 +199,10 @@ class _Preprocessor(QObject):
 
         self._decodeFn = decodeFn
         self._fs = {}
-        self._sos: dict = {}
-        self._zi: dict = {}
+        self._sosButter: dict = {}
+        self._ziButter: dict = {}
+        self._baNotch: dict = {}
+        self._ziNotch: dict = {}
 
         for iSigName, iSigConfig in sigsConfigs.items():
             self._fs[iSigName] = iSigConfig["fs"]
@@ -215,25 +223,48 @@ class _Preprocessor(QObject):
             - "nCh": the number of channels;
             - "filtType": the filter type (optional);
             - "freqs": list with the cut-off frequencies (optional);
-            - "filtOrder": the filter order (optional).
+            - "filtOrder": the filter order (optional);
+            - "notchFreq": frequency of the notch filter (optional);
+            - "qFactor": quality factor of the notch filter (optional).
         """
-        # If configuration is empty, remove previous filter (if present)
+        # 1. Butterworth filter:
         if "filtType" not in sigConfig:
-            self._sos.pop(sigName, None)
-            self._zi.pop(sigName, None)
-            return
+            # 1.1. If configuration is empty, remove previous filter (if present)
+            self._sosButter.pop(sigName, None)
+            self._ziButter.pop(sigName, None)
+        else:
+            # 1.2. Create filter
+            freqs = sigConfig["freqs"]
+            sosButter = scipy.signal.butter(
+                N=sigConfig["filtOrder"],
+                Wn=freqs if len(freqs) > 1 else freqs[0],
+                fs=sigConfig["fs"],
+                btype=sigConfig["filtType"],
+                output="sos",
+            )
+            self._sosButter[sigName] = sosButter
+            self._ziButter[sigName] = np.stack(
+                [scipy.signal.sosfilt_zi(sosButter) for _ in range(sigConfig["nCh"])],
+                axis=-1,
+            )
 
-        # Create filter
-        freqs = sigConfig["freqs"]
-        sos = scipy.signal.butter(
-            N=sigConfig["filtOrder"],
-            Wn=freqs if len(freqs) > 1 else freqs[0],
-            fs=sigConfig["fs"],
-            btype=sigConfig["filtType"],
-            output="sos",
-        )
-        self._sos[sigName] = sos
-        self._zi[sigName] = np.zeros((sos.shape[0], 2, sigConfig["nCh"]))
+        # 2. Powerline noise filter:
+        if "notchFreq" not in sigConfig:
+            # 2.1. If configuration is empty, remove previous filter (if present)
+            self._baNotch.pop(sigName, None)
+            self._ziNotch.pop(sigName, None)
+        else:
+            # 2.2. Create filter
+            b, a = scipy.signal.iirnotch(
+                w0=sigConfig["notchFreq"],
+                Q=sigConfig["qFactor"],
+                fs=sigConfig["fs"],
+            )
+            self._baNotch[sigName] = (b, a)
+            self._ziNotch[sigName] = np.stack(
+                [scipy.signal.lfilter_zi(b, a) for _ in range(sigConfig["nCh"])],
+                axis=-1,
+            )
 
     @instanceSlot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -265,16 +296,26 @@ class _Preprocessor(QObject):
             rawSignals.append(SigData(sigName, self._fs[sigName], sigData))
 
             # Filtering
-            if sigName in self._sos:
-                try:
-                    sigData, self._zi[sigName] = scipy.signal.sosfilt(
-                        self._sos[sigName], sigData, axis=0, zi=self._zi[sigName]
+            try:
+                if sigName in self._sosButter:
+                    sigData, self._ziButter[sigName] = scipy.signal.sosfilt(
+                        self._sosButter[sigName],
+                        sigData,
+                        axis=0,
+                        zi=self._ziButter[sigName],
                     )
-                except ValueError:
-                    self.errorOccurred.emit(
-                        "An error occurred during filtering, check the settings."
+                if sigName in self._baNotch:
+                    sigData, self._ziNotch[sigName] = scipy.signal.lfilter(
+                        *self._baNotch[sigName],
+                        sigData,
+                        axis=0,
+                        zi=self._ziNotch[sigName],
                     )
-                    return
+            except ValueError:
+                self.errorOccurred.emit(
+                    "An error occurred during filtering, check the settings."
+                )
+                return
             signals.append(SigData(sigName, self._fs[sigName], sigData))
 
         # Emit raw and filtered signals
@@ -305,7 +346,9 @@ class StreamingController(QObject):
         - "nCh": the number of channels;
         - "filtType": the filter type (optional);
         - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional).
+        - "filtOrder" the filter order (optional);
+        - "notchFreq": frequency of the notch filter (optional);
+        - "qFactor": quality factor of the notch filter (optional).
     parent : QObject or None, default=None
         Parent QObject.
 
@@ -448,7 +491,9 @@ class StreamingController(QObject):
             - "nCh": the number of channels;
             - "filtType": the filter type (optional);
             - "freqs": list with the cut-off frequencies (optional);
-            - "filtOrder": the filter order (optional).
+            - "filtOrder": the filter order (optional);
+            - "notchFreq": frequency of the notch filter (optional);
+            - "qFactor": quality factor of the notch filter (optional).
         """
         self._preprocessor.configFilter(sigName, sigConfig)
 

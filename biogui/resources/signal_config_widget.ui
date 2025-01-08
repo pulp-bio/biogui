@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>500</height>
+    <width>500</width>
+    <height>620</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Signal Configuration</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
    <item>
     <layout class="QFormLayout" name="formLayout1">
      <item row="0" column="0">
@@ -47,7 +47,7 @@
      <item row="2" column="0">
       <widget class="QLabel" name="label3">
        <property name="text">
-        <string>Sampling frequency (in sps):</string>
+        <string>Sampling rate (in sps):</string>
        </property>
       </widget>
      </item>
@@ -61,7 +61,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="filteringGroupBox">
+    <widget class="QGroupBox" name="filterGroupBox">
      <property name="toolTip">
       <string>Only for visualization, the raw signal will be saved to file</string>
      </property>
@@ -77,7 +77,7 @@
      <property name="checked">
       <bool>false</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout2">
+     <layout class="QFormLayout" name="formLayout">
       <item row="0" column="0">
        <widget class="QLabel" name="label4">
         <property name="frameShape">
@@ -115,7 +115,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label5">
         <property name="text">
-         <string>First critical frequency (in sps):</string>
+         <string>First critical frequency (in Hz):</string>
         </property>
        </widget>
       </item>
@@ -132,7 +132,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label6">
         <property name="text">
-         <string>Second critical frequency (in sps):</string>
+         <string>Second critical frequency (in Hz):</string>
         </property>
        </widget>
       </item>
@@ -159,10 +159,66 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="filtOrderTextField">
         <property name="toolTip">
-         <string/>
+         <string>Integer between 1 and 10</string>
         </property>
         <property name="placeholderText">
          <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="notchFilterGroupBox">
+     <property name="toolTip">
+      <string>Only for visualization, the raw signal will be saved to file</string>
+     </property>
+     <property name="title">
+      <string>Filter powerline noise</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label8">
+        <property name="text">
+         <string>Frequency (Hz):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="notchFreqComboBox">
+        <item>
+         <property name="text">
+          <string>50</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>60</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label9">
+        <property name="text">
+         <string>Quality factor:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="qFactorTextField">
+        <property name="toolTip">
+         <string>Integer between 10 and 50</string>
+        </property>
+        <property name="text">
+         <string>30</string>
         </property>
        </widget>
       </item>
@@ -191,7 +247,7 @@
      </property>
      <layout class="QFormLayout" name="formLayout4">
       <item row="0" column="0">
-       <widget class="QLabel" name="label8">
+       <widget class="QLabel" name="label10">
         <property name="text">
          <string>Channel spacing (in a.u.):</string>
         </property>
@@ -218,7 +274,7 @@
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="label9">
+       <widget class="QLabel" name="label11">
         <property name="text">
          <string>Range mode:</string>
         </property>
@@ -239,7 +295,7 @@
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label10">
+       <widget class="QLabel" name="label12">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -256,7 +312,7 @@
        </widget>
       </item>
       <item row="4" column="0">
-       <widget class="QLabel" name="label11">
+       <widget class="QLabel" name="label13">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -278,11 +334,14 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>filteringGroupBox</tabstop>
+  <tabstop>filterGroupBox</tabstop>
   <tabstop>filtTypeComboBox</tabstop>
   <tabstop>freq1TextField</tabstop>
   <tabstop>freq2TextField</tabstop>
   <tabstop>filtOrderTextField</tabstop>
+  <tabstop>notchFilterGroupBox</tabstop>
+  <tabstop>notchFreqComboBox</tabstop>
+  <tabstop>qFactorTextField</tabstop>
   <tabstop>plotGroupBox</tabstop>
   <tabstop>chSpacingTextField</tabstop>
   <tabstop>showYAxisCheckBox</tabstop>

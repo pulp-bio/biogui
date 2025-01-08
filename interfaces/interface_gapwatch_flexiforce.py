@@ -72,4 +72,4 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     force *= 1_000  # mV
     force = force.astype(np.float32)
 
-    return {"force": force[:, :3]}
+    return {"force": force[:, [8, 9, 10]]}

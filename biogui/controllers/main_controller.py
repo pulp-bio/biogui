@@ -292,6 +292,7 @@ class MainController(QObject):
         if not completed:
             return
         sigsConfigs = signalConfigWizard.sigsConfigs
+        print(sigsConfigs)
 
         # Add the data source
         self._addDataSource(dataSourceConfig, sigsConfigs)
