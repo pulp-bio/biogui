@@ -261,6 +261,7 @@ class Ui_SignalConfigWidget(object):
 #if QT_CONFIG(tooltip)
         self.filtOrderTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Integer between 1 and 10", None))
 #endif // QT_CONFIG(tooltip)
+        self.filtOrderTextField.setText(QCoreApplication.translate("SignalConfigWidget", u"4", None))
         self.filtOrderTextField.setPlaceholderText("")
 #if QT_CONFIG(tooltip)
         self.notchFilterGroupBox.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Only for visualization, the raw signal will be saved to file", None))
