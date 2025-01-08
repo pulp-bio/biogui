@@ -161,6 +161,9 @@
         <property name="toolTip">
          <string>Integer between 1 and 10</string>
         </property>
+        <property name="text">
+         <string>4</string>
+        </property>
         <property name="placeholderText">
          <string/>
         </property>
