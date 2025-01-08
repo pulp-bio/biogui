@@ -29,10 +29,15 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import QWidget
 
 from ..ui.tcp_data_source_config_widget_ui import Ui_TCPDataSourceConfigWidget
-from .base import ConfigResult, ConfigWidget, DataSourceType, DataSourceWorker
+from .base import (
+    DataSourceConfigResult,
+    DataSourceConfigWidget,
+    DataSourceType,
+    DataSourceWorker,
+)
 
 
-class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
+class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
     """
     Widget to configure the socket source.
 
@@ -58,18 +63,18 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def validateConfig(self) -> ConfigResult:
+    def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
 
         Returns
         -------
-        ConfigResult
+        DataSourceConfigResult
             Configuration result.
         """
         lo = QLocale()
         if not self.portTextField.hasAcceptableInput():
-            return ConfigResult(
+            return DataSourceConfigResult(
                 dataSourceType=DataSourceType.TCP,
                 dataSourceConfig={},
                 isValid=False,
@@ -77,7 +82,7 @@ class TCPConfigWidget(ConfigWidget, Ui_TCPDataSourceConfigWidget):
             )
         socketPort = lo.toInt(self.portTextField.text())[0]
 
-        return ConfigResult(
+        return DataSourceConfigResult(
             dataSourceType=DataSourceType.TCP,
             dataSourceConfig={"socketPort": socketPort},
             isValid=True,
