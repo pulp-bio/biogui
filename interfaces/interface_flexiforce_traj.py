@@ -31,7 +31,7 @@ startSeq: list[bytes] = [b"="]
 stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the board."""
 
-sigInfo: dict = {"force": {"fs": 120, "nCh": 3}}
+sigInfo: dict = {"force": {"fs": 267, "nCh": 3}}
 """Dictionary containing the signals information."""
 
 
@@ -53,9 +53,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     force = np.zeros(shape=(1, 3), dtype=np.float32)
 
     # Read force data
-    force[0, 0] = struct.unpack("<f", data[:4])[0]
+    force[:, 0] = np.asarray(struct.unpack("<f", data[:4]))
 
     # Read trajectories
-    force[0, 1:] = np.asarray(struct.unpack("<2f", data[4:]), dtype=np.float32)
+    force[:, 1:] = np.asarray(struct.unpack("<2f", data[4:]))
 
     return {"force": force}

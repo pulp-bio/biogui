@@ -1,5 +1,6 @@
 """
-This module generates the force trajectories.
+This module reads data from the GAPWatch, generates the force trajectories
+and append them to the FlexiForce data.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -26,7 +27,47 @@ from asyncio import IncompleteReadError
 
 import numpy as np
 
-BUFFER_SIZE = 32
+PACKET_SIZE = 720
+
+
+def _decodeFn(data: bytes) -> np.ndarray:
+    """
+    Function to decode the binary data received from the device into signals.
+
+    Parameters
+    ----------
+    data : bytes
+        A packet of bytes.
+
+    Returns
+    -------
+    ndarray
+        Signal with shape (nSamp, nCh).
+    """
+    nSamp = 15
+
+    # ADC parameters
+    vRef = 4
+    gain = 1
+    nBit = 24
+
+    dataTmp = bytearray(data)
+    # Convert 24-bit to 32-bit integer
+    pos = 0
+    for _ in range(len(dataTmp) // 3):
+        prefix = 255 if dataTmp[pos] > 127 else 0
+        dataTmp.insert(pos, prefix)
+        pos += 4
+    forceAdc = np.asarray(
+        struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32
+    ).reshape(nSamp, 16)
+
+    # ADC readings to mV
+    force = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    force *= 1_000  # mV
+    force = force.astype(np.float32)
+
+    return force[:, [8, 9, 10]]
 
 
 def _parse_input() -> tuple:
@@ -42,14 +83,14 @@ def _parse_input() -> tuple:
         "--p_mvc",
         type=int,
         required=True,
-        help="Target percentage of MVC",
+        help="Value of the MVC (in %)",
     )
     parser.add_argument(
         "-s",
         "--slope",
         type=int,
         required=True,
-        help="Slope of the ramps (in MVC percentage over seconds)",
+        help="Slope of the ramps (in %MVC/s)",
     )
     parser.add_argument(
         "--fs",
@@ -61,11 +102,11 @@ def _parse_input() -> tuple:
         "--gap_width",
         type=int,
         required=True,
-        help="Width of the gap (in MVC percentage) between the two trajectories",
+        help="Width of the gap (in %MVC) between the two trajectories",
     )
     parser.add_argument(
         "--emg_port",
-        default=45454,
+        default=3333,
         type=int,
         required=False,
         help="Receiving port for EMG data",
@@ -103,9 +144,9 @@ def _gen_trajectories(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
     ramp_duration_s = p_mvc / slope
-    rest_duration = int(round(rest_duration_s * fs))
-    plateau_duration = int(round(plateau_duration_s * fs))
-    ramp_duration = int(round(ramp_duration_s * fs))
+    rest_duration = rest_duration_s * fs
+    plateau_duration = plateau_duration_s * fs
+    ramp_duration = ramp_duration_s * fs
 
     # Create trajectories
     t_ramp = np.arange(ramp_duration) / fs
@@ -129,7 +170,6 @@ def _listen_for_stop(client_socket, stop_event):
             cmd = client_socket.recv(2)
             print(f'Received "{cmd}" command from server. Stopping transmission.')
             stop_event.set()
-            break
     except Exception as e:
         print(f"Error while listening for stop command: {e}")
 
@@ -140,13 +180,9 @@ def main():
         _parse_input()
     )
 
-    emg_buffer = np.zeros(shape=(BUFFER_SIZE, 64), dtype=np.float32)
-    aux_buffer = np.zeros(shape=(BUFFER_SIZE, 2), dtype=np.float32)
-    imu_buffer = np.zeros(shape=(BUFFER_SIZE, 4), dtype=np.float32)
-
-    # Trapezoidal trajectories (50 Hz)
+    # Trapezoidal trajectories
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, fs, gap_width, rest_duration_s=1, plateau_duration_s=6
+        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=20
     )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
@@ -177,7 +213,7 @@ def main():
         # Wait for start command
         cmd = client_socket.recv(2)
         print(f'Received "{cmd}" command from server. Starting transmission.')
-        conn.sendall(cmd)
+        # conn.sendall(cmd)
 
         # Start a thread to listen for the stop command
         stop_event = threading.Event()  # Event to stop the transmission
@@ -186,19 +222,19 @@ def main():
         )
         listener_thread.start()
 
-        i, buf_count = 0, 0
+        i = 0
         while True:
             if stop_event.is_set():
                 break  # Stop sending if stop event is triggered
 
             # Read data from server socket
             try:
-                data = bytearray(144)
+                data = bytearray(PACKET_SIZE)
                 pos = 0
-                while pos < 144:
+                while pos < PACKET_SIZE:
                     nRead = conn.recv_into(memoryview(data)[pos:])
                     if nRead == 0:
-                        raise IncompleteReadError(bytes(data[:pos]), 144)
+                        raise IncompleteReadError(bytes(data[:pos]), PACKET_SIZE)
                     pos += nRead
             except socket.timeout:
                 print("TCP communication failed.")
@@ -207,37 +243,19 @@ def main():
                 print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
                 return
 
-            # Get EMG data
-            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
+            # Get force data
+            force = _decodeFn(data)
+            avg_force = force.mean(axis=0).mean().item()
 
-            # Convert ADC readings to mV
-            mVConvF = 2.86e-4  # conversion factor
-            emg = (emg * mVConvF).astype(np.float32)
-            emg_buffer[buf_count] = emg
+            # Send data to TCP server
+            client_socket.sendall(struct.pack("<f", avg_force))
+            client_socket.sendall(struct.pack("<f", traj_low[i]))
+            client_socket.sendall(struct.pack("<f", traj_high[i]))
+            i += 1
 
-            # Get AUX data
-            aux = np.asarray(struct.unpack(">2h", data[128:132]), dtype=np.float32)
-            aux_buffer[buf_count] = aux
-            # Get IMU data
-            imu = np.asarray(struct.unpack(">4h", data[132:140]), dtype=np.float32)
-            imu_buffer[buf_count] = imu
-
-            buf_count += 1
-            if buf_count == BUFFER_SIZE:
-                buf_count = 0
-
-                # Send data to TCP server
-                client_socket.sendall(emg_buffer.tobytes())
-                client_socket.sendall(imu_buffer.tobytes())
-                client_socket.sendall(aux_buffer[:, 1].tobytes())  # trigger
-                client_socket.sendall(aux_buffer[:, 0].tobytes())  # force
-                client_socket.sendall(traj_low[i : i + BUFFER_SIZE].tobytes())
-                client_socket.sendall(traj_high[i : i + BUFFER_SIZE].tobytes())
-                i += BUFFER_SIZE
-
-                # Repeat trajectory
-                if i >= traj_low.size:
-                    i = 0
+            # Repeat trajectory
+            if i >= traj_low.size:
+                i = 0
 
         # Wait for the listener thread to finish
         listener_thread.join()
