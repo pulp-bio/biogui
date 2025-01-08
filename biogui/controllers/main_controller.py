@@ -292,7 +292,6 @@ class MainController(QObject):
         if not completed:
             return
         sigsConfigs = signalConfigWizard.sigsConfigs
-        print(sigsConfigs)
 
         # Add the data source
         self._addDataSource(dataSourceConfig, sigsConfigs)
@@ -394,6 +393,7 @@ class MainController(QObject):
         newCtrlId = str(streamingController)
         self._streamingControllers[newCtrlId] = streamingController
         self._config[newCtrlId] = newDataSourceConfig
+        itemToEdit.setText(newCtrlId)
 
         # Update plot widgets
         for sigName, sigConfig in sigsConfigs.items():
