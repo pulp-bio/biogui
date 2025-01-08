@@ -258,7 +258,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _validateDialog(self) -> None:
         """Validate user input in the form."""
-        # Interface module
+        # 1. Interface module
         if "interfaceModule" not in self._dataSourceConfig:
             QMessageBox.critical(
                 self,
@@ -269,7 +269,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             )
             return
 
-        # Data source type
+        # 2. Data source-specific config
         if self.dataSourceComboBox.currentText() == "":
             QMessageBox.critical(
                 self,
@@ -279,8 +279,6 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                 defaultButton=QMessageBox.Retry,  # type: ignore
             )
             return
-
-        # Data source-specific config
         configResult = self._configWidget.validateConfig()
         if not configResult.isValid:
             QMessageBox.critical(
@@ -294,7 +292,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["dataSourceType"] = configResult.dataSourceType
         self._dataSourceConfig |= configResult.dataSourceConfig
 
-        # File saving
+        # 3. File saving
         if self.fileSavingGroupBox.isChecked():
             if self._outDirPath is None:
                 QMessageBox.critical(
@@ -323,7 +321,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _prefill(self, dataSourceConfig: dict):
         """Pre-fill the form with the provided configuration."""
-        # Interface module
+        # 1. Interface module
         interfacePath = dataSourceConfig["interfacePath"]
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
@@ -335,10 +333,10 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.interfaceModulePathLabel.setText(displayText)
         self.interfaceModulePathLabel.setToolTip(interfacePath)
 
-        # Data source-specific config
+        # 2. Data source-specific config
         self._configWidget.prefill(dataSourceConfig)
 
-        # File saving
+        # 3. File saving
         if "filePath" in dataSourceConfig:
             self.fileSavingGroupBox.setChecked(True)
             outDirPath, fileName = os.path.split(dataSourceConfig["filePath"])

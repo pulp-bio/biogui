@@ -63,12 +63,22 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
         self.freqLabel.setText(str(fs))
-        self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
-        self.rangeModeComboBox.currentIndexChanged.connect(self._onRangeModeChange)
         if nCh == 1:
             self.label8.setEnabled(False)
             self.chSpacingTextField.setEnabled(False)
             self.chSpacingTextField.setText("0")
+
+        # Disable powerline noise filtering if incompatible with the sampling rate
+        if fs / 2 <= 50:
+            self.notchFilterGroupBox.setEnabled(False)
+            self.notchFilterGroupBox.setToolTip(
+                "The sampling rate is too low to apply the 50 Hz notch filter"
+            )
+        elif fs / 2 <= 60:
+            self.notchFreqComboBox.removeItem(1)
+            self.notchFilterGroupBox.setToolTip(
+                "The sampling rate is too low to apply the 60 Hz notch filter"
+            )
 
         # Validation rules
         nDec = 3
@@ -81,13 +91,14 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.freq2TextField.setToolTip(
             f"Float between {lo.toString(minFreq)} and {lo.toString(maxFreq)}"
         )
-
         freqValidator = QDoubleValidator(bottom=minFreq, top=maxFreq, decimals=nDec)
         freqValidator.setNotation(QDoubleValidator.StandardNotation)  # type: ignore
         self.freq1TextField.setValidator(freqValidator)
         self.freq2TextField.setValidator(freqValidator)
-        orderValidator = QIntValidator(bottom=1, top=2147483647)
+        orderValidator = QIntValidator(bottom=1, top=10)
         self.filtOrderTextField.setValidator(orderValidator)
+        qFactorValidator = QIntValidator(bottom=10, top=50)
+        self.qFactorTextField.setValidator(qFactorValidator)
         chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
         self.chSpacingTextField.setValidator(chSpacingValidator)
         rangeValidator = QDoubleValidator(bottom=-1e308, top=1e308, decimals=nDec)
@@ -101,6 +112,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if edit:
             self._prefill(kwargs)
 
+        self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
+        self.rangeModeComboBox.currentIndexChanged.connect(self._onRangeModeChange)
         self.destroyed.connect(self.deleteLater)
 
     @property
@@ -117,6 +130,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         - "filtType": the filter type (optional);
         - "freqs": list with the cut-off frequencies (optional);
         - "filtOrder" the filter order (optional);
+        - "notchFreq": frequency of the notch filter (optional);
+        - "qFactor": quality factor of the notch filter (optional);
         - "chSpacing": the channel spacing (optional);
         - "showYAxis": whether to show the Y axis (optional);
         - "minRange": minimum of the Y range (optional);
@@ -137,14 +152,14 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
     def _onRangeModeChange(self) -> None:
         """Detect if range mode has changed"""
         if self.rangeModeComboBox.currentText() == "Automatic":
-            self.label10.setEnabled(False)
+            self.label12.setEnabled(False)
             self.minRangeTextField.setEnabled(False)
-            self.label11.setEnabled(False)
+            self.label13.setEnabled(False)
             self.maxRangeTextField.setEnabled(False)
         else:
-            self.label10.setEnabled(True)
+            self.label12.setEnabled(True)
             self.minRangeTextField.setEnabled(True)
-            self.label11.setEnabled(True)
+            self.label13.setEnabled(True)
             self.maxRangeTextField.setEnabled(True)
 
     def validateForm(self) -> tuple[bool, str]:
@@ -160,8 +175,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """
         lo = QLocale()
 
-        # Check filtering settings
-        if self.filteringGroupBox.isChecked():
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
+        if self.filterGroupBox.isChecked():
             if not self.freq1TextField.hasAcceptableInput():
                 return False, 'The "Frequency 1" field is invalid.'
             freq1 = lo.toFloat(self.freq1TextField.text())[0]
@@ -185,8 +201,16 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._sigConfig["filtType"] = self.filtTypeComboBox.currentText()
             self._sigConfig["freqs"] = freqs
             self._sigConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[0]
+        # 1.2. Powerline noise filter
+        if self.notchFilterGroupBox.isChecked():
+            if not self.qFactorTextField.hasAcceptableInput():
+                return False, 'The "Quality factor" field is invalid.'
+            self._sigConfig["notchFreq"] = lo.toFloat(
+                self.notchFreqComboBox.currentText()
+            )[0]
+            self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
 
-        # Check plot settings
+        # 2. Plot settings
         if self.plotGroupBox.isChecked():
             if not self.chSpacingTextField.hasAcceptableInput():
                 return False, 'The "channel spacing" field is invalid.'
@@ -213,18 +237,31 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
     def _prefill(self, sigConfig: dict):
         """Pre-fill the form with the provided configuration."""
         lo = QLocale()
+
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
         if "filtType" in sigConfig:
-            self.filteringGroupBox.setChecked(True)
-            idx = self.filtTypeComboBox.findText(sigConfig["filtType"])
-            self.filtTypeComboBox.setCurrentIndex(idx)
+            self.filterGroupBox.setChecked(True)
+            self.filtTypeComboBox.setCurrentText(sigConfig["filtType"])
             freqs = sigConfig["freqs"]
             self.freq1TextField.setText(lo.toString(freqs[0]))
             if len(freqs) == 2:
+                self.freq2TextField.setEnabled(True)
                 self.freq2TextField.setText(lo.toString(freqs[1]))
             self.filtOrderTextField.setText(lo.toString(sigConfig["filtOrder"]))
         else:
-            self.filteringGroupBox.setChecked(False)
+            self.filterGroupBox.setChecked(False)
+        # 1.2. Powerline noise filter
+        if "notchFreq" in sigConfig:
+            self.notchFilterGroupBox.setChecked(True)
+            self.notchFreqComboBox.setCurrentText(
+                lo.toString(int(sigConfig["notchFreq"]))
+            )
+            self.qFactorTextField.setText(lo.toString(sigConfig["qFactor"]))
+        else:
+            self.notchFilterGroupBox.setChecked(False)
 
+        # 2. Plot settings
         if "chSpacing" in sigConfig:
             self.plotGroupBox.setChecked(True)
             self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
