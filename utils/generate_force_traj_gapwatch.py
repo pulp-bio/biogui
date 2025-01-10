@@ -60,14 +60,18 @@ def _decodeFn(data: bytes) -> np.ndarray:
         pos += 4
     forceAdc = np.asarray(
         struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, 16)
+    ).reshape(nSamp, 16)[:, [8, 9, 10]]
 
-    # ADC readings to mV
-    force = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
-    force *= 1_000  # mV
+    # ADC readings to V
+    forceV = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+
+    # V to kgf
+    slopes = np.asarray([2.8667, 2.5521, 2.7171])
+    intercepts = np.asarray([-1.1159, -0.99950, -1.0651])
+    force = slopes * forceV + intercepts
     force = force.astype(np.float32)
 
-    return force[:, [8, 9, 10]]
+    return force
 
 
 def _parse_input() -> tuple:
