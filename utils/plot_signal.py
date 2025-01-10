@@ -42,6 +42,7 @@ def read_bio_file(file_path: str) -> dict:
         n_signals = struct.unpack("<I", f.read(4))[0]
 
         # Read other metadata
+        fs_base, n_samp_base = struct.unpack("<fI", f.read(8))
         signals = {}
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", f.read(4))[0]
@@ -55,45 +56,31 @@ def read_bio_file(file_path: str) -> dict:
                 "fs": fs,
                 "n_samp": n_samp,
                 "n_ch": n_ch,
-                "data": np.zeros(shape=(0, n_ch), dtype=np.float32),
             }
-        base_fs = struct.unpack("<f", f.read(4))
 
         # Read whether the trigger is available
         is_trigger = struct.unpack("<?", f.read(1))[0]
 
-        # Read actual signals
-        ts = np.zeros(shape=(0,), dtype=np.float64)  # timestamp
-        trigger = np.zeros(shape=(0,), dtype=np.int32)  # trigger
-        while True:
-            # 1. Timestamp
-            data = f.read(8)
-            if not data:
-                break
-            ts = np.append(ts, struct.unpack("<d", data)[0])
+        # Read actual signals:
+        # 1. Timestamp
+        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
+            n_samp_base, 1
+        )
+        sig_dict = {"timestamp": {"data": ts, "fs": fs_base}}
 
-            # 2. Signals data
-            for sig_name in signals:
-                n_samp = signals[sig_name]["n_samp"]
-                n_ch = signals[sig_name]["n_ch"]
-                data = f.read(4 * n_samp * n_ch)
-                sig_packet = np.frombuffer(data, dtype=np.float32).reshape(-1, n_ch)
-                signals[sig_name]["data"] = np.concatenate(
-                    (signals[sig_name]["data"], sig_packet)
-                )
+        # 2. Signals data
+        for sig_name in signals:
+            n_samp = signals[sig_name].pop("n_samp")
+            n_ch = signals[sig_name].pop("n_ch")
+            data = np.frombuffer(f.read(4 * n_samp * n_ch), dtype=np.float32).reshape(
+                n_samp, n_ch
+            )
+            sig_dict[sig_name] = {"data": data, "fs": fs}
 
-            # 3. Trigger (optional)
-            if is_trigger:
-                trigger = np.append(trigger, struct.unpack("<I", f.read(4))[0])
-
-    sig_dict = {"Timestamp": {"data": ts.reshape(-1, 1), "fs": base_fs}}
-    for sig_name in signals:
-        sig_dict[sig_name] = {
-            "fs": signals[sig_name]["fs"],
-            "data": signals[sig_name]["data"],
-        }
-    if is_trigger:
-        sig_dict["Trigger"] = {"data": trigger.reshape(-1, 1), "fs": base_fs}
+        # 3. Trigger (optional)
+        if is_trigger:
+            trigger = np.frombuffer(f.read(), dtype=np.int32).reshape(n_samp_base, 1)
+            sig_dict["trigger"] = {"data": trigger, "fs": fs_base}
 
     return sig_dict
 

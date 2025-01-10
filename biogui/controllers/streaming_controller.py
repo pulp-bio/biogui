@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import datetime
 import struct
+import tempfile
 import time
 
 import numpy as np
@@ -39,20 +40,24 @@ class _FileWriterWorker(QObject):
     ----------
     filePath : str
         File path.
+    sigInfo : dict
+        Dictionary containing the signals information.
 
     Attributes
     ----------
-    _f : BinaryIO or None
-        File object.
+    _sigInfo : dict
+        Dictionary containing the signals information.
+    _tempData : dict
+        Dictionary containing, for each signal, a temporary file-like object and the number of samples written.
     """
 
-    def __init__(self, filePath: str) -> None:
+    def __init__(self, filePath: str, sigInfo: dict) -> None:
         super().__init__()
 
         self._filePath = filePath
+        self._sigInfo = sigInfo
 
-        self._f = None
-        self._isFirstWrite = True
+        self._tempData: dict = {}
         self._trigger = None
 
     @property
@@ -63,15 +68,6 @@ class _FileWriterWorker(QObject):
     @filePath.setter
     def filePath(self, filePath: str) -> None:
         self._filePath = filePath
-
-    @property
-    def isFirstWrite(self) -> bool:
-        """bool: Property representing whether it's the first time the worker receives data."""
-        return self._isFirstWrite
-
-    @isFirstWrite.setter
-    def isFirstWrite(self, isFirstWrite: bool) -> None:
-        self._isFirstWrite = isFirstWrite
 
     @property
     def trigger(self) -> int | None:
@@ -85,53 +81,40 @@ class _FileWriterWorker(QObject):
     @instanceSlot(list)
     def write(self, rawSignals: list[SigData]) -> None:
         """
-        Write to file when new data is received.
+        Write to in-memory file when new data is received.
 
         Parameters
         ----------
-        rawSignals : SigDataCollection
+        rawSignals : list of SigData
             Raw signals to write.
         """
-        if self._isFirstWrite:  # write metadata
-            # 1. Number of signals
-            self._f.write(struct.pack("<I", len(rawSignals)))  # type: ignore
-
-            # 2. Name, sampling rate and shape
-            for rawSignal in rawSignals:
-                self._f.write(  # type: ignore
-                    struct.pack(
-                        f"<I{len(rawSignal.sigName)}sf2I",
-                        len(rawSignal.sigName),
-                        rawSignal.sigName.encode(),
-                        rawSignal.fs,
-                        *rawSignal.data.shape,
-                    )
-                )
-            # Base sampling rate (useful for timestamp and trigger, if present)
-            baseFs = rawSignals[0].fs / rawSignals[0].data.shape[0]
-            self._f.write(struct.pack("<f", baseFs))  # type: ignore
-
-            # 3. Trigger (optional)
-            self._f.write(struct.pack("<?", self._trigger is not None))  # type: ignore
-
-            self._isFirstWrite = False
-
         # 1. Timestamp
         ts = time.time()
-        self._f.write(struct.pack("<d", ts))  # type: ignore
+        self._tempData["timestamp"]["file"].write(struct.pack("<d", ts))
+        self._tempData["timestamp"]["nSamp"] += 1
 
         # 2. Signals data
         for rawSignal in rawSignals:
-            self._f.write(rawSignal.data.tobytes())  # type: ignore
+            self._tempData[rawSignal.sigName]["file"].write(rawSignal.data.tobytes())
+            self._tempData[rawSignal.sigName]["nSamp"] += rawSignal.data.shape[0]
 
         # 3. Trigger (optional)
         if self._trigger is not None:
-            self._f.write(struct.pack("<I", self._trigger))  # type: ignore
+            self._tempData["trigger"]["file"].write(struct.pack("<I", self._trigger))
+            self._tempData["trigger"]["nSamp"] += 1
 
     def openFile(self) -> None:
         """Open the file."""
+        # Create temporary files
+        self._tempData["timestamp"] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
+        for sigName in self._sigInfo:
+            self._tempData[sigName] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
+        if self._trigger is not None:
+            self._tempData["trigger"] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
 
-        # Add timestamp and extension
+    def closeFile(self) -> None:
+        """Close the file."""
+        # Add timestamp and extension to filename
         filePath = (
             self._filePath
             + f"_{datetime.datetime.now().replace(microsecond=0)}.bio".replace(
@@ -139,12 +122,60 @@ class _FileWriterWorker(QObject):
             ).replace(":", "-")
         )
 
-        self._f = open(filePath, "wb")
-        self._isFirstWrite = True
+        # Dump data to the real file
+        with open(filePath, "wb") as f:
+            # 1. Metadata:
+            # 1.1. Number of signals
+            f.write(struct.pack("<I", len(self._sigInfo)))
 
-    def closeFile(self) -> None:
-        """Close the file."""
-        self._f.close()  # type: ignore
+            # 1.2. Name, sampling rate and shape of each signal
+            firstTime = True
+            for sigName in self._sigInfo:
+                fs = self._sigInfo[sigName]["fs"]
+                nSamp = self._tempData[sigName]["nSamp"]
+                nCh = self._sigInfo[sigName]["nCh"]
+
+                # Compute base sampling rate (useful for timestamp and trigger, if present)
+                if firstTime:
+                    nSampBase = self._tempData["timestamp"]["nSamp"]
+                    fsBase = nSampBase * fs / nSamp
+                    f.write(struct.pack("<fI", fsBase, nSampBase))
+                    firstTime = False
+
+                f.write(
+                    struct.pack(
+                        f"<I{len(sigName)}sf2I",
+                        len(sigName),
+                        sigName.encode(),
+                        fs,
+                        nSamp,
+                        nCh,
+                    )
+                )
+
+            # 1.3. Trigger (optional)
+            f.write(struct.pack("<?", self._trigger is not None))
+
+            # 2. Actual signals
+            # 2.1. Timestamp
+            self._tempData["timestamp"]["file"].seek(0)
+            ts = self._tempData["timestamp"]["file"].read()
+            print(len(ts))
+            f.write(ts)
+
+            # 2.2. Signals data
+            for sigName in self._sigInfo:
+                self._tempData[sigName]["file"].seek(0)
+                f.write(self._tempData[sigName]["file"].read())
+
+            # 3. Trigger (optional)
+            if self._trigger is not None:
+                self._tempData["trigger"]["file"].seek(0)
+                f.write(self._tempData["trigger"]["file"].read())
+
+        for sigName in self._tempData:
+            self._tempData[sigName]["file"].close()
+            self._tempData[sigName]["nSamp"] = 0
 
 
 class _Preprocessor(QObject):
@@ -401,7 +432,7 @@ class StreamingController(QObject):
         # Optionally, create file writer worker and thread
         self._fileWriterWorker, self._fileWriterThreads = None, None
         if filePath:
-            self._fileWriterWorker = _FileWriterWorker(filePath)
+            self._fileWriterWorker = _FileWriterWorker(filePath, sigsConfigs)
             self._fileWriterThread = QThread(self)
             self._fileWriterWorker.moveToThread(self._fileWriterThread)
             self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
@@ -464,14 +495,8 @@ class StreamingController(QObject):
             self._fileWriterThread = None
             return
 
-        # 3.2. If worker already exists, reset it and change path
-        if self._fileWriterWorker is not None:
-            self._fileWriterWorker.filePath = filePath
-            self._fileWriterWorker.isFirstWrite = False
-            return
-
-        # 3.3. Otherwise, initialize file writer
-        self._fileWriterWorker = _FileWriterWorker(filePath)
+        # 3.2. Otherwise, initialize file writer
+        self._fileWriterWorker = _FileWriterWorker(filePath, interfaceModule.sigInfo)
         self._fileWriterThread = QThread(self)
         self._fileWriterWorker.moveToThread(self._fileWriterThread)
         self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
