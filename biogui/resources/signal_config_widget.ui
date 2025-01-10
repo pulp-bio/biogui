@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>620</height>
+    <height>622</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Signal Configuration</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
    <item>
     <layout class="QFormLayout" name="formLayout1">
      <item row="0" column="0">
@@ -61,186 +61,18 @@
     </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="filterGroupBox">
-     <property name="toolTip">
-      <string>Only for visualization, the raw signal will be saved to file</string>
-     </property>
-     <property name="title">
-      <string>Configure filtering</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label4">
-        <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
-        </property>
-        <property name="text">
-         <string>Type:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QComboBox" name="filtTypeComboBox">
-        <item>
-         <property name="text">
-          <string>highpass</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>lowpass</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>bandpass</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>bandstop</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label5">
-        <property name="text">
-         <string>First critical frequency (in Hz):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="freq1TextField">
-        <property name="toolTip">
-         <string/>
-        </property>
-        <property name="placeholderText">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label6">
-        <property name="text">
-         <string>Second critical frequency (in Hz):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="freq2TextField">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="toolTip">
-         <string/>
-        </property>
-        <property name="placeholderText">
-         <string>For bandpass and bandstop only</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label7">
-        <property name="text">
-         <string>Filter order:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="filtOrderTextField">
-        <property name="toolTip">
-         <string>Integer between 1 and 10</string>
-        </property>
-        <property name="text">
-         <string>4</string>
-        </property>
-        <property name="placeholderText">
-         <string/>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="notchFilterGroupBox">
-     <property name="toolTip">
-      <string>Only for visualization, the raw signal will be saved to file</string>
-     </property>
-     <property name="title">
-      <string>Filter powerline noise</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-     <layout class="QFormLayout" name="formLayout2">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label8">
-        <property name="text">
-         <string>Frequency (Hz):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QComboBox" name="notchFreqComboBox">
-        <item>
-         <property name="text">
-          <string>50</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>60</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label9">
-        <property name="text">
-         <string>Quality factor:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="qFactorTextField">
-        <property name="toolTip">
-         <string>Integer between 10 and 50</string>
-        </property>
-        <property name="text">
-         <string>30</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <widget class="QGroupBox" name="plotGroupBox">
      <property name="toolTip">
       <string/>
      </property>
      <property name="title">
-      <string>Configure plot</string>
+      <string>Show plot</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
      </property>
      <property name="flat">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -248,87 +80,259 @@
      <property name="checked">
       <bool>true</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout4">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label10">
-        <property name="text">
-         <string>Channel spacing (in a.u.):</string>
-        </property>
-       </widget>
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0,0">
+      <item>
+       <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label4">
+          <property name="text">
+           <string>Channel spacing (in a.u.):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="chSpacingTextField">
+          <property name="toolTip">
+           <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
+          </property>
+          <property name="text">
+           <string>0</string>
+          </property>
+          <property name="placeholderText">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="showYAxisCheckBox">
+          <property name="text">
+           <string>Show Y axis</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="rangeModeComboBox">
+          <item>
+           <property name="text">
+            <string>Automatic</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Manual</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label5">
+          <property name="text">
+           <string>Range mode:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label6">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Minimum range (in a.u.):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="minRangeTextField">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label7">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Maximum range (in a.u.):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="maxRangeTextField">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="chSpacingTextField">
+      <item>
+       <widget class="QGroupBox" name="filterGroupBox">
         <property name="toolTip">
-         <string>Spacing between the channels in the signal unit (only for multi-channel signals)</string>
+         <string>Only for visualization, the raw signal will be saved to file</string>
         </property>
-        <property name="text">
-         <string>0</string>
+        <property name="title">
+         <string>Configure filtering</string>
         </property>
-        <property name="placeholderText">
-         <string/>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="showYAxisCheckBox">
-        <property name="text">
-         <string>Show Y axis</string>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label11">
-        <property name="text">
-         <string>Range mode:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QComboBox" name="rangeModeComboBox">
-        <item>
-         <property name="text">
-          <string>Automatic</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Manual</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label12">
-        <property name="enabled">
+        <property name="checked">
          <bool>false</bool>
         </property>
-        <property name="text">
-         <string>Minimum range (in a.u.):</string>
-        </property>
+        <layout class="QFormLayout" name="formLayout_3">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label8">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="text">
+            <string>Type:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="filtTypeComboBox">
+           <item>
+            <property name="text">
+             <string>highpass</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>lowpass</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>bandpass</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>bandstop</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label9">
+           <property name="text">
+            <string>First critical frequency (in Hz):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="freq1TextField">
+           <property name="toolTip">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label10">
+           <property name="text">
+            <string>Second critical frequency (in Hz):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="freq2TextField">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>For bandpass and bandstop only</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label11">
+           <property name="text">
+            <string>Filter order:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="filtOrderTextField">
+           <property name="toolTip">
+            <string>Integer between 1 and 10</string>
+           </property>
+           <property name="text">
+            <string>4</string>
+           </property>
+           <property name="placeholderText">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="minRangeTextField">
-        <property name="enabled">
+      <item>
+       <widget class="QGroupBox" name="notchFilterGroupBox">
+        <property name="toolTip">
+         <string>Only for visualization, the raw signal will be saved to file</string>
+        </property>
+        <property name="title">
+         <string>Filter powerline noise</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
          <bool>false</bool>
         </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label13">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Maximum range (in a.u.):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QLineEdit" name="maxRangeTextField">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
+        <layout class="QFormLayout" name="formLayout2">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label12">
+           <property name="text">
+            <string>Frequency (Hz):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="notchFreqComboBox">
+           <item>
+            <property name="text">
+             <string>50</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>60</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label13">
+           <property name="text">
+            <string>Quality factor:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="qFactorTextField">
+           <property name="toolTip">
+            <string>Integer between 10 and 50</string>
+           </property>
+           <property name="text">
+            <string>30</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
@@ -337,20 +341,8 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>filterGroupBox</tabstop>
-  <tabstop>filtTypeComboBox</tabstop>
-  <tabstop>freq1TextField</tabstop>
-  <tabstop>freq2TextField</tabstop>
-  <tabstop>filtOrderTextField</tabstop>
-  <tabstop>notchFilterGroupBox</tabstop>
   <tabstop>notchFreqComboBox</tabstop>
   <tabstop>qFactorTextField</tabstop>
-  <tabstop>plotGroupBox</tabstop>
-  <tabstop>chSpacingTextField</tabstop>
-  <tabstop>showYAxisCheckBox</tabstop>
-  <tabstop>rangeModeComboBox</tabstop>
-  <tabstop>minRangeTextField</tabstop>
-  <tabstop>maxRangeTextField</tabstop>
  </tabstops>
  <resources/>
  <connections/>
