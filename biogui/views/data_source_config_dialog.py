@@ -110,17 +110,15 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         Parent widget.
     kwargs : dict
         Optional keyword arguments for pre-filling the form, namely:
-        - "filtType": the filter type (optional);
-        - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional);
-        - "chSpacing": the channel spacing;
-        - "showYAxis": whether to show the Y axis (optional);
-        - "minRange": minimum of the Y range (optional);
-        - "maxRange": maximum of the Y range (optional).
+        - "dataSourceType": the data source type;
+        - "interfacePath": the interface module;
+        - "interfaceModule": the interface module;
+        - the data source type-specific configuration parameters;
+        - "filePath": the file path (optional).
 
     Attributes
     ----------
-    _configWidget : ConfigWidget
+    _configWidget : DataSourceConfigWidget
         Widget for data source configuration.
     _outDirPath : str or None
         Path to the output directory.
