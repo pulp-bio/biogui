@@ -4,7 +4,7 @@
     },
     "nReps": 1,
     "durationGesture": 4000,
-    "durationStart": 8000,
+    "durationStart": 20000,
     "durationRest": 2000,
     "imageFolder": "acquisitions/gestures_images"
 }

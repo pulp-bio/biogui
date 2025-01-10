@@ -23,7 +23,7 @@ class Ui_SignalConfigWidget(object):
     def setupUi(self, SignalConfigWidget):
         if not SignalConfigWidget.objectName():
             SignalConfigWidget.setObjectName(u"SignalConfigWidget")
-        SignalConfigWidget.resize(500, 620)
+        SignalConfigWidget.resize(500, 622)
         self.verticalLayout = QVBoxLayout(SignalConfigWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout1 = QFormLayout()
@@ -61,18 +61,82 @@ class Ui_SignalConfigWidget(object):
 
         self.verticalLayout.addLayout(self.formLayout1)
 
-        self.filterGroupBox = QGroupBox(SignalConfigWidget)
+        self.plotGroupBox = QGroupBox(SignalConfigWidget)
+        self.plotGroupBox.setObjectName(u"plotGroupBox")
+        self.plotGroupBox.setAlignment(Qt.AlignCenter)
+        self.plotGroupBox.setFlat(True)
+        self.plotGroupBox.setCheckable(True)
+        self.plotGroupBox.setChecked(True)
+        self.verticalLayout_2 = QVBoxLayout(self.plotGroupBox)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.label4 = QLabel(self.plotGroupBox)
+        self.label4.setObjectName(u"label4")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label4)
+
+        self.chSpacingTextField = QLineEdit(self.plotGroupBox)
+        self.chSpacingTextField.setObjectName(u"chSpacingTextField")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
+
+        self.showYAxisCheckBox = QCheckBox(self.plotGroupBox)
+        self.showYAxisCheckBox.setObjectName(u"showYAxisCheckBox")
+
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.showYAxisCheckBox)
+
+        self.rangeModeComboBox = QComboBox(self.plotGroupBox)
+        self.rangeModeComboBox.addItem("")
+        self.rangeModeComboBox.addItem("")
+        self.rangeModeComboBox.setObjectName(u"rangeModeComboBox")
+
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.rangeModeComboBox)
+
+        self.label5 = QLabel(self.plotGroupBox)
+        self.label5.setObjectName(u"label5")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label5)
+
+        self.label6 = QLabel(self.plotGroupBox)
+        self.label6.setObjectName(u"label6")
+        self.label6.setEnabled(False)
+
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label6)
+
+        self.minRangeTextField = QLineEdit(self.plotGroupBox)
+        self.minRangeTextField.setObjectName(u"minRangeTextField")
+        self.minRangeTextField.setEnabled(False)
+
+        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.minRangeTextField)
+
+        self.label7 = QLabel(self.plotGroupBox)
+        self.label7.setObjectName(u"label7")
+        self.label7.setEnabled(False)
+
+        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.label7)
+
+        self.maxRangeTextField = QLineEdit(self.plotGroupBox)
+        self.maxRangeTextField.setObjectName(u"maxRangeTextField")
+        self.maxRangeTextField.setEnabled(False)
+
+        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.maxRangeTextField)
+
+
+        self.verticalLayout_2.addLayout(self.formLayout)
+
+        self.filterGroupBox = QGroupBox(self.plotGroupBox)
         self.filterGroupBox.setObjectName(u"filterGroupBox")
         self.filterGroupBox.setAlignment(Qt.AlignCenter)
         self.filterGroupBox.setCheckable(True)
         self.filterGroupBox.setChecked(False)
-        self.formLayout = QFormLayout(self.filterGroupBox)
-        self.formLayout.setObjectName(u"formLayout")
-        self.label4 = QLabel(self.filterGroupBox)
-        self.label4.setObjectName(u"label4")
-        self.label4.setFrameShape(QFrame.NoFrame)
+        self.formLayout_3 = QFormLayout(self.filterGroupBox)
+        self.formLayout_3.setObjectName(u"formLayout_3")
+        self.label8 = QLabel(self.filterGroupBox)
+        self.label8.setObjectName(u"label8")
+        self.label8.setFrameShape(QFrame.NoFrame)
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label4)
+        self.formLayout_3.setWidget(0, QFormLayout.LabelRole, self.label8)
 
         self.filtTypeComboBox = QComboBox(self.filterGroupBox)
         self.filtTypeComboBox.addItem("")
@@ -81,52 +145,52 @@ class Ui_SignalConfigWidget(object):
         self.filtTypeComboBox.addItem("")
         self.filtTypeComboBox.setObjectName(u"filtTypeComboBox")
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.filtTypeComboBox)
+        self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.filtTypeComboBox)
 
-        self.label5 = QLabel(self.filterGroupBox)
-        self.label5.setObjectName(u"label5")
+        self.label9 = QLabel(self.filterGroupBox)
+        self.label9.setObjectName(u"label9")
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label5)
+        self.formLayout_3.setWidget(1, QFormLayout.LabelRole, self.label9)
 
         self.freq1TextField = QLineEdit(self.filterGroupBox)
         self.freq1TextField.setObjectName(u"freq1TextField")
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.freq1TextField)
+        self.formLayout_3.setWidget(1, QFormLayout.FieldRole, self.freq1TextField)
 
-        self.label6 = QLabel(self.filterGroupBox)
-        self.label6.setObjectName(u"label6")
+        self.label10 = QLabel(self.filterGroupBox)
+        self.label10.setObjectName(u"label10")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label6)
+        self.formLayout_3.setWidget(2, QFormLayout.LabelRole, self.label10)
 
         self.freq2TextField = QLineEdit(self.filterGroupBox)
         self.freq2TextField.setObjectName(u"freq2TextField")
         self.freq2TextField.setEnabled(False)
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.freq2TextField)
+        self.formLayout_3.setWidget(2, QFormLayout.FieldRole, self.freq2TextField)
 
-        self.label7 = QLabel(self.filterGroupBox)
-        self.label7.setObjectName(u"label7")
+        self.label11 = QLabel(self.filterGroupBox)
+        self.label11.setObjectName(u"label11")
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label7)
+        self.formLayout_3.setWidget(3, QFormLayout.LabelRole, self.label11)
 
         self.filtOrderTextField = QLineEdit(self.filterGroupBox)
         self.filtOrderTextField.setObjectName(u"filtOrderTextField")
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.filtOrderTextField)
+        self.formLayout_3.setWidget(3, QFormLayout.FieldRole, self.filtOrderTextField)
 
 
-        self.verticalLayout.addWidget(self.filterGroupBox)
+        self.verticalLayout_2.addWidget(self.filterGroupBox)
 
-        self.notchFilterGroupBox = QGroupBox(SignalConfigWidget)
+        self.notchFilterGroupBox = QGroupBox(self.plotGroupBox)
         self.notchFilterGroupBox.setObjectName(u"notchFilterGroupBox")
         self.notchFilterGroupBox.setCheckable(True)
         self.notchFilterGroupBox.setChecked(False)
         self.formLayout2 = QFormLayout(self.notchFilterGroupBox)
         self.formLayout2.setObjectName(u"formLayout2")
-        self.label8 = QLabel(self.notchFilterGroupBox)
-        self.label8.setObjectName(u"label8")
+        self.label12 = QLabel(self.notchFilterGroupBox)
+        self.label12.setObjectName(u"label12")
 
-        self.formLayout2.setWidget(0, QFormLayout.LabelRole, self.label8)
+        self.formLayout2.setWidget(0, QFormLayout.LabelRole, self.label12)
 
         self.notchFreqComboBox = QComboBox(self.notchFilterGroupBox)
         self.notchFreqComboBox.addItem("")
@@ -135,10 +199,10 @@ class Ui_SignalConfigWidget(object):
 
         self.formLayout2.setWidget(0, QFormLayout.FieldRole, self.notchFreqComboBox)
 
-        self.label9 = QLabel(self.notchFilterGroupBox)
-        self.label9.setObjectName(u"label9")
+        self.label13 = QLabel(self.notchFilterGroupBox)
+        self.label13.setObjectName(u"label13")
 
-        self.formLayout2.setWidget(1, QFormLayout.LabelRole, self.label9)
+        self.formLayout2.setWidget(1, QFormLayout.LabelRole, self.label13)
 
         self.qFactorTextField = QLineEdit(self.notchFilterGroupBox)
         self.qFactorTextField.setObjectName(u"qFactorTextField")
@@ -146,83 +210,13 @@ class Ui_SignalConfigWidget(object):
         self.formLayout2.setWidget(1, QFormLayout.FieldRole, self.qFactorTextField)
 
 
-        self.verticalLayout.addWidget(self.notchFilterGroupBox)
+        self.verticalLayout_2.addWidget(self.notchFilterGroupBox)
 
-        self.plotGroupBox = QGroupBox(SignalConfigWidget)
-        self.plotGroupBox.setObjectName(u"plotGroupBox")
-        self.plotGroupBox.setAlignment(Qt.AlignCenter)
-        self.plotGroupBox.setFlat(False)
-        self.plotGroupBox.setCheckable(True)
-        self.plotGroupBox.setChecked(True)
-        self.formLayout4 = QFormLayout(self.plotGroupBox)
-        self.formLayout4.setObjectName(u"formLayout4")
-        self.label10 = QLabel(self.plotGroupBox)
-        self.label10.setObjectName(u"label10")
-
-        self.formLayout4.setWidget(0, QFormLayout.LabelRole, self.label10)
-
-        self.chSpacingTextField = QLineEdit(self.plotGroupBox)
-        self.chSpacingTextField.setObjectName(u"chSpacingTextField")
-
-        self.formLayout4.setWidget(0, QFormLayout.FieldRole, self.chSpacingTextField)
-
-        self.showYAxisCheckBox = QCheckBox(self.plotGroupBox)
-        self.showYAxisCheckBox.setObjectName(u"showYAxisCheckBox")
-
-        self.formLayout4.setWidget(1, QFormLayout.FieldRole, self.showYAxisCheckBox)
-
-        self.label11 = QLabel(self.plotGroupBox)
-        self.label11.setObjectName(u"label11")
-
-        self.formLayout4.setWidget(2, QFormLayout.LabelRole, self.label11)
-
-        self.rangeModeComboBox = QComboBox(self.plotGroupBox)
-        self.rangeModeComboBox.addItem("")
-        self.rangeModeComboBox.addItem("")
-        self.rangeModeComboBox.setObjectName(u"rangeModeComboBox")
-
-        self.formLayout4.setWidget(2, QFormLayout.FieldRole, self.rangeModeComboBox)
-
-        self.label12 = QLabel(self.plotGroupBox)
-        self.label12.setObjectName(u"label12")
-        self.label12.setEnabled(False)
-
-        self.formLayout4.setWidget(3, QFormLayout.LabelRole, self.label12)
-
-        self.minRangeTextField = QLineEdit(self.plotGroupBox)
-        self.minRangeTextField.setObjectName(u"minRangeTextField")
-        self.minRangeTextField.setEnabled(False)
-
-        self.formLayout4.setWidget(3, QFormLayout.FieldRole, self.minRangeTextField)
-
-        self.label13 = QLabel(self.plotGroupBox)
-        self.label13.setObjectName(u"label13")
-        self.label13.setEnabled(False)
-
-        self.formLayout4.setWidget(4, QFormLayout.LabelRole, self.label13)
-
-        self.maxRangeTextField = QLineEdit(self.plotGroupBox)
-        self.maxRangeTextField.setObjectName(u"maxRangeTextField")
-        self.maxRangeTextField.setEnabled(False)
-
-        self.formLayout4.setWidget(4, QFormLayout.FieldRole, self.maxRangeTextField)
-
+        self.verticalLayout_2.setStretch(0, 1)
 
         self.verticalLayout.addWidget(self.plotGroupBox)
 
-        QWidget.setTabOrder(self.filterGroupBox, self.filtTypeComboBox)
-        QWidget.setTabOrder(self.filtTypeComboBox, self.freq1TextField)
-        QWidget.setTabOrder(self.freq1TextField, self.freq2TextField)
-        QWidget.setTabOrder(self.freq2TextField, self.filtOrderTextField)
-        QWidget.setTabOrder(self.filtOrderTextField, self.notchFilterGroupBox)
-        QWidget.setTabOrder(self.notchFilterGroupBox, self.notchFreqComboBox)
         QWidget.setTabOrder(self.notchFreqComboBox, self.qFactorTextField)
-        QWidget.setTabOrder(self.qFactorTextField, self.plotGroupBox)
-        QWidget.setTabOrder(self.plotGroupBox, self.chSpacingTextField)
-        QWidget.setTabOrder(self.chSpacingTextField, self.showYAxisCheckBox)
-        QWidget.setTabOrder(self.showYAxisCheckBox, self.rangeModeComboBox)
-        QWidget.setTabOrder(self.rangeModeComboBox, self.minRangeTextField)
-        QWidget.setTabOrder(self.minRangeTextField, self.maxRangeTextField)
 
         self.retranslateUi(SignalConfigWidget)
 
@@ -238,26 +232,43 @@ class Ui_SignalConfigWidget(object):
         self.label3.setText(QCoreApplication.translate("SignalConfigWidget", u"Sampling rate (in sps):", None))
         self.freqLabel.setText("")
 #if QT_CONFIG(tooltip)
+        self.plotGroupBox.setToolTip("")
+#endif // QT_CONFIG(tooltip)
+        self.plotGroupBox.setTitle(QCoreApplication.translate("SignalConfigWidget", u"Show plot", None))
+        self.label4.setText(QCoreApplication.translate("SignalConfigWidget", u"Channel spacing (in a.u.):", None))
+#if QT_CONFIG(tooltip)
+        self.chSpacingTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
+#endif // QT_CONFIG(tooltip)
+        self.chSpacingTextField.setText(QCoreApplication.translate("SignalConfigWidget", u"0", None))
+        self.chSpacingTextField.setPlaceholderText("")
+        self.showYAxisCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Y axis", None))
+        self.rangeModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Automatic", None))
+        self.rangeModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Manual", None))
+
+        self.label5.setText(QCoreApplication.translate("SignalConfigWidget", u"Range mode:", None))
+        self.label6.setText(QCoreApplication.translate("SignalConfigWidget", u"Minimum range (in a.u.):", None))
+        self.label7.setText(QCoreApplication.translate("SignalConfigWidget", u"Maximum range (in a.u.):", None))
+#if QT_CONFIG(tooltip)
         self.filterGroupBox.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Only for visualization, the raw signal will be saved to file", None))
 #endif // QT_CONFIG(tooltip)
         self.filterGroupBox.setTitle(QCoreApplication.translate("SignalConfigWidget", u"Configure filtering", None))
-        self.label4.setText(QCoreApplication.translate("SignalConfigWidget", u"Type:", None))
+        self.label8.setText(QCoreApplication.translate("SignalConfigWidget", u"Type:", None))
         self.filtTypeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"highpass", None))
         self.filtTypeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"lowpass", None))
         self.filtTypeComboBox.setItemText(2, QCoreApplication.translate("SignalConfigWidget", u"bandpass", None))
         self.filtTypeComboBox.setItemText(3, QCoreApplication.translate("SignalConfigWidget", u"bandstop", None))
 
-        self.label5.setText(QCoreApplication.translate("SignalConfigWidget", u"First critical frequency (in Hz):", None))
+        self.label9.setText(QCoreApplication.translate("SignalConfigWidget", u"First critical frequency (in Hz):", None))
 #if QT_CONFIG(tooltip)
         self.freq1TextField.setToolTip("")
 #endif // QT_CONFIG(tooltip)
         self.freq1TextField.setPlaceholderText("")
-        self.label6.setText(QCoreApplication.translate("SignalConfigWidget", u"Second critical frequency (in Hz):", None))
+        self.label10.setText(QCoreApplication.translate("SignalConfigWidget", u"Second critical frequency (in Hz):", None))
 #if QT_CONFIG(tooltip)
         self.freq2TextField.setToolTip("")
 #endif // QT_CONFIG(tooltip)
         self.freq2TextField.setPlaceholderText(QCoreApplication.translate("SignalConfigWidget", u"For bandpass and bandstop only", None))
-        self.label7.setText(QCoreApplication.translate("SignalConfigWidget", u"Filter order:", None))
+        self.label11.setText(QCoreApplication.translate("SignalConfigWidget", u"Filter order:", None))
 #if QT_CONFIG(tooltip)
         self.filtOrderTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Integer between 1 and 10", None))
 #endif // QT_CONFIG(tooltip)
@@ -267,31 +278,14 @@ class Ui_SignalConfigWidget(object):
         self.notchFilterGroupBox.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Only for visualization, the raw signal will be saved to file", None))
 #endif // QT_CONFIG(tooltip)
         self.notchFilterGroupBox.setTitle(QCoreApplication.translate("SignalConfigWidget", u"Filter powerline noise", None))
-        self.label8.setText(QCoreApplication.translate("SignalConfigWidget", u"Frequency (Hz):", None))
+        self.label12.setText(QCoreApplication.translate("SignalConfigWidget", u"Frequency (Hz):", None))
         self.notchFreqComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"50", None))
         self.notchFreqComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"60", None))
 
-        self.label9.setText(QCoreApplication.translate("SignalConfigWidget", u"Quality factor:", None))
+        self.label13.setText(QCoreApplication.translate("SignalConfigWidget", u"Quality factor:", None))
 #if QT_CONFIG(tooltip)
         self.qFactorTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Integer between 10 and 50", None))
 #endif // QT_CONFIG(tooltip)
         self.qFactorTextField.setText(QCoreApplication.translate("SignalConfigWidget", u"30", None))
-#if QT_CONFIG(tooltip)
-        self.plotGroupBox.setToolTip("")
-#endif // QT_CONFIG(tooltip)
-        self.plotGroupBox.setTitle(QCoreApplication.translate("SignalConfigWidget", u"Configure plot", None))
-        self.label10.setText(QCoreApplication.translate("SignalConfigWidget", u"Channel spacing (in a.u.):", None))
-#if QT_CONFIG(tooltip)
-        self.chSpacingTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
-#endif // QT_CONFIG(tooltip)
-        self.chSpacingTextField.setText(QCoreApplication.translate("SignalConfigWidget", u"0", None))
-        self.chSpacingTextField.setPlaceholderText("")
-        self.showYAxisCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Y axis", None))
-        self.label11.setText(QCoreApplication.translate("SignalConfigWidget", u"Range mode:", None))
-        self.rangeModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Automatic", None))
-        self.rangeModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Manual", None))
-
-        self.label12.setText(QCoreApplication.translate("SignalConfigWidget", u"Minimum range (in a.u.):", None))
-        self.label13.setText(QCoreApplication.translate("SignalConfigWidget", u"Maximum range (in a.u.):", None))
     # retranslateUi
 
