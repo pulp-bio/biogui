@@ -15,8 +15,4 @@
     <file alias="light/trash">icons/light/trash.png</file>
     <file alias="light/up-arrow">icons/light/up-arrow.png</file>
   </qresource>
-  <qresource prefix="images">
-    <file alias="stop">images/stop.png</file>
-    <file alias="start">images/start.png</file>
-  </qresource>
 </RCC>
