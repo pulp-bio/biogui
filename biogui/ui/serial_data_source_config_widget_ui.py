@@ -24,11 +24,12 @@ class Ui_SerialDataSourceConfigWidget(object):
     def setupUi(self, SerialDataSourceConfigWidget):
         if not SerialDataSourceConfigWidget.objectName():
             SerialDataSourceConfigWidget.setObjectName(u"SerialDataSourceConfigWidget")
-        SerialDataSourceConfigWidget.resize(400, 300)
+        SerialDataSourceConfigWidget.resize(400, 84)
         self.formLayout = QFormLayout(SerialDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
         self.label1 = QLabel(SerialDataSourceConfigWidget)
         self.label1.setObjectName(u"label1")
+        self.label1.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
 
@@ -53,6 +54,7 @@ class Ui_SerialDataSourceConfigWidget(object):
 
         self.label2 = QLabel(SerialDataSourceConfigWidget)
         self.label2.setObjectName(u"label2")
+        self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label2)
 

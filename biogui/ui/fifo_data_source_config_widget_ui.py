@@ -22,11 +22,13 @@ class Ui_FifoDataSourceConfigWidget(object):
     def setupUi(self, FifoDataSourceConfigWidget):
         if not FifoDataSourceConfigWidget.objectName():
             FifoDataSourceConfigWidget.setObjectName(u"FifoDataSourceConfigWidget")
-        FifoDataSourceConfigWidget.resize(400, 300)
+        FifoDataSourceConfigWidget.resize(400, 44)
         self.formLayout = QFormLayout(FifoDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
         self.label = QLabel(FifoDataSourceConfigWidget)
         self.label.setObjectName(u"label")
+        self.label.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label.setWordWrap(False)
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
 
@@ -42,7 +44,7 @@ class Ui_FifoDataSourceConfigWidget(object):
     # setupUi
 
     def retranslateUi(self, FifoDataSourceConfigWidget):
-        FifoDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("FifoDataSourceConfigWidget", u"FIFO Configuration Widget", None))
+        FifoDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("FifoDataSourceConfigWidget", u"FIFO Data Source Configuration", None))
         self.label.setText(QCoreApplication.translate("FifoDataSourceConfigWidget", u"Path to FIFO:", None))
     # retranslateUi
 

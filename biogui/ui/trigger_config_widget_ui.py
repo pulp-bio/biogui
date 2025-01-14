@@ -22,7 +22,7 @@ class Ui_TriggerConfigWidget(object):
     def setupUi(self, TriggerConfigWidget):
         if not TriggerConfigWidget.objectName():
             TriggerConfigWidget.setObjectName(u"TriggerConfigWidget")
-        TriggerConfigWidget.resize(400, 132)
+        TriggerConfigWidget.resize(400, 108)
         self.verticalLayout = QVBoxLayout(TriggerConfigWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.triggerGroupBox = QGroupBox(TriggerConfigWidget)
@@ -32,26 +32,17 @@ class Ui_TriggerConfigWidget(object):
         self.triggerGroupBox.setChecked(False)
         self.formLayout = QFormLayout(self.triggerGroupBox)
         self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.label1 = QLabel(self.triggerGroupBox)
-        self.label1.setObjectName(u"label1")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        self.browseTriggerConfigButton = QPushButton(self.triggerGroupBox)
+        self.browseTriggerConfigButton.setObjectName(u"browseTriggerConfigButton")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label1)
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.browseTriggerConfigButton)
 
-        self.browseJSONButton = QPushButton(self.triggerGroupBox)
-        self.browseJSONButton.setObjectName(u"browseJSONButton")
+        self.triggerConfigPathLabel = QLabel(self.triggerGroupBox)
+        self.triggerConfigPathLabel.setObjectName(u"triggerConfigPathLabel")
+        self.triggerConfigPathLabel.setWordWrap(True)
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.browseJSONButton)
-
-        self.label2 = QLabel(self.triggerGroupBox)
-        self.label2.setObjectName(u"label2")
-
-        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.label2)
-
-        self.configJSONPathLabel = QLabel(self.triggerGroupBox)
-        self.configJSONPathLabel.setObjectName(u"configJSONPathLabel")
-
-        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.configJSONPathLabel)
+        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.triggerConfigPathLabel)
 
 
         self.verticalLayout.addWidget(self.triggerGroupBox)
@@ -65,9 +56,7 @@ class Ui_TriggerConfigWidget(object):
     def retranslateUi(self, TriggerConfigWidget):
         TriggerConfigWidget.setWindowTitle(QCoreApplication.translate("TriggerConfigWidget", u"Trigger Configuration Widget", None))
         self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfigWidget", u"Configure triggers", None))
-        self.label1.setText(QCoreApplication.translate("TriggerConfigWidget", u"JSON with configuration:", None))
-        self.browseJSONButton.setText(QCoreApplication.translate("TriggerConfigWidget", u"Browse", None))
-        self.label2.setText(QCoreApplication.translate("TriggerConfigWidget", u"Path to JSON:", None))
-        self.configJSONPathLabel.setText("")
+        self.browseTriggerConfigButton.setText(QCoreApplication.translate("TriggerConfigWidget", u"Browse JSON file", None))
+        self.triggerConfigPathLabel.setText("")
     # retranslateUi
 

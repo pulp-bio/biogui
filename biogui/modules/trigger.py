@@ -33,7 +33,7 @@ from biogui.utils import detectTheme
 from biogui.views import MainWindow
 
 
-def _loadValidateJSON(filePath: str) -> tuple[dict | None, str]:
+def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
     """
     Load and validate a JSON file representing the trigger configuration.
 
@@ -174,7 +174,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
 
         self._config = {}
 
-        self.browseJSONButton.clicked.connect(self._browseTriggerConfig)
+        self.browseTriggerConfigButton.clicked.connect(self._browseTriggerConfig)
         self.destroyed.connect(self.deleteLater)
 
     @property
@@ -190,7 +190,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
             filter="*.json",
         )
         if filePath:
-            config, msg = _loadValidateJSON(filePath)
+            config, errMessage = _loadConfigFromJson(filePath)
             if config is None:
                 QMessageBox.critical(
                     self,
@@ -200,25 +200,16 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
                 return
-            if len(msg) > 0:
+            if len(errMessage) > 0:
                 QMessageBox.warning(
                     self,
                     "Invalid configuration",
-                    msg,
+                    errMessage,
                     buttons=QMessageBox.Ok,  # type: ignore
                     defaultButton=QMessageBox.Ok,  # type: ignore
                 )
-
             self._config = config
-            self._configJSONPath = filePath
-
-            displayText = (
-                filePath
-                if len(filePath) <= 20
-                else filePath[:6] + "..." + filePath[-14:]
-            )
-            self.configJSONPathLabel.setText(displayText)
-            self.configJSONPathLabel.setToolTip(filePath)
+            self.triggerConfigPathLabel.setText(filePath)
 
 
 class TriggerController(QObject):
