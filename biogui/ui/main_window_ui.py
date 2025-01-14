@@ -132,7 +132,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.moduleContainer = QWidget()
         self.moduleContainer.setObjectName(u"moduleContainer")
-        self.moduleContainer.setGeometry(QRect(0, 0, 374, 675))
+        self.moduleContainer.setGeometry(QRect(0, 0, 311, 675))
         self.verticalLayout3 = QVBoxLayout(self.moduleContainer)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -153,8 +153,8 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout1.addLayout(self.plotsLayout)
 
-        self.horizontalLayout1.setStretch(0, 2)
-        self.horizontalLayout1.setStretch(1, 8)
+        self.horizontalLayout1.setStretch(0, 1)
+        self.horizontalLayout1.setStretch(1, 5)
         MainWindow.setCentralWidget(self.centralWidget)
         QWidget.setTabOrder(self.startStreamingButton, self.stopStreamingButton)
         QWidget.setTabOrder(self.stopStreamingButton, self.addDataSourceButton)

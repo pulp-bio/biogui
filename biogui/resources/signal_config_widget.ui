@@ -17,7 +17,7 @@
    <item>
     <layout class="QFormLayout" name="formLayout1">
      <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      <enum>QFormLayout::ExpandingFieldsGrow</enum>
      </property>
      <item row="0" column="0">
       <widget class="QLabel" name="label1">
@@ -87,7 +87,7 @@
       <item>
        <layout class="QFormLayout" name="formLayout">
         <property name="fieldGrowthPolicy">
-         <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         <enum>QFormLayout::ExpandingFieldsGrow</enum>
         </property>
         <item row="0" column="0">
          <widget class="QLabel" name="label4">
@@ -192,7 +192,7 @@
         </property>
         <layout class="QFormLayout" name="formLayout_3">
          <property name="fieldGrowthPolicy">
-          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+          <enum>QFormLayout::ExpandingFieldsGrow</enum>
          </property>
          <item row="0" column="0">
           <widget class="QLabel" name="label8">
@@ -304,7 +304,7 @@
         </property>
         <layout class="QFormLayout" name="formLayout2">
          <property name="fieldGrowthPolicy">
-          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+          <enum>QFormLayout::ExpandingFieldsGrow</enum>
          </property>
          <item row="0" column="0">
           <widget class="QLabel" name="label12">
