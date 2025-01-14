@@ -152,7 +152,6 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
         self._config = {}
 
         self.browseJSONButton.clicked.connect(self._browseTriggerConfig)
-
         self.destroyed.connect(self.deleteLater)
 
     @property

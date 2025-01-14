@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'trigger_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -32,6 +32,7 @@ class Ui_TriggerConfigWidget(object):
         self.triggerGroupBox.setChecked(False)
         self.formLayout = QFormLayout(self.triggerGroupBox)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.label1 = QLabel(self.triggerGroupBox)
         self.label1.setObjectName(u"label1")
 
