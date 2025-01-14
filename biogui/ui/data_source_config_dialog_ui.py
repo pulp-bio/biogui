@@ -17,49 +17,40 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
     QDialogButtonBox, QFormLayout, QGroupBox, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QVBoxLayout,
-    QWidget)
+    QLayout, QLineEdit, QPushButton, QSizePolicy,
+    QVBoxLayout, QWidget)
 
 class Ui_DataSourceConfigDialog(object):
     def setupUi(self, DataSourceConfigDialog):
         if not DataSourceConfigDialog.objectName():
             DataSourceConfigDialog.setObjectName(u"DataSourceConfigDialog")
-        DataSourceConfigDialog.resize(400, 310)
+        DataSourceConfigDialog.resize(400, 300)
         self.verticalLayout = QVBoxLayout(DataSourceConfigDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.formLayout.setFormAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
-        self.label1 = QLabel(DataSourceConfigDialog)
-        self.label1.setObjectName(u"label1")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label1)
-
+        self.formLayout.setSizeConstraint(QLayout.SetDefaultConstraint)
         self.browseInterfaceModuleButton = QPushButton(DataSourceConfigDialog)
         self.browseInterfaceModuleButton.setObjectName(u"browseInterfaceModuleButton")
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.browseInterfaceModuleButton)
-
-        self.label2 = QLabel(DataSourceConfigDialog)
-        self.label2.setObjectName(u"label2")
-
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label2)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.browseInterfaceModuleButton)
 
         self.interfaceModulePathLabel = QLabel(DataSourceConfigDialog)
         self.interfaceModulePathLabel.setObjectName(u"interfaceModulePathLabel")
+        self.interfaceModulePathLabel.setWordWrap(True)
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.interfaceModulePathLabel)
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.interfaceModulePathLabel)
 
-        self.label3 = QLabel(DataSourceConfigDialog)
-        self.label3.setObjectName(u"label3")
+        self.label1 = QLabel(DataSourceConfigDialog)
+        self.label1.setObjectName(u"label1")
+        self.label1.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label3)
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label1)
 
         self.dataSourceComboBox = QComboBox(DataSourceConfigDialog)
         self.dataSourceComboBox.setObjectName(u"dataSourceComboBox")
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.dataSourceComboBox)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.dataSourceComboBox)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -74,39 +65,29 @@ class Ui_DataSourceConfigDialog(object):
         self.fileSavingGroupBox.setAlignment(Qt.AlignCenter)
         self.fileSavingGroupBox.setCheckable(True)
         self.fileSavingGroupBox.setChecked(False)
-        self.formLayout3 = QFormLayout(self.fileSavingGroupBox)
-        self.formLayout3.setObjectName(u"formLayout3")
-        self.formLayout3.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.formLayout3.setFormAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
-        self.label4 = QLabel(self.fileSavingGroupBox)
-        self.label4.setObjectName(u"label4")
-
-        self.formLayout3.setWidget(1, QFormLayout.LabelRole, self.label4)
-
+        self.formLayout_2 = QFormLayout(self.fileSavingGroupBox)
+        self.formLayout_2.setObjectName(u"formLayout_2")
         self.browseOutDirButton = QPushButton(self.fileSavingGroupBox)
         self.browseOutDirButton.setObjectName(u"browseOutDirButton")
 
-        self.formLayout3.setWidget(1, QFormLayout.FieldRole, self.browseOutDirButton)
-
-        self.label5 = QLabel(self.fileSavingGroupBox)
-        self.label5.setObjectName(u"label5")
-
-        self.formLayout3.setWidget(2, QFormLayout.LabelRole, self.label5)
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.browseOutDirButton)
 
         self.outDirPathLabel = QLabel(self.fileSavingGroupBox)
         self.outDirPathLabel.setObjectName(u"outDirPathLabel")
+        self.outDirPathLabel.setWordWrap(True)
 
-        self.formLayout3.setWidget(2, QFormLayout.FieldRole, self.outDirPathLabel)
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.outDirPathLabel)
 
-        self.label6 = QLabel(self.fileSavingGroupBox)
-        self.label6.setObjectName(u"label6")
+        self.label2 = QLabel(self.fileSavingGroupBox)
+        self.label2.setObjectName(u"label2")
+        self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.formLayout3.setWidget(3, QFormLayout.LabelRole, self.label6)
+        self.formLayout_2.setWidget(1, QFormLayout.LabelRole, self.label2)
 
         self.fileNameTextField = QLineEdit(self.fileSavingGroupBox)
         self.fileNameTextField.setObjectName(u"fileNameTextField")
 
-        self.formLayout3.setWidget(3, QFormLayout.FieldRole, self.fileNameTextField)
+        self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.fileNameTextField)
 
 
         self.verticalLayout.addWidget(self.fileSavingGroupBox)
@@ -118,10 +99,6 @@ class Ui_DataSourceConfigDialog(object):
 
         self.verticalLayout.addWidget(self.buttonBox)
 
-        QWidget.setTabOrder(self.browseInterfaceModuleButton, self.dataSourceComboBox)
-        QWidget.setTabOrder(self.dataSourceComboBox, self.fileSavingGroupBox)
-        QWidget.setTabOrder(self.fileSavingGroupBox, self.browseOutDirButton)
-        QWidget.setTabOrder(self.browseOutDirButton, self.fileNameTextField)
 
         self.retranslateUi(DataSourceConfigDialog)
 
@@ -130,23 +107,19 @@ class Ui_DataSourceConfigDialog(object):
 
     def retranslateUi(self, DataSourceConfigDialog):
         DataSourceConfigDialog.setWindowTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Data Source Configuration", None))
-        self.label1.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Interface module:", None))
 #if QT_CONFIG(tooltip)
         self.browseInterfaceModuleButton.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"The module must contain specific fields", None))
 #endif // QT_CONFIG(tooltip)
-        self.browseInterfaceModuleButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse", None))
-        self.label2.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Path to module:", None))
+        self.browseInterfaceModuleButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse interface module", None))
         self.interfaceModulePathLabel.setText("")
-        self.label3.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Data source:", None))
+        self.label1.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Data source:", None))
 #if QT_CONFIG(tooltip)
         self.dataSourceComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"List of available data sources", None))
 #endif // QT_CONFIG(tooltip)
         self.fileSavingGroupBox.setTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Configure file saving", None))
-        self.label4.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Output directory:", None))
-        self.browseOutDirButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse", None))
-        self.label5.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Path to directory:", None))
+        self.browseOutDirButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse output directory", None))
         self.outDirPathLabel.setText("")
-        self.label6.setText(QCoreApplication.translate("DataSourceConfigDialog", u"File name:", None))
+        self.label2.setText(QCoreApplication.translate("DataSourceConfigDialog", u"File name:", None))
 #if QT_CONFIG(tooltip)
         self.fileNameTextField.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"A timestamp corresponding to the start of the acquisition will be appended to the signal name", None))
 #endif // QT_CONFIG(tooltip)

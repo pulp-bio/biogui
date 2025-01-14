@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>132</height>
+    <height>108</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,33 +30,22 @@
      </property>
      <layout class="QFormLayout" name="formLayout">
       <property name="fieldGrowthPolicy">
-       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+       <enum>QFormLayout::ExpandingFieldsGrow</enum>
       </property>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label1">
+      <item row="3" column="0">
+       <widget class="QPushButton" name="browseTriggerConfigButton">
         <property name="text">
-         <string>JSON with configuration:</string>
+         <string>Browse JSON file</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QPushButton" name="browseJSONButton">
-        <property name="text">
-         <string>Browse</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label2">
-        <property name="text">
-         <string>Path to JSON:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QLabel" name="configJSONPathLabel">
+      <item row="3" column="1">
+       <widget class="QLabel" name="triggerConfigPathLabel">
         <property name="text">
          <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

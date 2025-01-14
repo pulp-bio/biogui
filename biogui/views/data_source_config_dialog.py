@@ -210,14 +210,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self._dataSourceConfig["interfacePath"] = interfacePath
             self._dataSourceConfig["interfaceModule"] = interfaceModule
 
-            # Limit display text to 40 characters
-            displayText = (
-                interfacePath
-                if len(interfacePath) <= 40
-                else interfacePath[:17] + "..." + interfacePath[-20:]
-            )
-            self.interfaceModulePathLabel.setText(displayText)
-            self.interfaceModulePathLabel.setToolTip(interfacePath)
+            self.interfaceModulePathLabel.setText(interfacePath)
 
     def _browseOutDir(self) -> None:
         """Browse directory where the data will be saved."""
@@ -230,14 +223,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         if outDirPath != "":
             self._outDirPath = outDirPath
 
-            # Limit display text to 40 characters
-            displayText = (
-                outDirPath
-                if len(outDirPath) <= 40
-                else outDirPath[:17] + "..." + outDirPath[-20:]
-            )
-            self.outDirPathLabel.setText(displayText)
-            self.outDirPathLabel.setToolTip(outDirPath)
+            self.outDirPathLabel.setText(outDirPath)
 
     def _onDataSourceChange(self) -> None:
         """Detect if data source type has changed."""
