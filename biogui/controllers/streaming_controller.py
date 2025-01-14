@@ -159,9 +159,7 @@ class _FileWriterWorker(QObject):
             # 2. Actual signals
             # 2.1. Timestamp
             self._tempData["timestamp"]["file"].seek(0)
-            ts = self._tempData["timestamp"]["file"].read()
-            print(len(ts))
-            f.write(ts)
+            f.write(self._tempData["timestamp"]["file"].read())
 
             # 2.2. Signals data
             for sigName in self._sigInfo:
