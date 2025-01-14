@@ -28,6 +28,7 @@ class Ui_SignalConfigWidget(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout1 = QFormLayout()
         self.formLayout1.setObjectName(u"formLayout1")
+        self.formLayout1.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.label1 = QLabel(SignalConfigWidget)
         self.label1.setObjectName(u"label1")
 
@@ -71,6 +72,7 @@ class Ui_SignalConfigWidget(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.label4 = QLabel(self.plotGroupBox)
         self.label4.setObjectName(u"label4")
 
@@ -132,6 +134,7 @@ class Ui_SignalConfigWidget(object):
         self.filterGroupBox.setChecked(False)
         self.formLayout_3 = QFormLayout(self.filterGroupBox)
         self.formLayout_3.setObjectName(u"formLayout_3")
+        self.formLayout_3.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.label8 = QLabel(self.filterGroupBox)
         self.label8.setObjectName(u"label8")
         self.label8.setFrameShape(QFrame.NoFrame)
@@ -187,6 +190,7 @@ class Ui_SignalConfigWidget(object):
         self.notchFilterGroupBox.setChecked(False)
         self.formLayout2 = QFormLayout(self.notchFilterGroupBox)
         self.formLayout2.setObjectName(u"formLayout2")
+        self.formLayout2.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.label12 = QLabel(self.notchFilterGroupBox)
         self.label12.setObjectName(u"label12")
 

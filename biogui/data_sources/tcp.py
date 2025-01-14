@@ -55,11 +55,11 @@ class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
         # Validation rules
         lo = QLocale()
         minPort, maxPort = 1024, 49151
-        self.portTextField.setToolTip(
+        self.socketPortTextField.setToolTip(
             f"Integer between {lo.toString(minPort)} and {lo.toString(maxPort)}"
         )
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
-        self.portTextField.setValidator(portValidator)
+        self.socketPortTextField.setValidator(portValidator)
 
         self.destroyed.connect(self.deleteLater)
 
@@ -73,14 +73,14 @@ class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
             Configuration result.
         """
         lo = QLocale()
-        if not self.portTextField.hasAcceptableInput():
+        if not self.socketPortTextField.hasAcceptableInput():
             return DataSourceConfigResult(
                 dataSourceType=DataSourceType.TCP,
                 dataSourceConfig={},
                 isValid=False,
                 errMessage='The "port" field is invalid.',
             )
-        socketPort = lo.toInt(self.portTextField.text())[0]
+        socketPort = lo.toInt(self.socketPortTextField.text())[0]
 
         return DataSourceConfigResult(
             dataSourceType=DataSourceType.TCP,
@@ -98,7 +98,7 @@ class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
             Dictionary with the configuration.
         """
         if "socketPort" in config:
-            self.portTextField.setText(QLocale().toString(config["socketPort"]))
+            self.socketPortTextField.setText(QLocale().toString(config["socketPort"]))
 
     def getFieldsInTabOrder(self) -> list[QWidget]:
         """
@@ -109,7 +109,7 @@ class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
         list of QWidgets
             List of the QWidgets in tab order.
         """
-        return [self.portTextField]
+        return [self.socketPortTextField]
 
 
 class TCPDataSourceWorker(DataSourceWorker):
