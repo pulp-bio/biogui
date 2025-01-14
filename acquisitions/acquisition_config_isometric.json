@@ -1,10 +1,10 @@
 {
-    "gestures": {
+    "triggers": {
         "fist (power grip)": "fist.png"
     },
     "nReps": 1,
-    "durationGesture": 4000,
-    "durationStart": 20000,
+    "durationTrigger": 5000,
+    "durationStart": 8000,
     "durationRest": 2000,
     "imageFolder": "acquisitions/gestures_images"
 }

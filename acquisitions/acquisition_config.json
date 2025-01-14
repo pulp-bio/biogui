@@ -1,5 +1,5 @@
 {
-    "gestures": {
+    "triggers": {
         "open hand": "open_hand.png",
         "fist (power grip)": "fist.png",
         "index pointed": "index_pointed.png",
@@ -9,7 +9,7 @@
         "wrist pronation": "wrist_pronation.png"
     },
     "nReps": 6,
-    "durationGesture": 4000,
+    "durationTrigger": 5000,
     "durationStart": 8000,
     "durationRest": 2000,
     "imageFolder": "acquisitions/gestures_images"

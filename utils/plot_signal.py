@@ -66,23 +66,26 @@ def read_bio_file(file_path: str) -> dict:
         ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
             n_samp_base, 1
         )
-        sig_dict = {"timestamp": {"data": ts, "fs": fs_base}}
+        signals["timestamp"] = {"data": ts, "fs": fs_base}
 
         # 2. Signals data
-        for sig_name in signals:
-            n_samp = signals[sig_name].pop("n_samp")
-            n_ch = signals[sig_name].pop("n_ch")
+        for sig_name, sig_data in signals.items():
+            if sig_name == "timestamp":
+                continue
+
+            n_samp = sig_data.pop("n_samp")
+            n_ch = sig_data.pop("n_ch")
             data = np.frombuffer(f.read(4 * n_samp * n_ch), dtype=np.float32).reshape(
                 n_samp, n_ch
             )
-            sig_dict[sig_name] = {"data": data, "fs": fs}
+            sig_data["data"] = data
 
         # 3. Trigger (optional)
         if is_trigger:
             trigger = np.frombuffer(f.read(), dtype=np.int32).reshape(n_samp_base, 1)
-            sig_dict["trigger"] = {"data": trigger, "fs": fs_base}
+            signals["trigger"] = {"data": trigger, "fs": fs_base}
 
-    return sig_dict
+    return signals
 
 
 def main():
