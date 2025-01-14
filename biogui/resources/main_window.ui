@@ -20,7 +20,7 @@
    <string>BioGUI</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="2,8">
+   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="1,5">
     <item>
      <layout class="QVBoxLayout" name="confLayout" stretch="0,1,2">
       <item>
@@ -183,7 +183,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>374</width>
+           <width>311</width>
            <height>675</height>
           </rect>
          </property>
