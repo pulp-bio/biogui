@@ -83,33 +83,16 @@ def _loadValidateJSON(filePath: str) -> tuple[dict | None, str]:
     return config, msg
 
 
-def _createTextPixmap(width: int, height: int, text: str) -> QPixmap:
-    """Create a QPixmap containing text."""
-    pixmap = QPixmap(width, height)
-    pixmap.fill(Qt.transparent)  # type: ignore
-
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.Antialiasing)  # type: ignore
-    theme = detectTheme()
-    painter.setPen(QColor("black" if theme == "light" else "white"))
-    painter.setFont(QFont("Arial", 48))
-
-    painter.drawText(pixmap.rect(), Qt.AlignCenter, text)  # type: ignore
-    painter.end()
-
-    return pixmap
-
-
 class _TriggerWidget(QWidget):
     """
     Widget showing the trigger.
 
     Attributes
     ----------
-    _pixmap : QPixmap
-        Image widget.
     _label : QLabel
         Label containing the image widget.
+    _qColor : QColor
+        Color for text.
 
     Class attributes
     ----------------
@@ -126,6 +109,7 @@ class _TriggerWidget(QWidget):
         self.resize(480, 480)
 
         self._label = QLabel(self)
+        self._qColor = QColor("black" if detectTheme() == "light" else "white")
 
         self._imageFolder = ""
 
@@ -151,9 +135,24 @@ class _TriggerWidget(QWidget):
         imagePath : str
             Path to the image file of the trigger.
         """
+
+        def createTextPixmap(text: str) -> QPixmap:
+            """Create a QPixmap containing text."""
+            pixmap = QPixmap(self.width(), self.height())
+            pixmap.fill(Qt.transparent)  # type: ignore
+
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing)  # type: ignore
+            painter.setPen(self._qColor)
+            painter.setFont(QFont("Arial", 48))
+
+            painter.drawText(pixmap.rect(), Qt.AlignCenter, text)  # type: ignore
+            painter.end()
+
+            return pixmap
+
         if imagePath == "":
-            triggerLabel = triggerLabel.upper().replace(" ", "\n")
-            pixmap = _createTextPixmap(self.width(), self.height(), triggerLabel)
+            pixmap = createTextPixmap(triggerLabel.upper().replace(" ", "\n"))
         else:
             imagePath = os.path.join(self._imageFolder, imagePath)
             pixmap = QPixmap(imagePath).scaled(self.width(), self.height())
