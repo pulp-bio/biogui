@@ -92,12 +92,15 @@ class MainController(QObject):
         Qt Signal emitted when the application is closed.
     signalsReady : Signal
         Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
+    streamingControllersChanged : Signal
+        Qt Signal emitted when the set of configured streaming controllers change.
     """
 
     streamingStarted = Signal()
     streamingStopped = Signal()
     appClosed = Signal()
     signalsReady = Signal(SigData)
+    streamingControllersChanged = Signal()
 
     def __init__(self, mainWin: MainWindow) -> None:
         super().__init__()
@@ -212,6 +215,9 @@ class MainController(QObject):
         self.dataSourceModel.appendRow(dataSourceNode)
         dataSourceNode.appendRows([QStandardItem(sigName) for sigName in sigsConfigs])
 
+        # Inform other modules that a new source is available
+        self.streamingControllersChanged.emit()
+
     def _deleteDataSource(self, dataSourceItem: QStandardItem) -> None:
         """Delete a data source, given data source item."""
         dataSource = dataSourceItem.text()
@@ -232,6 +238,9 @@ class MainController(QObject):
 
         # Update UI data source tree
         self.dataSourceModel.removeRow(dataSourceItem.row())
+
+        # Inform other modules that a source was deleted
+        self.streamingControllersChanged.emit()
 
     @instanceSlot(list)
     def _plotData(self, dataPacket: list[SigData]):
@@ -415,6 +424,9 @@ class MainController(QObject):
             self._signalPlotWidgets[newPlotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
+
+        # Inform other modules that a source was modified
+        self.streamingControllersChanged.emit()
 
     def _editSignalHandler(self) -> None:
         """Handler for editing the signal configuration."""

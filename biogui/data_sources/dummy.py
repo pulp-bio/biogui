@@ -20,7 +20,7 @@ limitations under the License.
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QWidget
 
 from .base import (
@@ -117,7 +117,11 @@ class DummyDataSourceWorker(DataSourceWorker):
         Qt Signal emitted when new data is collected.
     errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
+    _stopTimer : Signal
+        Qt Signal emitted to notify timer to stop.
     """
+
+    _stopTimer = Signal()
 
     def __init__(
         self, packetSize: int, startSeq: list[bytes], stopSeq: list[bytes]
@@ -136,6 +140,8 @@ class DummyDataSourceWorker(DataSourceWorker):
         self._timer.setInterval(78)
         self._timer.timeout.connect(self._generateData)
 
+        self._stopTimer.connect(self._stopGen)
+
     def __str__(self):
         return "Dummy"
 
@@ -145,7 +151,7 @@ class DummyDataSourceWorker(DataSourceWorker):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        self._timer.stop()
+        self._stopTimer.emit()
 
     def _generateData(self) -> None:
         """Generate dummy data when the QTimer ticks."""
@@ -164,3 +170,7 @@ class DummyDataSourceWorker(DataSourceWorker):
 
         # Update mean
         self._mean += self._prng.normal(scale=50.0)
+
+    def _stopGen(self) -> None:
+        """Stop the data generation."""
+        self._timer.stop()

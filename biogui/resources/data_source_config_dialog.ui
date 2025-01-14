@@ -16,6 +16,9 @@
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
    <item>
     <layout class="QFormLayout" name="formLayout">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
      <property name="formAlignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
@@ -84,6 +87,9 @@
       <bool>false</bool>
      </property>
      <layout class="QFormLayout" name="formLayout3">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
       <property name="formAlignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
