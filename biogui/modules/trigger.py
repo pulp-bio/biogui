@@ -23,16 +23,17 @@ import json
 import logging
 import os
 
-from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QPixmap
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
 from biogui.controllers import MainController
 from biogui.ui.trigger_config_widget_ui import Ui_TriggerConfigWidget
+from biogui.utils import detectTheme
 from biogui.views import MainWindow
 
 
-def _loadValidateJSON(filePath: str) -> dict | None:
+def _loadValidateJSON(filePath: str) -> tuple[dict | None, str]:
     """
     Load and validate a JSON file representing the trigger configuration.
 
@@ -45,38 +46,63 @@ def _loadValidateJSON(filePath: str) -> dict | None:
     -------
     dict or None
         Dictionary corresponding to the configuration, or None if it's not valid.
+    str
+        Error message.
     """
     with open(filePath) as f:
         config = json.load(f)
+
     # Check keys
     providedKeys = set(config.keys())
     validKeys = {
-        "gestures",
+        "triggers",
         "nReps",
-        "durationGesture",
+        "durationTrigger",
         "durationStart",
         "durationRest",
         "imageFolder",
     }
     if providedKeys != validKeys:
-        return None
+        return None, "The provided keys are not valid."
+
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
-        return None
-    for imagePath in config["gestures"].values():
-        imagePath = os.path.join(config["imageFolder"], imagePath)
+        return config, "The specified path does not exist."
+    msg = ""
+    for triggerLabel in config["triggers"]:
+        imagePath = os.path.join(
+            config["imageFolder"], config["triggers"][triggerLabel]
+        )
         if not (
             os.path.isfile(imagePath)
             and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
         ):
-            return None
+            config["triggers"][triggerLabel] = ""
+            msg = "Some images do not exist, the name of the trigger will be displayed."
 
-    return config
+    return config, msg
 
 
-class _GesturesWidget(QWidget):
+def _createTextPixmap(width: int, height: int, text: str) -> QPixmap:
+    """Create a QPixmap containing text."""
+    pixmap = QPixmap(width, height)
+    pixmap.fill(Qt.transparent)  # type: ignore
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)  # type: ignore
+    theme = detectTheme()
+    painter.setPen(QColor("black" if theme == "light" else "white"))
+    painter.setFont(QFont("Arial", 48))
+
+    painter.drawText(pixmap.rect(), Qt.AlignCenter, text)  # type: ignore
+    painter.end()
+
+    return pixmap
+
+
+class _TriggerWidget(QWidget):
     """
-    Widget showing the gestures to perform.
+    Widget showing the trigger.
 
     Attributes
     ----------
@@ -96,13 +122,10 @@ class _GesturesWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
-        self.setWindowTitle("Gesture Viewer")
+        self.setWindowTitle("Trigger Viewer")
         self.resize(480, 480)
 
-        self._pixmap = QPixmap(":/images/start.png")
-        self._pixmap = self._pixmap.scaled(self.width(), self.height())
         self._label = QLabel(self)
-        self._label.setPixmap(self._pixmap)
 
         self._imageFolder = ""
 
@@ -110,30 +133,31 @@ class _GesturesWidget(QWidget):
 
     @property
     def imageFolder(self) -> str:
-        """str: Property representing the path to the folder containing the images for the gestures."""
+        """str: Property representing the path to the folder containing the images for the triggers."""
         return self._imageFolder
 
     @imageFolder.setter
     def imageFolder(self, imageFolder: str) -> None:
         self._imageFolder = imageFolder
 
-    def renderImage(self, image: str) -> None:
+    def renderImage(self, triggerLabel: str, imagePath: str) -> None:
         """
-        Render the image for the current gesture.
+        Render the image for the current trigger.
 
         Parameters
         ----------
-        image : str
-            Name of the image file.
+        triggerLabel : str
+            Name of the trigger.
+        imagePath : str
+            Path to the image file of the trigger.
         """
-        if image == "start":
-            imagePath = ":/images/start"
-        elif image == "stop":
-            imagePath = ":/images/stop"
+        if imagePath == "":
+            triggerLabel = triggerLabel.upper().replace(" ", "\n")
+            pixmap = _createTextPixmap(self.width(), self.height(), triggerLabel)
         else:
-            imagePath = os.path.join(self._imageFolder, image)
+            imagePath = os.path.join(self._imageFolder, imagePath)
+            pixmap = QPixmap(imagePath).scaled(self.width(), self.height())
 
-        pixmap = QPixmap(imagePath).scaled(self.width(), self.height())
         self._label.setPixmap(pixmap)
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -167,7 +191,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
             filter="*.json",
         )
         if filePath:
-            config = _loadValidateJSON(filePath)
+            config, msg = _loadValidateJSON(filePath)
             if config is None:
                 QMessageBox.critical(
                     self,
@@ -177,6 +201,14 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
                 return
+            if len(msg) > 0:
+                QMessageBox.warning(
+                    self,
+                    "Invalid configuration",
+                    msg,
+                    buttons=QMessageBox.Ok,  # type: ignore
+                    defaultButton=QMessageBox.Ok,  # type: ignore
+                )
 
             self._config = config
             self._configJSONPath = filePath
@@ -198,20 +230,20 @@ class TriggerController(QObject):
     ----------
     _confWidget : _TriggerConfigWidget
         Instance of _TriggerConfigWidget.
-    _gestWidget : _GesturesWidget
-        Instance of _GesturesWidget.
+    _triggerWidget : _TriggerWidget
+        Instance of _TriggerWidget.
     _timer : QTimer
         Timer.
     _streamControllers : dict of (str: StreamingController)
         Reference to the streaming controller dictionary.
-    _gesturesId : dict of str: int
-        Dictionary containing pairs of gesture labels and integer indexes.
-    _gesturesLabels : list of str
-        List of gesture labels accounting for the number of repetitions.
-    _gestCounter : int
-        Counter for the gesture.
+    _triggerIds : dict of str: int
+        Dictionary containing pairs of trigger labels and integer indexes.
+    _triggerLabels : list of str
+        List of trigger labels accounting for the number of repetitions.
+    _triggerCounter : int
+        Counter for the trigger.
     _restFlag : bool
-        Flag for rest vs gesture.
+        Flag for rest vs trigger.
     """
 
     def __init__(self) -> None:
@@ -220,16 +252,16 @@ class TriggerController(QObject):
         self._confWidget = _TriggerConfigWidget()
         self._confWidget.triggerGroupBox.clicked.connect(self._checkHandler)
 
-        self._gestWidget = _GesturesWidget()
-        self._gestWidget.widgetClosed.connect(self._actualStopTriggerGen)
+        self._triggerWidget = _TriggerWidget()
+        self._triggerWidget.widgetClosed.connect(self._actualStopTriggerGen)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
 
         self._streamingControllers = {}
-        self._gesturesId = {}
-        self._gesturesLabels = []
-        self._gestCounter = 0
+        self._triggerIds = {}
+        self._triggerLabels = []
+        self._triggerCounter = 0
         self._restFlag = False
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
@@ -279,36 +311,39 @@ class TriggerController(QObject):
 
     def _updateTriggerAndImage(self) -> None:
         """Update the trigger and the image to display."""
-        if self._gestCounter >= len(self._gesturesLabels):
+        if self._triggerCounter >= len(self._triggerLabels):
             self._stopTriggerGen()
             return
 
         if self._restFlag:  # rest
             self._timer.start(self._confWidget.config["durationRest"])
 
-            new_trigger = 0
-            image = "stop"
+            newTrigger = 0
+            triggerLabel, imagePath = "stop", ""
 
             self._restFlag = False
 
-        else:  # gesture
-            self._timer.start(self._confWidget.config["durationGesture"])
+        else:  # trigger
+            self._timer.start(self._confWidget.config["durationTrigger"])
 
-            gestureLabel = self._gesturesLabels[self._gestCounter]
-            if gestureLabel != "last_stop":
-                new_trigger = self._gesturesId[gestureLabel]
-                image = self._confWidget.config["gestures"][gestureLabel]
+            triggerLabel = self._triggerLabels[self._triggerCounter]
+            if triggerLabel != "last_stop":
+                newTrigger = self._triggerIds[triggerLabel]
+                imagePath = self._confWidget.config["triggers"][triggerLabel]
             else:
-                new_trigger = 0
-                image = "stop"
+                newTrigger = 0
+                triggerLabel, imagePath = "stop", ""
 
-            self._gestCounter += 1
+            self._triggerCounter += 1
             self._restFlag = True
 
+        # Show trigger
+        self._triggerWidget.renderImage(triggerLabel, imagePath)
+
+        # Update trigger in streaming controllers
         for streamingController in self._streamingControllers.values():
-            streamingController.setTrigger(new_trigger)
-        self._gestWidget.renderImage(image)
-        logging.info(f"Trigger updated: {new_trigger}.")
+            streamingController.setTrigger(newTrigger)
+        logging.info(f"Trigger updated: {newTrigger}.")
 
     def _startTriggerGen(self) -> None:
         """Start the trigger generation."""
@@ -318,22 +353,22 @@ class TriggerController(QObject):
             for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(0)
 
-            # Gestures
-            for i, k in enumerate(self._confWidget.config["gestures"].keys()):
-                self._gesturesId[k] = i + 1
-                self._gesturesLabels.extend([k] * self._confWidget.config["nReps"])
-            self._gesturesLabels.append("last_stop")
+            # Triggers
+            for i, k in enumerate(self._confWidget.config["triggers"].keys()):
+                self._triggerIds[k] = i + 1
+                self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
+            self._triggerLabels.append("last_stop")
 
-            self._gestWidget.imageFolder = self._confWidget.config["imageFolder"]
-            self._gestWidget.renderImage("start")
-            self._gestWidget.show()
+            self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+            self._triggerWidget.renderImage("start", "")
+            self._triggerWidget.show()
 
             self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
-        """Stop trigger generation by exploiting GestureWidget close event."""
-        if self._gestWidget.isVisible():
-            self._gestWidget.close()  # the close event calls _actualStopTriggerGen
+        """Stop trigger generation by exploiting _TriggerWidget close event."""
+        if self._triggerWidget.isVisible():
+            self._triggerWidget.close()  # the close event calls _actualStopTriggerGen
         else:
             self._actualStopTriggerGen()
 
@@ -341,9 +376,9 @@ class TriggerController(QObject):
         """Stop trigger generation."""
         self._timer.stop()
 
-        self._gesturesId = {}
-        self._gesturesLabels = []
-        self._gestCounter = 0
+        self._triggerIds = {}
+        self._triggerLabels = []
+        self._triggerCounter = 0
         self._restFlag = False
 
         self._confWidget.triggerGroupBox.setEnabled(True)
