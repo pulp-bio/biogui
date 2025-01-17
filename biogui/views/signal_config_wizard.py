@@ -117,6 +117,7 @@ class SignalConfigWizard(QWizard):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self.setWizardStyle(QWizard.ClassicStyle)  # type: ignore
 
         # Populate wizard
         for sigName in sigInfo:
