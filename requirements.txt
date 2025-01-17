@@ -1,14 +1,8 @@
-black
-flake8
-isort
-matplotlib
 numpy
 pyqtgraph
 pyserial
 PySide6
 PySide6_Addons
 PySide6_Essentials
-scikit-learn
 scipy
 shiboken6
-skops
