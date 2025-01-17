@@ -23,6 +23,7 @@ import datetime
 import struct
 import tempfile
 import time
+from types import MappingProxyType
 
 import numpy as np
 import scipy
@@ -322,7 +323,7 @@ class _Preprocessor(QObject):
         rawSignals = []
         signals = []
         for sigName, sigData in dataDec.items():
-            rawSignals.append(SigData(sigName, self._fs[sigName], sigData))
+            rawSignals.append(SigData(sigName, sigData))
 
             # Filtering
             try:
@@ -345,7 +346,7 @@ class _Preprocessor(QObject):
                     "An error occurred during filtering, check the settings."
                 )
                 return
-            signals.append(SigData(sigName, self._fs[sigName], sigData))
+            signals.append(SigData(sigName, sigData))
 
         # Emit raw and filtered signals
         self.rawSignalsReady.emit(rawSignals)
@@ -427,10 +428,16 @@ class StreamingController(QObject):
         # Create pre-processor
         self._preprocessor = _Preprocessor(decodeFn, sigsConfigs)
 
+        # Store signal specifications
+        self._sigInfo = {
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh")}
+            for iSigName, iSigInfo in sigsConfigs.items()
+        }
+
         # Optionally, create file writer worker and thread
         self._fileWriterWorker, self._fileWriterThreads = None, None
         if filePath:
-            self._fileWriterWorker = _FileWriterWorker(filePath, sigsConfigs)
+            self._fileWriterWorker = _FileWriterWorker(filePath, self._sigInfo)
             self._fileWriterThread = QThread(self)
             self._fileWriterWorker.moveToThread(self._fileWriterThread)
             self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
@@ -438,6 +445,11 @@ class StreamingController(QObject):
 
     def __str__(self) -> str:
         return str(self._dataSourceWorker)
+
+    @property
+    def sigInfo(self) -> MappingProxyType:
+        """MappingProxyType: Property representing a read-only view of the signals specification dictionary."""
+        return MappingProxyType(self._sigInfo)
 
     @instanceSlot(str)
     def _handleErrors(self, errMessage: str) -> None:

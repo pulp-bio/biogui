@@ -56,6 +56,9 @@ class Ui_TriggerConfigWidget(object):
     def retranslateUi(self, TriggerConfigWidget):
         TriggerConfigWidget.setWindowTitle(QCoreApplication.translate("TriggerConfigWidget", u"Trigger Configuration Widget", None))
         self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfigWidget", u"Configure triggers", None))
+#if QT_CONFIG(tooltip)
+        self.browseTriggerConfigButton.setToolTip(QCoreApplication.translate("TriggerConfigWidget", u"The JSON file must contain specific fields", None))
+#endif // QT_CONFIG(tooltip)
         self.browseTriggerConfigButton.setText(QCoreApplication.translate("TriggerConfigWidget", u"Browse JSON file", None))
         self.triggerConfigPathLabel.setText("")
     # retranslateUi
