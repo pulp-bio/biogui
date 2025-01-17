@@ -75,7 +75,7 @@
       <set>Qt::AlignCenter</set>
      </property>
      <property name="flat">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -85,7 +85,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0,0">
       <item>
-       <layout class="QFormLayout" name="formLayout">
+       <layout class="QFormLayout" name="formLayout2">
         <property name="fieldGrowthPolicy">
          <enum>QFormLayout::ExpandingFieldsGrow</enum>
         </property>
@@ -190,7 +190,7 @@
         <property name="checked">
          <bool>false</bool>
         </property>
-        <layout class="QFormLayout" name="formLayout_3">
+        <layout class="QFormLayout" name="formLayout3">
          <property name="fieldGrowthPolicy">
           <enum>QFormLayout::ExpandingFieldsGrow</enum>
          </property>
@@ -296,13 +296,16 @@
         <property name="title">
          <string>Filter powerline noise</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
         <property name="checkable">
          <bool>true</bool>
         </property>
         <property name="checked">
          <bool>false</bool>
         </property>
-        <layout class="QFormLayout" name="formLayout2">
+        <layout class="QFormLayout" name="formLayout4">
          <property name="fieldGrowthPolicy">
           <enum>QFormLayout::ExpandingFieldsGrow</enum>
          </property>
