@@ -16,9 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from .processing import ProcessingController
 from .trigger import TriggerController
 
-# from .svm_inference import SVMInferenceController
-# from .svm_train import SVMTrainController
-
-__all__ = ["TriggerController"]  # , "SVMInferenceController", "SVMTrainController"]
+__all__ = ["ProcessingController", "TriggerController"]

@@ -85,6 +85,8 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
             None,
             'The selected Python module does not contain a "decodeFn" function.',
         )
+    if not isinstance(module.packetSize, int) or module.packetSize <= 0:
+        return (None, "The packet size must be a positive integer.")
 
     return (
         InterfaceModule(
@@ -210,14 +212,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self._dataSourceConfig["interfacePath"] = interfacePath
             self._dataSourceConfig["interfaceModule"] = interfaceModule
 
-            # Limit display text to 40 characters
-            displayText = (
-                interfacePath
-                if len(interfacePath) <= 40
-                else interfacePath[:17] + "..." + interfacePath[-20:]
-            )
-            self.interfaceModulePathLabel.setText(displayText)
-            self.interfaceModulePathLabel.setToolTip(interfacePath)
+            self.interfaceModulePathLabel.setText(interfacePath)
 
     def _browseOutDir(self) -> None:
         """Browse directory where the data will be saved."""
@@ -230,16 +225,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         if outDirPath != "":
             self._outDirPath = outDirPath
 
-            # Limit display text to 40 characters
-            displayText = (
-                outDirPath
-                if len(outDirPath) <= 40
-                else outDirPath[:17] + "..." + outDirPath[-20:]
-            )
-            self.outDirPathLabel.setText(displayText)
-            self.outDirPathLabel.setToolTip(outDirPath)
+            self.outDirPathLabel.setText(outDirPath)
 
-    def _onDataSourceChange(self) -> None:
+    def _onDataSourceChange(self, dataSourceType: str) -> None:
         """Detect if data source type has changed."""
         # Clear container
         self.dataSourceConfigContainer.removeWidget(self._configWidget)
@@ -247,12 +235,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         # Add new widget
         self._configWidget = data_sources.getConfigWidget(
-            data_sources.DataSourceType(self.dataSourceComboBox.currentText()), self
+            data_sources.DataSourceType(dataSourceType), self
         )
         self.dataSourceConfigContainer.addWidget(self._configWidget)
-
-        # Update tab order
-        self._updateTabOrder()
 
         # Update tab order
         self._updateTabOrder()

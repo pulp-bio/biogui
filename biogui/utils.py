@@ -44,14 +44,11 @@ class SigData:
     ----------
     sigName : str
         Signal name.
-    fs : float
-        Sampling frequency.
     data : ndarray
         Data with shape (nSamp, nCh).
     """
 
     sigName: str
-    fs: float
     data: np.ndarray
 
 

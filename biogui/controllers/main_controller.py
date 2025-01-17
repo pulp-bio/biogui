@@ -118,9 +118,7 @@ class MainController(QObject):
 
     @property
     def streamingControllers(self) -> MappingProxyType:
-        """
-        MappingProxyType: Property representing a read-only view of the StreamingController dictionary.
-        """
+        """MappingProxyType: Property representing a read-only view of the StreamingController dictionary."""
         return MappingProxyType(self._streamingControllers)
 
     def _connectSignals(self) -> None:
@@ -244,7 +242,8 @@ class MainController(QObject):
 
     @instanceSlot(list)
     def _plotData(self, dataPacket: list[SigData]):
-        """Plot the given data on the corresponding plot.
+        """
+        Plot the given data on the corresponding plot.
 
         Parameters
         ----------

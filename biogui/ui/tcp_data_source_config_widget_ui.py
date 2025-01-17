@@ -22,7 +22,7 @@ class Ui_TCPDataSourceConfigWidget(object):
     def setupUi(self, TCPDataSourceConfigWidget):
         if not TCPDataSourceConfigWidget.objectName():
             TCPDataSourceConfigWidget.setObjectName(u"TCPDataSourceConfigWidget")
-        TCPDataSourceConfigWidget.resize(400, 300)
+        TCPDataSourceConfigWidget.resize(400, 44)
         self.formLayout = QFormLayout(TCPDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
         self.label = QLabel(TCPDataSourceConfigWidget)
