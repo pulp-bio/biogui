@@ -9,20 +9,12 @@ stepLenS: float = 0.1
 """Time (in s) between two consecutive processings."""
 
 
-def processFn(data: dict[str, np.ndarray]) -> bytes:
-    """
-    Function to perform some operations on the input data and return the result.
+class ProcessFn:
+    """Callable class to perform some operations on the input data and return the result in bytes."""
 
-    Parameters
-    ----------
-    data : dict of (str: ndarray)
-        Input data.
+    def __init__(self) -> None:
+        pass
 
-    Returns
-    -------
-    bytes
-        Result of the operation in bytes.
-    """
-    avg = sum([d.mean() for d in data.values()]) / len(data)
-
-    return struct.pack("<f", avg)
+    def __call__(self, data: dict[str, np.ndarray]) -> bytes:
+        avg = sum([d.mean() for d in data.values()]) / len(data)
+        return struct.pack("<f", avg)
