@@ -1,6 +1,6 @@
 """
-This module reads data from the GAPWatch, generates the force trajectories
-and append them to the FlexiForce data.
+This module reads data from MANUS gloves, generates the angle trajectories
+and append them to the joints data.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,10 +27,10 @@ from asyncio import IncompleteReadError
 
 import numpy as np
 
-PACKET_SIZE = 720
+PACKET_SIZE = 128
 
 
-def _decodeFn(data: bytes) -> np.ndarray:
+def _decodeFn(data: bytes) -> tuple[np.ndarray]:
     """
     Function to decode the binary data received from the device into signals.
 
@@ -41,79 +41,69 @@ def _decodeFn(data: bytes) -> np.ndarray:
 
     Returns
     -------
-    ndarray
-        Signal with shape (nSamp, nCh).
+    tuple of ndarrays
+        Signal data packets, each with shape (nSamp, nCh).
     """
-    nSamp = 15
+    # 35 floats:
+    # - 20 for angles
+    # -  1 for nodeId
+    # -  3 for position
+    # -  4 for quaternion
+    # -  3 for scale
+    # -  1 for timestamp
 
-    # ADC parameters
-    vRef = 4
-    gain = 1
-    nBit = 24
+    manusData = np.zeros(shape=(1, 24), dtype=np.float32)
 
-    dataTmp = bytearray(data)
-    # Convert 24-bit to 32-bit integer
-    pos = 0
-    for _ in range(len(dataTmp) // 3):
-        prefix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, prefix)
-        pos += 4
-    forceAdc = np.asarray(
-        struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, 16)[:, [8, 9, 10]]
+    # Read the 20 angles [0:80]
+    manusData[0, :20] = np.asarray(struct.unpack("<20f", data[:80]), dtype=np.float32)
 
-    # ADC readings to V
-    forceV = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    # Read the quaternions [96:112]
+    manusData[0, 20:24] = np.asarray(
+        struct.unpack("<4f", data[96:112]), dtype=np.float32
+    )
 
-    # V to kgf
-    slopes = np.asarray([2.8667, 2.5521, 2.7171])
-    intercepts = np.asarray([-1.1159, -0.99950, -1.0651])
-    force = slopes * forceV + intercepts
-    force = force.astype(np.float32)
+    # Read timestamp [124:128]
+    manusTs = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(
+        1, 1
+    )
 
-    return force
+    return manusData, manusTs
 
 
 def _parse_input() -> tuple:
     """Parse the input arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--mvc",
-        type=float,
-        required=True,
-        help="Value of the MVC",
-    )
-    parser.add_argument(
-        "--p_mvc",
+        "--max_angle",
         type=int,
         required=True,
-        help="Value of the MVC (in %)",
+        help="Maximum angle (in °)",
     )
     parser.add_argument(
         "-s",
         "--slope",
         type=int,
         required=True,
-        help="Slope of the ramps (in %MVC/s)",
+        help="Slope of the ramps (in °/s)",
     )
     parser.add_argument(
         "--fs",
         type=int,
         required=True,
-        help="Frequency of the force signal",
+        help="Frequency of the signal",
     )
     parser.add_argument(
         "--gap_width",
         type=int,
         required=True,
-        help="Width of the gap (in %MVC) between the two trajectories",
+        help="Width of the gap (in °) between the two trajectories",
     )
     parser.add_argument(
         "--recv_port",
         default=3333,
         type=int,
         required=False,
-        help="Receiving port for the force data",
+        help="Receiving port for joint data",
     )
     parser.add_argument(
         "--server_addr",
@@ -131,8 +121,7 @@ def _parse_input() -> tuple:
     )
     args = vars(parser.parse_args())
 
-    mvc = args["mvc"]
-    p_mvc = args["p_mvc"]
+    max_angle = args["max_angle"]
     slope = args["slope"]
     fs = args["fs"]
     gap_width = args["gap_width"]
@@ -140,14 +129,14 @@ def _parse_input() -> tuple:
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    return mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port
+    return max_angle, slope, fs, gap_width, recv_port, server_addr, server_port
 
 
 def _gen_trajectories(
-    p_mvc, slope, fs, gap_width, rest_duration_s, plateau_duration_s
+    max_val, slope, fs, gap_width, rest_duration_s, plateau_duration_s
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
-    ramp_duration_s = p_mvc / slope
+    ramp_duration_s = max_val / slope
     rest_duration = rest_duration_s * fs
     plateau_duration = plateau_duration_s * fs
     ramp_duration = ramp_duration_s * fs
@@ -156,8 +145,8 @@ def _gen_trajectories(
     t_ramp = np.arange(ramp_duration) / fs
     rest = np.zeros(rest_duration)
     ramp_up = slope * t_ramp
-    plateau = np.ones(plateau_duration) * p_mvc
-    ramp_down = p_mvc - slope * t_ramp
+    plateau = np.ones(plateau_duration) * max_val
+    ramp_down = max_val - slope * t_ramp
     traj = np.concatenate([rest, ramp_up, plateau, ramp_down, rest])
     traj_low = traj - gap_width
     traj_high = traj + gap_width
@@ -180,16 +169,14 @@ def _listen_for_stop(client_socket, stop_event):
 
 def main():
     # Input arguments
-    mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port = (
+    max_angle, slope, fs, gap_width, recv_port, server_addr, server_port = (
         _parse_input()
     )
 
     # Trapezoidal trajectories
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=20
+        max_angle, slope, fs, gap_width, rest_duration_s=2, plateau_duration_s=4
     )
-    traj_low = traj_low * mvc / 100
-    traj_high = traj_high * mvc / 100
 
     try:
         # Create TCP client socket
@@ -248,11 +235,12 @@ def main():
                 return
 
             # Get force data
-            force = _decodeFn(data)
-            avg_force = force.mean(axis=0).mean().item()
+            manus_data, _ = _decodeFn(data)
+            avg_mcp = manus_data[:, [5, 9, 13]].mean().item()
+            # avg_mcp = manus_data[:, 9].item()
 
             # Send data to TCP server
-            client_socket.sendall(struct.pack("<f", avg_force))
+            client_socket.sendall(struct.pack("<f", avg_mcp))
             client_socket.sendall(struct.pack("<f", traj_low[i]))
             client_socket.sendall(struct.pack("<f", traj_high[i]))
             i += 1

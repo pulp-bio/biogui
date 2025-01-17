@@ -65,7 +65,7 @@ def _parse_input() -> tuple:
         help="Width of the gap (in MVC percentage) between the two trajectories",
     )
     parser.add_argument(
-        "--emg_port",
+        "--recv_port",
         default=45454,
         type=int,
         required=False,
@@ -92,11 +92,11 @@ def _parse_input() -> tuple:
     slope = args["slope"]
     fs = args["fs"]
     gap_width = args["gap_width"]
-    emg_port = args["emg_port"]
+    recv_port = args["recv_port"]
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    return mvc, p_mvc, slope, fs, gap_width, emg_port, server_addr, server_port
+    return mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port
 
 
 def _gen_trajectories(
@@ -137,7 +137,7 @@ def _listen_for_stop(client_socket, stop_event):
 
 def main():
     # Input arguments
-    mvc, p_mvc, slope, fs, gap_width, emg_port, server_addr, server_port = (
+    mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port = (
         _parse_input()
     )
 
@@ -168,9 +168,9 @@ def main():
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_socket.bind(("", emg_port))
+        server_socket.bind(("", recv_port))
         server_socket.listen()
-        print(f"Waiting for TCP connection on port {emg_port}...")
+        print(f"Waiting for TCP connection on port {recv_port}...")
 
         conn, (addr, _) = server_socket.accept()
         print(f"Connection from {addr}")
