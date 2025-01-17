@@ -33,7 +33,7 @@ from biogui.utils import detectTheme
 from biogui.views import MainWindow
 
 
-def _loadValidateJSON(filePath: str) -> tuple[dict | None, str]:
+def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
     """
     Load and validate a JSON file representing the trigger configuration.
 
@@ -64,6 +64,19 @@ def _loadValidateJSON(filePath: str) -> tuple[dict | None, str]:
     }
     if providedKeys != validKeys:
         return None, "The provided keys are not valid."
+
+    # Check values
+    if not isinstance(config["nReps"], int) or config["nReps"] <= 0:
+        return None, "The number of repetitions must be a positive integer."
+    if (
+        not isinstance(config["durationTrigger"], float)
+        or config["durationTrigger"] <= 0
+    ):
+        return None, "The duration of the trigger must be a positive float."
+    if not isinstance(config["durationStart"], float) or config["durationStart"] < 0:
+        return None, "The duration of the start period must be a non-negative float."
+    if not isinstance(config["durationRest"], float) or config["durationRest"] < 0:
+        return None, "The duration of the rest period must be a non-negative float."
 
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
@@ -174,7 +187,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
 
         self._config = {}
 
-        self.browseJSONButton.clicked.connect(self._browseTriggerConfig)
+        self.browseTriggerConfigButton.clicked.connect(self._browseTriggerConfig)
         self.destroyed.connect(self.deleteLater)
 
     @property
@@ -190,7 +203,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
             filter="*.json",
         )
         if filePath:
-            config, msg = _loadValidateJSON(filePath)
+            config, errMessage = _loadConfigFromJson(filePath)
             if config is None:
                 QMessageBox.critical(
                     self,
@@ -200,25 +213,16 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
                 return
-            if len(msg) > 0:
+            if len(errMessage) > 0:
                 QMessageBox.warning(
                     self,
                     "Invalid configuration",
-                    msg,
+                    errMessage,
                     buttons=QMessageBox.Ok,  # type: ignore
                     defaultButton=QMessageBox.Ok,  # type: ignore
                 )
-
             self._config = config
-            self._configJSONPath = filePath
-
-            displayText = (
-                filePath
-                if len(filePath) <= 20
-                else filePath[:6] + "..." + filePath[-14:]
-            )
-            self.configJSONPathLabel.setText(displayText)
-            self.configJSONPathLabel.setToolTip(filePath)
+            self.triggerConfigPathLabel.setText(filePath)
 
 
 class TriggerController(QObject):
@@ -347,22 +351,27 @@ class TriggerController(QObject):
     def _startTriggerGen(self) -> None:
         """Start the trigger generation."""
         self._confWidget.triggerGroupBox.setEnabled(False)
-        if self._confWidget.triggerGroupBox.isChecked() and self._confWidget.config:
-            # Set initial trigger
-            for streamingController in self._streamingControllers.values():
-                streamingController.setTrigger(0)
+        if (
+            not self._confWidget.triggerGroupBox.isChecked()
+            or not self._confWidget.config
+        ):
+            return
 
-            # Triggers
-            for i, k in enumerate(self._confWidget.config["triggers"].keys()):
-                self._triggerIds[k] = i + 1
-                self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
-            self._triggerLabels.append("last_stop")
+        # Set initial trigger
+        for streamingController in self._streamingControllers.values():
+            streamingController.setTrigger(0)
 
-            self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
-            self._triggerWidget.renderImage("start", "")
-            self._triggerWidget.show()
+        # Triggers
+        for i, k in enumerate(self._confWidget.config["triggers"].keys()):
+            self._triggerIds[k] = i + 1
+            self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
+        self._triggerLabels.append("last_stop")
 
-            self._timer.start(self._confWidget.config["durationStart"])
+        self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+        self._triggerWidget.renderImage("start", "")
+        self._triggerWidget.show()
+
+        self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
         """Stop trigger generation by exploiting _TriggerWidget close event."""

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>310</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,51 +16,40 @@
   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
    <item>
     <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-     </property>
-     <property name="formAlignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="label1">
-       <property name="text">
-        <string>Interface module:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
       <widget class="QPushButton" name="browseInterfaceModuleButton">
        <property name="toolTip">
         <string>The module must contain specific fields</string>
        </property>
        <property name="text">
-        <string>Browse</string>
+        <string>Browse interface module</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label2">
-       <property name="text">
-        <string>Path to module:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
+     <item row="0" column="1">
       <widget class="QLabel" name="interfaceModulePathLabel">
        <property name="text">
         <string/>
        </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label3">
-       <property name="text">
-        <string>Data source:</string>
+       <property name="wordWrap">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label1">
+       <property name="text">
+        <string>Data source:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
       <widget class="QComboBox" name="dataSourceComboBox">
        <property name="toolTip">
         <string>List of available data sources</string>
@@ -86,49 +75,35 @@
      <property name="checked">
       <bool>false</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout3">
-      <property name="fieldGrowthPolicy">
-       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-      </property>
-      <property name="formAlignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-      </property>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label4">
-        <property name="text">
-         <string>Output directory:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
+     <layout class="QFormLayout" name="formLayout_2">
+      <item row="0" column="0">
        <widget class="QPushButton" name="browseOutDirButton">
         <property name="text">
-         <string>Browse</string>
+         <string>Browse output directory</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label5">
-        <property name="text">
-         <string>Path to directory:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
+      <item row="0" column="1">
        <widget class="QLabel" name="outDirPathLabel">
         <property name="text">
          <string/>
         </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label6">
-        <property name="text">
-         <string>File name:</string>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="1" column="0">
+       <widget class="QLabel" name="label2">
+        <property name="text">
+         <string>File name:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
        <widget class="QLineEdit" name="fileNameTextField">
         <property name="toolTip">
          <string>A timestamp corresponding to the start of the acquisition will be appended to the signal name</string>
@@ -151,11 +126,7 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>browseInterfaceModuleButton</tabstop>
   <tabstop>dataSourceComboBox</tabstop>
-  <tabstop>fileSavingGroupBox</tabstop>
-  <tabstop>browseOutDirButton</tabstop>
-  <tabstop>fileNameTextField</tabstop>
  </tabstops>
  <resources/>
  <connections/>

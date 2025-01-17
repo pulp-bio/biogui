@@ -19,7 +19,7 @@ limitations under the License.
 
 import numpy as np
 
-packetSize: int = 0
+packetSize: int = 1
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = []

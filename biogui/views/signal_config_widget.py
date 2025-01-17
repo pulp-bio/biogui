@@ -113,7 +113,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._prefill(kwargs)
 
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
-        self.rangeModeComboBox.currentIndexChanged.connect(self._onRangeModeChange)
+        self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
         self.destroyed.connect(self.deleteLater)
 
     @property
@@ -139,9 +139,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """
         return self._sigConfig
 
-    def _onFiltTypeChange(self) -> None:
+    def _onFiltTypeChange(self, filtType: str) -> None:
         """Detect if filter type has changed."""
-        filtType = self.filtTypeComboBox.currentText()
         # Disable field for second frequency depending on the filter type
         if filtType in ("highpass", "lowpass"):
             self.freq2TextField.setEnabled(False)
@@ -149,9 +148,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         else:
             self.freq2TextField.setEnabled(True)
 
-    def _onRangeModeChange(self) -> None:
+    def _onRangeModeChange(self, rangeMode: str) -> None:
         """Detect if range mode has changed"""
-        if self.rangeModeComboBox.currentText() == "Automatic":
+        if rangeMode == "Automatic":
             self.label6.setEnabled(False)
             self.minRangeTextField.setEnabled(False)
             self.label7.setEnabled(False)

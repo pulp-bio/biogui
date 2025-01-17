@@ -43,4 +43,4 @@ class BioGUI(QApplication):
         self.mainWin = MainWindow()
         self.mainController = MainController(self.mainWin)
         self.moduleController = ModuleController(self.mainController, self.mainWin)
-        self.mainWin.show()
+        self.mainWin.showMaximized()
