@@ -85,6 +85,8 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
             None,
             'The selected Python module does not contain a "decodeFn" function.',
         )
+    if not isinstance(module.packetSize, int) or module.packetSize <= 0:
+        return (None, "The packet size must be a positive integer.")
 
     return (
         InterfaceModule(
@@ -225,7 +227,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
             self.outDirPathLabel.setText(outDirPath)
 
-    def _onDataSourceChange(self) -> None:
+    def _onDataSourceChange(self, dataSourceType: str) -> None:
         """Detect if data source type has changed."""
         # Clear container
         self.dataSourceConfigContainer.removeWidget(self._configWidget)
@@ -233,12 +235,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         # Add new widget
         self._configWidget = data_sources.getConfigWidget(
-            data_sources.DataSourceType(self.dataSourceComboBox.currentText()), self
+            data_sources.DataSourceType(dataSourceType), self
         )
         self.dataSourceConfigContainer.addWidget(self._configWidget)
-
-        # Update tab order
-        self._updateTabOrder()
 
         # Update tab order
         self._updateTabOrder()

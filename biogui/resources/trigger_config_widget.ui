@@ -34,6 +34,9 @@
       </property>
       <item row="3" column="0">
        <widget class="QPushButton" name="browseTriggerConfigButton">
+        <property name="toolTip">
+         <string>The JSON file must contain specific fields</string>
+        </property>
         <property name="text">
          <string>Browse JSON file</string>
         </property>

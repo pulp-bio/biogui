@@ -59,10 +59,17 @@ class ModuleController(QObject):
         moduleMenu = self._mainWin.menuBar().addMenu("Modules")
 
         # Add checkable action for each module
+        # 1. Trigger
         triggerAction = QAction("Configure triggers", self)
         triggerAction.setCheckable(True)
         triggerAction.triggered.connect(self._triggerActionHandler)
         moduleMenu.addAction(triggerAction)
+
+        # 2. Custom processing
+        processingAction = QAction("Configure custom processing", self)
+        processingAction.setCheckable(True)
+        processingAction.triggered.connect(self._processingActionHandler)
+        moduleMenu.addAction(processingAction)
 
     def _triggerActionHandler(self, checked: bool) -> None:
         """Handler for the "configure triggers" action."""
@@ -74,3 +81,14 @@ class ModuleController(QObject):
             triggerModule = self._modules.pop("trigger")
             triggerModule.unsubscribe(self._mainController, self._mainWin)
             del triggerModule
+
+    def _processingActionHandler(self, checked: bool) -> None:
+        """Handler for the "configure custom processing" action."""
+        if checked:
+            processingModule = modules.ProcessingController()
+            processingModule.subscribe(self._mainController, self._mainWin)
+            self._modules["processingModule"] = processingModule
+        else:
+            processingModule = self._modules.pop("processingModule")
+            processingModule.unsubscribe(self._mainController, self._mainWin)
+            del processingModule
