@@ -38,9 +38,9 @@ from biogui.utils import SigData, instanceSlot
 from biogui.views import MainWindow
 
 ProcessFn: TypeAlias = Callable[[dict[str, np.ndarray]], bytes]
-"""Type representing a processing function."""
+"""Type representing a processing callable class."""
 
-ProcessingModule = namedtuple("InterfaceModule", "winLenS, stepLenS, processFn")
+ProcessingModule = namedtuple("ProcessingModule", "winLenS, stepLenS, ProcessFn")
 """Type representing the processing module to apply on the acquired data."""
 
 
@@ -55,8 +55,8 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
 
     Returns
     -------
-    InterfaceModule or None
-        InterfaceModule object, or None if the module is not valid.
+    ProcessingModule or None
+        ProcessingModule object, or None if the module is not valid.
     str
         Error message.
     """
@@ -85,10 +85,10 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
             None,
             'The selected Python module does not contain a "stepLenS" variable.',
         )
-    if not hasattr(module, "processFn"):
+    if not hasattr(module, "ProcessFn"):
         return (
             None,
-            'The selected Python module does not contain a "processFn" function.',
+            'The selected Python module does not contain a "ProcessFn" callable class.',
         )
 
     if not isinstance(module.winLenS, float) or module.winLenS <= 0:
@@ -110,7 +110,7 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
         ProcessingModule(
             winLenS=module.winLenS,
             stepLenS=module.stepLenS,
-            processFn=module.processFn,
+            ProcessFn=module.ProcessFn,
         ),
         "",
     )
@@ -501,7 +501,7 @@ class ProcessingController(QObject):
             winLen = int(round(winLenS * fs))
             stepLen = int(round(stepLenS * fs))
             buffersConfig[sigName] = {"winLen": winLen, "stepLen": stepLen}
-        self._processingWorker.processFn = self._confWidget.processingModule.processFn
+        self._processingWorker.processFn = self._confWidget.processingModule.ProcessFn()
         self._processingWorker.initBuffers(buffersConfig)
 
         # Configure TCP server

@@ -22,6 +22,7 @@ import socket
 import sys
 
 from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 
 class SocketListener(QObject):
@@ -114,6 +115,7 @@ if __name__ == "__main__":
 
     from biogui import BioGUI
 
+    QApplication.setStyle("windowsvista")
     app = BioGUI()
 
     if args["rem_port"]:
