@@ -1,6 +1,5 @@
 """
-This module reads data from MANUS gloves, generates the angle trajectories
-and append them to the joints data.
+This module reads IMU data from the GAPWatch and translates it into an angle.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,10 +26,10 @@ from asyncio import IncompleteReadError
 
 import numpy as np
 
-PACKET_SIZE = 128
+PACKET_SIZE = 720
 
 
-def _decodeFn(data: bytes) -> tuple[np.ndarray, np.ndarray]:
+def _decodeFn(data: bytes) -> np.ndarray:
     """
     Function to decode the binary data received from the device into signals.
 
@@ -41,69 +40,31 @@ def _decodeFn(data: bytes) -> tuple[np.ndarray, np.ndarray]:
 
     Returns
     -------
-    tuple of ndarrays
-        Signal data packets, each with shape (nSamp, nCh).
+    ndarray
+        Signal with shape (nSamp, nCh).
     """
-    # 35 floats:
-    # - 20 for angles
-    # -  1 for nodeId
-    # -  3 for position
-    # -  4 for quaternion
-    # -  3 for scale
-    # -  1 for timestamp
+    imuTmp = bytes(data[:6] + data[240:246] + data[480:486])
+    imu = np.asarray(struct.unpack("<9h", imuTmp), dtype=np.float32).reshape(3, 3)
+    imu *= 0.061
 
-    manusData = np.zeros(shape=(1, 24), dtype=np.float32)
-
-    # Read the 20 angles [0:80]
-    manusData[0, :20] = np.asarray(struct.unpack("<20f", data[:80]), dtype=np.float32)
-
-    # Read the quaternions [96:112]
-    manusData[0, 20:24] = np.asarray(
-        struct.unpack("<4f", data[96:112]), dtype=np.float32
-    )
-
-    # Read timestamp [124:128]
-    manusTs = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(
-        1, 1
-    )
-
-    return manusData, manusTs
+    return imu
 
 
 def _parse_input() -> tuple:
     """Parse the input arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--max_angle",
-        type=int,
-        required=True,
-        help="Maximum angle (in °)",
-    )
-    parser.add_argument(
-        "-s",
-        "--slope",
-        type=int,
-        required=True,
-        help="Slope of the ramps (in °/s)",
-    )
-    parser.add_argument(
         "--fs",
         type=int,
         required=True,
-        help="Frequency of the signal",
-    )
-    parser.add_argument(
-        "--gap_width",
-        type=int,
-        required=True,
-        help="Width of the gap (in °) between the two trajectories",
+        help="Frequency of the force signal",
     )
     parser.add_argument(
         "--recv_port",
         default=3333,
         type=int,
         required=False,
-        help="Receiving port for joint data",
+        help="Receiving port for the force data",
     )
     parser.add_argument(
         "--server_addr",
@@ -121,58 +82,30 @@ def _parse_input() -> tuple:
     )
     args = vars(parser.parse_args())
 
-    max_angle = args["max_angle"]
-    slope = args["slope"]
     fs = args["fs"]
-    gap_width = args["gap_width"]
     recv_port = args["recv_port"]
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    return max_angle, slope, fs, gap_width, recv_port, server_addr, server_port
+    return fs, recv_port, server_addr, server_port
 
 
-def _gen_trajectories(
-    max_val, slope, fs, gap_width, rest_duration_s, plateau_duration_s
-) -> tuple[np.ndarray, np.ndarray]:
-    """Generate trapezoidal trajectories."""
-    ramp_duration_s = max_val / slope
-    rest_duration = int(round(rest_duration_s * fs))
-    plateau_duration = int(round(plateau_duration_s * fs))
-    ramp_duration = int(round(ramp_duration_s * fs))
+def _compute_bend_angle(g_neutral, g_bent):
+    # Compute the dot product
+    dot_product = np.dot(g_neutral, g_bent)
 
-    # Create trajectories
-    t_ramp = np.arange(ramp_duration) / fs
-    rest = np.zeros(rest_duration)
-    ramp_up = slope * t_ramp
-    plateau = np.ones(plateau_duration) * max_val
-    ramp_down = max_val - slope * t_ramp
-    traj = np.concatenate([rest, ramp_up, plateau, ramp_down, rest])
-    traj_low = traj - gap_width
-    traj_high = traj + gap_width
-    traj_low = traj_low.astype(np.float32)
-    traj_high = traj_high.astype(np.float32)
+    # Compute the magnitudes of the vectors
+    magnitude_neutral = np.linalg.norm(g_neutral)
+    magnitude_bent = np.linalg.norm(g_bent)
 
-    return traj_low, traj_high
+    # Calculate the cosine of the angle
+    cos_theta = dot_product / (magnitude_neutral * magnitude_bent)
 
+    # Compute the angle in radians and convert to degrees
+    theta = np.arccos(np.clip(cos_theta, -1.0, 1.0))  # Clip for numerical stability
+    theta_degrees = np.degrees(theta)
 
-def _read_tcp(conn: socket.socket, packet_size: int) -> bytearray | None:
-    """Read data from a TCP client socket."""
-    try:
-        data = bytearray(packet_size)
-        pos = 0
-        while pos < packet_size:
-            nRead = conn.recv_into(memoryview(data)[pos:])
-            if nRead == 0:
-                raise IncompleteReadError(bytes(data[:pos]), packet_size)
-            pos += nRead
-        return data
-    except socket.timeout:
-        print("TCP communication failed.")
-        return
-    except IncompleteReadError as e:
-        print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
-        return
+    return theta_degrees
 
 
 def _listen_for_stop(client_socket, stop_event):
@@ -188,14 +121,7 @@ def _listen_for_stop(client_socket, stop_event):
 
 def main():
     # Input arguments
-    max_angle, slope, fs, gap_width, recv_port, server_addr, server_port = (
-        _parse_input()
-    )
-
-    # Trapezoidal trajectories
-    traj_low, traj_high = _gen_trajectories(
-        max_angle, slope, fs, gap_width, rest_duration_s=2, plateau_duration_s=4
-    )
+    fs, recv_port, server_addr, server_port = _parse_input()
 
     try:
         # Create TCP server socket
@@ -233,28 +159,46 @@ def main():
         listener_thread.start()
 
         i = 0
+        calib_complete = False
+        neutral_angle = 0
         while True:
             if stop_event.is_set():
                 break  # Stop sending if stop event is triggered
 
             # Read data from server socket
-            data = _read_tcp(conn, PACKET_SIZE)
-            if data is None:
-                break
+            try:
+                data = bytearray(PACKET_SIZE)
+                pos = 0
+                while pos < PACKET_SIZE:
+                    nRead = conn.recv_into(memoryview(data)[pos:])
+                    if nRead == 0:
+                        raise IncompleteReadError(bytes(data[:pos]), PACKET_SIZE)
+                    pos += nRead
+            except socket.timeout:
+                print("TCP communication failed.")
+                return
+            except IncompleteReadError as e:
+                print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
+                return
 
-            # Get force data
-            manus_data, _ = _decodeFn(data)
-            avg_mcp = manus_data[:, [5, 9, 13]].mean().item()
+            # Get IMU data
+            imu = _decodeFn(data)
+            n_samp = imu.shape[0]
+            angle = np.zeros(shape=n_samp, dtype=np.float32)
+            i += n_samp
+            if i < 5 * fs:  # 2-seconds calibration
+                neutral_angle += imu.sum(axis=0)
+            else:
+                if not calib_complete:
+                    neutral_angle /= i
+                    calib_complete = True
+                    print(f"Calibration done (i = {i})")
+                for k in range(n_samp):
+                    angle[k] = _compute_bend_angle(neutral_angle, imu[k])
 
             # Send data to TCP server
-            client_socket.sendall(struct.pack("<f", avg_mcp))
-            client_socket.sendall(struct.pack("<f", traj_low[i]))
-            client_socket.sendall(struct.pack("<f", traj_high[i]))
-            i += 1
-
-            # Repeat trajectory
-            if i >= traj_low.size:
-                i = 0
+            client_socket.sendall(imu.tobytes())
+            client_socket.sendall(angle.tobytes())
 
         # Wait for the listener thread to finish
         listener_thread.join()

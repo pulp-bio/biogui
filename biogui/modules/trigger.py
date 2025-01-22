@@ -68,15 +68,12 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
     # Check values
     if not isinstance(config["nReps"], int) or config["nReps"] <= 0:
         return None, "The number of repetitions must be a positive integer."
-    if (
-        not isinstance(config["durationTrigger"], float)
-        or config["durationTrigger"] <= 0
-    ):
-        return None, "The duration of the trigger must be a positive float."
-    if not isinstance(config["durationStart"], float) or config["durationStart"] < 0:
-        return None, "The duration of the start period must be a non-negative float."
-    if not isinstance(config["durationRest"], float) or config["durationRest"] < 0:
-        return None, "The duration of the rest period must be a non-negative float."
+    if not isinstance(config["durationTrigger"], int) or config["durationTrigger"] <= 0:
+        return None, "The duration of the trigger must be a positive int."
+    if not isinstance(config["durationStart"], int) or config["durationStart"] < 0:
+        return None, "The duration of the start period must be a non-negative int."
+    if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
+        return None, "The duration of the rest period must be a non-negative int."
 
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
@@ -208,7 +205,7 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
                 QMessageBox.critical(
                     self,
                     "Invalid configuration",
-                    "The provided JSON file has an invalid configuration.",
+                    errMessage,
                     buttons=QMessageBox.Retry,  # type: ignore
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )

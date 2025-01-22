@@ -148,9 +148,9 @@ def _gen_trajectories(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
     ramp_duration_s = p_mvc / slope
-    rest_duration = rest_duration_s * fs
-    plateau_duration = plateau_duration_s * fs
-    ramp_duration = ramp_duration_s * fs
+    rest_duration = int(round(rest_duration_s * fs))
+    plateau_duration = int(round(plateau_duration_s * fs))
+    ramp_duration = int(round(ramp_duration_s * fs))
 
     # Create trajectories
     t_ramp = np.arange(ramp_duration) / fs
@@ -165,6 +165,25 @@ def _gen_trajectories(
     traj_high = traj_high.astype(np.float32)
 
     return traj_low, traj_high
+
+
+def _read_tcp(conn: socket.socket, packet_size: int) -> bytearray | None:
+    """Read data from a TCP client socket."""
+    try:
+        data = bytearray(packet_size)
+        pos = 0
+        while pos < packet_size:
+            nRead = conn.recv_into(memoryview(data)[pos:])
+            if nRead == 0:
+                raise IncompleteReadError(bytes(data[:pos]), packet_size)
+            pos += nRead
+        return data
+    except socket.timeout:
+        print("TCP communication failed.")
+        return
+    except IncompleteReadError as e:
+        print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
+        return
 
 
 def _listen_for_stop(client_socket, stop_event):
@@ -186,23 +205,12 @@ def main():
 
     # Trapezoidal trajectories
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=20
+        p_mvc, slope, fs, gap_width, rest_duration_s=5, plateau_duration_s=30
     )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
 
     try:
-        # Create TCP client socket
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            try:
-                client_socket.connect((server_addr, server_port))
-                break
-            except ConnectionRefusedError:
-                print("Connection refused, retrying in a second...")
-                time.sleep(1)
-        print(f"Connected to server at {server_addr}:{server_port}")
-
         # Create TCP server socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -213,6 +221,17 @@ def main():
 
         conn, (addr, _) = server_socket.accept()
         print(f"Connection from {addr}")
+
+        # Create TCP client socket
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                client_socket.connect((server_addr, server_port))
+                break
+            except ConnectionRefusedError:
+                print("Connection refused, retrying in a second...")
+                time.sleep(1)
+        print(f"Connected to server at {server_addr}:{server_port}")
 
         # Wait for start command
         cmd = client_socket.recv(2)
@@ -232,20 +251,9 @@ def main():
                 break  # Stop sending if stop event is triggered
 
             # Read data from server socket
-            try:
-                data = bytearray(PACKET_SIZE)
-                pos = 0
-                while pos < PACKET_SIZE:
-                    nRead = conn.recv_into(memoryview(data)[pos:])
-                    if nRead == 0:
-                        raise IncompleteReadError(bytes(data[:pos]), PACKET_SIZE)
-                    pos += nRead
-            except socket.timeout:
-                print("TCP communication failed.")
-                return
-            except IncompleteReadError as e:
-                print(f"Read only {len(e.partial)} out of {e.expected} bytes.")
-                return
+            data = _read_tcp(conn, PACKET_SIZE)
+            if data is None:
+                break
 
             # Get force data
             force = _decodeFn(data)
@@ -259,8 +267,10 @@ def main():
 
             # Repeat trajectory
             if i >= traj_low.size:
-                i = 0
+                break
 
+        if not stop_event.is_set():
+            stop_event.set()
         # Wait for the listener thread to finish
         listener_thread.join()
         print("Stopped by server.")
