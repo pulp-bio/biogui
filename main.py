@@ -22,7 +22,8 @@ import socket
 import sys
 
 from PySide6.QtCore import QObject, QThread, Signal
-from PySide6.QtWidgets import QApplication
+
+from biogui import BioGUI
 
 
 class SocketListener(QObject):
@@ -113,9 +114,6 @@ if __name__ == "__main__":
 
         logging.basicConfig(level=logging.INFO)
 
-    from biogui import BioGUI
-
-    QApplication.setStyle("windowsvista")
     app = BioGUI()
 
     if args["rem_port"]:
