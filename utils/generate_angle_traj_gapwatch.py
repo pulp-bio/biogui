@@ -1,6 +1,5 @@
 """
-This module reads data from the OTBioelettronica Sessantaquattro+, generates
-the force trajectories and append them to the EMG, IMU and AUX data.
+This module reads IMU data from the GAPWatch, translates it into an angle, and generates the angle trajectories.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -27,50 +26,70 @@ from asyncio import IncompleteReadError
 
 import numpy as np
 
-PACKET_SIZE = 144
-BUFFER_SIZE = 32
+PACKET_SIZE = 720
+
+
+def _decodeFn(data: bytes) -> np.ndarray:
+    """
+    Function to decode the binary data received from the device into signals.
+
+    Parameters
+    ----------
+    data : bytes
+        A packet of bytes.
+
+    Returns
+    -------
+    ndarray
+        Signal with shape (nSamp, nCh).
+    """
+    imuTmp = bytes(data[:6] + data[240:246] + data[480:486])
+    imu = np.asarray(struct.unpack("<9h", imuTmp), dtype=np.float32).reshape(3, 3)
+    imu *= 0.061
+
+    return imu
 
 
 def _parse_input() -> tuple:
     """Parse the input arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--mvc",
-        type=float,
-        required=True,
-        help="Value of the MVC",
-    )
-    parser.add_argument(
-        "--p_mvc",
+        "--max_angle",
         type=int,
         required=True,
-        help="Target percentage of MVC",
+        help="Maximum angle (in °)",
     )
     parser.add_argument(
         "-s",
         "--slope",
         type=int,
         required=True,
-        help="Slope of the ramps (in MVC percentage over seconds)",
+        help="Slope of the ramps (in °/s)",
     )
     parser.add_argument(
         "--fs",
         type=int,
         required=True,
-        help="Frequency of the force signal",
+        help="Frequency of the signal",
     )
     parser.add_argument(
         "--gap_width",
         type=int,
         required=True,
-        help="Width of the gap (in MVC percentage) between the two trajectories",
+        help="Width of the gap (in °) between the two trajectories",
+    )
+    parser.add_argument(
+        "--n_reps",
+        type=int,
+        required=True,
+        help="Number of repetitions",
     )
     parser.add_argument(
         "--recv_port",
-        default=45454,
+        default=3333,
         type=int,
         required=False,
-        help="Receiving port for EMG data",
+        help="Receiving port for joint data",
     )
     parser.add_argument(
         "--server_addr",
@@ -88,23 +107,23 @@ def _parse_input() -> tuple:
     )
     args = vars(parser.parse_args())
 
-    mvc = args["mvc"]
-    p_mvc = args["p_mvc"]
+    max_angle = args["max_angle"]
     slope = args["slope"]
     fs = args["fs"]
     gap_width = args["gap_width"]
+    n_reps = args["n_reps"]
     recv_port = args["recv_port"]
     server_addr = args["server_addr"]
     server_port = args["server_port"]
 
-    return mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port
+    return max_angle, slope, fs, gap_width, n_reps, recv_port, server_addr, server_port
 
 
 def _gen_trajectories(
-    p_mvc, slope, fs, gap_width, rest_duration_s, plateau_duration_s
+    max_val, slope, fs, gap_width, rest_duration_s, plateau_duration_s
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate trapezoidal trajectories."""
-    ramp_duration_s = p_mvc / slope
+    ramp_duration_s = max_val / slope
     rest_duration = int(round(rest_duration_s * fs))
     plateau_duration = int(round(plateau_duration_s * fs))
     ramp_duration = int(round(ramp_duration_s * fs))
@@ -113,8 +132,8 @@ def _gen_trajectories(
     t_ramp = np.arange(ramp_duration) / fs
     rest = np.zeros(rest_duration)
     ramp_up = slope * t_ramp
-    plateau = np.ones(plateau_duration) * p_mvc
-    ramp_down = p_mvc - slope * t_ramp
+    plateau = np.ones(plateau_duration) * max_val
+    ramp_down = max_val - slope * t_ramp
     traj = np.concatenate([rest, ramp_up, plateau, ramp_down, rest])
     traj_low = traj - gap_width
     traj_high = traj + gap_width
@@ -143,47 +162,68 @@ def _read_tcp(conn: socket.socket, packet_size: int) -> bytearray | None:
         return
 
 
-def _listen_for_stop(client_socket, stop_event):
+def _listen_for_stop(client_socket, conn, stop_event):
     """Listen for a "stop" command from the server."""
     try:
         while not stop_event.is_set():
             cmd = client_socket.recv(2)
             print(f'Received "{cmd}" command from server. Stopping transmission.')
             stop_event.set()
-            break
+            conn.sendall(cmd)
     except Exception as e:
         print(f"Error while listening for stop command: {e}")
 
 
+def _compute_bend_angle(g_neutral, g_bent):
+    """Compute the bend angle from the IMU data given a neutral position."""
+    # Compute the dot product
+    dot_product = np.dot(g_neutral, g_bent)
+
+    # Compute the magnitudes of the vectors
+    magnitude_neutral = np.linalg.norm(g_neutral)
+    magnitude_bent = np.linalg.norm(g_bent)
+
+    # Calculate the cosine of the angle
+    cos_theta = dot_product / (magnitude_neutral * magnitude_bent)
+
+    # Compute the angle in radians and convert to degrees
+    theta = np.arccos(np.clip(cos_theta, -1.0, 1.0))  # Clip for numerical stability
+    theta_degrees = np.degrees(theta)
+
+    return theta_degrees
+
+
+def _pad_with_last_value(arr, target_size):
+    """Pad a 1D NumPy array to a given size by repeating the last value."""
+    if len(arr) >= target_size:
+        return arr[:target_size]  # Truncate if the array is already larger or equal.
+
+    pad_size = target_size - len(arr)
+    padding = np.full(pad_size, arr[-1])
+
+    return np.concatenate((arr, padding)).astype(arr.dtype)
+
+
 def main():
     # Input arguments
-    mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port = (
+    max_angle, slope, fs, gap_width, n_reps, recv_port, server_addr, server_port = (
         _parse_input()
     )
 
-    emg_buffer = np.zeros(shape=(BUFFER_SIZE, 64), dtype=np.float32)
-    aux_buffer = np.zeros(shape=(BUFFER_SIZE, 2), dtype=np.float32)
-    imu_buffer = np.zeros(shape=(BUFFER_SIZE, 4), dtype=np.float32)
-
-    # Trapezoidal trajectories (50 Hz)
+    # Trapezoidal trajectories
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, fs, gap_width, rest_duration_s=1, plateau_duration_s=6
+        max_angle, slope, fs, gap_width, rest_duration_s=0.5, plateau_duration_s=1
     )
-    traj_low = traj_low * mvc / 100
-    traj_high = traj_high * mvc / 100
+    practice_duration_s = 10
+    practice_duration = int(round(practice_duration_s * fs))
+    traj_low = np.concatenate(
+        [np.ones(practice_duration, dtype=np.float32) * traj_low[0], traj_low]
+    )
+    traj_high = np.concatenate(
+        [np.ones(practice_duration, dtype=np.float32) * traj_high[0], traj_high]
+    )
 
     try:
-        # Create TCP client socket
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            try:
-                client_socket.connect((server_addr, server_port))
-                break
-            except ConnectionRefusedError:
-                print("Connection refused, retrying in a second...")
-                time.sleep(1)
-        print(f"Connected to server at {server_addr}:{server_port}")
-
         # Create TCP server socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -195,6 +235,17 @@ def main():
         conn, (addr, _) = server_socket.accept()
         print(f"Connection from {addr}")
 
+        # Create TCP client socket
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                client_socket.connect((server_addr, server_port))
+                break
+            except ConnectionRefusedError:
+                print("Connection refused, retrying in a second...")
+                time.sleep(1)
+        print(f"Connected to server at {server_addr}:{server_port}")
+
         # Wait for start command
         cmd = client_socket.recv(2)
         print(f'Received "{cmd}" command from server. Starting transmission.')
@@ -203,11 +254,16 @@ def main():
         # Start a thread to listen for the stop command
         stop_event = threading.Event()  # Event to stop the transmission
         listener_thread = threading.Thread(
-            target=_listen_for_stop, args=(client_socket, stop_event)
+            target=_listen_for_stop, args=(client_socket, conn, stop_event)
         )
         listener_thread.start()
 
-        i, buf_count = 0, 0
+        calib_time_s = 5.0
+        calib_time = int(round(calib_time_s * fs))
+        calib_complete = False
+        neutral_angle = 0
+        rep_counter = 0
+        i = 0
         while True:
             if stop_event.is_set():
                 break  # Stop sending if stop event is triggered
@@ -217,38 +273,46 @@ def main():
             if data is None:
                 break
 
-            # Get EMG data
-            emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32)
-
-            # Convert ADC readings to mV
-            mVConvF = 2.86e-4  # conversion factor
-            emg = (emg * mVConvF).astype(np.float32)
-            emg_buffer[buf_count] = emg
-
-            # Get AUX data
-            aux = np.asarray(struct.unpack(">2h", data[128:132]), dtype=np.float32)
-            aux_buffer[buf_count] = aux
             # Get IMU data
-            imu = np.asarray(struct.unpack(">4h", data[132:140]), dtype=np.float32)
-            imu_buffer[buf_count] = imu
+            imu = _decodeFn(data)
+            n_samp = imu.shape[0]
+            angle = np.zeros(n_samp, dtype=np.float32)
+            i += n_samp
+            if not calib_complete:
+                neutral_angle += imu.sum(axis=0)
+                cur_traj_low = np.zeros(n_samp, dtype=np.float32)
+                cur_traj_high = np.zeros(n_samp, dtype=np.float32)
 
-            buf_count += 1
-            if buf_count == BUFFER_SIZE:
-                buf_count = 0
+                if i >= calib_time:
+                    neutral_angle /= i
+                    i = 0
+                    calib_complete = True
+                    print(f"Calibration done: neutral position = {neutral_angle}")
+            else:
+                for k in range(n_samp):
+                    angle[k] = _compute_bend_angle(neutral_angle, imu[k])
 
-                # Send data to TCP server
-                client_socket.sendall(emg_buffer.tobytes())
-                client_socket.sendall(imu_buffer.tobytes())
-                client_socket.sendall(aux_buffer[:, 1].tobytes())  # trigger
-                client_socket.sendall(aux_buffer[:, 0].tobytes())  # force
-                client_socket.sendall(traj_low[i : i + BUFFER_SIZE].tobytes())
-                client_socket.sendall(traj_high[i : i + BUFFER_SIZE].tobytes())
-                i += BUFFER_SIZE
+                cur_traj_low = _pad_with_last_value(traj_low[i - n_samp : i], n_samp)
+                cur_traj_high = _pad_with_last_value(traj_high[i - n_samp : i], n_samp)
 
                 # Repeat trajectory
                 if i >= traj_low.size:
-                    i = 0
+                    print(f"{rep_counter} -> {rep_counter + 1}")
+                    rep_counter += 1
+                    i = practice_duration
 
+            # Send data to TCP server
+            client_socket.sendall(imu.tobytes())
+            client_socket.sendall(angle.tobytes())
+            client_socket.sendall(cur_traj_low.tobytes())
+            client_socket.sendall(cur_traj_high.tobytes())
+
+            if rep_counter == n_reps:
+                print("Experiment ended.")
+                break
+
+        if not stop_event.is_set():
+            stop_event.set()
         # Wait for the listener thread to finish
         listener_thread.join()
         print("Stopped by server.")
