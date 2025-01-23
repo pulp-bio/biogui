@@ -208,13 +208,12 @@ class SerialDataSourceWorker(DataSourceWorker):
         try:
             ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
         except serial.serialutil.SerialException as e:
-            self.errorOccurred.emit(
-                f"Cannot open serial port due to the following exception:\n{e}."
-            )
-            logging.error("DataWorker: serial communication failed.")
+            errMsg = f"Cannot open serial port due to the following exception:\n{e}."
+            self.errorOccurred.emit(errMsg)
+            logging.error(f"DataSourceWorker: {errMsg}")
             return
 
-        logging.info("DataWorker: serial communication started.")
+        logging.info("DataSourceWorker: serial communication started.")
 
         # Start command
         for c in self._startSeq:
@@ -227,7 +226,7 @@ class SerialDataSourceWorker(DataSourceWorker):
             # Check number of bytes read
             if len(data) != self._packetSize:
                 self.errorOccurred.emit("No data received.")
-                logging.error("DataWorker: no data received.")
+                logging.error("DataSourceWorker: no data received")
                 break
 
             self.dataPacketReady.emit(data)
@@ -242,7 +241,7 @@ class SerialDataSourceWorker(DataSourceWorker):
         ser.reset_input_buffer()
         ser.close()
 
-        logging.info("DataWorker: serial communication stopped.")
+        logging.info("DataSourceWorker: serial communication stopped.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""

@@ -175,14 +175,20 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._exitAcceptLoopFlag = False
 
         # Open socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(0.5)
-        sock.bind(("", self._socketPort))
-        sock.listen()
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.settimeout(0.5)
+            sock.bind(("", self._socketPort))
+            sock.listen()
+        except OSError as e:
+            errMsg = f"Cannot open socket due to the following exception:\n{e}."
+            self.errorOccurred.emit(errMsg)
+            logging.error(f"DataSourceWorker: {errMsg}")
+            return
 
         logging.info(
-            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
+            f"DataSourceWorker: waiting for TCP connection on port {self._socketPort}."
         )
 
         # Non-blocking accept
@@ -192,7 +198,7 @@ class TCPDataSourceWorker(DataSourceWorker):
                 conn.settimeout(5)
 
                 logging.info(
-                    f"DataWorker: TCP connection from {addr}, communication started."
+                    f"DataSourceWorker: TCP connection from {addr}, communication started."
                 )
 
                 # Start command
@@ -212,11 +218,11 @@ class TCPDataSourceWorker(DataSourceWorker):
                             pos += nRead
                     except socket.timeout:
                         self.errorOccurred.emit("No data received.")
-                        logging.error("DataWorker: no data received.")
+                        logging.error("DataSourceWorker: no data received.")
                         return
                     except IncompleteReadError as e:
                         logging.error(
-                            f"DataWorker: read only {len(e.partial)} out of {e.expected} bytes."
+                            f"DataSourceWorker: read only {len(e.partial)} out of {e.expected} bytes."
                         )
                         return
 
@@ -232,14 +238,14 @@ class TCPDataSourceWorker(DataSourceWorker):
                     data = conn.recv(self._packetSize)
                     if not data:
                         break
-                    logging.info("Flushing...")
+                    logging.info("DataSourceWorker: flushing...")
 
                 # Close connection and socket
                 conn.shutdown(socket.SHUT_RDWR)
                 conn.close()
                 sock.close()
 
-                logging.info("DataWorker: TCP communication stopped.")
+                logging.info("DataSourceWorker: TCP communication stopped.")
 
                 self._exitAcceptLoopFlag = True
             except socket.timeout:
