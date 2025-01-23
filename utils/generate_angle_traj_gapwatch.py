@@ -27,9 +27,11 @@ from asyncio import IncompleteReadError
 import numpy as np
 
 PACKET_SIZE = 720
+N_SAMP = 3
+N_CH = 3
 
 
-def _decodeFn(data: bytes) -> np.ndarray:
+def _decodeFn(data: bytes) -> tuple[np.ndarray, np.ndarray]:
     """
     Function to decode the binary data received from the device into signals.
 
@@ -40,14 +42,79 @@ def _decodeFn(data: bytes) -> np.ndarray:
 
     Returns
     -------
-    ndarray
-        Signal with shape (nSamp, nCh).
+    tuple of ndarrays
+        Signals with shape (nSamp, nCh).
     """
-    imuTmp = bytes(data[:6] + data[240:246] + data[480:486])
-    imu = np.asarray(struct.unpack("<9h", imuTmp), dtype=np.float32).reshape(3, 3)
-    imu *= 0.061
+    # Accelerometer
+    accTmp = bytes(data[:6] + data[240:246] + data[480:486])
+    acc = np.asarray(struct.unpack("<9h", accTmp), dtype=np.float32).reshape(
+        N_SAMP, N_CH
+    )
+    acc *= 0.061 / 1000  # raw to g
 
-    return imu
+    # Gyroscope
+    gyroTmp = bytes(data[6:12] + data[246:252] + data[486:492])
+    gyro = np.asarray(struct.unpack("<9h", gyroTmp), dtype=np.float32).reshape(
+        N_SAMP, N_CH
+    )
+    gyro *= 8.75 / 1000  # raw to deg/s
+
+    return acc, gyro
+
+
+class ComplementaryFilter:
+
+    def __init__(
+        self,
+        alpha: float = 0.9,
+        filt_alpha: float = 0.9,
+        dt: float = 0.01,
+    ) -> None:
+        self._alpha = alpha
+        self._filt_alpha = filt_alpha
+        self._dt = dt
+        self._pitch = 0.0
+        self._acc_state = None
+        self._gyro_state = None
+        self._last_gyro = None
+
+    def compute_angle(self, acc: np.ndarray, gyro: np.ndarray) -> np.ndarray:
+        angle = np.zeros(acc.shape[0], dtype=np.float32)
+        for k in range(acc.shape[0]):
+            # Apply filters
+            if self._acc_state is None:
+                self._acc_state = acc[k]
+            else:
+                self._acc_state = (
+                    self._filt_alpha * self._acc_state + (1 - self._filt_alpha) * acc[k]
+                )
+            if self._gyro_state is None or self._last_gyro is None:
+                self._gyro_state = gyro[k]
+                self._last_gyro = gyro[k]
+            else:
+                self._gyro_state = self._filt_alpha * (
+                    self._gyro_state + gyro[k] - self._last_gyro
+                )
+                self._last_gyro = gyro[k]
+
+            ax = self._acc_state[0]
+            ay = self._acc_state[1]
+            az = self._acc_state[2]
+            gyro_y = self._gyro_state[1]
+
+            # Calculate pitch from accelerometer (in degress)
+            accel_pitch = np.arctan2(-ax, np.sqrt(ay**2 + az**2)) * (180 / np.pi)
+
+            # Complementary filter
+            self._pitch = (
+                self._alpha * (self._pitch + gyro_y * self._dt)
+                + (1 - self._alpha) * accel_pitch
+            )
+            self._pitch = accel_pitch
+
+            angle[k] = self._pitch
+
+        return 90 - angle
 
 
 def _parse_input() -> tuple:
@@ -174,25 +241,6 @@ def _listen_for_stop(client_socket, conn, stop_event):
         print(f"Error while listening for stop command: {e}")
 
 
-def _compute_bend_angle(g_neutral, g_bent):
-    """Compute the bend angle from the IMU data given a neutral position."""
-    # Compute the dot product
-    dot_product = np.dot(g_neutral, g_bent)
-
-    # Compute the magnitudes of the vectors
-    magnitude_neutral = np.linalg.norm(g_neutral)
-    magnitude_bent = np.linalg.norm(g_bent)
-
-    # Calculate the cosine of the angle
-    cos_theta = dot_product / (magnitude_neutral * magnitude_bent)
-
-    # Compute the angle in radians and convert to degrees
-    theta = np.arccos(np.clip(cos_theta, -1.0, 1.0))  # Clip for numerical stability
-    theta_degrees = np.degrees(theta)
-
-    return theta_degrees
-
-
 def _pad_with_last_value(arr, target_size):
     """Pad a 1D NumPy array to a given size by repeating the last value."""
     if len(arr) >= target_size:
@@ -222,6 +270,9 @@ def main():
     traj_high = np.concatenate(
         [np.ones(practice_duration, dtype=np.float32) * traj_high[0], traj_high]
     )
+
+    # Complementary filter for angle estimation
+    comp_filt = ComplementaryFilter()
 
     try:
         # Create TCP server socket
@@ -258,10 +309,6 @@ def main():
         )
         listener_thread.start()
 
-        calib_time_s = 5.0
-        calib_time = int(round(calib_time_s * fs))
-        calib_complete = False
-        neutral_angle = 0
         rep_counter = 0
         i = 0
         while True:
@@ -274,38 +321,28 @@ def main():
                 break
 
             # Get IMU data
-            imu = _decodeFn(data)
-            n_samp = imu.shape[0]
-            angle = np.zeros(n_samp, dtype=np.float32)
-            i += n_samp
-            if not calib_complete:
-                neutral_angle += imu.sum(axis=0)
-                cur_traj_low = np.zeros(n_samp, dtype=np.float32)
-                cur_traj_high = np.zeros(n_samp, dtype=np.float32)
+            acc, gyro = _decodeFn(data)
 
-                if i >= calib_time:
-                    neutral_angle /= i
-                    i = 0
-                    calib_complete = True
-                    print(f"Calibration done: neutral position = {neutral_angle}")
-            else:
-                for k in range(n_samp):
-                    angle[k] = _compute_bend_angle(neutral_angle, imu[k])
+            # Estimate angle
+            angle = comp_filt.compute_angle(acc, gyro)
 
-                cur_traj_low = _pad_with_last_value(traj_low[i - n_samp : i], n_samp)
-                cur_traj_high = _pad_with_last_value(traj_high[i - n_samp : i], n_samp)
-
-                # Repeat trajectory
-                if i >= traj_low.size:
-                    print(f"{rep_counter} -> {rep_counter + 1}")
-                    rep_counter += 1
-                    i = practice_duration
+            # Slice trajectories
+            cur_traj_low = _pad_with_last_value(traj_low[i : i + N_SAMP], N_SAMP)
+            cur_traj_high = _pad_with_last_value(traj_high[i : i + N_SAMP], N_SAMP)
+            i += N_SAMP
 
             # Send data to TCP server
-            client_socket.sendall(imu.tobytes())
+            client_socket.sendall(acc.tobytes())
+            client_socket.sendall(gyro.tobytes())
             client_socket.sendall(angle.tobytes())
             client_socket.sendall(cur_traj_low.tobytes())
             client_socket.sendall(cur_traj_high.tobytes())
+
+            # Repeat trajectory
+            if i >= traj_low.size:
+                print(f"{rep_counter} -> {rep_counter + 1}")
+                rep_counter += 1
+                i = practice_duration
 
             if rep_counter == n_reps:
                 print("Experiment ended.")
@@ -322,8 +359,9 @@ def main():
         print(f"An error occurred: {e}")
     finally:
         # Close resources
-        client_socket.close()
-        print("Client socket closed.")
+        if "client_socket" in locals():
+            client_socket.close()
+            print("Client socket closed.")
         if "server_socket" in locals():
             server_socket.close()
             print("Server socket closed.")

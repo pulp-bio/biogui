@@ -154,11 +154,17 @@ class FIFODataSourceWorker(DataSourceWorker):
 
         logging.info("DataWorker: data reading started.")
 
-        with open(self._fifoPath, "rb") as f:
-            while not self._stopReadingFlag:
-                data = f.read(self._packetSize)
+        try:
+            with open(self._fifoPath, "rb") as f:
+                while not self._stopReadingFlag:
+                    data = f.read(self._packetSize)
 
-                self.dataPacketReady.emit(data)
+                    self.dataPacketReady.emit(data)
+        except OSError as e:
+            errMsg = f"Cannot open FIFO due to the following exception:\n{e}."
+            self.errorOccurred.emit(errMsg)
+            logging.error(f"DataSourceWorker: {errMsg}")
+            return
 
         logging.info("DataWorker: data reading stopped.")
 

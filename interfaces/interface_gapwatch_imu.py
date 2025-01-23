@@ -19,7 +19,7 @@ limitations under the License.
 
 import numpy as np
 
-packetSize: int = 72
+packetSize: int = 108
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [b"="]
@@ -28,7 +28,11 @@ startSeq: list[bytes] = [b"="]
 stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the device."""
 
-sigInfo: dict = {"imu": {"fs": 104, "nCh": 3}, "angle": {"fs": 104, "nCh": 3}}
+sigInfo: dict = {
+    "acc": {"fs": 104, "nCh": 3},
+    "gyro": {"fs": 104, "nCh": 3},
+    "angle": {"fs": 104, "nCh": 3},
+}
 """Dictionary containing the signals information."""
 
 
@@ -47,11 +51,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    imu = np.frombuffer(data[:36], dtype=np.float32).reshape(3, 3)
+    acc = np.frombuffer(data[:36], dtype=np.float32).reshape(3, 3)
+    gyro = np.frombuffer(data[36:72], dtype=np.float32).reshape(3, 3)
 
     angle = np.zeros(shape=(3, 3), dtype=np.float32)
-    angle[:, 0] = np.frombuffer(data[36:48], dtype=np.float32)
-    angle[:, 1] = np.frombuffer(data[48:60], dtype=np.float32)
-    angle[:, 2] = np.frombuffer(data[60:], dtype=np.float32)
+    angle[:, 0] = np.frombuffer(data[72:84], dtype=np.float32)
+    angle[:, 1] = np.frombuffer(data[84:96], dtype=np.float32)
+    angle[:, 2] = np.frombuffer(data[96:], dtype=np.float32)
 
-    return {"imu": imu, "angle": angle}
+    return {"acc": acc, "gyro": gyro, "angle": angle}
