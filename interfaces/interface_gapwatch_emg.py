@@ -24,10 +24,10 @@ import numpy as np
 packetSize: int = 720
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = []
+startSeq: list[bytes] = [b"="]
 """Sequence of commands to start the device."""
 
-stopSeq: list[bytes] = []
+stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the device."""
 
 sigInfo: dict = {"emg": {"fs": 4000, "nCh": 16}}
