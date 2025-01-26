@@ -406,7 +406,10 @@ class MainController(QObject):
         # Update plot widgets
         for sigName, sigConfig in sigsConfigs.items():
             oldPlotId = f"{oldCtrlId}%{sigName}"
+            if oldPlotId not in self._signalPlotWidgets:
+                continue
             newPlotId = f"{newCtrlId}%{sigName}"
+
             oldSignalPlotWidget = self._signalPlotWidgets.pop(oldPlotId)
             newSignalPlotWidget = SignalPlotWidget(
                 sigName,
