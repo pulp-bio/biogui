@@ -19,13 +19,13 @@ limitations under the License.
 
 import numpy as np
 
-packetSize: int = 1
+packetSize: int = 192
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = []
+startSeq: list[bytes] = [b":"]
 """Sequence of commands to start the device."""
 
-stopSeq: list[bytes] = []
+stopSeq: list[bytes] = [b"="]
 """Sequence of commands to stop the device."""
 
 sigInfo: dict = {"sig1": {"fs": 128, "nCh": 4}, "sig2": {"fs": 51.2, "nCh": 2}}
