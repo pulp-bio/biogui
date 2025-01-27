@@ -22,7 +22,6 @@ from __future__ import annotations
 from PySide6.QtWidgets import QWidget
 
 from .base import DataSourceConfigWidget, DataSourceType, DataSourceWorker
-from .dummy import DummyConfigWidget, DummyDataSourceWorker
 from .fifo import FIFOConfigWidget, FIFODataSourceWorker
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
@@ -49,7 +48,6 @@ def getConfigWidget(
     configWidgetDict = {
         DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.TCP: TCPConfigWidget,
-        DataSourceType.DUMMY: DummyConfigWidget,
         DataSourceType.FIFO: FIFOConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
@@ -86,7 +84,6 @@ def getDataSourceWorker(
     dataSourceDict = {
         DataSourceType.SERIAL: SerialDataSourceWorker,
         DataSourceType.TCP: TCPDataSourceWorker,
-        DataSourceType.DUMMY: DummyDataSourceWorker,
         DataSourceType.FIFO: FIFODataSourceWorker,
     }
     return dataSourceDict[dataSourceType](packetSize, startSeq, stopSeq, **kwargs)
