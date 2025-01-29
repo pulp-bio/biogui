@@ -71,8 +71,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     forceV = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
 
     # V to kgf
-    slopes = np.asarray([2.8667, 2.5521, 2.7171])
-    intercepts = np.asarray([-1.1159, -0.99950, -1.0651])
+    slopes = np.asarray([1.9317, 2.5521, 2.7171])
+    intercepts = np.asarray([-0.7540, -0.99950, -1.0651])
     force = slopes * forceV + intercepts
     force = force.astype(np.float32)
 
