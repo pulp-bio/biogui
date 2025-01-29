@@ -221,9 +221,9 @@ class TCPDataSourceWorker(DataSourceWorker):
                         logging.error("DataSourceWorker: no data received.")
                         return
                     except IncompleteReadError as e:
-                        logging.error(
-                            f"DataSourceWorker: read only {len(e.partial)} out of {e.expected} bytes."
-                        )
+                        errMsg = f"Incomplete read ({len(e.partial)} out of {e.expected} bytes read)."
+                        self.errorOccurred.emit(errMsg)
+                        logging.error(f"DataSourceWorker: {errMsg}")
                         return
 
                     self.dataPacketReady.emit(data)
@@ -251,6 +251,11 @@ class TCPDataSourceWorker(DataSourceWorker):
             except socket.timeout:
                 time.sleep(0.5)
                 pass
+            except (Exception,) as e:
+                errMsg = f"The following exception has occurred:\n{e}."
+                self.errorOccurred.emit(errMsg)
+                logging.error(f"DataSourceWorker: {errMsg}")
+                return
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
