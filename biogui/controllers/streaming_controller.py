@@ -139,7 +139,7 @@ class _FileWriterWorker(QObject):
                 # Compute base sampling rate (useful for timestamp and trigger, if present)
                 if firstTime:
                     nSampBase = self._tempData["timestamp"]["nSamp"]
-                    fsBase = nSampBase * fs / nSamp
+                    fsBase = nSampBase * fs / nSamp if nSamp != 0 else fs
                     f.write(struct.pack("<fI", fsBase, nSampBase))
                     firstTime = False
 
