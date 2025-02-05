@@ -289,7 +289,7 @@ class _ProcessingWorker(QObject):
                 queue = self._buffers[sigName]["queue"]
                 winLen = self._buffers[sigName]["winLen"]
                 stepLen = self._buffers[sigName]["stepLen"]
-                dataDict[sigName] = np.asarray(queue)
+                dataDict[sigName] = np.asarray(queue)[:winLen]
                 # Shift by step length
                 self._buffers[sigName]["queue"] = deque(
                     islice(queue, stepLen, len(queue))
