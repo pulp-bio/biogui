@@ -99,11 +99,10 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
     if (
         not isinstance(module.stepLenS, float)
         or module.stepLenS <= 0
-        or module.stepLenS > module.winLenS
     ):
         return (
             None,
-            "The step length must be a positive float smaller or equal to the window size",
+            "The step length must be a positive float",
         )
 
     return (
