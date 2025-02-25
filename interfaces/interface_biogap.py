@@ -21,13 +21,54 @@ import struct
 
 import numpy as np
 
+
+GAIN = 12
+
+
+def createCommand():
+    """Internal function to create start command."""
+    command = []
+    # Byte 0: ADS sampling rate
+    # - 6 -> 500sps
+    command.append(6)
+    # Byte 1: ADS1298 mode
+    # - 0 -> default
+    command.append(0)
+    # Byte 2: depends on the number of ADSs
+    command.append(1)
+    # Byte 3: chip select (not modifiable)
+    command.append(4)
+    # Byte 4: PGA gain
+    # 16 ->  1
+    # 32 ->  2
+    # 64 ->  4
+    #  0 ->  6
+    # 80 ->  8
+    # 96 -> 12
+    gainCmdMap = {
+        1: 16,
+        2: 32,
+        4: 64,
+        6: 0,
+        8: 80,
+        12: 96,
+    }
+    command.append(gainCmdMap[GAIN])
+    # Byte 5: CR (not modifiable)
+    command.append(13)
+    # Byte 6: LF (not modifiable)
+    command.append(10)
+
+    return command
+
+
 packetSize: int = 234
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [
     bytes([20, 1, 50]),
     (18).to_bytes(),
-    bytes([6, 0, 1, 4, 0, 13, 10]),
+    bytes(createCommand()),
 ]
 """Sequence of commands to start the device."""
 
@@ -57,7 +98,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
 
     # ADC parameters
     vRef = 2.5
-    gain = 6.0
     nBit = 24
 
     dataTmp = bytearray(
@@ -80,8 +120,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     ).reshape(nSamp, nCh)
 
     # ADC readings to mV
-    emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    emg = (emgAdc * vRef / (GAIN * (2 ** (nBit - 1) - 1))).astype(np.float32)  # V
     emg *= 1_000  # mV
-    emg = emg.astype(np.float32)
 
     return {"emg": emg}
