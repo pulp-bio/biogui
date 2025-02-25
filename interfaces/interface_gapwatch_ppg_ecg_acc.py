@@ -21,13 +21,13 @@ import struct
 
 import numpy as np
 
-packetSize: int = 204
+packetSize: int = 68
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = []
+startSeq: list[bytes] = [b"="]
 """Sequence of commands to start the device."""
 
-stopSeq: list[bytes] = []
+stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the device."""
 
 sigInfo: dict = {
@@ -54,9 +54,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         the keys must match with those of the "sigInfo" dictionary.
     """
     # Split bytes into PPG, ECG and accelerometer
-    ppgBytes = bytearray(data[:30] + data[68:98] + data[136:166])
-    ecgBytes1 = bytearray(data[30:60] + data[98:128] + data[166:196])
-    accelBytes = bytearray(data[60:66] + data[128:134] + data[196:202])
+    ppgBytes = bytearray(data[:30])
+    ecgBytes1 = bytearray(data[30:60])
+    accelBytes = bytearray(data[60:66])
     ecgBytes2 = []
 
     # Convert to 32-bit integer
@@ -74,9 +74,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         ecgBytes2.append(struct.unpack(">i", ecgByte)[0])
 
         pos += 4
-    ppg = np.asarray(struct.unpack(">30i", ppgBytes), dtype=np.int32)
+    ppg = np.asarray(struct.unpack(">10i", ppgBytes), dtype=np.int32)
     ecg = np.asarray(ecgBytes2, dtype=np.int32)
-    acc = np.asarray(struct.unpack("<9h", accelBytes), dtype=np.int32)
+    acc = np.asarray(struct.unpack("<3h", accelBytes), dtype=np.int32)
 
     # ADC parameters
     vRefECG = 1.0
