@@ -60,15 +60,21 @@ def createCommand(start=1):
 packetSize: int = 9216
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = [
+startSeq: list[bytes | float] = [
     createCommand(1).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to start the board."""
+"""
+Sequence of commands (as bytes) to start the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
-stopSeq: list[bytes] = [
+stopSeq: list[bytes | float] = [
     createCommand(0).to_bytes(2, byteorder="big"),
 ]
-"""Sequence of commands to stop the board."""
+"""
+Sequence of commands (as bytes) to stop the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
 fs: list[float] = [2000, 2000, 2000, 2000]
 """Sequence of floats representing the sampling rate of each signal."""
