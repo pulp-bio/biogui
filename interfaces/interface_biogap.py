@@ -21,7 +21,6 @@ import struct
 
 import numpy as np
 
-
 GAIN = 12
 
 
@@ -65,15 +64,23 @@ def createCommand():
 packetSize: int = 234
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = [
+startSeq: list[bytes | float] = [
     bytes([20, 1, 50]),
+    0.2,
     (18).to_bytes(),
+    0.2,
     bytes(createCommand()),
 ]
-"""Sequence of commands to start the device."""
+"""
+Sequence of commands (as bytes) to start the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
-stopSeq: list[bytes] = [(19).to_bytes()]
-"""Sequence of commands to stop the device."""
+stopSeq: list[bytes | float] = [(19).to_bytes()]
+"""
+Sequence of commands (as bytes) to stop the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
 sigInfo: dict = {"emg": {"fs": 500, "nCh": 8}}
 """Dictionary containing the signals information."""

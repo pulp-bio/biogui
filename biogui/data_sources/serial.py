@@ -217,8 +217,10 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         # Start command
         for c in self._startSeq:
-            ser.write(c)
-            time.sleep(0.2)
+            if type(c) is bytes:
+                ser.write(c)
+            elif type(c) is float:
+                time.sleep(c)
 
         while not self._stopReadingFlag:
             data = ser.read(self._packetSize)
@@ -233,8 +235,10 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         # Stop command
         for c in self._stopSeq:
-            ser.write(c)
-            time.sleep(0.2)
+            if type(c) is bytes:
+                ser.write(c)
+            elif type(c) is float:
+                time.sleep(c)
         ser.flush()
 
         # Close port

@@ -22,11 +22,17 @@ import numpy as np
 packetSize: int = 192
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = [b":"]
-"""Sequence of commands to start the device."""
+startSeq: list[bytes | float] = [b":"]
+"""
+Sequence of commands (as bytes) to start the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
-stopSeq: list[bytes] = [b"="]
-"""Sequence of commands to stop the device."""
+stopSeq: list[bytes | float] = [b"="]
+"""
+Sequence of commands (as bytes) to stop the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
 sigInfo: dict = {"sig1": {"fs": 128, "nCh": 4}, "sig2": {"fs": 51.2, "nCh": 2}}
 """Dictionary containing the signals information."""
