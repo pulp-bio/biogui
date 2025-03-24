@@ -90,7 +90,7 @@ class _FileWriterWorker(QObject):
             Raw signals to write.
         """
         # 1. Timestamp
-        ts = time.time()
+        ts = rawSignals[0].ts
         self._tempData["timestamp"]["file"].write(struct.pack("<d", ts))
         self._tempData["timestamp"]["nSamp"] += 1
 
@@ -307,6 +307,7 @@ class _Preprocessor(QObject):
             New data packet.
         """
         try:
+            ts = time.time()
             dataDec = self._decodeFn(data)
         except (Exception,) as e:
             self.errorOccurred.emit(
@@ -323,7 +324,7 @@ class _Preprocessor(QObject):
         rawSignals = []
         signals = []
         for sigName, sigData in dataDec.items():
-            rawSignals.append(SigData(sigName, sigData))
+            rawSignals.append(SigData(sigName, sigData, ts))
 
             # Filtering
             try:
@@ -346,7 +347,7 @@ class _Preprocessor(QObject):
                     "An error occurred during filtering, check the settings."
                 )
                 return
-            signals.append(SigData(sigName, sigData))
+            signals.append(SigData(sigName, sigData, ts))
 
         # Emit raw and filtered signals
         self.rawSignalsReady.emit(rawSignals)
