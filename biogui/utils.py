@@ -46,10 +46,13 @@ class SigData:
         Signal name.
     data : ndarray
         Data with shape (nSamp, nCh).
+    ts : float
+        Timestamp denoting the time of acquisition.
     """
 
     sigName: str
     data: np.ndarray
+    ts: float
 
 
 def instanceSlot(*args, **kwargs):
