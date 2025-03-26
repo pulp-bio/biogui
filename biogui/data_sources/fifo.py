@@ -145,6 +145,8 @@ class FIFODataSourceWorker(DataSourceWorker):
         self._fifoPath = fifoPath
         self._stopReadingFlag = False
 
+        self.destroyed.connect(self.deleteLater)
+
     def __str__(self):
         return f"FIFO - {self._fifoPath}"
 
