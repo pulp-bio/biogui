@@ -36,6 +36,20 @@ def read_bio_file(file_path: str) -> dict:
     dict
         Dictionary containing timestamp, signals and trigger.
     """
+    dtypeMap = {
+        "?": np.dtype("bool"),
+        "b": np.dtype("int8"),
+        "B": np.dtype("uint8"),
+        "h": np.dtype("int16"),
+        "H": np.dtype("uint16"),
+        "i": np.dtype("int32"),
+        "I": np.dtype("uint32"),
+        "q": np.dtype("int64"),
+        "Q": np.dtype("uint64"),
+        "f": np.dtype("float32"),
+        "d": np.dtype("float64"),
+    }
+
     # Read data
     with open(file_path, "rb") as f:
         # Read number of signals
@@ -49,13 +63,15 @@ def read_bio_file(file_path: str) -> dict:
             sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[
                 0
             ].decode()
-            fs, n_samp, n_ch = struct.unpack("<f2I", f.read(12))
+            fs, n_samp, n_ch, dtype = struct.unpack("<f2Ic", f.read(13))
+            dtype = dtypeMap[dtype.decode("ascii")]
 
             # Initialize signal array
             signals[sig_name] = {
                 "fs": fs,
                 "n_samp": n_samp,
                 "n_ch": n_ch,
+                "dtype": dtype,
             }
 
         # Read whether the trigger is available
@@ -75,9 +91,10 @@ def read_bio_file(file_path: str) -> dict:
 
             n_samp = sig_data.pop("n_samp")
             n_ch = sig_data.pop("n_ch")
-            data = np.frombuffer(f.read(4 * n_samp * n_ch), dtype=np.float32).reshape(
-                n_samp, n_ch
-            )
+            dtype = sig_data.pop("dtype")
+            data = np.frombuffer(
+                f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
+            ).reshape(n_samp, n_ch)
             sig_data["data"] = data
 
         # 3. Trigger (optional)

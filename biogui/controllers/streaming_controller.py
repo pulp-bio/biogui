@@ -50,7 +50,14 @@ class _FileWriterWorker(QObject):
         Dictionary containing the signals information.
     _tempData : dict
         Dictionary containing, for each signal, a temporary file-like object and the number of samples written.
+
+    Class attributes
+    ----------------
+    errorOccurred : Signal
+        Qt Signal emitted when a configuration error occurs.
     """
+
+    errorOccurred = Signal(str)
 
     def __init__(self, filePath: str, sigInfo: dict) -> None:
         super().__init__()
@@ -58,6 +65,19 @@ class _FileWriterWorker(QObject):
         self._filePath = filePath
         self._sigInfo = sigInfo
 
+        self._dtypeMap = {
+            np.dtype("bool"): "?",
+            np.dtype("int8"): "b",
+            np.dtype("uint8"): "B",
+            np.dtype("int16"): "h",
+            np.dtype("uint16"): "H",
+            np.dtype("int32"): "i",
+            np.dtype("uint32"): "I",
+            np.dtype("int64"): "q",
+            np.dtype("uint64"): "Q",
+            np.dtype("float32"): "f",
+            np.dtype("float64"): "d",
+        }
         self._tempData: dict = {}
         self._trigger = None
 
@@ -79,6 +99,25 @@ class _FileWriterWorker(QObject):
     def trigger(self, trigger: int | None) -> None:
         self._trigger = trigger
 
+    def openFile(self) -> None:
+        """Open the file."""
+        # Create temporary files
+        try:
+            self._tempData["acq_ts"] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
+            for sigName in self._sigInfo:
+                self._tempData[sigName] = {
+                    "file": tempfile.TemporaryFile(),
+                    "nSamp": 0,
+                    "dtype": "",
+                }
+            if self._trigger is not None:
+                self._tempData["trigger"] = {
+                    "file": tempfile.TemporaryFile(),
+                    "nSamp": 0,
+                }
+        except (OSError, PermissionError, FileNotFoundError):
+            self.errorOccurred.emit("Could not open temporary files.")
+
     @instanceSlot(list)
     def write(self, rawSignals: list[SigData]) -> None:
         """
@@ -89,29 +128,39 @@ class _FileWriterWorker(QObject):
         rawSignals : list of SigData
             Raw signals to write.
         """
-        # 1. Timestamp
-        ts = rawSignals[0].ts
-        self._tempData["timestamp"]["file"].write(struct.pack("<d", ts))
-        self._tempData["timestamp"]["nSamp"] += 1
+        try:
+            # 1. Timestamp
+            self._tempData["acq_ts"]["file"].write(struct.pack("<d", rawSignals[0].ts))
+            self._tempData["acq_ts"]["nSamp"] += 1
 
-        # 2. Signals data
-        for rawSignal in rawSignals:
-            self._tempData[rawSignal.sigName]["file"].write(rawSignal.data.tobytes())
-            self._tempData[rawSignal.sigName]["nSamp"] += rawSignal.data.shape[0]
+            # 2. Signals data
+            for rawSignal in rawSignals:
+                self._tempData[rawSignal.sigName]["file"].write(
+                    rawSignal.data.tobytes()
+                )
+                self._tempData[rawSignal.sigName]["nSamp"] += rawSignal.data.shape[0]
 
-        # 3. Trigger (optional)
-        if self._trigger is not None:
-            self._tempData["trigger"]["file"].write(struct.pack("<I", self._trigger))
-            self._tempData["trigger"]["nSamp"] += 1
+                # Save data type
+                if self._tempData[rawSignal.sigName]["dtype"] != "":
+                    continue
+                try:
+                    self._tempData[rawSignal.sigName]["dtype"] = self._dtypeMap[
+                        rawSignal.data.dtype
+                    ]
+                except KeyError:
+                    self.errorOccurred.emit(
+                        f'Type "{rawSignal.data.dtype}" not supported.'
+                    )
+                    return
 
-    def openFile(self) -> None:
-        """Open the file."""
-        # Create temporary files
-        self._tempData["timestamp"] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
-        for sigName in self._sigInfo:
-            self._tempData[sigName] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
-        if self._trigger is not None:
-            self._tempData["trigger"] = {"file": tempfile.TemporaryFile(), "nSamp": 0}
+            # 3. Trigger (optional)
+            if self._trigger is not None:
+                self._tempData["trigger"]["file"].write(
+                    struct.pack("<I", self._trigger)
+                )
+                self._tempData["trigger"]["nSamp"] += 1
+        except OSError:
+            self.errorOccurred.emit("Could not open temporary files.")
 
     def closeFile(self) -> None:
         """Close the file."""
@@ -124,57 +173,87 @@ class _FileWriterWorker(QObject):
         )
 
         # Dump data to the real file
-        with open(filePath, "wb") as f:
-            # 1. Metadata:
-            # 1.1. Number of signals
-            f.write(struct.pack("<I", len(self._sigInfo)))
+        try:
+            with open(filePath, "wb") as f:
+                # 1. Metadata:
+                # 1.1. Number of signals
+                f.write(struct.pack("<I", len(self._sigInfo)))
 
-            # 1.2. Name, sampling rate and shape of each signal
-            firstTime = True
-            for sigName in self._sigInfo:
-                fs = self._sigInfo[sigName]["fs"]
-                nSamp = self._tempData[sigName]["nSamp"]
-                nCh = self._sigInfo[sigName]["nCh"]
+                # 1.2. Name, sampling rate, shape and dtype of each signal
+                firstTime = True
+                for sigName in self._sigInfo:
+                    fs = self._sigInfo[sigName]["fs"]
+                    nSamp = self._tempData[sigName]["nSamp"]
+                    nCh = self._sigInfo[sigName]["nCh"]
+                    dtype = self._tempData[sigName]["dtype"]
 
-                # Compute base sampling rate (useful for timestamp and trigger, if present)
-                if firstTime:
-                    nSampBase = self._tempData["timestamp"]["nSamp"]
-                    fsBase = nSampBase * fs / nSamp if nSamp != 0 else fs
-                    f.write(struct.pack("<fI", fsBase, nSampBase))
-                    firstTime = False
+                    # Compute base sampling rate (useful for timestamp and trigger, if present)
+                    if firstTime:
+                        nSampBase = self._tempData["acq_ts"]["nSamp"]
+                        fsBase = nSampBase * fs / nSamp if nSamp != 0 else fs
+                        f.write(struct.pack("<fI", fsBase, nSampBase))
+                        firstTime = False
 
-                f.write(
-                    struct.pack(
-                        f"<I{len(sigName)}sf2I",
-                        len(sigName),
-                        sigName.encode(),
-                        fs,
-                        nSamp,
-                        nCh,
+                    f.write(
+                        struct.pack(
+                            f"<I{len(sigName)}sf2Ic",
+                            len(sigName),
+                            sigName.encode(),
+                            fs,
+                            nSamp,
+                            nCh,
+                            dtype.encode("ascii"),
+                        )
                     )
-                )
 
-            # 1.3. Trigger (optional)
-            f.write(struct.pack("<?", self._trigger is not None))
+                # 1.3. Trigger (optional)
+                f.write(struct.pack("<?", self._trigger is not None))
 
-            # 2. Actual signals
-            # 2.1. Timestamp
-            self._tempData["timestamp"]["file"].seek(0)
-            f.write(self._tempData["timestamp"]["file"].read())
+                # 2. Actual signals
+                # 2.1. Timestamp
+                self._tempData["acq_ts"]["file"].seek(0)
+                f.write(self._tempData["acq_ts"]["file"].read())
 
-            # 2.2. Signals data
-            for sigName in self._sigInfo:
-                self._tempData[sigName]["file"].seek(0)
-                f.write(self._tempData[sigName]["file"].read())
+                # 2.2. Signals data
+                for sigName in self._sigInfo:
+                    self._tempData[sigName]["file"].seek(0)
+                    f.write(self._tempData[sigName]["file"].read())
 
-            # 3. Trigger (optional)
-            if self._trigger is not None:
-                self._tempData["trigger"]["file"].seek(0)
-                f.write(self._tempData["trigger"]["file"].read())
+                # 3. Trigger (optional)
+                if self._trigger is not None:
+                    self._tempData["trigger"]["file"].seek(0)
+                    f.write(self._tempData["trigger"]["file"].read())
+        except FileNotFoundError:
+            self.errorOccurred.emit(f'File "{self._filePath}" not found.')
+        except PermissionError:
+            self.errorOccurred.emit(
+                f'Permission denied: unable to create file "{self._filePath}".'
+            )
+        except IsADirectoryError:
+            self.errorOccurred.emit(f'File "{self._filePath}" is a directory.')
+        except Exception as e:
+            self.errorOccurred.emit(
+                f'An error occurred while writing file "{self._filePath}": {e}.'
+            )
+        finally:
+            self._resetTempFiles()
 
+    def _resetTempFiles(self) -> None:
+        """Reset the temporary files."""
+        # 1. Timestamp
+        self._tempData["acq_ts"]["file"].close()
+        self._tempData["acq_ts"]["nSamp"] = 0
+
+        # 2. Signals data
         for sigName in self._tempData:
             self._tempData[sigName]["file"].close()
             self._tempData[sigName]["nSamp"] = 0
+            self._tempData[sigName]["dtype"] = ""
+
+        # 3. Trigger (optional)
+        if self._trigger is not None:
+            self._tempData["trigger"]["file"].close()
+            self._tempData["trigger"]["nSamp"] = 0
 
 
 class _Preprocessor(QObject):
@@ -310,8 +389,8 @@ class _Preprocessor(QObject):
         data : bytes
             New data packet.
         """
+        ts = time.time()
         try:
-            ts = time.time()
             dataDec = self._decodeFn(data)
         except (Exception,) as e:
             self.errorOccurred.emit(
@@ -558,6 +637,7 @@ class StreamingController(QObject):
 
         if self._fileWriterWorker is not None and self._fileWriterThread is not None:
             self._preprocessor.rawSignalsReady.connect(self._fileWriterWorker.write)
+            self._fileWriterWorker.errorOccurred.connect(self._handleErrors)
             self._fileWriterThread.start()
 
         self._dataSourceThread.start()

@@ -1,6 +1,12 @@
 function signals = readBioFile(filePath)
 fileID = fopen(filePath, 'r');
 
+typeMap = containers.Map( ...
+    {'?', 'b', 'B', 'h', 'H', 'i', 'I', 'q', 'Q', 'f', 'd'}, ...
+    {'logical', 'int8', 'uint8', 'int16', 'uint16', 'int32', ...
+     'uint32', 'int64', 'uint64', 'float32', 'float64'} ...
+);
+
 % 1. Read metadata
 % 1.1. Read number of signal
 nSignals = fread(fileID, 1, 'uint32');
@@ -17,7 +23,8 @@ for i = 1:nSignals
     fs = fread(fileID, 1, 'float32');
     nSamp = fread(fileID, 1, 'uint32');
     nCh = fread(fileID, 1, 'uint32');
-    signals.(sigName) = struct('fs', fs, 'nSamp', nSamp, 'nCh', nCh);
+    type = typeMap(fread(fileID, 1, '*char'));
+    signals.(sigName) = struct('fs', fs, 'nSamp', nSamp, 'nCh', nCh, 'type', type);
 end
 % 1.4. Read whether the trigger is available
 isTrigger = fread(fileID, 1, 'uint8');
@@ -40,8 +47,9 @@ for i = 1:numel(signalNames)
 
     nSamp = sigData.nSamp;
     nCh = sigData.nCh;
+    type = sigData.type;
     signals.(sigName) = rmfield(sigData, {'nSamp', 'nCh'});
-    data = fread(fileID, nSamp * nCh, 'float32');
+    data = fread(fileID, nSamp * nCh, type);
     data = reshape(data, [nCh, nSamp])';
     signals.(sigName).data = data;
 end
@@ -51,8 +59,5 @@ if isTrigger
     trigger = reshape(trigger, nSampBase, 1);
     signals.trigger = struct('data', trigger, 'fs', fsBase);
 end
-%nCh = fread(fileID, 1, 'uint32');
-%data = fread(fileID, 'float32');
-%mg = reshape(data, nCh, []);
 fclose('all');
 end
