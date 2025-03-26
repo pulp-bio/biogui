@@ -179,6 +179,7 @@ class MainController(QObject):
         streamingController = StreamingController(
             dataSourceWorkerArgs, interfaceModule.decodeFn, filePath, sigsConfigs, self
         )
+        self.appClosed.connect(streamingController.onAppExit)
         self._streamingControllers[str(streamingController)] = streamingController
 
         # Create plot widget
