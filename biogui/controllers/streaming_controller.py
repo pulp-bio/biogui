@@ -194,6 +194,8 @@ class _Preprocessor(QObject):
         - "filtOrder" the filter order (optional);
         - "notchFreq": frequency of the notch filter (optional);
         - "qFactor": quality factor of the notch filter (optional).
+    parent : QObject or None, default=None
+        Parent QObject.
 
     Attributes
     ----------
@@ -224,8 +226,10 @@ class _Preprocessor(QObject):
     signalsReady = Signal(list)
     errorOccurred = Signal(str)
 
-    def __init__(self, decodeFn: DecodeFn, sigsConfigs: dict) -> None:
-        super().__init__()
+    def __init__(
+        self, decodeFn: DecodeFn, sigsConfigs: dict, parent: QObject | None = None
+    ) -> None:
+        super().__init__(parent)
 
         self._decodeFn = decodeFn
         self._fs = {}
@@ -427,7 +431,7 @@ class StreamingController(QObject):
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
 
         # Create pre-processor
-        self._preprocessor = _Preprocessor(decodeFn, sigsConfigs)
+        self._preprocessor = _Preprocessor(decodeFn, sigsConfigs, self)
 
         # Store signal specifications
         self._sigInfo = {
@@ -573,3 +577,9 @@ class StreamingController(QObject):
         self._dataSourceWorker.errorOccurred.disconnect()
         self._preprocessor.signalsReady.disconnect()
         self._preprocessor.errorOccurred.disconnect()
+
+    def onAppExit(self) -> None:
+        """Safely delete workers when closing the application."""
+        self._dataSourceWorker.deleteLater()
+        if self._fileWriterWorker is not None:
+            self._fileWriterWorker.deleteLater()

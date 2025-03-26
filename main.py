@@ -127,6 +127,7 @@ if __name__ == "__main__":
             socketListener.stop()
             thread.quit()
             thread.wait()
+            socketListener.deleteLater()
 
         # Connect signals
         thread.started.connect(socketListener.run)
