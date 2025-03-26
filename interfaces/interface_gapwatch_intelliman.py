@@ -20,9 +20,8 @@ limitations under the License.
 import struct
 
 import numpy as np
-from datetime import datetime
 
-BUFF_SIZE = 1
+BUFF_SIZE = 20
 
 packetSize: int = (252) * BUFF_SIZE
 """Number of bytes in each package."""
@@ -97,8 +96,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     counter = np.asarray(
         struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.float32
     ).reshape(nSampCounter, 1)
-    ts = np.asarray(
-        struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64
-    ).reshape(nSampTs, 1)
+    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
+        nSampTs, 1
+    )
 
     return {"emg": emg, "battery": battery, "counter": counter, "ts": ts}
