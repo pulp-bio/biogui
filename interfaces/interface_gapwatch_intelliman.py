@@ -24,7 +24,7 @@ import numpy as np
 BUFF_SIZE = 20
 NCH_EMG = 5
 
-packetSize: int = (252) * BUFF_SIZE
+packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [bytes([0xAA, 2, 0x04, 0x60]), 1.0, b"="] #freq, ch_setting, mode
