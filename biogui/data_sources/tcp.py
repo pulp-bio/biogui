@@ -201,15 +201,18 @@ class TCPDataSourceWorker(DataSourceWorker):
 
             # Close socket
             self._clientSock.close()
+            self._clientSock.deleteLater()
+
         # Close server
         self._tcpServer.close()
         self._buffer = QByteArray()
+
+        logging.info("DataWorker: TCP communication started.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
         self._clientSock = self._tcpServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
-        # self._clientSock.disconnected.connect(self._clientSock.deleteLater)
 
         logging.info("DataWorker: new TCP connection.")
 
