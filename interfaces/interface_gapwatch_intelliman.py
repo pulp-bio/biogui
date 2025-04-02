@@ -23,7 +23,7 @@ import numpy as np
 
 BUFF_SIZE = 20
 
-packetSize: int = (252) * BUFF_SIZE
+packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
 startSeq: list[bytes] = [b"="]
