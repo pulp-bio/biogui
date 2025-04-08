@@ -33,6 +33,8 @@ def _listen_for_stop(sock, stop_event):
             print(f'Received "{cmd}" command from server, stopping transmission.')
             stop_event.set()
             break
+    except socket.timeout:
+        pass
     except Exception as e:
         sys.exit(f"Error while listening for stop command: {e}.")
 
@@ -68,6 +70,7 @@ def main():
         print(f'Received "{cmd}" command from server, starting transmission.')
 
         # Start a thread to listen for the stop command
+        sock.settimeout(0.5)
         stop_event = threading.Event()  # Event to stop the transmission
         listener_thread = threading.Thread(
             target=_listen_for_stop, args=(sock, stop_event)
@@ -99,10 +102,11 @@ def main():
     except Exception as e:
         print(f"An error occurred: {e}.")
     finally:
-        # Wait for the listener thread to finish
-        if not stop_event.is_set():
-            stop_event.set()
-        listener_thread.join()
+        if "stop_event" in locals():
+            # Wait for the listener thread to finish
+            if not stop_event.is_set():
+                stop_event.set()
+            listener_thread.join()
 
         # Close socket
         sock.close()
