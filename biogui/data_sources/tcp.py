@@ -181,7 +181,7 @@ class TCPDataSourceWorker(DataSourceWorker):
         if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):  # type: ignore
             errMsg = f"Cannot start TCP server due to the following error:\n{self._tcpServer.errorString()}."
             self.errorOccurred.emit(errMsg)
-            logging.error("DataWorker: {errMsg}")
+            logging.error(f"DataWorker: {errMsg}")
             return
 
         logging.info(
@@ -202,12 +202,13 @@ class TCPDataSourceWorker(DataSourceWorker):
             # Close socket
             self._clientSock.close()
             self._clientSock.deleteLater()
+            self._clientSock = None
 
         # Close server
         self._tcpServer.close()
         self._buffer = QByteArray()
 
-        logging.info("DataWorker: TCP communication started.")
+        logging.info("DataWorker: TCP communication stopped.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""

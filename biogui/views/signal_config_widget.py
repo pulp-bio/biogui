@@ -176,6 +176,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         # 1. Plot settings
         if not self.plotGroupBox.isChecked():
+            self._sigConfig["showYAxis"] = False
             return True, ""
 
         if not self.chSpacingTextField.hasAcceptableInput():
