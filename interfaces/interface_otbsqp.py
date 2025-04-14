@@ -22,6 +22,8 @@ import struct
 
 import numpy as np
 
+N_BUFF = 50
+
 
 def createCommand(start=1):
     """Internal function to create start/stop commands."""
@@ -83,7 +85,7 @@ def createCommand(start=1):
     return command
 
 
-packetSize: int = 144
+packetSize: int = 144 * N_BUFF
 """Number of bytes in each package."""
 
 startSeq: list[bytes | float] = [
@@ -132,20 +134,30 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     # - 1 for SyncStation trigger
     # - 1 for sample counter
 
-    # Get EMG data
-    emg = np.asarray(struct.unpack(">64h", data[:128]), dtype=np.int32).reshape(1, 64)
+    dataEMG = bytearray()
+    dataAux = bytearray()
+    dataIMU = bytearray()
+    for i in range(N_BUFF):
+        dataEMG.extend(bytearray(data[i * 144 : i * 144 + 128]))
+        dataAux.extend(bytearray(data[i * 144 + 128 : i * 144 + 132]))
+        dataIMU.extend(bytearray(data[i * 144 + 132 : i * 144 + 140]))
 
+    # Get EMG data
+    emg = np.asarray(
+        struct.unpack(f">{N_BUFF * 64}h", dataEMG), dtype=np.int32
+    ).reshape(-1, 64)
     # Convert ADC readings to mV
     mVConvF = 2.86e-4  # conversion factor
     emg = (emg * mVConvF).astype(np.float32)
 
     # Get AUX data
-    aux = np.asarray(struct.unpack(">2h", data[128:132]), dtype=np.float32).reshape(
-        -1, 2
-    )
+    aux = np.asarray(
+        struct.unpack(f">{N_BUFF * 2}h", dataAux), dtype=np.float32
+    ).reshape(-1, 2)
+
     # Get IMU data
-    imu = np.asarray(struct.unpack(">4h", data[132:140]), dtype=np.float32).reshape(
-        -1, 4
-    )
+    imu = np.asarray(
+        struct.unpack(f">{N_BUFF * 4}h", dataIMU), dtype=np.float32
+    ).reshape(-1, 4)
 
     return {"emg": emg, "aux": aux, "imu": imu}
