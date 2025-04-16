@@ -91,10 +91,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
 
     # Read battery and packet counter
     battery = np.asarray(
-        struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.float32
+        struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.uint8
     ).reshape(nSampBat, 1)
     counter = np.asarray(
-        struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.float32
+        struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.uint8
     ).reshape(nSampCounter, 1)
     ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
         nSampTs, 1
