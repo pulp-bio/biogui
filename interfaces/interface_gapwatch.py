@@ -21,22 +21,29 @@ import struct
 
 import numpy as np
 
-packetSize: int = 720
+BUFF_SIZE = 20
+
+packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [b"="]
+startSeq: list[bytes | float] = [bytes([0xAA, 3, 0x04, 0x00, 1]), 1.0, b"="]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-stopSeq: list[bytes | float] = [b":"]
+stopSeq: list[bytes] = [b":"]
 """
 Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {"emg": {"fs": 4000, "nCh": 16}}
+sigInfo: dict = {
+    "emg": {"fs": 2000, "nCh": 16},
+    "battery": {"fs": 400, "nCh": 1},
+    "counter": {"fs": 400, "nCh": 1},
+    "ts": {"fs": 400, "nCh": 1},
+}
 """Dictionary containing the signals information."""
 
 
@@ -55,27 +62,48 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSamp, nCh = 15, sigInfo["emg"]["nCh"]
+    nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
+    nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
     # ADC parameters
     vRef = 4
     gain = 6
     nBit = 24
 
-    dataTmp = bytearray(data)
+    dataEMG = bytearray()
+    dataBat = bytearray()
+    dataCounter = bytearray()
+    dataTs = bytearray()
+    for i in range(BUFF_SIZE):
+        dataEMG.extend(bytearray(data[i * 252 : i * 252 + 240]))
+        dataBat.extend(bytearray(data[i * 252 + 240 : i * 252 + 241]))
+        dataCounter.extend(bytearray(data[i * 252 + 241 : i * 252 + 243]))
+        dataTs.extend(bytearray(data[i * 252 + 244 : i * 252 + 252]))
+
     # Convert 24-bit to 32-bit integer
     pos = 0
-    for _ in range(len(dataTmp) // 3):
-        prefix = 255 if dataTmp[pos] > 127 else 0
-        dataTmp.insert(pos, prefix)
+    for _ in range(len(dataEMG) // 3):
+        prefix = 255 if dataEMG[pos] > 127 else 0
+        dataEMG.insert(pos, prefix)
         pos += 4
-    emgAdc = np.asarray(
-        struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, nCh)
+    emgADC = np.asarray(
+        struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32
+    ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    emg = emgADC * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
 
-    return {"emg": emg}
+    # Read battery and packet counter
+    battery = np.asarray(
+        struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.uint8
+    ).reshape(nSampBat, 1)
+    counter = np.asarray(
+        struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.uint8
+    ).reshape(nSampCounter, 1)
+    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
+        nSampTs, 1
+    )
+
+    return {"emg": emg, "battery": battery, "counter": counter, "ts": ts}
