@@ -27,11 +27,17 @@ NCH_EMG = 5
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes] = [bytes([0xAA, 2, 0x04, 0x60]), 1.0, b"="] #freq, ch_setting, mode
-"""Sequence of commands to start the device."""
+startSeq: list[bytes | float] = [bytes([0xAA, 3, 0x04, 0x00, 1]), 1.0, b"="]
+"""
+Sequence of commands (as bytes) to start the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
 stopSeq: list[bytes] = [b":"]
-"""Sequence of commands to stop the device."""
+"""
+Sequence of commands (as bytes) to stop the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
 
 sigInfo: dict = {
     "emg": {"fs": 2000, "nCh": NCH_EMG},
@@ -60,7 +66,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
-    channels = [0,1,8,9,10]
+    channels = [0, 1, 8, 9, 10]
 
     # ADC parameters
     vRef = 4
@@ -90,7 +96,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     # ADC readings to mV
     emg = emgADC * vRef / (gain * (2 ** (nBit - 1) - 1))  # V<
     emg *= 1_000  # mV
-    emg = emg.astype(np.float32)[:,channels]
+    emg = emg.astype(np.float32)[:, channels]
 
     # Read battery and packet counter
     battery = np.asarray(
