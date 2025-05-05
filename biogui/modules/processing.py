@@ -21,8 +21,6 @@ from __future__ import annotations
 
 import importlib.util
 import logging
-import socket
-import time
 from collections import deque, namedtuple
 from itertools import islice
 from typing import Callable, TypeAlias
@@ -30,6 +28,7 @@ from typing import Callable, TypeAlias
 import numpy as np
 from PySide6.QtCore import QLocale, QObject, QThread, Signal
 from PySide6.QtGui import QIntValidator
+from PySide6.QtNetwork import QAbstractSocket, QTcpSocket
 from PySide6.QtWidgets import QCheckBox, QFileDialog, QMessageBox, QWidget
 
 from biogui.controllers import MainController
@@ -96,10 +95,7 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
             None,
             "The window length must be a positive float.",
         )
-    if (
-        not isinstance(module.stepLenS, float)
-        or module.stepLenS <= 0
-    ):
+    if not isinstance(module.stepLenS, float) or module.stepLenS <= 0:
         return (
             None,
             "The step length must be a positive float",
@@ -113,97 +109,6 @@ def _loadProcessingScript(filePath: str) -> tuple[ProcessingModule | None, str]:
         ),
         "",
     )
-
-
-class _TCPServerWorker(QObject):
-    """
-    Worker that creates a TCP server socket to send data to the client.
-
-    Parameters
-    ----------
-    socketPort: int or None, default=None
-        Socket port.
-
-    Attributes
-    ----------
-    _exitAcceptLoopFlag : bool
-        Flag indicating to exit the non-blocking accept loop.
-    _sock : socket or None
-        TCP server socket.
-    _conn : socket or None
-        Socket connected to the client.
-    """
-
-    def __init__(self, socketPort: int | None = None) -> None:
-        super().__init__()
-
-        self._socketPort = socketPort
-        self._exitAcceptLoopFlag = False
-        self._sock = None
-        self._conn = None
-
-    @property
-    def socketPort(self) -> int | None:
-        """int or None: Property representing the socket port."""
-        return self._socketPort
-
-    @socketPort.setter
-    def socketPort(self, socketPort: int | None) -> None:
-        self._socketPort = socketPort
-
-    def openConnection(self) -> None:
-        """Open the connection."""
-        self._exitAcceptLoopFlag = False
-
-        # Open socket
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.settimeout(0.5)
-        self._sock.bind(("", self._socketPort))
-        self._sock.listen()
-
-        logging.info(
-            f"TCPServerWorker: waiting for TCP connection on port {self._socketPort}."
-        )
-
-        # Non-blocking accept
-        while not self._exitAcceptLoopFlag:
-            try:
-                self._conn, (addr, _) = self._sock.accept()
-                self._conn.settimeout(5)
-
-                logging.info(
-                    f"TCPServerWorker: TCP connection from {addr}, communication started."
-                )
-
-                self._exitAcceptLoopFlag = True
-            except socket.timeout:
-                time.sleep(0.5)
-                pass
-
-    def closeConnection(self) -> None:
-        """Close the connection."""
-        if self._conn is not None and self._sock is not None:
-            self._conn.shutdown(socket.SHUT_RDWR)
-            self._conn.close()
-            self._sock.close()
-        else:
-            self._exitAcceptLoopFlag = True
-
-    @instanceSlot(bytes)
-    def sendData(self, data: bytes) -> None:
-        """
-        Send the given data via the TCP socket.
-
-        Parameters
-        ----------
-        data : bytes
-            Data to be sent.
-        """
-        if self._conn is None:
-            return
-
-        self._conn.sendall(data)
 
 
 class _ProcessingWorker(QObject):
@@ -364,6 +269,12 @@ class ProcessingController(QObject):
         Instance of _TriggerConfigWidget.
     _streamControllers : dict of (str: StreamingController)
         Reference to the streaming controller dictionary.
+    _processingWorker : _ProcessingWorker
+        Worker for data processing.
+    _processingThread : QThread
+        The QThread associated to the processing worker.
+    _socket : QTcpSocket
+        TCP socket object.
     """
 
     def __init__(self) -> None:
@@ -376,18 +287,21 @@ class ProcessingController(QObject):
             self._onDataSourceChange
         )
 
-        # TCP server
-        self._tcpServerWorker = _TCPServerWorker()
-        self._tcpServerThread = QThread(self)
-        self._tcpServerWorker.moveToThread(self._tcpServerThread)
-        self._tcpServerThread.started.connect(self._tcpServerWorker.openConnection)
-
         # Custom processing
         self._processingWorker = _ProcessingWorker()
         self._processingThread = QThread(self)
         self._processingWorker.moveToThread(self._processingThread)
-        self._processingWorker.resultReady.connect(self._tcpServerWorker.sendData)
+        self._processingWorker.resultReady.connect(self._sendData)
         self._processingThread.finished.connect(self._processingWorker.reset)
+
+        # TCP socket
+        self._socket = QTcpSocket(self)
+        self._socket.connected.connect(
+            lambda: logging.info("Processing module: connected to server.")
+        )
+        self._socket.errorOccurred.connect(
+            lambda: logging.info("Processing module: an error occurred.")
+        )
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
@@ -462,6 +376,12 @@ class ProcessingController(QObject):
             list(self._streamingControllers.keys())
         )
 
+    def _sendData(self, data: bytes) -> None:
+        """Send data via TCP socket."""
+        if self._socket.state() == QAbstractSocket.ConnectedState:  # type: ignore
+            self._socket.write(data)
+            self._socket.flush()
+
     def _startProcessing(self) -> None:
         """Start the custom processing."""
         self._confWidget.customProcessingGroupBox.setEnabled(False)
@@ -494,8 +414,10 @@ class ProcessingController(QObject):
             item = layout.itemAt(i)
             if item is None:  # should never happen
                 continue
-            checkbox = layout.itemAt(i).widget()  # type: ignore
-            sigName = checkbox.property("sigName")
+            checkBox: QCheckBox = layout.itemAt(i).widget()  # type: ignore
+            if not checkBox.isChecked():
+                continue
+            sigName = checkBox.property("sigName")
             fs = streamingController.sigInfo[sigName]["fs"]
             winLen = int(round(winLenS * fs))
             stepLen = int(round(stepLenS * fs))
@@ -503,21 +425,20 @@ class ProcessingController(QObject):
         self._processingWorker.processFn = self._confWidget.processingModule.ProcessFn()
         self._processingWorker.initBuffers(buffersConfig)
 
-        # Configure TCP server
+        # Connect to TCP server
         socketPort = QLocale().toInt(self._confWidget.socketPortTextField.text())[0]
-        self._tcpServerWorker.socketPort = socketPort
+        self._socket.connectToHost(
+            self._confWidget.socketAddressTextField.text(), socketPort
+        )
 
-        # Start threads
-        self._tcpServerThread.start()
+        # Start thread
         self._processingThread.start()
 
     def _stopProcessing(self) -> None:
         """Stop custom processing."""
         self._confWidget.customProcessingGroupBox.setEnabled(True)
-        if self._tcpServerThread.isRunning:
-            # Stop threads
-            self._processingThread.quit()
-            self._processingThread.wait()
-            self._tcpServerWorker.closeConnection()
-            self._tcpServerThread.quit()
-            self._tcpServerThread.wait()
+        # Stop thread
+        self._processingThread.quit()
+        self._processingThread.wait()
+        if self._socket.state() == QAbstractSocket.ConnectedState:  # type: ignore
+            self._socket.disconnectFromHost()
