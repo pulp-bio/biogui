@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'processing_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,7 +28,7 @@ class Ui_ProcessingConfigWidget(object):
         self.verticalLayout1.setObjectName(u"verticalLayout1")
         self.customProcessingGroupBox = QGroupBox(ProcessingConfigWidget)
         self.customProcessingGroupBox.setObjectName(u"customProcessingGroupBox")
-        self.customProcessingGroupBox.setAlignment(Qt.AlignCenter)
+        self.customProcessingGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.customProcessingGroupBox.setCheckable(True)
         self.customProcessingGroupBox.setChecked(False)
         self.verticalLayout2 = QVBoxLayout(self.customProcessingGroupBox)
@@ -38,36 +38,46 @@ class Ui_ProcessingConfigWidget(object):
         self.browseProcessingModuleButton = QPushButton(self.customProcessingGroupBox)
         self.browseProcessingModuleButton.setObjectName(u"browseProcessingModuleButton")
 
-        self.formLayout2.setWidget(1, QFormLayout.LabelRole, self.browseProcessingModuleButton)
+        self.formLayout2.setWidget(2, QFormLayout.ItemRole.LabelRole, self.browseProcessingModuleButton)
 
         self.processingModulePathLabel = QLabel(self.customProcessingGroupBox)
         self.processingModulePathLabel.setObjectName(u"processingModulePathLabel")
         self.processingModulePathLabel.setWordWrap(True)
 
-        self.formLayout2.setWidget(1, QFormLayout.FieldRole, self.processingModulePathLabel)
+        self.formLayout2.setWidget(2, QFormLayout.ItemRole.FieldRole, self.processingModulePathLabel)
 
-        self.label1 = QLabel(self.customProcessingGroupBox)
-        self.label1.setObjectName(u"label1")
-        self.label1.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label2 = QLabel(self.customProcessingGroupBox)
+        self.label2.setObjectName(u"label2")
+        self.label2.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.formLayout2.setWidget(0, QFormLayout.LabelRole, self.label1)
+        self.formLayout2.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label2)
 
         self.socketPortTextField = QLineEdit(self.customProcessingGroupBox)
         self.socketPortTextField.setObjectName(u"socketPortTextField")
 
-        self.formLayout2.setWidget(0, QFormLayout.FieldRole, self.socketPortTextField)
+        self.formLayout2.setWidget(1, QFormLayout.ItemRole.FieldRole, self.socketPortTextField)
 
-        self.label2 = QLabel(self.customProcessingGroupBox)
-        self.label2.setObjectName(u"label2")
-        self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label3 = QLabel(self.customProcessingGroupBox)
+        self.label3.setObjectName(u"label3")
+        self.label3.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.formLayout2.setWidget(2, QFormLayout.LabelRole, self.label2)
+        self.formLayout2.setWidget(3, QFormLayout.ItemRole.LabelRole, self.label3)
 
         self.dataSourceComboBox = QComboBox(self.customProcessingGroupBox)
         self.dataSourceComboBox.setObjectName(u"dataSourceComboBox")
-        self.dataSourceComboBox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.dataSourceComboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
-        self.formLayout2.setWidget(2, QFormLayout.FieldRole, self.dataSourceComboBox)
+        self.formLayout2.setWidget(3, QFormLayout.ItemRole.FieldRole, self.dataSourceComboBox)
+
+        self.label1 = QLabel(self.customProcessingGroupBox)
+        self.label1.setObjectName(u"label1")
+
+        self.formLayout2.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label1)
+
+        self.socketAddressTextField = QLineEdit(self.customProcessingGroupBox)
+        self.socketAddressTextField.setObjectName(u"socketAddressTextField")
+
+        self.formLayout2.setWidget(0, QFormLayout.ItemRole.FieldRole, self.socketAddressTextField)
 
 
         self.verticalLayout2.addLayout(self.formLayout2)
@@ -83,7 +93,8 @@ class Ui_ProcessingConfigWidget(object):
 
         self.verticalLayout1.addWidget(self.customProcessingGroupBox)
 
-        QWidget.setTabOrder(self.customProcessingGroupBox, self.socketPortTextField)
+        QWidget.setTabOrder(self.customProcessingGroupBox, self.socketAddressTextField)
+        QWidget.setTabOrder(self.socketAddressTextField, self.socketPortTextField)
         QWidget.setTabOrder(self.socketPortTextField, self.browseProcessingModuleButton)
         QWidget.setTabOrder(self.browseProcessingModuleButton, self.dataSourceComboBox)
 
@@ -101,10 +112,11 @@ class Ui_ProcessingConfigWidget(object):
         self.browseProcessingModuleButton.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Browse processing module", None))
         self.processingModulePathLabel.setText("")
 #if QT_CONFIG(tooltip)
-        self.label1.setToolTip(QCoreApplication.translate("ProcessingConfigWidget", u"For the process to which the results will be sent", None))
+        self.label2.setToolTip(QCoreApplication.translate("ProcessingConfigWidget", u"For the process to which the results will be sent", None))
 #endif // QT_CONFIG(tooltip)
-        self.label1.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Socket port:", None))
-        self.label2.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Data source:", None))
+        self.label2.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Socket port:", None))
+        self.label3.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Data source:", None))
+        self.label1.setText(QCoreApplication.translate("ProcessingConfigWidget", u"Socket address:", None))
         self.signalsGroupBox.setTitle(QCoreApplication.translate("ProcessingConfigWidget", u"Signals to process", None))
     # retranslateUi
 
