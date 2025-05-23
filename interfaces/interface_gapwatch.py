@@ -22,11 +22,30 @@ import struct
 import numpy as np
 
 BUFF_SIZE = 20
+FS = 2000
+GAIN = 6
+
+FS_MAP = {
+    500: 0x06,
+    1000: 0x05,
+    2000: 0x04,
+    4000: 0x03,
+}
+
+GAIN_MAP = {
+    6: 0x00,
+    1: 0x10,
+    2: 0x20,
+    3: 0x30,
+    4: 0x40,
+    8: 0x80,
+    12: 0x60,
+}
 
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [bytes([0xAA, 3, 0x04, 0x00, 1]), 1.0, b"="]
+startSeq: list[bytes | float] = [bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]), 1.0, b"="]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
@@ -39,10 +58,10 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": 2000, "nCh": 16},
-    "battery": {"fs": 400, "nCh": 1},
-    "counter": {"fs": 400, "nCh": 1},
-    "ts": {"fs": 400, "nCh": 1},
+    "emg": {"fs": FS, "nCh": 16},
+    "battery": {"fs": FS // 5, "nCh": 1},
+    "counter": {"fs": FS // 5, "nCh": 1},
+    "ts": {"fs": FS // 5, "nCh": 1},
 }
 """Dictionary containing the signals information."""
 
@@ -67,7 +86,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
 
     # ADC parameters
     vRef = 4
-    gain = 6
     nBit = 24
 
     dataEMG = bytearray()
@@ -91,7 +109,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgADC * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
+    emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
 
