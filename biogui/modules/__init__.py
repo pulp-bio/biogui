@@ -18,5 +18,6 @@ limitations under the License.
 
 from .processing import ProcessingController
 from .trigger import TriggerController
+from .teleprompter import TeleprompterController
 
-__all__ = ["ProcessingController", "TriggerController"]
+__all__ = ["ProcessingController", "TriggerController", "TeleprompterController"]

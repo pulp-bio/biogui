@@ -23,6 +23,41 @@ import sys
 import numpy as np
 from matplotlib import pyplot as plt
 
+from scipy.signal import butter, filtfilt
+#define butter lowpass filter
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+# Define the bandpass filter
+def butter_bandpass(lowcut, highcut, fs, order=4):
+    nyquist = 0.5 * fs
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+# Apply the bandpass filter
+def bandpass_filter(data, lowcut, highcut, fs, order=4):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = filtfilt(b, a, data, axis=0)
+    return y
+
+#apply the lowpass filter   
+def lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)  
+    y = filtfilt(b, a, data, axis=0)
+    return y
+#define notch filter
+def notch_filter(data, fs, f0, Q):
+    nyq = 0.5 * fs
+    low = f0 - (f0 / Q)
+    high = f0 + (f0 / Q)
+    b, a = butter(2, [low / nyq, high / nyq], btype='bandstop')
+    y = filtfilt(b, a, data, axis=0)
+    return y
 
 def read_bio_file(file_path: str) -> dict:
     """
@@ -112,9 +147,17 @@ def main():
     file_path = sys.argv[1]
 
     signals = read_bio_file(file_path)
-
+    # print(signals["audio"]["data"].shape[0]/signals["audio"]["fs"])s
+    if "emg" in signals:
+        signals["emg"]["data"] = signals["emg"]["data"][int(10*signals["emg"]["fs"]):int(70*signals["emg"]["fs"]),:9]*3/12*1000
+        signals["emg"]["data"] = notch_filter(signals["emg"]["data"], signals["emg"]["fs"], 60, 30)
+        signals["emg"]["data"] = bandpass_filter(signals["emg"]["data"], 30, 500, signals["emg"]["fs"], order=4)
+    
     # Plot
     for sig_name, sig_data in signals.items():
+        #if sig name is emg set the y axis label to microvolts
+
+
         n_samp, n_ch = sig_data["data"].shape
 
         t = np.arange(n_samp) / sig_data["fs"]
@@ -124,8 +167,17 @@ def main():
             squeeze=False,
             figsize=(16, n_ch),
             layout="constrained",
+            tight_layout=True,
         )
         fig.suptitle(sig_name)
+        if sig_name == "emg":
+            # set one shared y axis label for all subplots
+            for ax in axes[:, 0]:
+                ax.set_ylabel("Amplitude [µV]")
+                ax.set_xlabel("Time [s]")
+
+
+
         for i in range(n_ch):
             axes[i][0].plot(t, sig_data["data"][:, i])
 
