@@ -1,0 +1,10 @@
+{
+    "sentences": [
+        "Welcome to our presentation on Deep Learning.",
+        "In this session, we will cover convolutional networks.",
+        "Next, we'll dive into recurrent architectures.",
+        "Finally, we'll discuss practical tips for model deployment."
+    ],
+    "durationPerSentence": 7000,
+    "durationStart": 1000
+}

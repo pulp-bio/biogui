@@ -33,6 +33,8 @@ class DataSourceType(Enum):
     SERIAL = "Serial port"
     TCP = "TCP socket"
     FIFO = "FIFO"
+    BLE = "BLE"
+    MIC = "Microphone"
 
 
 @dataclass

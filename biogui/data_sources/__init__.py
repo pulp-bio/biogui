@@ -25,7 +25,8 @@ from .base import DataSourceConfigWidget, DataSourceType, DataSourceWorker
 from .fifo import FIFOConfigWidget, FIFODataSourceWorker
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
-
+from .ble import BLEConfigWidget, BLEDataSourceWorker
+from .microphone import MicrophoneConfigWidget, MicrophoneDataSourceWorker
 
 def getConfigWidget(
     dataSourceType: DataSourceType, parent: QWidget
@@ -49,6 +50,8 @@ def getConfigWidget(
         DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.TCP: TCPConfigWidget,
         DataSourceType.FIFO: FIFOConfigWidget,
+        DataSourceType.BLE: BLEConfigWidget,
+        DataSourceType.MIC: MicrophoneConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
 
@@ -85,6 +88,8 @@ def getDataSourceWorker(
         DataSourceType.SERIAL: SerialDataSourceWorker,
         DataSourceType.TCP: TCPDataSourceWorker,
         DataSourceType.FIFO: FIFODataSourceWorker,
+        DataSourceType.BLE: BLEDataSourceWorker,
+        DataSourceType.MIC: MicrophoneDataSourceWorker,
     }
     return dataSourceDict[dataSourceType](packetSize, startSeq, stopSeq, **kwargs)
 

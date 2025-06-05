@@ -209,7 +209,7 @@ class TCPDataSourceWorker(DataSourceWorker):
         """Handle a new TCP connection."""
         self._clientSock = self._tcpServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
-        self._clientSock.disconnected.connect(self._clientSock.deleteLater)
+        # self._clientSock.disconnected.connect(self._clientSock.deleteLater)
 
         logging.info("DataWorker: new TCP connection.")
 

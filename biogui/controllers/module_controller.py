@@ -71,6 +71,12 @@ class ModuleController(QObject):
         processingAction.triggered.connect(self._processingActionHandler)
         moduleMenu.addAction(processingAction)
 
+        # 3. Teleprompter
+        teleprompterAction = QAction("Configure teleprompter", self)
+        teleprompterAction.setCheckable(True)
+        teleprompterAction.triggered.connect(self._teleprompterActionHandler)
+        moduleMenu.addAction(teleprompterAction)
+
     def _triggerActionHandler(self, checked: bool) -> None:
         """Handler for the "configure triggers" action."""
         if checked:
@@ -92,3 +98,14 @@ class ModuleController(QObject):
             processingModule = self._modules.pop("processingModule")
             processingModule.unsubscribe(self._mainController, self._mainWin)
             del processingModule
+
+    def _teleprompterActionHandler(self, checked: bool) -> None:
+        """Handler for the "configure teleprompter" action."""
+        if checked:
+            teleprompterModule = modules.TeleprompterController()
+            teleprompterModule.subscribe(self._mainController, self._mainWin)
+            self._modules["teleprompter"] = teleprompterModule
+        else:
+            teleprompterModule = self._modules.pop("teleprompter")
+            teleprompterModule.unsubscribe(self._mainController, self._mainWin)
+            del teleprompterModule
