@@ -21,8 +21,8 @@ import struct
 
 import numpy as np
 
-BUFF_SIZE = 20
-FS = 2000
+BUFF_SIZE = 40
+FS = 4000
 GAIN = 6
 
 FS_MAP = {
@@ -38,14 +38,18 @@ GAIN_MAP = {
     2: 0x20,
     3: 0x30,
     4: 0x40,
-    8: 0x80,
+    8: 0x50,
     12: 0x60,
 }
 
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]), 1.0, b"="]
+startSeq: list[bytes | float] = [
+    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]),
+    1.0,
+    b"=",
+]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
