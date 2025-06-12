@@ -21,13 +21,35 @@ import struct
 
 import numpy as np
 
-BUFF_SIZE = 20
-NCH_EMG = 5
+BUFF_SIZE = 40
+FS = 4000
+GAIN = 6
+
+FS_MAP = {
+    500: 0x06,
+    1000: 0x05,
+    2000: 0x04,
+    4000: 0x03,
+}
+
+GAIN_MAP = {
+    6: 0x00,
+    1: 0x10,
+    2: 0x20,
+    3: 0x30,
+    4: 0x40,
+    8: 0x50,
+    12: 0x60,
+}
 
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [bytes([0xAA, 3, 0x04, 0x00, 1]), 1.0, b"="]
+startSeq: list[bytes | float] = [
+    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]),
+    1.0,
+    b"=",
+]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
@@ -40,10 +62,10 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": 2000, "nCh": NCH_EMG},
-    "battery": {"fs": 400, "nCh": 1},
-    "counter": {"fs": 400, "nCh": 1},
-    "ts": {"fs": 400, "nCh": 1},
+    "emg": {"fs": FS, "nCh": 16},
+    "battery": {"fs": FS // 5, "nCh": 1},
+    "counter": {"fs": FS // 5, "nCh": 1},
+    "ts": {"fs": FS // 5, "nCh": 1},
 }
 """Dictionary containing the signals information."""
 
@@ -63,14 +85,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
+    nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
-
-    channels = [0, 1, 8, 9, 10]
 
     # ADC parameters
     vRef = 4
-    gain = 3
     nBit = 24
 
     dataEMG = bytearray()
@@ -94,9 +113,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgADC * vRef / (gain * (2 ** (nBit - 1) - 1))  # V<
+    emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
-    emg = emg.astype(np.float32)[:, channels]
+    emg = emg.astype(np.float32)
 
     # Read battery and packet counter
     battery = np.asarray(
