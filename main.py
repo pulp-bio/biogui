@@ -21,7 +21,8 @@ import argparse
 import socket
 import sys
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Qt, Signal
+from PySide6.QtGui import QGuiApplication
 
 from biogui import BioGUI
 
@@ -114,6 +115,11 @@ if __name__ == "__main__":
 
         logging.basicConfig(level=logging.INFO)
 
+    # Disable native macOS menu
+    if sys.platform == "darwin":
+        QGuiApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
+
+    # Instantiate app
     app = BioGUI()
 
     if args["rem_port"]:
