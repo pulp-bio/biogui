@@ -21,9 +21,14 @@ import struct
 
 import numpy as np
 
+<<<<<<< Updated upstream:interfaces/interface_gapwatch.py
 BUFF_SIZE = 40
 FS = 4000
 GAIN = 6
+=======
+BUFF_SIZE = 20
+NCH_EMG = 3
+>>>>>>> Stashed changes:interfaces/interface_gapwatch_intelliman.py
 
 FS_MAP = {
     500: 0x06,
@@ -88,6 +93,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
+<<<<<<< Updated upstream:interfaces/interface_gapwatch.py
+=======
+    channels = [0,1,2]
+
+>>>>>>> Stashed changes:interfaces/interface_gapwatch_intelliman.py
     # ADC parameters
     vRef = 4
     nBit = 24
