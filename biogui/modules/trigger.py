@@ -22,6 +22,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import math
+from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QPainter, QPixmap
@@ -88,26 +90,21 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
             and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
         ):
             config["triggers"][triggerLabel] = ""
-            msg = "Some images do not exist, the name of the trigger will be displayed."
+            msg = "Some images do not exist; the name of the trigger will be displayed."
 
     return config, msg
 
 
 class _TriggerWidget(QWidget):
     """
-    Widget showing the trigger.
+    Widget showing either a stimulus image/label or a countdown with next stimulus label during rest.
 
     Attributes
     ----------
     _label : QLabel
-        Label containing the image widget.
+        The QLabel that holds a combined QPixmap for countdown and upcoming label.
     _qColor : QColor
-        Color for text.
-
-    Class attributes
-    ----------------
-    widgetClosed : Signal
-        Qt signal emitted when the widget is closed.
+        Text color (black in light theme, white in dark theme).
     """
 
     widgetClosed = Signal()
@@ -127,46 +124,66 @@ class _TriggerWidget(QWidget):
 
     @property
     def imageFolder(self) -> str:
-        """str: Property representing the path to the folder containing the images for the triggers."""
+        """str: Path to the folder containing the images for the triggers."""
         return self._imageFolder
 
     @imageFolder.setter
     def imageFolder(self, imageFolder: str) -> None:
         self._imageFolder = imageFolder
 
-    def renderImage(self, triggerLabel: str, imagePath: str) -> None:
+    def renderImage(self, mainText: str, imagePath: str, subText: str = "") -> None:
         """
-        Render the image for the current trigger.
+        Render:
+        - Stimulus image if imagePath is non-empty.
+        - For plain text (no imagePath): if subText is provided,
+          draw mainText (next label) above and subText (countdown) below.
+        - If no subText, draw mainText centered.
 
         Parameters
         ----------
-        triggerLabel : str
-            Name of the trigger.
+        mainText : str
+            For stimulus: label or "stop"/"start". For rest: upcoming stimulus label.
         imagePath : str
-            Path to the image file of the trigger.
+            If non-empty, filename of the image inside imageFolder.
+        subText : str
+            If provided (during rest), the countdown number as a string.
         """
+        pixmap = QPixmap(self.width(), self.height())
+        pixmap.fill(Qt.transparent)  # type: ignore
 
-        def createTextPixmap(text: str) -> QPixmap:
-            """Create a QPixmap containing text."""
-            pixmap = QPixmap(self.width(), self.height())
-            pixmap.fill(Qt.transparent)  # type: ignore
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)  # type: ignore
+        painter.setPen(self._qColor)
 
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)  # type: ignore
-            painter.setPen(self._qColor)
-            painter.setFont(QFont("Arial", 48))
-
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, text)  # type: ignore
-            painter.end()
-
-            return pixmap
-
-        if imagePath == "":
-            pixmap = createTextPixmap(triggerLabel.upper().replace(" ", "\n"))
+        if imagePath:
+            # Display the image file scaled to widget size.
+            fullPath = os.path.join(self._imageFolder, imagePath)
+            img = QPixmap(fullPath).scaled(self.width(), self.height())
+            painter.drawPixmap(0, 0, img)
         else:
-            imagePath = os.path.join(self._imageFolder, imagePath)
-            pixmap = QPixmap(imagePath).scaled(self.width(), self.height())
+            if subText:
+                # Rest period: draw upcoming label and countdown
+                # Draw next label at top half, smaller font
+                painter.setFont(QFont("Arial", 48))
+                rect_top = pixmap.rect().adjusted(0, 0, 0, -self.height() // 2)
+                painter.drawText(rect_top, Qt.AlignCenter, mainText.upper())  # type: ignore
+                # Draw countdown at bottom half, larger font
+                painter.setFont(QFont("Arial", 72))
+                rect_bot = pixmap.rect().adjusted(0, self.height() // 2, 0, 0)
+                painter.drawText(rect_bot, Qt.AlignCenter, subText)  # type: ignore
+            else:
+                # Plain label (start/stop or stimulus without image)
+                try:
+                    # If mainText can be parsed as int, treat as countdown-only
+                    _ = int(mainText)
+                    painter.setFont(QFont("Arial", 72))
+                except ValueError:
+                    painter.setFont(QFont("Arial", 48))
+                painter.drawText(
+                    pixmap.rect(), Qt.AlignCenter, mainText.upper().replace(" ", "\n")  # type: ignore
+                )
 
+        painter.end()
         self._label.setPixmap(pixmap)
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -179,21 +196,17 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
 
     def __init__(self) -> None:
         super().__init__()
-
         self.setupUi(self)
-
         self._config = {}
-
         self.browseTriggerConfigButton.clicked.connect(self._browseTriggerConfig)
         self.destroyed.connect(self.deleteLater)
 
     @property
     def config(self) -> dict:
-        """dict: Property representing the JSON configuration."""
+        """dict: JSON configuration."""
         return self._config
 
     def _browseTriggerConfig(self) -> None:
-        """Browse to select the JSON file with the trigger configuration."""
         filePath, _ = QFileDialog.getOpenFileName(
             self,
             "Load JSON configuration",
@@ -225,25 +238,6 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
 class TriggerController(QObject):
     """
     Controller for the triggers.
-
-    Attributes
-    ----------
-    _confWidget : _TriggerConfigWidget
-        Instance of _TriggerConfigWidget.
-    _triggerWidget : _TriggerWidget
-        Instance of _TriggerWidget.
-    _timer : QTimer
-        Timer.
-    _streamControllers : dict of (str: StreamingController)
-        Reference to the streaming controller dictionary.
-    _triggerIds : dict of str: int
-        Dictionary containing pairs of trigger labels and integer indexes.
-    _triggerLabels : list of str
-        List of trigger labels accounting for the number of repetitions.
-    _triggerCounter : int
-        Counter for the trigger.
-    _restFlag : bool
-        Flag for rest vs trigger.
     """
 
     def __init__(self) -> None:
@@ -255,47 +249,32 @@ class TriggerController(QObject):
         self._triggerWidget = _TriggerWidget()
         self._triggerWidget.widgetClosed.connect(self._actualStopTriggerGen)
 
+        # Primary timer for switching between stimulus and rest
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
 
-        self._streamingControllers = {}
-        self._triggerIds = {}
-        self._triggerLabels = []
+        # Secondary timer: fires every second during rest to decrement the countdown
+        self._countdownTimer = QTimer(self)
+        self._countdownTimer.setInterval(1000)
+        self._countdownTimer.timeout.connect(self._updateCountdown)  # type: ignore
+
+        self._streamingControllers: MappingProxyType
+        self._triggerIds: dict[str, int] = {}
+        self._triggerLabels: list[str] = []
         self._triggerCounter = 0
-        self._restFlag = False
+        self._restFlag = True
+        self._restCounter = 0
+        self._upcomingLabel = ""
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
-        """
-        Subscribe to the main controller.
-
-        Parameters
-        ----------
-        mainController : MainController
-            Reference to the main controller.
-        mainWin : MainWindow
-            Reference to the main window.
-        """
-        # Make connections with MainWindow
         mainWin.moduleContainer.layout().addWidget(self._confWidget)  # type: ignore
         mainController.streamingStarted.connect(self._startTriggerGen)
         mainController.streamingStopped.connect(self._stopTriggerGen)
         mainController.appClosed.connect(self._stopTriggerGen)
 
-        # Get reference to StreamingControllers
         self._streamingControllers = mainController.streamingControllers
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
-        """
-        Unsubscribe from the main controller.
-
-        Parameters
-        ----------
-        mainController : MainController
-            Reference to the main controller.
-        mainWin : MainWindow
-            Reference to the main window.
-        """
-        # Undo connections with MainWindow
         mainWin.moduleContainer.layout().removeWidget(self._confWidget)  # type: ignore
         self._confWidget.deleteLater()
         mainController.streamingStarted.disconnect(self._startTriggerGen)
@@ -303,29 +282,50 @@ class TriggerController(QObject):
         mainController.appClosed.disconnect(self._stopTriggerGen)
 
     def _checkHandler(self, checked: bool) -> None:
-        """Handler for detecting whether the groupbox has been checked or not."""
         if not checked:
-            # Reset trigger
             for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(None)
 
     def _updateTriggerAndImage(self) -> None:
-        """Update the trigger and the image to display."""
+        """Called when the primary timer times out. Decides whether to show a stimulus or start the rest countdown."""
+        # If the countdownTimer is running, do nothing here.
+        if self._countdownTimer.isActive():
+            return
+
+        # If we've shown all triggers, stop.
         if self._triggerCounter >= len(self._triggerLabels):
             self._stopTriggerGen()
             return
 
-        if self._restFlag:  # rest
-            self._timer.start(self._confWidget.config["durationRest"])
+        if self._restFlag:
+            # Start a new rest interval:
+            restMs = self._confWidget.config["durationRest"]
+            # Compute initial seconds for countdown (round up)
+            self._restCounter = math.ceil(restMs / 1000)
+            # Determine upcoming stimulus label
+            if self._triggerCounter < len(self._triggerLabels):
+                nextLabel = self._triggerLabels[self._triggerCounter]
+                self._upcomingLabel = nextLabel
+            else:
+                self._upcomingLabel = ""
+            # Draw countdown with upcoming label
+            self._triggerWidget.renderImage(
+                self._upcomingLabel, "", str(self._restCounter)
+            )
+            # Force triggers to zero during rest
+            for streamingController in self._streamingControllers.values():
+                streamingController.setTrigger(0)
+            logging.info(
+                f"Rest started: upcoming='{self._upcomingLabel}' \
+                countdown={self._restCounter}s (durationRest={restMs}ms)."
+            )
+            # Schedule end of rest after exactly restMs
+            QTimer.singleShot(restMs, self._endRest)
+            # Begin per-second countdown updates
+            self._countdownTimer.start()
 
-            newTrigger = 0
-            triggerLabel, imagePath = "stop", ""
-
-            self._restFlag = False
-
-        else:  # trigger
-            self._timer.start(self._confWidget.config["durationTrigger"])
-
+        else:
+            # Stimulus interval
             triggerLabel = self._triggerLabels[self._triggerCounter]
             if triggerLabel != "last_stop":
                 newTrigger = self._triggerIds[triggerLabel]
@@ -334,19 +334,44 @@ class TriggerController(QObject):
                 newTrigger = 0
                 triggerLabel, imagePath = "stop", ""
 
+            # Show either the image or label for the stimulus
+            self._triggerWidget.renderImage(triggerLabel, imagePath)
+            for streamingController in self._streamingControllers.values():
+                streamingController.setTrigger(newTrigger)
+            logging.info(f"Trigger updated: {newTrigger} (label: {triggerLabel}).")
+
             self._triggerCounter += 1
             self._restFlag = True
+            # After `durationTrigger` ms, call this same function again
+            self._timer.start(self._confWidget.config["durationTrigger"])
 
-        # Show trigger
-        self._triggerWidget.renderImage(triggerLabel, imagePath)
+    def _updateCountdown(self) -> None:
+        """
+        Called every 1 second during rest: decrement restCounter, update display.
+        Actual end of rest is scheduled by singleShot.
+        """
+        self._restCounter -= 1
+        if self._restCounter > 0:
+            self._triggerWidget.renderImage(
+                self._upcomingLabel, "", str(self._restCounter)
+            )
+            logging.info(
+                f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
+            )
+        # else: do nothing; _endRest will fire when ms timer expires.
 
-        # Update trigger in streaming controllers
-        for streamingController in self._streamingControllers.values():
-            streamingController.setTrigger(newTrigger)
-        logging.info(f"Trigger updated: {newTrigger}.")
+    def _endRest(self) -> None:
+        """
+        Called once when rest interval (durationRest ms) elapses. Stop countdown timer, switch back to stimulus flow.
+        """
+        if self._countdownTimer.isActive():
+            self._countdownTimer.stop()
+        self._restFlag = False
+        logging.info("Rest ended, proceeding to next trigger.")
+        self._updateTriggerAndImage()
 
     def _startTriggerGen(self) -> None:
-        """Start the trigger generation."""
+        """Begin the whole trigger sequence (called once when streaming starts)."""
         self._confWidget.triggerGroupBox.setEnabled(False)
         if (
             not self._confWidget.triggerGroupBox.isChecked()
@@ -354,36 +379,44 @@ class TriggerController(QObject):
         ):
             return
 
-        # Set initial trigger
+        # Initialize all streaming controllers to zero
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
 
-        # Triggers
+        # Build trigger IDs and replicate each label nReps times
         for i, k in enumerate(self._confWidget.config["triggers"].keys()):
             self._triggerIds[k] = i + 1
             self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
         self._triggerLabels.append("last_stop")
 
         self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+        # Show an initial “start” label
+        self._restFlag = True
         self._triggerWidget.renderImage("start", "")
         self._triggerWidget.show()
 
+        # Wait for durationStart before firing the very first stimulus
         self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
-        """Stop trigger generation by exploiting _TriggerWidget close event."""
+        """Halt everything and close the viewer."""
         if self._triggerWidget.isVisible():
-            self._triggerWidget.close()  # the close event calls _actualStopTriggerGen
+            self._triggerWidget.close()
         else:
             self._actualStopTriggerGen()
 
     def _actualStopTriggerGen(self) -> None:
-        """Stop trigger generation."""
-        self._timer.stop()
+        """Cleanup: stop timers and reset state."""
+        if self._timer.isActive():
+            self._timer.stop()
+        if self._countdownTimer.isActive():
+            self._countdownTimer.stop()
 
         self._triggerIds = {}
         self._triggerLabels = []
         self._triggerCounter = 0
         self._restFlag = False
+        self._restCounter = 0
+        self._upcomingLabel = ""
 
         self._confWidget.triggerGroupBox.setEnabled(True)
