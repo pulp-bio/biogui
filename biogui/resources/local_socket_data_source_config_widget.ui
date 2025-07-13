@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FifoDataSourceConfigWidget</class>
- <widget class="QWidget" name="FifoDataSourceConfigWidget">
+ <class>LocalSocketDataSourceConfigWidget</class>
+ <widget class="QWidget" name="LocalSocketDataSourceConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,16 +11,16 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>FIFO Data Source Configuration</string>
+   <string>Local Socket Data Source Configuration</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Path to FIFO:</string>
+      <string>Socket path:</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
      <property name="wordWrap">
       <bool>false</bool>
@@ -28,7 +28,7 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QLineEdit" name="fifoPathTextField"/>
+    <widget class="QLineEdit" name="socketPathTextField"/>
    </item>
   </layout>
  </widget>

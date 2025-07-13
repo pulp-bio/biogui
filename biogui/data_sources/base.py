@@ -32,7 +32,7 @@ class DataSourceType(Enum):
 
     SERIAL = "Serial port"
     TCP = "TCP socket"
-    FIFO = "FIFO"
+    LOCAL_SOCK = "Local socket"
 
 
 @dataclass

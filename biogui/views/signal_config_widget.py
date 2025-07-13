@@ -208,7 +208,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.notchFreqComboBox.currentText()
             )[0]
             self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
-        
+
         # 3. Plot settings
         if not self.plotGroupBox.isChecked():
             return True, ""
