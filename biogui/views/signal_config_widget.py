@@ -64,7 +64,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.nChLabel.setText(str(nCh))
         self.freqLabel.setText(str(fs))
         if nCh == 1:
-            self.label8.setEnabled(False)
+            self.label10.setEnabled(False)
             self.chSpacingTextField.setEnabled(False)
             self.chSpacingTextField.setText("0")
 
@@ -99,7 +99,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.filtOrderTextField.setValidator(orderValidator)
         qFactorValidator = QIntValidator(bottom=10, top=50)
         self.qFactorTextField.setValidator(qFactorValidator)
-        chSpacingValidator = QIntValidator(bottom=0, top=2147483647)
+        chSpacingValidator = QDoubleValidator(bottom=0, top=1e308, decimals=nDec)
         self.chSpacingTextField.setValidator(chSpacingValidator)
         rangeValidator = QDoubleValidator(bottom=-1e308, top=1e308, decimals=nDec)
         self.minRangeTextField.setValidator(rangeValidator)
@@ -133,7 +133,6 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         - "notchFreq": frequency of the notch filter (optional);
         - "qFactor": quality factor of the notch filter (optional);
         - "chSpacing": the channel spacing (optional);
-        - "showYAxis": whether to show the Y axis (optional);
         - "minRange": minimum of the Y range (optional);
         - "maxRange": maximum of the Y range (optional).
         """
@@ -151,14 +150,14 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
     def _onRangeModeChange(self, rangeMode: str) -> None:
         """Detect if range mode has changed"""
         if rangeMode == "Automatic":
-            self.label6.setEnabled(False)
+            self.label12.setEnabled(False)
             self.minRangeTextField.setEnabled(False)
-            self.label7.setEnabled(False)
+            self.label13.setEnabled(False)
             self.maxRangeTextField.setEnabled(False)
         else:
-            self.label6.setEnabled(True)
+            self.label12.setEnabled(True)
             self.minRangeTextField.setEnabled(True)
-            self.label7.setEnabled(True)
+            self.label13.setEnabled(True)
             self.maxRangeTextField.setEnabled(True)
 
     def validateForm(self) -> tuple[bool, str]:
@@ -174,33 +173,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """
         lo = QLocale()
 
-        # 1. Plot settings
-        if not self.plotGroupBox.isChecked():
-            self._sigConfig["showYAxis"] = False
-            return True, ""
-
-        if not self.chSpacingTextField.hasAcceptableInput():
-            return False, 'The "channel spacing" field is invalid.'
-        self._sigConfig["chSpacing"] = lo.toInt(self.chSpacingTextField.text())[0]
-        self._sigConfig["showYAxis"] = self.showYAxisCheckBox.isChecked()
-        if self.rangeModeComboBox.currentText() == "Manual":
-            if not self.minRangeTextField.hasAcceptableInput():
-                return False, 'The "minimum range" field is invalid.'
-            minRange = lo.toFloat(self.minRangeTextField.text())[0]
-            if not self.maxRangeTextField.hasAcceptableInput():
-                return False, 'The "maximum range" field is invalid.'
-            maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
-            if maxRange <= minRange:
-                return (
-                    False,
-                    "The maximum range cannot be lower than the minimum range.",
-                )
-
-            self._sigConfig["minRange"] = minRange
-            self._sigConfig["maxRange"] = maxRange
-
-        # 2. Filtering settings:
-        # 2.1. Butterworth filter
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
         if self.filterGroupBox.isChecked():
             if not self.freq1TextField.hasAcceptableInput():
                 return False, 'The "Frequency 1" field is invalid.'
@@ -226,7 +200,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._sigConfig["freqs"] = freqs
             self._sigConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[0]
 
-        # 2.2. Powerline noise filter
+        # 1.2. Powerline noise filter
         if self.notchFilterGroupBox.isChecked():
             if not self.qFactorTextField.hasAcceptableInput():
                 return False, 'The "Quality factor" field is invalid.'
@@ -234,6 +208,29 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.notchFreqComboBox.currentText()
             )[0]
             self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
+        
+        # 3. Plot settings
+        if not self.plotGroupBox.isChecked():
+            return True, ""
+
+        if not self.chSpacingTextField.hasAcceptableInput():
+            return False, 'The "channel spacing" field is invalid.'
+        self._sigConfig["chSpacing"] = lo.toFloat(self.chSpacingTextField.text())[0]
+        if self.rangeModeComboBox.currentText() == "Manual":
+            if not self.minRangeTextField.hasAcceptableInput():
+                return False, 'The "minimum range" field is invalid.'
+            minRange = lo.toFloat(self.minRangeTextField.text())[0]
+            if not self.maxRangeTextField.hasAcceptableInput():
+                return False, 'The "maximum range" field is invalid.'
+            maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
+            if maxRange <= minRange:
+                return (
+                    False,
+                    "The maximum range cannot be lower than the minimum range.",
+                )
+
+            self._sigConfig["minRange"] = minRange
+            self._sigConfig["maxRange"] = maxRange
 
         return True, ""
 
@@ -241,31 +238,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """Pre-fill the form with the provided configuration."""
         lo = QLocale()
 
-        # 1. Plot settings
-        if "chSpacing" not in sigConfig:
-            self.plotGroupBox.setChecked(False)
-            return
-
-        self.plotGroupBox.setChecked(True)
-        self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
-        self.showYAxisCheckBox.setChecked(sigConfig["showYAxis"])
-        if "minRange" in sigConfig and "maxRange" in sigConfig:
-            self.rangeModeComboBox.setCurrentText("Manual")
-            self.minRangeTextField.setText(lo.toString(sigConfig["minRange"]))
-            self.maxRangeTextField.setText(lo.toString(sigConfig["maxRange"]))
-            self.label6.setEnabled(True)
-            self.minRangeTextField.setEnabled(True)
-            self.label7.setEnabled(True)
-            self.maxRangeTextField.setEnabled(True)
-        else:
-            self.rangeModeComboBox.setCurrentText("Automatic")
-            self.label6.setEnabled(False)
-            self.minRangeTextField.setEnabled(False)
-            self.label7.setEnabled(False)
-            self.maxRangeTextField.setEnabled(False)
-
-        # 2. Filtering settings:
-        # 2.1. Butterworth filter
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
         if "filtType" in sigConfig:
             self.filterGroupBox.setChecked(True)
             self.filtTypeComboBox.setCurrentText(sigConfig["filtType"])
@@ -278,7 +252,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         else:
             self.filterGroupBox.setChecked(False)
 
-        # 2.2. Powerline noise filter
+        # 1.2. Powerline noise filter
         if "notchFreq" in sigConfig:
             self.notchFilterGroupBox.setChecked(True)
             self.notchFreqComboBox.setCurrentText(
@@ -287,3 +261,25 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.qFactorTextField.setText(lo.toString(sigConfig["qFactor"]))
         else:
             self.notchFilterGroupBox.setChecked(False)
+
+        # 2. Plot settings
+        if "chSpacing" not in sigConfig:
+            self.plotGroupBox.setChecked(False)
+            return
+
+        self.plotGroupBox.setChecked(True)
+        self.chSpacingTextField.setText(lo.toString(sigConfig["chSpacing"]))
+        if "minRange" in sigConfig and "maxRange" in sigConfig:
+            self.rangeModeComboBox.setCurrentText("Manual")
+            self.minRangeTextField.setText(lo.toString(sigConfig["minRange"]))
+            self.maxRangeTextField.setText(lo.toString(sigConfig["maxRange"]))
+            self.label12.setEnabled(True)
+            self.minRangeTextField.setEnabled(True)
+            self.label13.setEnabled(True)
+            self.maxRangeTextField.setEnabled(True)
+        else:
+            self.rangeModeComboBox.setCurrentText("Automatic")
+            self.label12.setEnabled(False)
+            self.minRangeTextField.setEnabled(False)
+            self.label13.setEnabled(False)
+            self.maxRangeTextField.setEnabled(False)

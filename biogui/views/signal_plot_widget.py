@@ -42,10 +42,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    chSpacing : int
+    chSpacing : float
         Spacing between each channel in the plot.
-    showYAxis : bool
-        Whether to show the Y axis or not.
     renderLenMs : int
         Length of the window in the plot (in ms).
     parent : QWidget or None
@@ -61,7 +59,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         Sampling frequency.
     _nCh : int
         Number of channels.
-    _chSpacing : int
+    _chSpacing : float
         Spacing between each channel in the plot.
     _plotTimer : QTimer
         Timer for plot refreshing.
@@ -80,8 +78,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        chSpacing: int,
-        showYAxis: bool,
+        chSpacing: float,
         renderLenMs: int,
         parent: QWidget | None = None,
         **kwargs: dict[str, float],
@@ -120,8 +117,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self.graphWidget.setTitle(sigName)
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
         self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
-        if not showYAxis:
-            self.graphWidget.getPlotItem().hideAxis("left")  # type: ignore
         if "minRange" in kwargs and "maxRange" in kwargs:
             self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])  # type: ignore
         self._renderPlots()
