@@ -21,14 +21,10 @@ import struct
 
 import numpy as np
 
-<<<<<<< Updated upstream:interfaces/interface_gapwatch.py
 BUFF_SIZE = 40
-FS = 4000
-GAIN = 6
-=======
-BUFF_SIZE = 20
-NCH_EMG = 3
->>>>>>> Stashed changes:interfaces/interface_gapwatch_intelliman.py
+FS = 2000
+GAIN = 12
+NCH_EMG = 8
 
 FS_MAP = {
     500: 0x06,
@@ -67,7 +63,7 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": FS, "nCh": 16},
+    "emg": {"fs": FS, "nCh": NCH_EMG},
     "battery": {"fs": FS // 5, "nCh": 1},
     "counter": {"fs": FS // 5, "nCh": 1},
     "ts": {"fs": FS // 5, "nCh": 1},
@@ -90,14 +86,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
+    nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
-<<<<<<< Updated upstream:interfaces/interface_gapwatch.py
-=======
-    channels = [0,1,2]
+    channels = [0,1,2,3,4,5,6,7]  
 
->>>>>>> Stashed changes:interfaces/interface_gapwatch_intelliman.py
     # ADC parameters
     vRef = 4
     nBit = 24
@@ -123,9 +116,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
+    emg = emgADC * vRef / (3 * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
-    emg = emg.astype(np.float32)
+    emg = emg.astype(np.float32)[:, channels]  # Select only the first 3 channels
 
     # Read battery and packet counter
     battery = np.asarray(

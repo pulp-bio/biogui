@@ -27,7 +27,7 @@
         "yankee": "yankee.png",
         "zulu": "zulu.png"
     },
-    "nReps": 10,
+    "nReps": 20,
     "durationTrigger": 3000,
     "durationStart": 10000,
     "durationRest": 1000,
