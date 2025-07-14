@@ -1,0 +1,11 @@
+{
+    "triggers": {
+        "alpha": "alpha.png",
+        "bravo": "bravo.png"
+    },
+    "nReps": 4,
+    "durationTrigger": 3000,
+    "durationStart": 10000,
+    "durationRest": 1000,
+    "imageFolder": "acquisitions/gestures_images"
+}
