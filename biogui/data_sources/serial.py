@@ -22,9 +22,11 @@ from __future__ import annotations
 import logging
 import time
 
-from PySide6.QtCore import QByteArray, QIODevice, QLocale
+import serial
+import serial.serialutil
+import serial.tools.list_ports
+from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon, QIntValidator
-from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
 from biogui.utils import detectTheme
@@ -134,7 +136,7 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         """Rescan the serial ports to update the combo box."""
         self.serialPortsComboBox.clear()
         self.serialPortsComboBox.addItems(
-            [portInfo.portName() for portInfo in QSerialPortInfo.availablePorts()]
+            [info[0] for info in serial.tools.list_ports.comports()]
         )
 
 
@@ -167,10 +169,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         String representing the serial port.
     _baudRate : int
         Baud rate.
-    _serialPort : QSerialPort
-        Serial port object.
-    _buffer : QByteArray
-        Input buffer.
+    _stopReadingFlag : bool
+        Flag indicating to stop reading data.
 
     Class attributes
     ----------------
@@ -195,58 +195,58 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._stopSeq = stopSeq
         self._serialPortName = serialPortName
         self._baudRate = baudRate
-
-        self._serialPort = QSerialPort(self)
-        self._serialPort.setPortName(serialPortName)
-        self._serialPort.setBaudRate(baudRate)
-        self._serialPort.readyRead.connect(self._collectData)
-        self._buffer = QByteArray()
-
-        self.destroyed.connect(self.deleteLater)
+        self._stopReadingFlag = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
-        # Open port
-        if not self._serialPort.open(QIODevice.ReadWrite):  # type: ignore
-            errMsg = f"Cannot open serial port due to the following error:\n{self._serialPort.errorString()}."
+        self._stopReadingFlag = False
+
+        # Open serial port
+        try:
+            ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
+        except serial.serialutil.SerialException as e:
+            errMsg = f"Cannot open serial port due to the following exception:\n{e}."
             self.errorOccurred.emit(errMsg)
-            logging.error("DataWorker: {errMsg}")
+            logging.error(f"DataSourceWorker: {errMsg}")
             return
+
+        logging.info("DataSourceWorker: serial communication started.")
 
         # Start command
         for c in self._startSeq:
             if type(c) is bytes:
-                self._serialPort.write(c)
+                ser.write(c)
             elif type(c) is float:
                 time.sleep(c)
 
-        logging.info("DataWorker: serial communication started.")
+        while not self._stopReadingFlag:
+            data = ser.read(self._packetSize)
 
-    def stopCollecting(self) -> None:
-        """Stop data collection."""
+            # Check number of bytes read
+            if len(data) != self._packetSize:
+                self.errorOccurred.emit("No data received.")
+                logging.error("DataSourceWorker: no data received")
+                break
 
-        logging.info("DataWorker: serial communication stopped.")
+            self.dataPacketReady.emit(data)
 
         # Stop command
         for c in self._stopSeq:
             if type(c) is bytes:
-                self._serialPort.write(c)
+                ser.write(c)
             elif type(c) is float:
                 time.sleep(c)
+        ser.flush()
 
-        # Reset input buffer and close port
-        while self._serialPort.waitForReadyRead(100):
-            self._serialPort.clear()
-        self._serialPort.close()
-        self._buffer = QByteArray()
+        # Close port
+        ser.reset_input_buffer()
+        ser.close()
 
-    def _collectData(self) -> None:
-        """Fill input buffer when data is ready."""
-        self._buffer.append(self._serialPort.readAll())
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
-            self.dataPacketReady.emit(data)
-            self._buffer.remove(0, self._packetSize)
+        logging.info("DataSourceWorker: serial communication stopped.")
+
+    def stopCollecting(self) -> None:
+        """Stop data collection."""
+        self._stopReadingFlag = True
