@@ -410,6 +410,7 @@ class _Preprocessor(QObject):
         signals = []
         for sigName, sigData in dataDec.items():
             rawSignals.append(SigData(sigName, sigData, acq_ts))
+            dtype = sigData.dtype
 
             # Filtering
             try:
@@ -432,7 +433,7 @@ class _Preprocessor(QObject):
                     "An error occurred during filtering, check the settings."
                 )
                 return
-            signals.append(SigData(sigName, sigData, acq_ts))
+            signals.append(SigData(sigName, sigData.astype(dtype), acq_ts))
 
         # Emit raw and filtered signals
         self.rawSignalsReady.emit(rawSignals)
@@ -646,6 +647,8 @@ class StreamingController(QObject):
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
+        if isinstance(self._dataSourceWorker, data_sources.SerialDataSourceWorker):
+            self._dataSourceWorker.stopCollecting()
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
 
