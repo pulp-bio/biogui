@@ -141,7 +141,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
             self._plots.append(
                 self.graphWidget.plot(
-                    ys[i] + self._chSpacing * (self._nCh - i), pen=pen
+                    ys[i] + self._chSpacing * (self._nCh - i - 1), pen=pen
                 )
             )
 
@@ -196,7 +196,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             ys = np.asarray(self._dataQueue).T
             for i in range(self._nCh):
                 self._plots[i].setData(
-                    ys[i] + self._chSpacing * (self._nCh - i),
+                    ys[i] + self._chSpacing * (self._nCh - i - 1),
                     skipFiniteCheck=True,
                 )
 

@@ -49,8 +49,8 @@ def getConfigWidget(
         The corresponding DataSourceConfigWidget object.
     """
     configWidgetDict = {
-        DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.TCP: TCPConfigWidget,
+        DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.LOCAL_SOCK: LocalSocketConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)

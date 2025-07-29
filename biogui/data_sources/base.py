@@ -30,8 +30,8 @@ from PySide6.QtWidgets import QWidget
 class DataSourceType(Enum):
     """Enum representing the data source type."""
 
-    SERIAL = "Serial port"
     TCP = "TCP socket"
+    SERIAL = "Serial port"
     LOCAL_SOCK = "Local socket"
 
 

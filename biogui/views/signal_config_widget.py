@@ -101,7 +101,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.qFactorTextField.setValidator(qFactorValidator)
         chSpacingValidator = QDoubleValidator(bottom=0, top=1e308, decimals=nDec)
         self.chSpacingTextField.setValidator(chSpacingValidator)
-        rangeValidator = QDoubleValidator(bottom=-1e308, top=1e308, decimals=nDec)
+        rangeValidator = QDoubleValidator(bottom=0, top=1e308, decimals=nDec)
         self.minRangeTextField.setValidator(rangeValidator)
         self.maxRangeTextField.setValidator(rangeValidator)
 

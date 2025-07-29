@@ -141,6 +141,7 @@ class MainController(QObject):
         self._mainWin.startStreamingButton.setEnabled(False)
         self._mainWin.stopStreamingButton.setEnabled(True)
         self._mainWin.streamConfGroupBox.setEnabled(False)
+        self._mainWin.moduleContainer.setEnabled(False)
 
         # Start all StreamingController objects
         for streamController in self._streamingControllers.values():
@@ -159,9 +160,10 @@ class MainController(QObject):
         self.streamingStopped.emit()
 
         # Handle UI elements
-        self._mainWin.streamConfGroupBox.setEnabled(True)
         self._mainWin.startStreamingButton.setEnabled(True)
         self._mainWin.stopStreamingButton.setEnabled(False)
+        self._mainWin.streamConfGroupBox.setEnabled(True)
+        self._mainWin.moduleContainer.setEnabled(True)
 
     def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
         """Add a data source, given its configuration."""
