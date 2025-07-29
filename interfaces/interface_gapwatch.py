@@ -22,8 +22,8 @@ import struct
 import numpy as np
 
 BUFF_SIZE = 40
-FS = 4000
-GAIN = 6
+FS = 2000
+GAIN = 1
 
 FS_MAP = {
     500: 0x06,
@@ -85,7 +85,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
+    nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
     # ADC parameters
