@@ -158,7 +158,7 @@ class _FileWriterWorker(QObject):
             # 3. Trigger (optional)
             if self._trigger is not None:
                 self._tempData["trigger"]["file"].write(
-                    struct.pack("<I", self._trigger)
+                    struct.pack("<i", self._trigger)
                 )
                 self._tempData["trigger"]["nSamp"] += 1
         except OSError:
