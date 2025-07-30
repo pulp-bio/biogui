@@ -59,6 +59,12 @@ def notch_filter(data, fs, f0, Q):
     y = filtfilt(b, a, data, axis=0)
     return y
 
+def decode_trigger(trigger_value):
+    sentence_index = (trigger_value // 1000) - 1
+    repetition = (trigger_value % 1000) // 10
+    is_voiced = (trigger_value % 10) == 1
+    return sentence_index, repetition, is_voiced
+
 def read_bio_file(file_path: str) -> dict:
     """
     Parameters
@@ -135,6 +141,7 @@ def read_bio_file(file_path: str) -> dict:
         # 3. Trigger (optional)
         if is_trigger:
             trigger = np.frombuffer(f.read(), dtype=np.int32).reshape(n_samp_base, 1)
+
             signals["trigger"] = {"data": trigger, "fs": fs_base}
 
     return signals
@@ -152,7 +159,33 @@ def main():
         signals["emg"]["data"] = signals["emg"]["data"][int(10*signals["emg"]["fs"]):int(70*signals["emg"]["fs"]),:9]*3/12*1000
         signals["emg"]["data"] = notch_filter(signals["emg"]["data"], signals["emg"]["fs"], 60, 30)
         signals["emg"]["data"] = bandpass_filter(signals["emg"]["data"], 30, 500, signals["emg"]["fs"], order=4)
-    
+    #decode trigger for every samp in the trigger signal using list comprehension and lambda
+    if "trigger" in signals:    
+        signals["trigger"]["data"] = np.array(
+            list(
+                map(
+                    lambda x: decode_trigger(x[0]),
+                    signals["trigger"]["data"],
+                )
+            )
+        )
+        # Unpack the decoded trigger values
+        sentence_index, repetition, is_voiced = zip(*signals["trigger"]["data"])
+
+    t = np.arange(len(sentence_index)) / signals["trigger"]["fs"]
+    print(f"Sentence index: {sentence_index}, Repetition: {repetition}, Is voiced: {is_voiced}")
+    #plot sentence index, repetition and is voiced
+    plt.figure(figsize=(10, 5))
+    plt.plot(t, sentence_index, label="Sentence Index")
+    plt.plot(t, repetition, label="Repetition")
+    plt.plot(t, is_voiced, label="Is Voiced")
+    plt.xlabel("Time [s]")  
+    plt.ylabel("Value")
+    plt.title("Trigger Signal Decoding")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
     # Plot
     for sig_name, sig_data in signals.items():
         #if sig name is emg set the y axis label to microvolts

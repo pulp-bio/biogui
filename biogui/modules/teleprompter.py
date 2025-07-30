@@ -7,7 +7,10 @@ JSON structure:
 {
     "sentences": ["First sentence.", "Second sentence.", ...],
     "durationStart": 1000,
-    "durationPerSentence": 2000
+    "durationPerSentence": 2000,
+    "numberofRepeatsVoiced": 1,
+    "numberofRepeatsSilent": 1
+    
 }
 
 Copyright 2024
@@ -51,9 +54,9 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
         config = json.load(f)
 
     provided = set(config.keys())
-    valid = {"sentences", "durationStart", "durationPerSentence"}
+    valid = {"sentences", "durationStart", "durationPerSentence", "numberofRepeatsVoiced", "numberofRepeatsSilent", "durationRest"}
     if provided != valid:
-        return None, "JSON must contain exactly 'sentences', 'durationStart', and 'durationPerSentence'."
+        return None, "JSON must contain exactly 'sentences', 'durationStart', 'durationPerSentence', 'numberofRepeatsVoiced', 'numberofRepeatsSilent', and 'durationRest'."
 
     if not isinstance(config["sentences"], list) or len(config["sentences"]) == 0:
         return None, "'sentences' must be a non-empty list of strings."
@@ -65,11 +68,31 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
         return None, "'durationStart' must be a non-negative integer (milliseconds)."
     if not isinstance(config["durationPerSentence"], int) or config["durationPerSentence"] <= 0:
         return None, "'durationPerSentence' must be a positive integer (milliseconds)."
+    if not isinstance(config["numberofRepeatsVoiced"], int) or config["numberofRepeatsVoiced"] < 0:
+        return None, "'numberofRepeatsVoiced' must be a non-negative integer."
+    if not isinstance(config["numberofRepeatsSilent"], int) or config["numberofRepeatsSilent"] < 0:
+        return None, "'numberofRepeatsSilent' must be a non-negative integer."
+    if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
+        return None, "'durationRest' must be a non-negative integer (milliseconds)."
 
     return config, ""
 
 
 class _TeleprompterWidget(QWidget):
+    restFinished = Signal()
+    def displayRest(self, duration_ms: int) -> None:
+        """Display a rest period message."""
+        self._modeLabel.setText(f"<span style='font-size:20px;'>REST</span>")
+        self._label.setText(f"<span style='font-size: 32px; font-weight: bold;'>REST</span>")
+        try:
+            self._wordTimer.stop()
+        except AttributeError:
+            pass
+        self._wordTimer = QTimer(self)
+        self._wordTimer.setInterval(duration_ms)
+        self._wordTimer.setSingleShot(True)
+        self._wordTimer.timeout.connect(self.restFinished.emit)
+        self._wordTimer.start()
     """
     Widget that displays text, highlighting each word.
 
@@ -88,6 +111,10 @@ class _TeleprompterWidget(QWidget):
         self.setWindowTitle("Teleprompter")
         self.resize(800, 200)
 
+        self._modeLabel = QLabel(self)
+        self._modeLabel.setAlignment(Qt.AlignCenter)
+        self._modeLabel.setFont(QFont("Arial", 16, QFont.Bold))
+
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignCenter)
         self._label.setWordWrap(True)
@@ -95,16 +122,20 @@ class _TeleprompterWidget(QWidget):
         self._label.setTextFormat(Qt.RichText)
 
         layout = QVBoxLayout(self)
+        layout.addWidget(self._modeLabel)
         layout.addWidget(self._label)
         self.setLayout(layout)
 
         self._qColor = QColor("black" if detectTheme() == "light" else "white")
         self._label.setStyleSheet(f"color: {self._qColor.name()};")
+        self._modeLabel.setStyleSheet(f"color: {self._qColor.name()};")
 
         self.destroyed.connect(self.deleteLater)
 
-    def displaySentence(self, sentence: str, duration_ms: int) -> None:
-        """Highlight words with timing based on word length relative to total characters."""
+    def displaySentence(self, sentence: str, duration_ms: int, is_voiced: bool = True) -> None:
+        """Highlight words with timing based on word length relative to total characters. Show mode label."""
+        mode_text = "VOICED" if is_voiced else "SILENT"
+        self._modeLabel.setText(f"<span style='font-size:20px;'>{mode_text}</span>")
         words = sentence.split()
         total_chars = sum(len(w) for w in words)
         if total_chars == 0:
@@ -141,7 +172,8 @@ class _TeleprompterWidget(QWidget):
         highlighted = []
         for idx, w in enumerate(self._words):
             if idx == self._current_word_idx:
-                highlighted.append(f"<span style='background-color: yellow;'>{w}</span>")
+                # highlighted.append(f"<span style='background-color: yellow;'>{w}</span>")
+                highlighted.append(w)
             else:
                 highlighted.append(w)
         html = " ".join(highlighted)
@@ -233,6 +265,7 @@ class TeleprompterController(QObject):
 
         self._teleWidget = _TeleprompterWidget()
         self._teleWidget.widgetClosed.connect(self._stopTeleprompter)
+        self._teleWidget.restFinished.connect(self._onRestFinished)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._showNextSentence)
@@ -240,8 +273,15 @@ class TeleprompterController(QObject):
         self._sentences: list[str] = []
         self._duration = 0
         self._durationStart = 0
+        self._durationRest = 0
         self._index = 0
         self._streamingControllers: dict[str, object] = {}
+        self._voicedRepeats = 1
+        self._silentRepeats = 1
+        self._currentVoiced = 0
+        self._currentSilent = 0
+        self._isVoiced = True
+        self._pendingRest = False
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         mainWin.moduleContainer.layout().addWidget(self._confWidget)
@@ -263,7 +303,14 @@ class TeleprompterController(QObject):
         self._sentences = config["sentences"]
         self._duration = config["durationPerSentence"]
         self._durationStart = config["durationStart"]
+        self._durationRest = config["durationRest"]
         self._index = 0
+        self._voicedRepeats = config.get("numberofRepeatsVoiced", 1)
+        self._silentRepeats = config.get("numberofRepeatsSilent", 1)
+        self._currentVoiced = 0
+        self._currentSilent = 0
+        self._isVoiced = True
+        self._pendingRest = False
 
         for ctrl in self._streamingControllers.values():
             ctrl.setTrigger(0)
@@ -274,20 +321,79 @@ class TeleprompterController(QObject):
         QTimer.singleShot(self._durationStart, self._beginSentences)
 
     def _beginSentences(self) -> None:
-        # After start duration, show first sentence
+        # After start duration, show first sentence (voiced)
+        self._currentVoiced = 1
+        self._currentSilent = 0
+        self._isVoiced = True
+        # Encode trigger: (sentence_index+1)*1000 + repetition*10 + (1 if voiced else 0)
+        trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
         for ctrl in self._streamingControllers.values():
-            ctrl.setTrigger(1)
-        self._teleWidget.displaySentence(self._sentences[self._index], self._duration)
+            ctrl.setTrigger(trigger_value)
+        self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
         self._timer.start(self._duration)
 
     def _showNextSentence(self) -> None:
-        self._index += 1
-        if self._index >= len(self._sentences):
-            self._stopTeleprompter()
+        # Handle voiced and silent repeats for each sentence, with rest in between
+        if self._pendingRest:
+            # Just finished a rest, continue with the next repetition
+            self._pendingRest = False
+            if self._isVoiced:
+                trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(trigger_value)
+                self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
+                self._timer.start(self._duration)
+            else:
+                trigger_value = (self._index + 1) * 1000 + self._currentSilent * 10 + 0
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(trigger_value)
+                self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=False)
+                self._timer.start(self._duration)
             return
-        for ctrl in self._streamingControllers.values():
-            ctrl.setTrigger(self._index + 1)
-        self._teleWidget.displaySentence(self._sentences[self._index], self._duration)
+
+        if self._isVoiced:
+            if self._currentVoiced < self._voicedRepeats:
+                # Insert rest before next voiced repetition
+                self._pendingRest = True
+                self._currentVoiced += 1
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(-999)  # Special trigger for rest
+                self._teleWidget.displayRest(self._durationRest)
+                return
+            else:
+                self._isVoiced = False
+                self._currentSilent = 1
+                # Insert rest before first silent repetition
+                self._pendingRest = True
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(-999)
+                self._teleWidget.displayRest(self._durationRest)
+                return
+        else:
+            if self._currentSilent < self._silentRepeats:
+                # Insert rest before next silent repetition
+                self._pendingRest = True
+                self._currentSilent += 1
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(-999)
+                self._teleWidget.displayRest(self._durationRest)
+                return
+            else:
+                self._isVoiced = True
+                self._currentVoiced = 1
+                self._index += 1
+                if self._index >= len(self._sentences):
+                    self._stopTeleprompter()
+                    return
+                # Insert rest before first voiced repetition of next sentence
+                self._pendingRest = True
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(-999)
+                self._teleWidget.displayRest(self._durationRest)
+                return
+
+    def _onRestFinished(self):
+        self._showNextSentence()
 
     def _stopTeleprompter(self) -> None:
         if self._teleWidget.isVisible():

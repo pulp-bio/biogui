@@ -6,5 +6,8 @@
         "Finally, we'll discuss practical tips for model deployment."
     ],
     "durationPerSentence": 7000,
-    "durationStart": 1000
+    "durationStart": 1000,
+    "durationRest": 1000,
+    "numberofRepeatsVoiced": 2,
+    "numberofRepeatsSilent": 3
 }
