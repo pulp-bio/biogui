@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'trigger_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,22 +27,23 @@ class Ui_TriggerConfigWidget(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.triggerGroupBox = QGroupBox(TriggerConfigWidget)
         self.triggerGroupBox.setObjectName(u"triggerGroupBox")
-        self.triggerGroupBox.setAlignment(Qt.AlignCenter)
-        self.triggerGroupBox.setCheckable(True)
+        self.triggerGroupBox.setEnabled(True)
+        self.triggerGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.triggerGroupBox.setCheckable(False)
         self.triggerGroupBox.setChecked(False)
         self.formLayout = QFormLayout(self.triggerGroupBox)
         self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         self.browseTriggerConfigButton = QPushButton(self.triggerGroupBox)
         self.browseTriggerConfigButton.setObjectName(u"browseTriggerConfigButton")
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.browseTriggerConfigButton)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.browseTriggerConfigButton)
 
         self.triggerConfigPathLabel = QLabel(self.triggerGroupBox)
         self.triggerConfigPathLabel.setObjectName(u"triggerConfigPathLabel")
         self.triggerConfigPathLabel.setWordWrap(True)
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.triggerConfigPathLabel)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.triggerConfigPathLabel)
 
 
         self.verticalLayout.addWidget(self.triggerGroupBox)
@@ -55,7 +56,7 @@ class Ui_TriggerConfigWidget(object):
 
     def retranslateUi(self, TriggerConfigWidget):
         TriggerConfigWidget.setWindowTitle(QCoreApplication.translate("TriggerConfigWidget", u"Trigger Configuration Widget", None))
-        self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfigWidget", u"Configure triggers", None))
+        self.triggerGroupBox.setTitle(QCoreApplication.translate("TriggerConfigWidget", u"Trigger configuration", None))
 #if QT_CONFIG(tooltip)
         self.browseTriggerConfigButton.setToolTip(QCoreApplication.translate("TriggerConfigWidget", u"The JSON file must contain specific fields", None))
 #endif // QT_CONFIG(tooltip)

@@ -81,13 +81,15 @@ class ModuleController(QObject):
     def _triggerActionHandler(self, checked: bool) -> None:
         """Handler for the "configure triggers" action."""
         if checked:
-            triggerModule = modules.TriggerController()
+            triggerModule = modules.TriggerController(
+                self._mainController.streamingControllers, self
+            )
             triggerModule.subscribe(self._mainController, self._mainWin)
             self._modules["trigger"] = triggerModule
         else:
             triggerModule = self._modules.pop("trigger")
             triggerModule.unsubscribe(self._mainController, self._mainWin)
-            del triggerModule
+            triggerModule.deleteLater()
 
     def _processingActionHandler(self, checked: bool) -> None:
         """Handler for the "configure forwarding" action."""
@@ -100,3 +102,4 @@ class ModuleController(QObject):
         else:
             forwardingModule = self._modules.pop("forwardingModule")
             forwardingModule.unsubscribe(self._mainController, self._mainWin)
+            forwardingModule.deleteLater()
