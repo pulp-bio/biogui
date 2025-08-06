@@ -166,6 +166,11 @@ class _FileWriterWorker(QObject):
 
     def closeFile(self) -> None:
         """Close the file."""
+        # Check if file is empty
+        if self._tempData["acq_ts"]["nSamp"] == 0:
+            self._resetTempFiles()
+            return
+
         # Add timestamp and extension to filename
         filePath = (
             self._filePath
@@ -540,9 +545,14 @@ class StreamingController(QObject):
         """MappingProxyType: Property representing a read-only view of the signals specification dictionary."""
         return MappingProxyType(self._sigInfo)
 
+    @instanceSlot(list)
+    def _forwardData(self, signal: list) -> None:
+        """When the signals are ready, forward the data via a Qt Signal."""
+        self.signalsReady.emit(signal)
+
     @instanceSlot(str)
     def _handleErrors(self, errMessage: str) -> None:
-        """When error occurs, stop collection and preprocessing and forward the error Qt Signal."""
+        """When error occurs, forward the error via a Qt Signal."""
         self.errorOccurred.emit(
             f'StreamingController "{self.__str__()}" raised the following error:\n\n{errMessage}'
         )
@@ -637,7 +647,7 @@ class StreamingController(QObject):
         """Start streaming."""
         self._dataSourceWorker.dataPacketReady.connect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorOccurred.connect(self._handleErrors)
-        self._preprocessor.signalsReady.connect(lambda d: self.signalsReady.emit(d))
+        self._preprocessor.signalsReady.connect(self._forwardData)
         self._preprocessor.errorOccurred.connect(self._handleErrors)
 
         if self._fileWriterWorker is not None and self._fileWriterThread is not None:
@@ -660,6 +670,5 @@ class StreamingController(QObject):
 
         self._dataSourceWorker.dataPacketReady.disconnect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorOccurred.disconnect(self._handleErrors)
-        self._preprocessor.signalsReady.disconnect()
+        self._preprocessor.signalsReady.disconnect(self._forwardData)
         self._preprocessor.errorOccurred.disconnect(self._handleErrors)
-        self._preprocessor.errorOccurred.disconnect()

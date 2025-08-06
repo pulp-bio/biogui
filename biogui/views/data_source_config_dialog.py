@@ -236,7 +236,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         # Add new widget
         self._configWidget = data_sources.getConfigWidget(
-            data_sources.DataSourceType(dataSourceType), self
+            data_sources.DataSourceType(dataSourceType), parent=self
         )
         self.dataSourceConfigContainer.addWidget(self._configWidget)
 
