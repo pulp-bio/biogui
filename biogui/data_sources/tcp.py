@@ -60,8 +60,6 @@ class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.socketPortTextField.setValidator(portValidator)
 
-        self.destroyed.connect(self.deleteLater)
-
     def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
@@ -169,8 +167,6 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._tcpServer.newConnection.connect(self._handleConnection)
         self._clientSock: QTcpSocket | None = None
         self._buffer = QByteArray()
-
-        self.destroyed.connect(self.deleteLater)
 
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"

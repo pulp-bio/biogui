@@ -70,6 +70,8 @@ class MainController(QObject):
     ----------
     mainWin : MainWindow
         Instance of MainWindow.
+    parent : QObject or None, default=None
+        Parent QObject.
 
     Attributes
     ----------
@@ -88,8 +90,6 @@ class MainController(QObject):
         Qt Signal emitted when streaming starts.
     streamingStopped : Signal
         Qt Signal emitted when streaming stops.
-    appClosed : Signal
-        Qt Signal emitted when the application is closed.
     signalsReady : Signal
         Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
     streamingControllersChanged : Signal
@@ -98,12 +98,11 @@ class MainController(QObject):
 
     streamingStarted = Signal()
     streamingStopped = Signal()
-    appClosed = Signal()
     signalsReady = Signal(SigData)
     streamingControllersChanged = Signal()
 
-    def __init__(self, mainWin: MainWindow) -> None:
-        super().__init__()
+    def __init__(self, mainWin: MainWindow, parent: QObject | None = None) -> None:
+        super().__init__(parent)
         self._mainWin = mainWin
         self._streamingControllers: dict[str, StreamingController] = {}
         self._signalPlotWidgets: dict[str, SignalPlotWidget] = {}
@@ -117,7 +116,7 @@ class MainController(QObject):
         self._connectSignals()
 
     @property
-    def streamingControllers(self) -> MappingProxyType:
+    def streamingControllers(self) -> MappingProxyType[str, StreamingController]:
         """MappingProxyType: Property representing a read-only view of the StreamingController dictionary."""
         return MappingProxyType(self._streamingControllers)
 
@@ -179,9 +178,12 @@ class MainController(QObject):
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
         streamingController = StreamingController(
-            dataSourceWorkerArgs, interfaceModule.decodeFn, filePath, sigsConfigs, self
+            dataSourceWorkerArgs,
+            interfaceModule.decodeFn,
+            filePath,
+            sigsConfigs,
+            parent=self,
         )
-        self.appClosed.connect(streamingController.onAppExit)
         self._streamingControllers[str(streamingController)] = streamingController
 
         # Create plot widget
@@ -234,6 +236,7 @@ class MainController(QObject):
                 plotWidgetToRemove.deleteLater()
 
         # Delete streaming controller and config
+        self._streamingControllers[dataSource].deleteLater()
         del self._streamingControllers[dataSource]
         del self._config[dataSource]
 
@@ -253,9 +256,9 @@ class MainController(QObject):
         dataPacket : tuple of (str, list of SigData)
             Data to plot.
         """
-        ctrlId = str(self.sender())
+        dataSourceId = str(self.sender())
         for sigData in dataPacket:
-            plotId = f"{ctrlId}%{sigData.sigName}"
+            plotId = f"{dataSourceId}%{sigData.sigName}"
             if plotId in self._signalPlotWidgets:
                 self._signalPlotWidgets[plotId].addData(sigData.data)
 
@@ -297,7 +300,7 @@ class MainController(QObject):
 
         # Get the configurations of all the signals
         signalConfigWizard = SignalConfigWizard(
-            dataSourceConfig["interfaceModule"].sigInfo, self._mainWin
+            dataSourceConfig["interfaceModule"].sigInfo, parent=self._mainWin
         )
         completed = signalConfigWizard.exec()
         if not completed:
@@ -358,7 +361,7 @@ class MainController(QObject):
 
             # Get the configurations of all the signals
             signalConfigWizard = SignalConfigWizard(
-                newDataSourceConfig["interfaceModule"].sigInfo, self._mainWin
+                newDataSourceConfig["interfaceModule"].sigInfo, parent=self._mainWin
             )
             completed = signalConfigWizard.exec()
             if not completed:
@@ -398,20 +401,20 @@ class MainController(QObject):
 
         # Update streaming controller and store new settings
         streamingController = self._streamingControllers.pop(dataSourceToEdit)
-        oldCtrlId = str(streamingController)
-        del self._config[oldCtrlId]
+        oldDataSourceId = str(streamingController)
+        del self._config[oldDataSourceId]
         streamingController.editDataSourceConfig(newDataSourceConfig)
-        newCtrlId = str(streamingController)
-        self._streamingControllers[newCtrlId] = streamingController
-        self._config[newCtrlId] = newDataSourceConfig
-        itemToEdit.setText(newCtrlId)
+        newDataSourceId = str(streamingController)
+        self._streamingControllers[newDataSourceId] = streamingController
+        self._config[newDataSourceId] = newDataSourceConfig
+        itemToEdit.setText(newDataSourceId)
 
         # Update plot widgets
         for sigName, sigConfig in sigsConfigs.items():
-            oldPlotId = f"{oldCtrlId}%{sigName}"
+            oldPlotId = f"{oldDataSourceId}%{sigName}"
             if oldPlotId not in self._signalPlotWidgets:
                 continue
-            newPlotId = f"{newCtrlId}%{sigName}"
+            newPlotId = f"{newDataSourceId}%{sigName}"
 
             oldSignalPlotWidget = self._signalPlotWidgets.pop(oldPlotId)
             newSignalPlotWidget = SignalPlotWidget(

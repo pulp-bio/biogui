@@ -442,7 +442,7 @@ class _Preprocessor(QObject):
 
 class StreamingController(QObject):
     """
-    Controller for the streaming from the serial port using the ESB protocol.
+    Controller for streaming data from a source.
 
     Parameters
     ----------
@@ -511,9 +511,10 @@ class StreamingController(QObject):
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
+        self._dataSourceThread.destroyed.connect(self._dataSourceWorker.deleteLater)
 
         # Create pre-processor
-        self._preprocessor = _Preprocessor(decodeFn, sigsConfigs, self)
+        self._preprocessor = _Preprocessor(decodeFn, sigsConfigs, parent=self)
 
         # Store signal specifications
         self._sigInfo = {
@@ -529,6 +530,7 @@ class StreamingController(QObject):
             self._fileWriterWorker.moveToThread(self._fileWriterThread)
             self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
             self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)
+            self._fileWriterThread.destroyed.connect(self._fileWriterWorker.deleteLater)
 
     def __str__(self) -> str:
         return str(self._dataSourceWorker)
@@ -647,8 +649,6 @@ class StreamingController(QObject):
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
-        if isinstance(self._dataSourceWorker, data_sources.SerialDataSourceWorker):
-            self._dataSourceWorker.stopCollecting()
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
 
@@ -656,15 +656,10 @@ class StreamingController(QObject):
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
             self._fileWriterWorker.trigger = None
-            self._preprocessor.rawSignalsReady.disconnect()
+            self._preprocessor.rawSignalsReady.disconnect(self._fileWriterWorker.write)
 
-        self._dataSourceWorker.dataPacketReady.disconnect()
-        self._dataSourceWorker.errorOccurred.disconnect()
+        self._dataSourceWorker.dataPacketReady.disconnect(self._preprocessor.preprocess)
+        self._dataSourceWorker.errorOccurred.disconnect(self._handleErrors)
         self._preprocessor.signalsReady.disconnect()
+        self._preprocessor.errorOccurred.disconnect(self._handleErrors)
         self._preprocessor.errorOccurred.disconnect()
-
-    def onAppExit(self) -> None:
-        """Safely delete workers when closing the application."""
-        self._dataSourceWorker.deleteLater()
-        if self._fileWriterWorker is not None:
-            self._fileWriterWorker.deleteLater()

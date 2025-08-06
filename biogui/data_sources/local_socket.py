@@ -54,8 +54,6 @@ class LocalSocketConfigWidget(
 
         self.setupUi(self)
 
-        self.destroyed.connect(self.deleteLater)
-
     def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
@@ -161,10 +159,6 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
         self._localServer.newConnection.connect(self._handleConnection)
         self._clientSock: QLocalSocket | None = None
         self._buffer = QByteArray()
-
-        self.destroyed.connect(self.deleteLater)
-
-        self.destroyed.connect(self.deleteLater)
 
     def __str__(self):
         return f"Local socket - {self._socketPath}"

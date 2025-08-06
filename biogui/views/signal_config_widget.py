@@ -114,7 +114,6 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
-        self.destroyed.connect(self.deleteLater)
 
     @property
     def sigName(self) -> str:

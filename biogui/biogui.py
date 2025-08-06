@@ -41,14 +41,8 @@ class BioGUI(QApplication):
         super().__init__()
 
         self.mainWin = MainWindow()
-        self.mainController = MainController(self.mainWin)
-        self.moduleController = ModuleController(self.mainController, self.mainWin)
+        self.mainController = MainController(self.mainWin, parent=self)
+        self.moduleController = ModuleController(
+            self.mainController, self.mainWin, parent=self
+        )
         self.mainWin.showMaximized()
-        self.aboutToQuit.connect(self.onAppExit)
-
-    def onAppExit(self) -> None:
-        """Safely delete main window and controllers when closing the application."""
-        self.mainController.appClosed.emit()
-        self.mainWin.deleteLater()
-        self.mainController.deleteLater()
-        self.moduleController.deleteLater()

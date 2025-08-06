@@ -72,8 +72,6 @@ class SignalConfigDialog(QDialog):
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
 
-        self.destroyed.connect(self.deleteLater)
-
     @property
     def sigConfig(self) -> dict:
         """
