@@ -120,8 +120,6 @@ class _TriggerWidget(QWidget):
 
         self._imageFolder = ""
 
-        self.destroyed.connect(self.deleteLater)
-
     @property
     def imageFolder(self) -> str:
         """str: Path to the folder containing the images for the triggers."""
@@ -156,7 +154,7 @@ class _TriggerWidget(QWidget):
         painter.setPen(self._qColor)
 
         if imagePath:
-            # Display the image file scaled to widget size.
+            # Display the image file scaled to widget size
             fullPath = os.path.join(self._imageFolder, imagePath)
             img = QPixmap(fullPath).scaled(self.width(), self.height())
             painter.drawPixmap(0, 0, img)
@@ -199,7 +197,6 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
         self.setupUi(self)
         self._config = {}
         self.browseTriggerConfigButton.clicked.connect(self._browseTriggerConfig)
-        self.destroyed.connect(self.deleteLater)
 
     @property
     def config(self) -> dict:
@@ -238,27 +235,55 @@ class _TriggerConfigWidget(QWidget, Ui_TriggerConfigWidget):
 class TriggerController(QObject):
     """
     Controller for the triggers.
+
+    Parameters
+    ----------
+    streamingControllers : MappingProxyType
+        Read-only reference to the streaming controller dictionary.
+    parent : QObject or None, default=None
+        Parent QObject.
+
+    Attributes
+    ----------
+    _streamingControllers : MappingProxyType
+        Read-only reference to the streaming controller dictionary.
+    _timer : QTimer
+        Primary timer for switching between stimulus and rest.
+    _countdownTimer : QTimer
+        Secondary timer for the countdown during rest.
+    _triggerIds : dict of (str: int)
+        Dictionary containing the trigger IDs.
+    _triggerLabels : list of str
+        List containing the trigger labels.
+    _triggerCounter : int
+        Counter for the trigger.
+    _restFlag : bool
+        Flag denoting the rest state.
+    _restCounter : int
+        Counter for the rest state.
+    _upcomingLabel : str
+        Upcoming label.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(
+        self, streamingContollers: MappingProxyType, parent: QObject | None = None
+    ) -> None:
+        super().__init__(parent)
 
+        self._streamingControllers = streamingContollers
         self._confWidget = _TriggerConfigWidget()
-        self._confWidget.triggerGroupBox.clicked.connect(self._checkHandler)
-
         self._triggerWidget = _TriggerWidget()
         self._triggerWidget.widgetClosed.connect(self._actualStopTriggerGen)
 
         # Primary timer for switching between stimulus and rest
         self._timer = QTimer(self)
-        self._timer.timeout.connect(self._updateTriggerAndImage)  # type: ignore
+        self._timer.timeout.connect(self._updateTriggerAndImage)
 
         # Secondary timer: fires every second during rest to decrement the countdown
         self._countdownTimer = QTimer(self)
         self._countdownTimer.setInterval(1000)
-        self._countdownTimer.timeout.connect(self._updateCountdown)  # type: ignore
+        self._countdownTimer.timeout.connect(self._updateCountdown)
 
-        self._streamingControllers: MappingProxyType
         self._triggerIds: dict[str, int] = {}
         self._triggerLabels: list[str] = []
         self._triggerCounter = 0
@@ -267,38 +292,37 @@ class TriggerController(QObject):
         self._upcomingLabel = ""
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
+        # Add configuration widget to main window
         mainWin.moduleContainer.layout().addWidget(self._confWidget)  # type: ignore
+
+        # Make connections with main controller
         mainController.streamingStarted.connect(self._startTriggerGen)
         mainController.streamingStopped.connect(self._stopTriggerGen)
-        mainController.appClosed.connect(self._stopTriggerGen)
 
         self._streamingControllers = mainController.streamingControllers
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
+        # Remove configuration widget from main window
         mainWin.moduleContainer.layout().removeWidget(self._confWidget)  # type: ignore
         self._confWidget.deleteLater()
+
+        # Undo connections with main controller
         mainController.streamingStarted.disconnect(self._startTriggerGen)
         mainController.streamingStopped.disconnect(self._stopTriggerGen)
-        mainController.appClosed.disconnect(self._stopTriggerGen)
-
-    def _checkHandler(self, checked: bool) -> None:
-        if not checked:
-            for streamingController in self._streamingControllers.values():
-                streamingController.setTrigger(None)
 
     def _updateTriggerAndImage(self) -> None:
         """Called when the primary timer times out. Decides whether to show a stimulus or start the rest countdown."""
-        # If the countdownTimer is running, do nothing here.
+        # If the countdownTimer is running, do nothing
         if self._countdownTimer.isActive():
             return
 
-        # If we've shown all triggers, stop.
+        # If we've shown all triggers, stop
         if self._triggerCounter >= len(self._triggerLabels):
             self._stopTriggerGen()
             return
 
         if self._restFlag:
-            # Start a new rest interval:
+            # Start a new rest interval
             restMs = self._confWidget.config["durationRest"]
             # Compute initial seconds for countdown (round up)
             self._restCounter = math.ceil(restMs / 1000)
@@ -358,7 +382,6 @@ class TriggerController(QObject):
             logging.info(
                 f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
             )
-        # else: do nothing; _endRest will fire when ms timer expires.
 
     def _endRest(self) -> None:
         """
@@ -372,14 +395,10 @@ class TriggerController(QObject):
 
     def _startTriggerGen(self) -> None:
         """Begin the whole trigger sequence (called once when streaming starts)."""
-        self._confWidget.triggerGroupBox.setEnabled(False)
-        if (
-            not self._confWidget.triggerGroupBox.isChecked()
-            or not self._confWidget.config
-        ):
+        if not self._confWidget.config:
             return
 
-        # Initialize all streaming controllers to zero
+        # Initialize the trigger to zero for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
 
@@ -419,4 +438,6 @@ class TriggerController(QObject):
         self._restCounter = 0
         self._upcomingLabel = ""
 
-        self._confWidget.triggerGroupBox.setEnabled(True)
+        # Reset triggers for all streaming controllers
+        for streamingController in self._streamingControllers.values():
+            streamingController.setTrigger(None)
