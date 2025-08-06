@@ -323,7 +323,7 @@ class MainController(QObject):
         self._deleteDataSource(itemToRemove)
 
         # Disable start button, source deletion and signal configuration depending on the number of remaining sources
-        if len(self._streamingControllers) == 0:
+        if not self._streamingControllers:
             self._mainWin.startStreamingButton.setEnabled(False)
             self._mainWin.editButton.setEnabled(False)
             self._mainWin.deleteDataSourceButton.setEnabled(False)

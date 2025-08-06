@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .processing import ProcessingController
+from .forwarding import ForwardingController
 from .trigger import TriggerController
 
-__all__ = ["ProcessingController", "TriggerController"]
+__all__ = ["ForwardingController", "TriggerController"]

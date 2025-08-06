@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ForwardingConfigWidget</class>
+ <widget class="QWidget" name="ForwardingConfigWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>453</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Forwarding Configuration Widget</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout1" stretch="0">
+   <item>
+    <widget class="QGroupBox" name="forwardGroupBox">
+     <property name="title">
+      <string>Forwarding configuration</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout2">
+      <item>
+       <widget class="QTreeView" name="dataSourceTree"/>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="windowGroupBox">
+        <property name="title">
+         <string>Window settings</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <layout class="QFormLayout" name="formLayout1">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label1">
+           <property name="text">
+            <string>Window length (in ms):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="winLenTextField"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label2">
+           <property name="text">
+            <string>Window stride (in ms):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="winStrideTextField"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="socketGroupBox">
+        <property name="title">
+         <string>Socket settings</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <layout class="QFormLayout" name="formLayout2">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label3">
+           <property name="text">
+            <string>Socket type:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="socketTypeComboBox">
+           <item>
+            <property name="text">
+             <string>TCP</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Local</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label4">
+           <property name="text">
+            <string>Socket address:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="socketAddressTextField">
+           <property name="text">
+            <string>127.0.0.1</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label5">
+           <property name="toolTip">
+            <string>For the process to which the results will be sent</string>
+           </property>
+           <property name="text">
+            <string>Socket port:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="socketPortTextField"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label6">
+           <property name="text">
+            <string>Socket path:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="socketPathTextField"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

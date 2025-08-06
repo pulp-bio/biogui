@@ -72,8 +72,8 @@ class ModuleController(QObject):
         triggerAction.triggered.connect(self._triggerActionHandler)
         moduleMenu.addAction(triggerAction)
 
-        # 2. Custom processing
-        processingAction = QAction("Configure custom processing", self)
+        # 2. Forwarding
+        processingAction = QAction("Configure forwarding", self)
         processingAction.setCheckable(True)
         processingAction.triggered.connect(self._processingActionHandler)
         moduleMenu.addAction(processingAction)
@@ -90,12 +90,13 @@ class ModuleController(QObject):
             del triggerModule
 
     def _processingActionHandler(self, checked: bool) -> None:
-        """Handler for the "configure custom processing" action."""
+        """Handler for the "configure forwarding" action."""
         if checked:
-            processingModule = modules.ProcessingController()
-            processingModule.subscribe(self._mainController, self._mainWin)
-            self._modules["processingModule"] = processingModule
+            forwardingModule = modules.ForwardingController(
+                self._mainController.streamingControllers, parent=self
+            )
+            forwardingModule.subscribe(self._mainController, self._mainWin)
+            self._modules["forwardingModule"] = forwardingModule
         else:
-            processingModule = self._modules.pop("processingModule")
-            processingModule.unsubscribe(self._mainController, self._mainWin)
-            del processingModule
+            forwardingModule = self._modules.pop("forwardingModule")
+            forwardingModule.unsubscribe(self._mainController, self._mainWin)
