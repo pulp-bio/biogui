@@ -130,8 +130,6 @@ class SignalConfigWizard(QWizard):
 
         self._sigsConfigs = {}
 
-        self.destroyed.connect(self.deleteLater)
-
     @property
     def sigsConfigs(self) -> dict:
         """

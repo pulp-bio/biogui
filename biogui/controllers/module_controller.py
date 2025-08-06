@@ -38,6 +38,8 @@ class ModuleController(QObject):
         Instance of MainController.
     mainWin : MainWindow
         Instance of MainWindow.
+    parent : QObject or None, default=None
+        Parent QObject.
 
     Attributes
     ----------
@@ -49,8 +51,13 @@ class ModuleController(QObject):
         Collection of pluggable modules.
     """
 
-    def __init__(self, mainController: MainController, mainWin: MainWindow) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        mainController: MainController,
+        mainWin: MainWindow,
+        parent: QObject | None = None,
+    ) -> None:
+        super().__init__(parent)
 
         self._mainController = mainController
         self._mainWin = mainWin

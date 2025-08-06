@@ -162,11 +162,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._outDirPath = None
 
         # Pre-fill with provided configuration
-        # self.browseInterfaceModuleButton.setEnabled(not edit)
         if kwargs:
             self._prefill(kwargs)
-
-        self.destroyed.connect(self.deleteLater)
 
     @property
     def dataSourceConfig(self) -> dict:
