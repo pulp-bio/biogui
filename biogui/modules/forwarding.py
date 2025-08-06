@@ -446,6 +446,11 @@ class ForwardingController(QObject):
                 sigNode.setData(Qt.Unchecked, Qt.CheckStateRole)  # type: ignore
                 dataSourceNode.appendRow(sigNode)
 
+        # Clear list of signals to forward
+        self._sigsToForward.clear()
+
+        self._confWidget.dataSourceTree.expandAll()
+
     def _updateForwardingList(self, item: QStandardItem) -> None:
         """Update the list of signals that should be forwarded."""
         sigName = item.text()

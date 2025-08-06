@@ -221,6 +221,8 @@ class MainController(QObject):
         # Inform other modules that a new source is available
         self.streamingControllersChanged.emit()
 
+        self._mainWin.dataSourceTree.expandAll()
+
     def _deleteDataSource(self, dataSourceItem: QStandardItem) -> None:
         """Delete a data source, given data source item."""
         dataSource = dataSourceItem.text()
