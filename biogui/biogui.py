@@ -42,6 +42,7 @@ class BioGUI(QApplication):
 
         self.mainWin = MainWindow()
         self.mainController = MainController(self.mainWin, parent=self)
+        self.aboutToQuit.connect(self.mainController.stopStreaming)
         self.moduleController = ModuleController(
             self.mainController, self.mainWin, parent=self
         )

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from PySide6.QtCore import QModelIndex, QObject, Signal
+from PySide6.QtCore import Qt, QModelIndex, QObject, Signal
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
 
@@ -60,6 +60,17 @@ def validateFreqSettings(sigConfig, fs):
                 freqSettingsValid = False
                 break
     return freqSettingsValid
+
+
+def getCheckedItems(model: QStandardItemModel):
+    checked = []
+    root = model.invisibleRootItem()
+    for row in range(model.rowCount()):
+        item = root.child(row)
+        if item.checkState() == Qt.Checked:  # type: ignore
+            checked.append(item.text())
+    print(checked)
+    return checked
 
 
 class MainController(QObject):
@@ -112,6 +123,7 @@ class MainController(QObject):
         self.dataSourceModel = QStandardItemModel(self)
         self.dataSourceModel.setHorizontalHeaderLabels(["Data sources"])
         self._mainWin.dataSourceTree.setModel(self.dataSourceModel)
+        self.dataSourceModel.itemChanged.connect(self._dataSourceCheckedHandler)
 
         self._connectSignals()
 
@@ -134,6 +146,21 @@ class MainController(QObject):
         self._mainWin.startStreamingButton.clicked.connect(self.startStreaming)
         self._mainWin.stopStreamingButton.clicked.connect(self.stopStreaming)
 
+    @instanceSlot(QStandardItem)
+    def _dataSourceCheckedHandler(self, item: QStandardItem):
+        """Handler for when a data source is checked/unchecked."""
+        # Enable start button
+        if item.checkState() == Qt.Checked:  # type: ignore
+            self._mainWin.startStreamingButton.setEnabled(True)
+            self._mainWin.editButton.setEnabled(True)
+            self._mainWin.deleteDataSourceButton.setEnabled(True)
+
+        # Disable start button
+        if not getCheckedItems(self.dataSourceModel):
+            self._mainWin.startStreamingButton.setEnabled(False)
+            self._mainWin.editButton.setEnabled(False)
+            self._mainWin.deleteDataSourceButton.setEnabled(False)
+
     def startStreaming(self) -> None:
         """Start streaming."""
         # Handle UI elements
@@ -142,18 +169,20 @@ class MainController(QObject):
         self._mainWin.streamConfGroupBox.setEnabled(False)
         self._mainWin.moduleContainer.setEnabled(False)
 
-        # Start all StreamingController objects
-        for streamController in self._streamingControllers.values():
-            streamController.startStreaming()
-
         # Emit "start" Qt Signal (for pluggable modules)
         self.streamingStarted.emit()
+
+        # Start all StreamingController objects
+        checkedDataSources = getCheckedItems(self.dataSourceModel)
+        for checkedDataSource in checkedDataSources:
+            self._streamingControllers[checkedDataSource].startStreaming()
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
         # Stop all StreamingController objects
-        for streamController in self._streamingControllers.values():
-            streamController.stopStreaming()
+        checkedDataSources = getCheckedItems(self.dataSourceModel)
+        for checkedDataSource in checkedDataSources:
+            self._streamingControllers[checkedDataSource].stopStreaming()
 
         # Emit "stop" Qt Signal (for pluggable modules)
         self.streamingStopped.emit()
@@ -215,6 +244,8 @@ class MainController(QObject):
 
         # Update UI data source tree
         dataSourceNode = QStandardItem(str(streamingController))
+        dataSourceNode.setFlags(dataSourceNode.flags() | Qt.ItemIsUserCheckable)  # type: ignore
+        dataSourceNode.setData(Qt.Checked, Qt.CheckStateRole)  # type: ignore
         self.dataSourceModel.appendRow(dataSourceNode)
         dataSourceNode.appendRows([QStandardItem(sigName) for sigName in sigsConfigs])
 
