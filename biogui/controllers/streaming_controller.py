@@ -645,29 +645,38 @@ class StreamingController(QObject):
 
     def startStreaming(self) -> None:
         """Start streaming."""
+        # Connect Qt Signals
         self._dataSourceWorker.dataPacketReady.connect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorOccurred.connect(self._handleErrors)
         self._preprocessor.signalsReady.connect(self._forwardData)
         self._preprocessor.errorOccurred.connect(self._handleErrors)
 
+        # Start file writer thread
         if self._fileWriterWorker is not None and self._fileWriterThread is not None:
             self._preprocessor.rawSignalsReady.connect(self._fileWriterWorker.write)
             self._fileWriterWorker.errorOccurred.connect(self._handleErrors)
             self._fileWriterThread.start()
 
+        # Start data source thread
         self._dataSourceThread.start()
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
+        if not self._dataSourceThread.isRunning():
+            return
+
+        # Stop data source thread
         self._dataSourceThread.quit()
         self._dataSourceThread.wait()
 
+        # Stop file writer thread
         if self._fileWriterWorker is not None and self._fileWriterThread is not None:
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
             self._fileWriterWorker.trigger = None
             self._preprocessor.rawSignalsReady.disconnect(self._fileWriterWorker.write)
 
+        # Disconnect Qt Signals
         self._dataSourceWorker.dataPacketReady.disconnect(self._preprocessor.preprocess)
         self._dataSourceWorker.errorOccurred.disconnect(self._handleErrors)
         self._preprocessor.signalsReady.disconnect(self._forwardData)
