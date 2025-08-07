@@ -62,15 +62,27 @@ def validateFreqSettings(sigConfig, fs):
     return freqSettingsValid
 
 
-def getCheckedItems(model: QStandardItemModel):
-    checked = []
-    root = model.invisibleRootItem()
-    for row in range(model.rowCount()):
-        item = root.child(row)
-        if item.checkState() == Qt.Checked:  # type: ignore
-            checked.append(item.text())
-    print(checked)
-    return checked
+def getCheckedDataSources(dataSourceModel: QStandardItemModel) -> list[str]:
+    """
+    Get the checked data sources given the data source model.
+
+    Parameters
+    ----------
+    dataSourceModel : QStandardItemModel
+        Model representing the data sources.
+
+    Returns
+    -------
+    list of str
+        List containing the IDs of the checked data sources.
+    """
+    checkedDataSources = []
+    root = dataSourceModel.invisibleRootItem()
+    for i in range(dataSourceModel.rowCount()):
+        dataSourceItem = root.child(i)
+        if dataSourceItem.checkState() == Qt.Checked:  # type: ignore
+            checkedDataSources.append(dataSourceItem.text())
+    return checkedDataSources
 
 
 class MainController(QObject):
@@ -156,7 +168,7 @@ class MainController(QObject):
             self._mainWin.deleteDataSourceButton.setEnabled(True)
 
         # Disable start button
-        if not getCheckedItems(self.dataSourceModel):
+        if not getCheckedDataSources(self.dataSourceModel):
             self._mainWin.startStreamingButton.setEnabled(False)
             self._mainWin.editButton.setEnabled(False)
             self._mainWin.deleteDataSourceButton.setEnabled(False)
@@ -173,14 +185,14 @@ class MainController(QObject):
         self.streamingStarted.emit()
 
         # Start all StreamingController objects
-        checkedDataSources = getCheckedItems(self.dataSourceModel)
+        checkedDataSources = getCheckedDataSources(self.dataSourceModel)
         for checkedDataSource in checkedDataSources:
             self._streamingControllers[checkedDataSource].startStreaming()
 
     def stopStreaming(self) -> None:
         """Stop streaming."""
         # Stop all StreamingController objects
-        checkedDataSources = getCheckedItems(self.dataSourceModel)
+        checkedDataSources = getCheckedDataSources(self.dataSourceModel)
         for checkedDataSource in checkedDataSources:
             self._streamingControllers[checkedDataSource].stopStreaming()
 

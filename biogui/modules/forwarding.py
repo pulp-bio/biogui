@@ -36,6 +36,37 @@ from biogui.utils import SigData, instanceSlot
 from biogui.views import MainWindow
 
 
+def getCheckedSignals(dataSourceModel: QStandardItemModel) -> dict[str, list[str]]:
+    """
+    Get the checked signals given the data source model.
+
+    Parameters
+    ----------
+    dataSourceModel : QStandardItemModel
+        Model representing the data sources.
+
+    Returns
+    -------
+    dict of (str: list of str)
+        Dictionary containing the names of the signals to forward, grouped by data source.
+    """
+    checkedSigs = {}
+    root = dataSourceModel.invisibleRootItem()
+    for i in range(dataSourceModel.rowCount()):
+        dataSourceItem = root.child(i)
+        dataSourceId = dataSourceItem.text()
+
+        for j in range(dataSourceItem.rowCount()):
+            sigItem = dataSourceItem.child(j)
+            sigName = sigItem.text()
+
+            if sigItem.checkState() == Qt.Checked:  # type: ignore
+                if dataSourceId not in checkedSigs:
+                    checkedSigs[dataSourceId] = []
+                checkedSigs[dataSourceId].append(sigName)
+    return checkedSigs
+
+
 class _Socket(QObject):
     """
     Abstraction for Qt-based sockets.
@@ -336,8 +367,6 @@ class ForwardingController(QObject):
         Read-only reference to the streaming controller dictionary.
     _confWidget : _ForwardingConfigWidget
         Instance of _ForwardingConfigWidget.
-    _sigsToForward : dict
-        Dictionary containing the names of the signals to forward, grouped by data source.
     _forwardingWorker : _ForwardingWorker
         Worker for forwarding.
     _forwardingThread : QThread
@@ -351,7 +380,6 @@ class ForwardingController(QObject):
 
         self._streamingControllers = streamingContollers
         self._confWidget = _ForwardingConfigWidget()
-        self._sigsToForward: dict[str, set[str]] = {}
 
         # Forwarding worker
         self._forwardingWorker = _ForwardingWorker()
@@ -373,7 +401,6 @@ class ForwardingController(QObject):
         self.dataSourceModel = QStandardItemModel(self)
         self.dataSourceModel.setHorizontalHeaderLabels(["Signals to forward"])
         self._confWidget.dataSourceTree.setModel(self.dataSourceModel)
-        self.dataSourceModel.itemChanged.connect(self._updateForwardingList)
 
         # Populate data sources combo box
         self._rescanDataSources()
@@ -446,37 +473,12 @@ class ForwardingController(QObject):
                 sigNode.setData(Qt.Unchecked, Qt.CheckStateRole)  # type: ignore
                 dataSourceNode.appendRow(sigNode)
 
-        # Clear list of signals to forward
-        self._sigsToForward.clear()
-
         self._confWidget.dataSourceTree.expandAll()
-
-    def _updateForwardingList(self, item: QStandardItem) -> None:
-        """Update the list of signals that should be forwarded."""
-        sigName = item.text()
-        dataSourceId = item.parent().text()
-        if item.checkState() == Qt.Checked:  # type: ignore
-            logging.info(
-                'ForwardingController: the signal "%s" (data source "%s") was added to the forwarding list',
-                sigName,
-                dataSourceId,
-            )
-            if dataSourceId not in self._sigsToForward:
-                self._sigsToForward[dataSourceId] = set()
-            self._sigsToForward[dataSourceId].add(sigName)
-        else:
-            logging.info(
-                'ForwardingController: the signal "%s" (data source "%s") was removed from the forwarding list',
-                sigName,
-                dataSourceId,
-            )
-            self._sigsToForward[dataSourceId].remove(sigName)
-            if not self._sigsToForward[dataSourceId]:
-                self._sigsToForward.pop(dataSourceId)
 
     def _startForwarding(self) -> None:
         """Start forwarding."""
-        if not self._sigsToForward:  # empty
+        sigsToForward = getCheckedSignals(self.dataSourceModel)
+        if not sigsToForward:  # empty
             return
 
         config, errMsg = self._confWidget.validateConfig()
@@ -488,7 +490,7 @@ class ForwardingController(QObject):
         winLenS = config.pop("winLenS")
         winStrideS = config.pop("winStrideS")
         buffersConfig = {}
-        for dataSourceId, sigNames in self._sigsToForward.items():
+        for dataSourceId, sigNames in sigsToForward.items():
             buffersConfig[dataSourceId] = {}
 
             streamingController = self._streamingControllers[dataSourceId]
@@ -518,7 +520,8 @@ class ForwardingController(QObject):
         self._forwardingThread.wait()
 
         # Disconnect the forwarding worker from the streaming controller
-        for dataSourceId in self._sigsToForward:
+        sigsToForward = getCheckedSignals(self.dataSourceModel)
+        for dataSourceId in sigsToForward:
             self._streamingControllers[dataSourceId].signalsReady.disconnect(
                 self._forwardingWorker.forward
             )
