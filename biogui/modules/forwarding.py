@@ -515,6 +515,9 @@ class ForwardingController(QObject):
 
     def _stopForwarding(self) -> None:
         """Stop forwarding."""
+        if not self._forwardingThread.isRunning():
+            return
+
         # Stop thread
         self._forwardingThread.quit()
         self._forwardingThread.wait()
