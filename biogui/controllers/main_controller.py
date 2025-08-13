@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from PySide6.QtCore import Qt, QModelIndex, QObject, Signal
+from PySide6.QtCore import Qt, QModelIndex, QObject, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
 
@@ -33,7 +33,7 @@ from biogui.views import (
     SignalPlotWidget,
 )
 
-from ..utils import SigData, instanceSlot
+from ..utils import SigData
 from .streaming_controller import StreamingController
 
 
@@ -158,7 +158,7 @@ class MainController(QObject):
         self._mainWin.startStreamingButton.clicked.connect(self.startStreaming)
         self._mainWin.stopStreamingButton.clicked.connect(self.stopStreaming)
 
-    @instanceSlot(QStandardItem)
+    @Slot(QStandardItem)
     def _dataSourceCheckedHandler(self, item: QStandardItem):
         """Handler for when a data source is checked/unchecked."""
         # Enable start button
@@ -291,7 +291,7 @@ class MainController(QObject):
         # Inform other modules that a source was deleted
         self.streamingControllersChanged.emit()
 
-    @instanceSlot(list)
+    @Slot(list)
     def _plotData(self, dataPacket: list[SigData]):
         """
         Plot the given data on the corresponding plot.
@@ -307,7 +307,7 @@ class MainController(QObject):
             if plotId in self._signalPlotWidgets:
                 self._signalPlotWidgets[plotId].addData(sigData.data)
 
-    @instanceSlot(str)
+    @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When an error occurs, display an alert and stop streaming."""
         self.stopStreaming()
@@ -319,7 +319,7 @@ class MainController(QObject):
             defaultButton=QMessageBox.Retry,  # type: ignore
         )
 
-    @instanceSlot(QModelIndex)
+    @Slot(QModelIndex)
     def _selectionHandler(self, idx: QModelIndex):
         """Enable buttons to configure sources or signals."""
         # Disconnect handler for editing

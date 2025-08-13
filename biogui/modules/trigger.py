@@ -25,7 +25,7 @@ import os
 import math
 from types import MappingProxyType
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QCloseEvent, QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
@@ -266,11 +266,11 @@ class TriggerController(QObject):
     """
 
     def __init__(
-        self, streamingContollers: MappingProxyType, parent: QObject | None = None
+        self, streamingControllers: MappingProxyType, parent: QObject | None = None
     ) -> None:
         super().__init__(parent)
 
-        self._streamingControllers = streamingContollers
+        self._streamingControllers = streamingControllers
         self._confWidget = _TriggerConfigWidget()
         self._triggerWidget = _TriggerWidget()
         self._triggerWidget.widgetClosed.connect(self._actualStopTriggerGen)

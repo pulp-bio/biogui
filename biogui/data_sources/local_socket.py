@@ -109,9 +109,9 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
     ----------
     packetSize : int
         Number of bytes in the packet.
-    startSeq : list of bytes
+    startSeq : list of bytes or float
         Sequence of commands to start the source.
-    stopSeq : list of bytes
+    stopSeq : list of bytes or float
         Sequence of commands to stop the source.
     socketPath : str
         Path to the local socket.
@@ -120,9 +120,9 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
     ----------
     _packetSize : int
         Size of each packet read from the local socket.
-    _startSeq : list of bytes
+    _startSeq : list of bytes or float
         Sequence of commands to start the source.
-    _stopSeq : list of bytes
+    _stopSeq : list of bytes or float
         Sequence of commands to stop the source.
     _socketPath : str
         Path to the local socket.
@@ -144,8 +144,8 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
     def __init__(
         self,
         packetSize: int,
-        startSeq: list[bytes],
-        stopSeq: list[bytes],
+        startSeq: list[bytes | float],
+        stopSeq: list[bytes | float],
         socketPath: str,
     ) -> None:
         super().__init__()
@@ -173,9 +173,6 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
             return
 
         logging.info(f"DataWorker: waiting for local connection on {self._socketPath}.")
-        self._stopReadingFlag = False
-
-        logging.info("DataWorker: data reading started.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""

@@ -23,11 +23,10 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QLocale, QTimer
+from PySide6.QtCore import QLocale, QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
 from ..ui.signal_plot_widget_ui import Ui_SignalPlotWidget
-from ..utils import instanceSlot
 
 
 class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
@@ -145,7 +144,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                 )
             )
 
-    @instanceSlot(int)
+    @Slot(int)
     def reInitPlot(self, renderLenMs) -> None:
         """Re-initialize the plot when the render length changes."""
 
@@ -174,7 +173,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._plotTimer.stop()
         self._spsTimer.stop()
 
-    @instanceSlot(np.ndarray)
+    @Slot(np.ndarray)
     def addData(self, data: np.ndarray) -> None:
         """
         Add the given data to the internal queues.

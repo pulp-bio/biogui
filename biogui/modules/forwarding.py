@@ -32,7 +32,7 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
 from biogui.ui.forwarding_config_widget_ui import Ui_ForwardingConfigWidget
-from biogui.utils import SigData, instanceSlot
+from biogui.utils import SigData, Slot
 from biogui.views import MainWindow
 
 
@@ -127,8 +127,6 @@ class _Socket(QObject):
         elif isinstance(self._socket, QLocalSocket):
             return self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
 
-        return False  # should never happen
-
     def write(self, data: bytes) -> None:
         """Write bytes to the socket and then flush."""
         self._socket.write(data)
@@ -211,7 +209,7 @@ class _ForwardingWorker(QObject):
         )
         self._socket.connectToServer()
 
-    @instanceSlot(list)
+    @Slot(list)
     def forward(self, dataPacket: list[SigData]) -> None:
         """
         Forward the given data.
@@ -374,11 +372,11 @@ class ForwardingController(QObject):
     """
 
     def __init__(
-        self, streamingContollers: MappingProxyType, parent: QObject | None = None
+        self, streamingControllers: MappingProxyType, parent: QObject | None = None
     ) -> None:
         super().__init__(parent)
 
-        self._streamingControllers = streamingContollers
+        self._streamingControllers = streamingControllers
         self._confWidget = _ForwardingConfigWidget()
 
         # Forwarding worker
@@ -444,7 +442,7 @@ class ForwardingController(QObject):
         mainController.streamingStopped.disconnect(self._stopForwarding)
         mainController.streamingControllersChanged.disconnect(self._rescanDataSources)
 
-    @instanceSlot(str)
+    @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When an error occurs, display an alert."""
         QMessageBox.critical(

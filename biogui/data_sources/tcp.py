@@ -117,9 +117,9 @@ class TCPDataSourceWorker(DataSourceWorker):
     ----------
     packetSize : int
         Size of each packet read from the socket.
-    startSeq : list of bytes
+    startSeq : list of bytes or float
         Sequence of commands to start the source.
-    stopSeq : list of bytes
+    stopSeq : list of bytes or float
         Sequence of commands to stop the source.
     socketPort: int
         Socket port.
@@ -128,9 +128,9 @@ class TCPDataSourceWorker(DataSourceWorker):
     ----------
     _packetSize : int
         Size of each packet read from the socket.
-    _startSeq : list of bytes
+    _startSeq : list of bytes or float
         Sequence of commands to start the source.
-    _stopSeq : list of bytes
+    _stopSeq : list of bytes or float
         Sequence of commands to stop the source.
     _socketPort: int
         Socket port.
@@ -152,8 +152,8 @@ class TCPDataSourceWorker(DataSourceWorker):
     def __init__(
         self,
         packetSize: int,
-        startSeq: list[bytes],
-        stopSeq: list[bytes],
+        startSeq: list[bytes | float],
+        stopSeq: list[bytes | float],
         socketPort: int,
     ) -> None:
         super().__init__()

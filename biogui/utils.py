@@ -55,15 +55,6 @@ class SigData:
     acq_ts: float
 
 
-def instanceSlot(*args, **kwargs):
-    """Wrapper of the Slot Qt decorator for instance methods."""
-
-    def decorator(func):
-        return Slot(*args, **kwargs)(func)
-
-    return decorator
-
-
 def detectTheme():
     """Determine whether the system theme is light or dark."""
     # Get palette of QApplication
