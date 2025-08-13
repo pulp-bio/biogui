@@ -127,6 +127,8 @@ class _Socket(QObject):
         elif isinstance(self._socket, QLocalSocket):
             return self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
 
+        return False  # should never happen
+
     def write(self, data: bytes) -> None:
         """Write bytes to the socket and then flush."""
         self._socket.write(data)
