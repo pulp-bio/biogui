@@ -86,11 +86,11 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
             'The selected Python module does not contain a "decodeFn" function.',
         )
     if not isinstance(module.packetSize, int) or module.packetSize <= 0:
-        return (None, "The packet size must be a positive integer.")
+        return None, "The packet size must be a positive integer."
 
     for sigName in module.sigInfo.keys():
         if sigName in ("acq_ts", "trigger"):
-            return (None, '"acq_ts" and "trigger" are reserved signal names.')
+            return None, '"acq_ts" and "trigger" are reserved signal names.'
 
     return (
         InterfaceModule(

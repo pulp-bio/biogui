@@ -26,17 +26,13 @@ GAIN = 12
 
 def createCommand():
     """Internal function to create start command."""
-    command = []
     # Byte 0: ADS sampling rate
     # - 6 -> 500sps
-    command.append(6)
     # Byte 1: ADS1298 mode
     # - 0 -> default
-    command.append(0)
     # Byte 2: depends on the number of ADSs
-    command.append(1)
     # Byte 3: chip select (not modifiable)
-    command.append(4)
+    command = [6, 0, 1, 4]
     # Byte 4: PGA gain
     # 16 ->  1
     # 32 ->  2

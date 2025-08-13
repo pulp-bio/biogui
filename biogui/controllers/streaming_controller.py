@@ -27,10 +27,10 @@ from types import MappingProxyType
 
 import numpy as np
 import scipy
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from .. import data_sources
-from ..utils import DecodeFn, SigData, instanceSlot
+from ..utils import DecodeFn, SigData, InterfaceModule
 
 
 class _FileWriterWorker(QObject):
@@ -42,12 +42,12 @@ class _FileWriterWorker(QObject):
     filePath : str
         File path.
     sigInfo : dict
-        Dictionary containing the signals information.
+        Dictionary containing the signals' information.
 
     Attributes
     ----------
     _sigInfo : dict
-        Dictionary containing the signals information.
+        Dictionary containing the signals' information.
     _tempData : dict
         Dictionary containing, for each signal, a temporary file-like object and the number of samples written.
 
@@ -118,7 +118,7 @@ class _FileWriterWorker(QObject):
         except (OSError, PermissionError, FileNotFoundError):
             self.errorOccurred.emit("Could not open temporary files.")
 
-    @instanceSlot(list)
+    @Slot(list)
     def write(self, rawSignals: list[SigData]) -> None:
         """
         Write to in-memory file when new data is received.
@@ -386,7 +386,7 @@ class _Preprocessor(QObject):
                 axis=-1,
             )
 
-    @instanceSlot(bytes)
+    @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
         """
         Decode the received packet of bytes and apply filtering.
@@ -545,12 +545,12 @@ class StreamingController(QObject):
         """MappingProxyType: Property representing a read-only view of the signals specification dictionary."""
         return MappingProxyType(self._sigInfo)
 
-    @instanceSlot(list)
+    @Slot(list)
     def _forwardData(self, signal: list) -> None:
         """When the signals are ready, forward the data via a Qt Signal."""
         self.signalsReady.emit(signal)
 
-    @instanceSlot(str)
+    @Slot(str)
     def _handleErrors(self, errMessage: str) -> None:
         """When error occurs, forward the error via a Qt Signal."""
         self.errorOccurred.emit(
@@ -577,8 +577,8 @@ class StreamingController(QObject):
             for k, v in dataSourceConfig.items()
             if k not in ("interfacePath", "interfaceModule", "filePath", "sigsConfigs")
         }
-        interfaceModule = dataSourceConfig["interfaceModule"]
-        filePath = dataSourceConfig.get("filePath", None)
+        interfaceModule: InterfaceModule = dataSourceConfig["interfaceModule"]
+        filePath: str | None = dataSourceConfig.get("filePath", None)
         dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq

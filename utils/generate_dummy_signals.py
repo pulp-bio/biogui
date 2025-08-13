@@ -53,6 +53,9 @@ def main():
     except ValueError:
         sys.exit("Port is not an integer.")
 
+    stop_event = None
+    listener_thread = None
+    sock = None
     try:
         # Create TCP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,15 +105,17 @@ def main():
     except Exception as e:
         print(f"An error occurred: {e}.")
     finally:
-        if "stop_event" in locals():
+        if stop_event is not None:
             # Wait for the listener thread to finish
             if not stop_event.is_set():
                 stop_event.set()
+        if listener_thread is not None:
             listener_thread.join()
 
         # Close socket
-        sock.close()
-        print("Socket closed.")
+        if sock is not None:
+            sock.close()
+            print("Socket closed.")
 
 
 if __name__ == "__main__":

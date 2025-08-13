@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     # Disable native macOS menu
     if sys.platform == "darwin":
-        QGuiApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
+        QGuiApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)  # type: ignore
 
     # Instantiate app
     app = BioGUI()

@@ -106,7 +106,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.maxRangeTextField.setValidator(rangeValidator)
 
         self._sigName = sigName
-        self._sigConfig = {"fs": fs, "nCh": nCh}
+        self._sigConfig: dict = {"fs": fs, "nCh": nCh}
 
         # Pre-fill with provided configuration
         if edit:
