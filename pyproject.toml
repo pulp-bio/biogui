@@ -1,0 +1,15 @@
+[project]
+name = "biogui"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.2.6",
+    "pyqtgraph>=0.13.7",
+    "pyside6>=6.9.2",
+    "pyside6-addons>=6.9.2",
+    "pyside6-essentials>=6.9.2",
+    "scipy>=1.15.3",
+    "shiboken6>=6.9.2",
+]
