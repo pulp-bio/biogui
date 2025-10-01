@@ -216,6 +216,9 @@ class SerialDataSourceWorker(DataSourceWorker):
         for c in self._startSeq:
             if type(c) is bytes:
                 self._serialPort.write(c)
+                # make sure the full command is sent
+                while self._serialPort.bytesToWrite() > 0:
+                    self._serialPort.waitForBytesWritten(100)
             elif type(c) is float:
                 time.sleep(c)
 
@@ -230,11 +233,14 @@ class SerialDataSourceWorker(DataSourceWorker):
         for c in self._stopSeq:
             if type(c) is bytes:
                 self._serialPort.write(c)
+                # make sure the full command is sent
+                while self._serialPort.bytesToWrite() > 0:
+                    self._serialPort.waitForBytesWritten(100)
             elif type(c) is float:
                 time.sleep(c)
 
         # Reset input buffer and close port
-        while self._serialPort.waitForReadyRead(100):
+        while self._serialPort.waitForReadyRead(500):
             self._serialPort.clear()
         self._serialPort.close()
         self._buffer = QByteArray()
