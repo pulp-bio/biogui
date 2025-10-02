@@ -524,8 +524,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     logging.info(f"Wulpus Interface: {data[:20]=}")
 
     # Check if data starts with b'START\n' start sequence (i.e. if the data is aligned)
-    if data[:6] != b'START\n':
-        raise ValueError("WULPUS INTERFACE ERROR: Data packet does not start with expected b'START\\n' sequence. Hence, the data is not aligned.")
+    if data[:6] != b"START\n":
+        raise ValueError(
+            "WULPUS INTERFACE ERROR: Data packet does not start with expected b'START\\n' sequence. Hence, the data is not aligned."
+        )
 
     # remove b'START\n' from data
     data = data[6:]
