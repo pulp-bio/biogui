@@ -130,7 +130,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         dataQueue = deque(maxlen=renderLen)
 
         if "dataQueue" in kwargs:
-            dataQueue.Queue.extend(kwargs["dataQueue"])
+            dataQueue.extend(kwargs["dataQueue"])
 
         else:
             # Fill with zeros
@@ -174,7 +174,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             self._setupAModeAxes()
             self._setupLinePlots()
         elif self._ultrasoundMode == "M-Mode":
-            self._setupAModeAxes()
+            self._setupMModeAxes()
             self._setupImagePlot()
         else:
             # Time-Series (default)
@@ -220,11 +220,12 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._imageItem = pg.ImageItem()
         self.graphWidget.addItem(self._imageItem)
 
-        # Better colormap for ultrasound
-        colormap = pg.colormap.get('viridis')
+        # colormap = pg.colormap.get('plasma')
+        colormap = pg.colormap.get("viridis")
+        # colormap = pg.colormap.get('CET-C1')
         self._imageItem.setColorMap(colormap)
 
-        # Initialize with the actual buffer from _initializeModeSpecificData
+        # self._imageItem.setLookupTable(None)
         self._imageItem.setImage(self._mModeBuffer.T, autoLevels=True)
 
         # Calculate scaling - but defer setRect to first data update
@@ -344,15 +345,19 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         # Extract latest A-line
         latest_samples = self._getLatestScanData()
-        a_line_data = latest_samples[:, 0] if self._nCh == 1 else np.mean(latest_samples, axis=1)
+        a_line_data = (
+            latest_samples[:, 0] if self._nCh == 1 else np.mean(latest_samples, axis=1)
+        )
 
         # Update M-Mode buffer (scroll left, add new data on right)
         self._mModeBuffer = np.roll(self._mModeBuffer, -1, axis=1)
         self._mModeBuffer[:, -1] = a_line_data
 
         # Setup rect on first update (when image has proper dimensions)
-        if hasattr(self, '_needsRectSetup') and self._needsRectSetup:
-            depth_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.SCAN_LENGTH
+        if hasattr(self, "_needsRectSetup") and self._needsRectSetup:
+            depth_mm = (
+                (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.SCAN_LENGTH
+            )
             time_s = self.MMODE_TIME_WINDOW * (self.SCAN_LENGTH / self._fs)
             self._imageItem.setRect(pg.QtCore.QRectF(0, 0, time_s, depth_mm))
             self._needsRectSetup = False
@@ -364,12 +369,24 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._imageItem.setImage(
             self._mModeBuffer.T,
             autoLevels=False,
-            levels=[data_min - 0.1*level_range, data_max + 0.1*level_range]
+            levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
         )
 
         scan_count = self._timeTracker // self.SCAN_LENGTH
         self.timeLabel.setText(f"M-Mode: {scan_count} scans")
 
+    def _refreshTimeSeriesPlot(self) -> None:
+        """Plot data as time series."""
+        ys = np.asarray(self._dataQueue).T
+        for i in range(self._nCh):
+            self._plots[i].setData(
+                ys[i] + self._chSpacing * (self._nCh - i - 1),
+                skipFiniteCheck=True,
+            )
+
+        self.timeLabel.setText(
+            f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
+        )
 
     def _refreshSamplingRate(self) -> None:
         """Refresh the sampling rate."""
