@@ -16,8 +16,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 from __future__ import annotations
+
+import logging
 
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QDoubleValidator, QIntValidator
@@ -38,6 +39,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
+    signal_type : str
+        Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
     edit : bool, default=False
@@ -52,6 +55,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         sigName: str,
         fs: float,
         nCh: int,
+        signal_type: str,
         parent: QWidget | None = None,
         edit: bool = False,
         **kwargs,
@@ -106,7 +110,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.maxRangeTextField.setValidator(rangeValidator)
 
         self._sigName = sigName
-        self._sigConfig: dict = {"fs": fs, "nCh": nCh}
+        self._sigConfig: dict = {"fs": fs, "nCh": nCh, "signal_type": signal_type}
 
         # Pre-fill with provided configuration
         if edit:
@@ -114,6 +118,15 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
+
+        # activate ultrasound dropdown only for ultrasound signals
+        # TODO: use enums instead?
+        if signal_type == "ultrasound":
+            self.label14.setEnabled(True)
+            self.ultrasoundModeComboBox.setEnabled(True)
+        else:
+            self.label14.setEnabled(False)
+            self.ultrasoundModeComboBox.setEnabled(False)
 
     @property
     def sigName(self) -> str:
@@ -126,6 +139,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         dict: Property for getting the dictionary with the signal configuration, namely:
         - "fs": the sampling frequency;
         - "nCh": the number of channels;
+        - "signal_type": the signal type;
         - "filtType": the filter type (optional);
         - "freqs": list with the cut-off frequencies (optional);
         - "filtOrder" the filter order (optional);
@@ -135,6 +149,10 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         - "minRange": minimum of the Y range (optional);
         - "maxRange": maximum of the Y range (optional).
         """
+        # if self.ultrasoundModeComboBox.isEnabled():
+        #     self._sigConfig["ultrasoundMode"] = self.ultrasoundModeComboBox.currentText()
+        #     print(f"{self._sigConfig=}")
+
         return self._sigConfig
 
     def _onFiltTypeChange(self, filtType: str) -> None:
@@ -230,6 +248,11 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             self._sigConfig["minRange"] = minRange
             self._sigConfig["maxRange"] = maxRange
+
+        if self.ultrasoundModeComboBox.isEnabled():
+            self._sigConfig["ultrasoundMode"] = self.ultrasoundModeComboBox.currentText()
+
+        logging.info(f"SignalConfigWidget: {self._sigConfig=}")
 
         return True, ""
 

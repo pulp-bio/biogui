@@ -515,6 +515,8 @@ sigInfo: dict = {
     "ultrasound": {
         "fs": int(wulpus_config.sampling_freq / 1000),  # Convert to kHz
         "nCh": 1,  # Single channel A-mode data,
+        # TODO: make this field optional or required => add in all the existing interfaces?
+        "signal_type": "ultrasound",
     }
 }
 """Dictionary containing the signals information."""

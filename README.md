@@ -40,7 +40,7 @@ To enable the communication between the GUI and a board, one must provide a Pyth
 - `packetSize`: integer representing the number of bytes to be read;
 - `startSeq`: sequence of commands to start the board, expressed as a list of bytes;
 - `stopSeq`: sequence of commands to stop the board, expressed as a list of bytes;
-- `sigInfo`: dictionary containing, for each signal, a sub-dictionary with its sampling rate (`fs`) and number of channels (`nCh`);
+- `sigInfo`: dictionary containing, for each signal, a sub-dictionary with its sampling rate (`fs`), number of channels (`nCh`), and signal type (`signal_type`);
 - `decodeFn`: function that decodes each packet of byte read from the board into the specified signals.
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
@@ -64,8 +64,8 @@ If you would like to reference the project, please cite the following paper:
 ```
 @ARTICLE{10552147,
   author={Orlandi, Mattia and Rapa, Pierangelo Maria and Zanghieri, Marcello and Frey, Sebastian and Kartsch, Victor and Benini, Luca and Benatti, Simone},
-  journal={IEEE Transactions on Biomedical Circuits and Systems}, 
-  title={Real-Time Motor Unit Tracking From sEMG Signals With Adaptive ICA on a Parallel Ultra-Low Power Processor}, 
+  journal={IEEE Transactions on Biomedical Circuits and Systems},
+  title={Real-Time Motor Unit Tracking From sEMG Signals With Adaptive ICA on a Parallel Ultra-Low Power Processor},
   year={2024},
   volume={18},
   number={4},
