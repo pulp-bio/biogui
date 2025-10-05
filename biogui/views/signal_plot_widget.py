@@ -72,6 +72,13 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         List containing the references to the PlotItem objects.
     """
 
+    # Constants
+    SCAN_LENGTH = 400  # TODO: Get from interface config
+    MMODE_TIME_WINDOW = 300  # Show more history (was 100)
+    PLOT_UPDATE_RATE = 50  # ms (20 FPS)
+    SPS_UPDATE_RATE = 1000  # ms
+    SPEED_OF_SOUND = 1540  # m/s in tissue
+
     def __init__(
         self,
         sigName: str,
@@ -92,37 +99,67 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         # read ultrasound mode if available
         self._ultrasoundMode = kwargs.get("ultrasoundMode", False)
-        print(f"Ultrasound mode: {self._ultrasoundMode}")
+
+        # Initialize mode-specific data structures
+        self._initializeModeSpecificData()
 
         # Set up queue
         renderLen = int(round(renderLenMs / 1000 * fs))
         self._dataQueue = deque(maxlen=renderLen)
 
-        # Fill queue
-        if "dataQueue" in kwargs:
-            self._dataQueue.extend(kwargs["dataQueue"])
-        else:
-            for _ in range(renderLen):
-                self._dataQueue.append(np.zeros(self._nCh))
+        # Set up data queue
+        renderLen = int(round(renderLenMs / 1000 * fs))
+        self._dataQueue = self._createDataQueue(renderLen, kwargs)
 
-        # Configure timers
+        # Configure UI and timers
+        self._setupTimers()
+        self._setupGraphWidget(sigName, kwargs)
+        self._renderPlots()
+
+    def _initializeModeSpecificData(self) -> None:
+        """Initialize data structures based on ultrasound mode."""
+        self._plots = []
+        self._imageItem = None
+        self._lastRenderedScan = -1
+
+        if self._ultrasoundMode == "M-Mode":
+            self._mModeBuffer = np.zeros((self.SCAN_LENGTH, self.MMODE_TIME_WINDOW))
+
+    def _createDataQueue(self, renderLen: int, kwargs: dict) -> deque:
+        """Create and initialize the data queue."""
+        dataQueue = deque(maxlen=renderLen)
+
+        if "dataQueue" in kwargs:
+            dataQueue.Queue.extend(kwargs["dataQueue"])
+
+        else:
+            # Fill with zeros
+            for _ in range(renderLen):
+                dataQueue.append(np.zeros(self._nCh))
+
+        return dataQueue
+
+    def _setupTimers(self) -> None:
+        """Configure plot and sampling rate timers."""
         self._plotTimer = QTimer(self)
-        self._plotTimer.setInterval(50)  # 20 FPS
+        self._plotTimer.setInterval(self.PLOT_UPDATE_RATE)
         self._plotTimer.timeout.connect(self._refreshPlot)
+
         self._spsTimer = QTimer(self)
-        self._spsTimer.setInterval(1000)
+        self._spsTimer.setInterval(self.SPS_UPDATE_RATE)
         self._spsTimer.timeout.connect(self._refreshSamplingRate)
+
         self._timeTracker = 0
         self._spsTracker = 0
 
-        # Initialize plots
-        self._plots = []
+    def _setupGraphWidget(self, sigName: str, kwargs: dict) -> None:
+        """Configure the graph widget."""
         self.graphWidget.setTitle(sigName)
-        self.graphWidget.getPlotItem().setMouseEnabled(False, False)  # type: ignore
-        self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+        self.graphWidget.getPlotItem().setMouseEnabled(False, False)
+        self.graphWidget.getPlotItem().hideAxis("bottom")
+
         if "minRange" in kwargs and "maxRange" in kwargs:
-            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])  # type: ignore
-        self._renderPlots()
+            self.graphWidget.setYRange(kwargs["minRange"], kwargs["maxRange"])
 
     @property
     def dataQueue(self) -> deque:
@@ -134,13 +171,35 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self.graphWidget.clear()
 
         if self._ultrasoundMode == "A-Mode":
-            self.graphWidget.getPlotItem().showAxis("bottom")  # type: ignore
-            axis_item = self.graphWidget.getPlotItem().getAxis("bottom")
-            axis_item.enableAutoSIPrefix(False)
-            self.graphWidget.getPlotItem().setLabel("bottom", "Distance", "mm")  # type: ignore
+            self._setupAModeAxes()
+            self._setupLinePlots()
+        elif self._ultrasoundMode == "M-Mode":
+            self._setupAModeAxes()
+            self._setupImagePlot()
         else:
-            self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
+            # Time-Series (default)
+            # self.graphWidget.getPlotItem().hideAxis("bottom")
+            self._setupLinePlots()
 
+    def _setupAModeAxes(self) -> None:
+        """Configure axes for A-Mode display."""
+        plot_item = self.graphWidget.getPlotItem()
+        plot_item.showAxis("bottom")
+
+        axis_item = plot_item.getAxis("bottom")
+        axis_item.enableAutoSIPrefix(False)
+
+        plot_item.setLabel("bottom", "Distance", "mm")
+
+    def _setupMModeAxes(self) -> None:
+        """Configure axes for M-Mode display."""
+        plot_item = self.graphWidget.getPlotItem()
+        plot_item.showAxis("bottom")
+        plot_item.setLabel("bottom", "Time", "s")
+        plot_item.setLabel("left", "Distance", "mm")
+
+    def _setupLinePlots(self) -> None:
+        """Setup line plots for A-Mode and Time-Series."""
         # Get colormap
         cm = pg.colormap.get("CET-C1")
         cm.setMappingMode("diverging")  # type: ignore
@@ -155,6 +214,50 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                     ys[i] + self._chSpacing * (self._nCh - i - 1), pen=pen
                 )
             )
+
+    def _setupImagePlot(self) -> None:
+        """Setup 2D image plot for M-Mode with enhanced quality."""
+        self._imageItem = pg.ImageItem()
+        self.graphWidget.addItem(self._imageItem)
+
+        # Better colormap for ultrasound
+        colormap = pg.colormap.get('viridis')
+        self._imageItem.setColorMap(colormap)
+
+        # Initialize with the actual buffer from _initializeModeSpecificData
+        self._imageItem.setImage(self._mModeBuffer.T, autoLevels=True)
+
+        # Calculate scaling - but defer setRect to first data update
+        # to avoid the TypeError
+        self._needsRectSetup = True  # Flag for first update
+
+    def _hasNewCompleteScan(self, mode_suffix: str = "") -> bool:
+        """Check if we have a new complete scan to render."""
+        if len(self._dataQueue) < self.SCAN_LENGTH:
+            return False
+
+        current_scan_count = self._timeTracker // self.SCAN_LENGTH
+        last_scan_attr = f"_lastRenderedScan{mode_suffix}"
+
+        if not hasattr(self, last_scan_attr):
+            setattr(self, last_scan_attr, -1)
+
+        last_scan = getattr(self, last_scan_attr)
+
+        if current_scan_count <= last_scan:
+            return False
+
+        setattr(self, last_scan_attr, current_scan_count)
+        return True
+
+    def _getLatestScanData(self) -> np.ndarray:
+        """Extract the latest complete scan from the data queue."""
+        return np.asarray(self._dataQueue)[-self.SCAN_LENGTH :]
+
+    def _calculateDistanceAxis(self) -> np.ndarray:
+        """Calculate distance axis for ultrasound display."""
+        sample_distance_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000)
+        return np.arange(self.SCAN_LENGTH) * sample_distance_mm
 
     @Slot(int)
     def reInitPlot(self, renderLenMs) -> None:
@@ -208,67 +311,65 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         if self._ultrasoundMode == "A-Mode":
             self._refreshAModePlot()
+        elif self._ultrasoundMode == "M-Mode":
+            self._refreshMModePlot()
         else:
             self._refreshTimeSeriesPlot()
 
     def _refreshAModePlot(self) -> None:
         """Plot data as A-Mode."""
-
-        # TODO: Import from wulpus interface? (add to sigInfo to make it work for future interfaces as well)
-        scan_length = 400
-
-        # Safety check: are there enough samples?
-        if len(self._dataQueue) < scan_length:
-            print("SignalPlotWidget::_refreshAModePlot: Not enough samples")
+        if not self._hasNewCompleteScan("AMode"):
             return
 
-        # Check if we have a new complete A-Mode scan
-        current_scan_count = self._timeTracker // scan_length
-
-        # Initialize on first run
-        if not hasattr(self, '_last_rendered_scan'):
-            self._last_rendered_scan = -1
-
-        # Only update plot if we have a new complete scan
-        if current_scan_count <= self._last_rendered_scan:
-            return  # No new scan, skip rendering
-
-
-        # Only display the latest sample at a time
-        latest_sample = np.asarray(self._dataQueue)[-scan_length:]
-        print(f"{latest_sample[:10]=}")
-        print(f"{latest_sample.shape=}")
-        # a_mode_data = latest_sample[:, 0]
-
-        speed_of_sound = 1540
-        sample_distance_mm = (speed_of_sound * 1000) / (2 * self._fs * 1000)
-        distance_axis = np.arange(scan_length) * sample_distance_mm
+        latest_samples = self._getLatestScanData()
+        distance_axis = self._calculateDistanceAxis()
 
         for i in range(self._nCh):
-            a_mode_data_ch = latest_sample[:, i]
+            a_mode_data = latest_samples[:, i]
             vertical_offset = self._chSpacing * (self._nCh - i - 1)
 
             self._plots[i].setData(
                 distance_axis,
-                a_mode_data_ch + vertical_offset,
+                a_mode_data + vertical_offset,
                 skipFiniteCheck=True,
             )
 
-        self.timeLabel.setText(f"Samples: {self._timeTracker // scan_length}")
-        self._last_rendered_scan = current_scan_count
+        scan_count = self._timeTracker // self.SCAN_LENGTH
+        self.timeLabel.setText(f"A-Mode Scan: {scan_count}")
 
-    def _refreshTimeSeriesPlot(self) -> None:
-        """Plot data as time series."""
-        ys = np.asarray(self._dataQueue).T
-        for i in range(self._nCh):
-            self._plots[i].setData(
-                ys[i] + self._chSpacing * (self._nCh - i - 1),
-                skipFiniteCheck=True,
-            )
+    def _refreshMModePlot(self) -> None:
+        """Plot data as M-Mode with enhanced quality."""
+        if not self._hasNewCompleteScan("MMode"):
+            return
 
-        self.timeLabel.setText(
-            f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
-        )  # type: ignore
+        # Extract latest A-line
+        latest_samples = self._getLatestScanData()
+        a_line_data = latest_samples[:, 0] if self._nCh == 1 else np.mean(latest_samples, axis=1)
+
+        # Update M-Mode buffer (scroll left, add new data on right)
+        self._mModeBuffer = np.roll(self._mModeBuffer, -1, axis=1)
+        self._mModeBuffer[:, -1] = a_line_data
+
+        # Setup rect on first update (when image has proper dimensions)
+        if hasattr(self, '_needsRectSetup') and self._needsRectSetup:
+            depth_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.SCAN_LENGTH
+            time_s = self.MMODE_TIME_WINDOW * (self.SCAN_LENGTH / self._fs)
+            self._imageItem.setRect(pg.QtCore.QRectF(0, 0, time_s, depth_mm))
+            self._needsRectSetup = False
+
+        # Update image with better contrast settings
+        data_min, data_max = a_line_data.min(), a_line_data.max()
+        level_range = data_max - data_min
+
+        self._imageItem.setImage(
+            self._mModeBuffer.T,
+            autoLevels=False,
+            levels=[data_min - 0.1*level_range, data_max + 0.1*level_range]
+        )
+
+        scan_count = self._timeTracker // self.SCAN_LENGTH
+        self.timeLabel.setText(f"M-Mode: {scan_count} scans")
+
 
     def _refreshSamplingRate(self) -> None:
         """Refresh the sampling rate."""
