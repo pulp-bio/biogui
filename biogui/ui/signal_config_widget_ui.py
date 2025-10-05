@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'signal_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.0
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -182,6 +182,11 @@ class Ui_SignalConfigWidget(object):
 
         self.formLayout.setWidget(6, QFormLayout.ItemRole.LabelRole, self.label13)
 
+        self.label14 = QLabel(self.plotGroupBox)
+        self.label14.setObjectName(u"label14")
+
+        self.formLayout.setWidget(8, QFormLayout.ItemRole.LabelRole, self.label14)
+
         self.chSpacingTextField = QLineEdit(self.plotGroupBox)
         self.chSpacingTextField.setObjectName(u"chSpacingTextField")
 
@@ -205,6 +210,14 @@ class Ui_SignalConfigWidget(object):
         self.maxRangeTextField.setEnabled(False)
 
         self.formLayout.setWidget(6, QFormLayout.ItemRole.FieldRole, self.maxRangeTextField)
+
+        self.ultrasoundModeComboBox = QComboBox(self.plotGroupBox)
+        self.ultrasoundModeComboBox.addItem("")
+        self.ultrasoundModeComboBox.addItem("")
+        self.ultrasoundModeComboBox.setObjectName(u"ultrasoundModeComboBox")
+        self.ultrasoundModeComboBox.setEnabled(False)
+
+        self.formLayout.setWidget(8, QFormLayout.ItemRole.FieldRole, self.ultrasoundModeComboBox)
 
 
         self.verticalLayout.addWidget(self.plotGroupBox)
@@ -282,6 +295,7 @@ class Ui_SignalConfigWidget(object):
         self.label11.setText(QCoreApplication.translate("SignalConfigWidget", u"Range mode:", None))
         self.label12.setText(QCoreApplication.translate("SignalConfigWidget", u"Minimum range (in a.u.):", None))
         self.label13.setText(QCoreApplication.translate("SignalConfigWidget", u"Maximum range (in a.u.):", None))
+        self.label14.setText(QCoreApplication.translate("SignalConfigWidget", u"Ultrasound mode:", None))
 #if QT_CONFIG(tooltip)
         self.chSpacingTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
 #endif // QT_CONFIG(tooltip)
@@ -289,6 +303,9 @@ class Ui_SignalConfigWidget(object):
         self.chSpacingTextField.setPlaceholderText("")
         self.rangeModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Automatic", None))
         self.rangeModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Manual", None))
+
+        self.ultrasoundModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"A-Mode", None))
+        self.ultrasoundModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"M-Mode", None))
 
     # retranslateUi
 

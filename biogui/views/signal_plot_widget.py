@@ -90,6 +90,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._nCh = nCh
         self._chSpacing = chSpacing
 
+        # read ultrasound mode if available
+        self._ultrasoundMode = kwargs.get("ultrasoundMode", False)
+        print(f"Ultrasound mode: {self._ultrasoundMode}")
+
         # Set up queue
         renderLen = int(round(renderLenMs / 1000 * fs))
         self._dataQueue = deque(maxlen=renderLen)
@@ -128,6 +132,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     def _renderPlots(self) -> None:
         """Render the initial plot."""
         self.graphWidget.clear()
+
+        if self._ultrasoundMode == "A-Mode":
+            self.graphWidget.getPlotItem().showAxis("bottom")  # type: ignore
+            axis_item = self.graphWidget.getPlotItem().getAxis("bottom")
+            axis_item.enableAutoSIPrefix(False)
+            self.graphWidget.getPlotItem().setLabel("bottom", "Distance", "mm")  # type: ignore
+        else:
+            self.graphWidget.getPlotItem().hideAxis("bottom")  # type: ignore
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
@@ -191,15 +203,72 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _refreshPlot(self) -> None:
         """Plot the given data."""
-        if self._dataQueue:
-            ys = np.asarray(self._dataQueue).T
-            for i in range(self._nCh):
-                self._plots[i].setData(
-                    ys[i] + self._chSpacing * (self._nCh - i - 1),
-                    skipFiniteCheck=True,
-                )
+        if not self._dataQueue:
+            return
 
-            self.timeLabel.setText(f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s")  # type: ignore
+        if self._ultrasoundMode == "A-Mode":
+            self._refreshAModePlot()
+        else:
+            self._refreshTimeSeriesPlot()
+
+    def _refreshAModePlot(self) -> None:
+        """Plot data as A-Mode."""
+
+        # TODO: Import from wulpus interface? (add to sigInfo to make it work for future interfaces as well)
+        scan_length = 400
+
+        # Safety check: are there enough samples?
+        if len(self._dataQueue) < scan_length:
+            print("SignalPlotWidget::_refreshAModePlot: Not enough samples")
+            return
+
+        # Check if we have a new complete A-Mode scan
+        current_scan_count = self._timeTracker // scan_length
+
+        # Initialize on first run
+        if not hasattr(self, '_last_rendered_scan'):
+            self._last_rendered_scan = -1
+
+        # Only update plot if we have a new complete scan
+        if current_scan_count <= self._last_rendered_scan:
+            return  # No new scan, skip rendering
+
+
+        # Only display the latest sample at a time
+        latest_sample = np.asarray(self._dataQueue)[-scan_length:]
+        print(f"{latest_sample[:10]=}")
+        print(f"{latest_sample.shape=}")
+        # a_mode_data = latest_sample[:, 0]
+
+        speed_of_sound = 1540
+        sample_distance_mm = (speed_of_sound * 1000) / (2 * self._fs * 1000)
+        distance_axis = np.arange(scan_length) * sample_distance_mm
+
+        for i in range(self._nCh):
+            a_mode_data_ch = latest_sample[:, i]
+            vertical_offset = self._chSpacing * (self._nCh - i - 1)
+
+            self._plots[i].setData(
+                distance_axis,
+                a_mode_data_ch + vertical_offset,
+                skipFiniteCheck=True,
+            )
+
+        self.timeLabel.setText(f"Samples: {self._timeTracker // scan_length}")
+        self._last_rendered_scan = current_scan_count
+
+    def _refreshTimeSeriesPlot(self) -> None:
+        """Plot data as time series."""
+        ys = np.asarray(self._dataQueue).T
+        for i in range(self._nCh):
+            self._plots[i].setData(
+                ys[i] + self._chSpacing * (self._nCh - i - 1),
+                skipFiniteCheck=True,
+            )
+
+        self.timeLabel.setText(
+            f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
+        )  # type: ignore
 
     def _refreshSamplingRate(self) -> None:
         """Refresh the sampling rate."""
