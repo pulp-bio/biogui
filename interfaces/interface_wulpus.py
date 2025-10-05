@@ -6,7 +6,7 @@ ACQ_LENGTH_SAMPLES = 400
 
 # Protocol related
 START_BYTE_CONF_PACK = 250
-START_BYTE_RESTART = 251
+START_BYTE_RESTART = 251  # stops acquisition loop on WULPUS and WULPUS will wait for a new valid configuration package
 # Maximum length of the configuration package
 PACKAGE_LEN = 68
 
@@ -471,20 +471,13 @@ packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 
 startSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),  # Send restart first
-    2.5,  # Wait 2.5 seconds (biogui convention: floats are delays)
-    wulpus_config.get_conf_package(),  # Send configuration,
+    # 2.5,  # Wait 2.5 seconds (wulpus gui convention)
+    wulpus_config.get_conf_package(),  # Send configuration which acts as start command
 ]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
 """
-
-
-# startSeq = [
-#     b"\xfb\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
-#     2.5,
-#     b'\xfa\x03\x00K\x1d\x10U"\x00@B\x0f\x00\x0b\x01\x00 \x03!\x01\x00\xc0\x00@\xa0\x0f\xc4\t\x19\x00\x19\x00\xd3\t\xa9\x03\xa6\x0e\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
-# ]
 
 
 stopSeq: list[bytes | float] = [
@@ -499,7 +492,7 @@ interpreted as delays (in seconds) between commands.
 sigInfo: dict = {
     "ultrasound": {
         "fs": int(wulpus_config.sampling_freq / 1000),  # Convert to kHz
-        "nCh": 1,  # Single channel A-mode data
+        "nCh": 1,  # Single channel A-mode data,
     }
 }
 """Dictionary containing the signals information."""
@@ -536,12 +529,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     acq_nr = data[4]
     tx_rx_id = np.frombuffer(data[5:7], dtype="<u2")[0]
 
-    # print(f"acq_nr: {acq_nr}, tx_rx_id: {tx_rx_id}")
-    # print(f"rf_arr: {rf_arr}")
+    logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
+    logging.info(f"Wulpus Interface: {rf_arr[:10]=}\n")
 
     return {"ultrasound": rf_arr.reshape(-1, 1)}
-
-
-print(f"{packetSize=}")
-# print(f"{startSeq}")
-# print(f"{stopSeq}")
