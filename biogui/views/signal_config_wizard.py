@@ -119,6 +119,8 @@ class SignalConfigWizard(QWizard):
         super().__init__(parent)
         self.setWizardStyle(QWizard.ClassicStyle)  # type: ignore
 
+        self.setWindowTitle("Signal Configuration")
+
         # Populate wizard
         for sigName in sigInfo:
             self.addPage(
