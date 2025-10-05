@@ -530,6 +530,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     tx_rx_id = np.frombuffer(data[5:7], dtype="<u2")[0]
 
     logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
-    logging.info(f"Wulpus Interface: {rf_arr[:10]=}\n")
+    logging.info(f"Wulpus Interface: {rf_arr[:8]=}\n")
 
     return {"ultrasound": rf_arr.reshape(-1, 1)}
