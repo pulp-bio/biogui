@@ -74,7 +74,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     # Constants
     SCAN_LENGTH = 400  # TODO: Get from interface config
-    MMODE_TIME_WINDOW = 300  # Show more history (was 100)
+    MMODE_TIME_WINDOW = 400  # Show more history
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
     SPS_UPDATE_RATE = 1000  # ms
     SPEED_OF_SOUND = 1540  # m/s in tissue
@@ -103,10 +103,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # Initialize mode-specific data structures
         self._initializeModeSpecificData()
 
-        # Set up queue
-        renderLen = int(round(renderLenMs / 1000 * fs))
-        self._dataQueue = deque(maxlen=renderLen)
-
         # Set up data queue
         renderLen = int(round(renderLenMs / 1000 * fs))
         self._dataQueue = self._createDataQueue(renderLen, kwargs)
@@ -119,7 +115,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     def _initializeModeSpecificData(self) -> None:
         """Initialize data structures based on ultrasound mode."""
         self._plots = []
-        self._imageItem = None
         self._lastRenderedScan = -1
 
         if self._ultrasoundMode == "M-Mode":
@@ -131,7 +126,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         if "dataQueue" in kwargs:
             dataQueue.extend(kwargs["dataQueue"])
-
         else:
             # Fill with zeros
             for _ in range(renderLen):
@@ -220,9 +214,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._imageItem = pg.ImageItem()
         self.graphWidget.addItem(self._imageItem)
 
-        # colormap = pg.colormap.get('plasma')
         colormap = pg.colormap.get("viridis")
-        # colormap = pg.colormap.get('CET-C1')
         self._imageItem.setColorMap(colormap)
 
         # self._imageItem.setLookupTable(None)
@@ -232,24 +224,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # to avoid the TypeError
         self._needsRectSetup = True  # Flag for first update
 
-    def _hasNewCompleteScan(self, mode_suffix: str = "") -> bool:
-        """Check if we have a new complete scan to render."""
-        if len(self._dataQueue) < self.SCAN_LENGTH:
-            return False
-
-        current_scan_count = self._timeTracker // self.SCAN_LENGTH
-        last_scan_attr = f"_lastRenderedScan{mode_suffix}"
-
-        if not hasattr(self, last_scan_attr):
-            setattr(self, last_scan_attr, -1)
-
-        last_scan = getattr(self, last_scan_attr)
-
-        if current_scan_count <= last_scan:
-            return False
-
-        setattr(self, last_scan_attr, current_scan_count)
-        return True
 
     def _getLatestScanData(self) -> np.ndarray:
         """Extract the latest complete scan from the data queue."""
@@ -319,9 +293,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _refreshAModePlot(self) -> None:
         """Plot data as A-Mode."""
-        if not self._hasNewCompleteScan("AMode"):
-            return
-
         latest_samples = self._getLatestScanData()
         distance_axis = self._calculateDistanceAxis()
 
@@ -340,9 +311,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _refreshMModePlot(self) -> None:
         """Plot data as M-Mode with enhanced quality."""
-        if not self._hasNewCompleteScan("MMode"):
-            return
-
         # Extract latest A-line
         latest_samples = self._getLatestScanData()
         a_line_data = (
