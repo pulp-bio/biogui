@@ -39,7 +39,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : str | None, default=None
+    signal_type : dict | None, default=None
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
@@ -55,7 +55,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: str | None = None,
+        signal_type: dict | None = None,
         parent: QWidget | None = None,
         edit: bool = False,
         **kwargs,
@@ -120,8 +120,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
 
         # activate ultrasound dropdown only for ultrasound signals
-        # TODO: use enums instead?
-        if signal_type == "ultrasound":
+        if signal_type["type"] == "ultrasound":
             self.label14.setEnabled(True)
             self.ultrasoundModeComboBox.setEnabled(True)
         else:

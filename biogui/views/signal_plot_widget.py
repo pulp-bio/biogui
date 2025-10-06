@@ -73,7 +73,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     """
 
     # Constants
-    SCAN_LENGTH = 400  # TODO: Get from interface config
     MMODE_TIME_WINDOW = 400  # Show more history
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
     SPS_UPDATE_RATE = 1000  # ms
@@ -100,6 +99,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # read ultrasound mode if available
         self._ultrasoundMode = kwargs.get("ultrasoundMode", False)
 
+        if self._ultrasoundMode:
+            signal_type = kwargs["signal_type"]
+            self.NUM_SAMPLES = signal_type["num_samples"]
+
         # Initialize mode-specific data structures
         self._initializeModeSpecificData()
 
@@ -118,7 +121,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._lastRenderedScan = -1
 
         if self._ultrasoundMode == "M-Mode":
-            self._mModeBuffer = np.zeros((self.SCAN_LENGTH, self.MMODE_TIME_WINDOW))
+            self._mModeBuffer = np.zeros((self.NUM_SAMPLES, self.MMODE_TIME_WINDOW))
 
     def _createDataQueue(self, renderLen: int, kwargs: dict) -> deque:
         """Create and initialize the data queue."""
@@ -224,15 +227,15 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # to avoid the TypeError
         self._needsRectSetup = True  # Flag for first update
 
-
     def _getLatestScanData(self) -> np.ndarray:
         """Extract the latest complete scan from the data queue."""
-        return np.asarray(self._dataQueue)[-self.SCAN_LENGTH :]
+        return np.asarray(self._dataQueue)[-self.NUM_SAMPLES :]
 
     def _calculateDistanceAxis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display."""
+        # TODO: Check calculation
         sample_distance_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000)
-        return np.arange(self.SCAN_LENGTH) * sample_distance_mm
+        return np.arange(self.NUM_SAMPLES) * sample_distance_mm
 
     @Slot(int)
     def reInitPlot(self, renderLenMs) -> None:
@@ -306,7 +309,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                 skipFiniteCheck=True,
             )
 
-        scan_count = self._timeTracker // self.SCAN_LENGTH
+        # TODO: Translate into time instead of number of scans?
+        scan_count = self._timeTracker // self.NUM_SAMPLES
         self.timeLabel.setText(f"A-Mode Scan: {scan_count}")
 
     def _refreshMModePlot(self) -> None:
@@ -324,9 +328,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # Setup rect on first update (when image has proper dimensions)
         if hasattr(self, "_needsRectSetup") and self._needsRectSetup:
             depth_mm = (
-                (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.SCAN_LENGTH
+                (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.NUM_SAMPLES
             )
-            time_s = self.MMODE_TIME_WINDOW * (self.SCAN_LENGTH / self._fs)
+            time_s = self.MMODE_TIME_WINDOW * (self.NUM_SAMPLES / self._fs)
             self._imageItem.setRect(pg.QtCore.QRectF(0, 0, time_s, depth_mm))
             self._needsRectSetup = False
 
@@ -340,7 +344,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
         )
 
-        scan_count = self._timeTracker // self.SCAN_LENGTH
+        # TODO: Translate into time instead of number of scans?
+        scan_count = self._timeTracker // self.NUM_SAMPLES
         self.timeLabel.setText(f"M-Mode: {scan_count} scans")
 
     def _refreshTimeSeriesPlot(self) -> None:
