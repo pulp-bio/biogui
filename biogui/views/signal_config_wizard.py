@@ -52,7 +52,7 @@ class SignalConfigWizardPage(QWizardPage):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: str,
+        signal_type: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)

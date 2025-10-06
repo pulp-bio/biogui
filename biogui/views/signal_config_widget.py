@@ -55,7 +55,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: str,
+        signal_type: str | None = None,
         parent: QWidget | None = None,
         edit: bool = False,
         **kwargs,
