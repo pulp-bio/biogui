@@ -39,7 +39,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : str
+    signal_type : str | None, default=None
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
@@ -305,3 +305,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.minRangeTextField.setEnabled(False)
             self.label13.setEnabled(False)
             self.maxRangeTextField.setEnabled(False)
+
+        # 3. Ultrasound settingss
+        if "ultrasoundMode" in sigConfig:
+            self.ultrasoundModeComboBox.setCurrentText(sigConfig["ultrasoundMode"])
