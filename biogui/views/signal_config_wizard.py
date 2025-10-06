@@ -36,7 +36,7 @@ class SignalConfigWizardPage(QWizardPage):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : str | None, default=None
+    signal_type : dict | None, default=None
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
@@ -52,7 +52,7 @@ class SignalConfigWizardPage(QWizardPage):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: str | None = None,
+        signal_type: dict | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)

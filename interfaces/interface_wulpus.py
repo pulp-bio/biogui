@@ -511,7 +511,7 @@ biceps_exercise_config = WulpusUssConfig(
     capt_timeout=3000,
 )
 
-wulpus_config = biceps_exercise_config
+wulpus_config = waterbath_config
 
 packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 """Number of bytes in each package."""
@@ -540,8 +540,10 @@ sigInfo: dict = {
     "ultrasound": {
         "fs": int(wulpus_config.sampling_freq / 1000),  # Convert to kHz
         "nCh": 1,  # Single channel A-mode data,
-        # TODO: make this field optional or required => add in all the existing interfaces?
-        "signal_type": "ultrasound",
+        "signal_type": {
+            "type": "ultrasound",
+            "num_samples": wulpus_config.num_samples,
+        },
     }
 }
 """Dictionary containing the signals information."""
