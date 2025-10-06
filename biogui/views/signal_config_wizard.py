@@ -36,7 +36,7 @@ class SignalConfigWizardPage(QWizardPage):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : str
+    signal_type : str | None, default=None
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
