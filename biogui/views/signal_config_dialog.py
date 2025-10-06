@@ -72,6 +72,8 @@ class SignalConfigDialog(QDialog):
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
 
+        self.setWindowTitle("Signal Configuration")
+
     @property
     def sigConfig(self) -> dict:
         """
