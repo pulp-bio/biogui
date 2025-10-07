@@ -156,9 +156,9 @@ class _FileWriterWorker(QObject):
                     return
 
             # 3. Trigger (optional)
-            if self._trigger is not None:
+            if "trigger" in self._tempData:
                 self._tempData["trigger"]["file"].write(
-                    struct.pack("<I", self._trigger)
+                    struct.pack("<I", self._trigger if self._trigger is not None else 0)
                 )
                 self._tempData["trigger"]["nSamp"] += 1
         except OSError:
@@ -214,7 +214,7 @@ class _FileWriterWorker(QObject):
                     )
 
                 # 1.3. Trigger (optional)
-                f.write(struct.pack("<?", self._trigger is not None))
+                f.write(struct.pack("<?", "trigger" in self._tempData))
 
                 # 2. Actual signals
                 # 2.1. Timestamp
@@ -227,7 +227,7 @@ class _FileWriterWorker(QObject):
                     f.write(self._tempData[sigName]["file"].read())
 
                 # 3. Trigger (optional)
-                if self._trigger is not None:
+                if "trigger" in self._tempData:
                     self._tempData["trigger"]["file"].seek(0)
                     f.write(self._tempData["trigger"]["file"].read())
         except FileNotFoundError:
