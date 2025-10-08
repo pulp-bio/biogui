@@ -113,7 +113,7 @@ class ModuleController(QObject):
     def _teleprompterActionHandler(self, checked: bool) -> None:
         """Handler for the "configure teleprompter" action."""
         if checked:
-            teleprompterModule = modules.TeleprompterController()
+            teleprompterModule = modules.TeleprompterController(self._mainController.streamingControllers, parent=self)
             teleprompterModule.subscribe(self._mainController, self._mainWin)
             self._modules["teleprompter"] = teleprompterModule
         else:
