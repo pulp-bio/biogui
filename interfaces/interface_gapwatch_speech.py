@@ -1,5 +1,5 @@
 """
-This module contains the GAPWatch interface for sEMG.
+This module contains the GAPWatch interface for sEMG neckband.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -23,7 +23,8 @@ import numpy as np
 
 BUFF_SIZE = 40
 FS = 2000
-GAIN = 1
+GAIN = 12
+NCH_EMG = 8
 
 FS_MAP = {
     500: 0x06,
@@ -62,7 +63,7 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": FS, "nCh": 16},
+    "emg": {"fs": FS, "nCh": NCH_EMG},
     "battery": {"fs": FS // 5, "nCh": 1},
     "counter": {"fs": FS // 5, "nCh": 1},
     "ts": {"fs": FS // 5, "nCh": 1},
@@ -87,6 +88,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
     nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
+
+    channels = [0,1,2,3,4,5,6,7]  
 
     # ADC parameters
     vRef = 4
@@ -113,9 +116,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
+    emg = emgADC * vRef / (3 * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
-    emg = emg.astype(np.float32)
+    emg = emg.astype(np.float32)[:, channels]  # Select only the first 3 channels
 
     # Read battery and packet counter
     battery = np.asarray(
