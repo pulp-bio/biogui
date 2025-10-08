@@ -1,5 +1,4 @@
-"""
-This module contains the GAPWatch interface for sEMG.
+"""This module contains the GAPWatch interface for sEMG.
 
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
@@ -21,52 +20,18 @@ import struct
 
 import numpy as np
 
-BUFF_SIZE = 40
-FS = 2000
-GAIN = 1
+BUFF_SIZE = 20
 
-FS_MAP = {
-    500: 0x06,
-    1000: 0x05,
-    2000: 0x04,
-    4000: 0x03,
-}
-
-GAIN_MAP = {
-    6: 0x00,
-    1: 0x10,
-    2: 0x20,
-    3: 0x30,
-    4: 0x40,
-    8: 0x50,
-    12: 0x60,
-}
-
-packetSize: int = 252 * BUFF_SIZE
+packetSize: int = (256) * BUFF_SIZE
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [
-    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]),
-    1.0,
-    b"=",
-]
-"""
-Sequence of commands (as bytes) to start the device; floats are
-interpreted as delays (in seconds) between commands.
-"""
+startSeq: list[bytes] = [bytes([0xAA, 3, 0x04, 250, 1]), 1.0, b"="]
+"""Sequence of commands to start the device."""
 
 stopSeq: list[bytes] = [b":"]
-"""
-Sequence of commands (as bytes) to stop the device; floats are
-interpreted as delays (in seconds) between commands.
-"""
+"""Sequence of commands to stop the device."""
 
-sigInfo: dict = {
-    "emg": {"fs": FS, "nCh": 16},
-    "battery": {"fs": FS // 5, "nCh": 1},
-    "counter": {"fs": FS // 5, "nCh": 1},
-    "ts": {"fs": FS // 5, "nCh": 1},
-}
+sigInfo: dict = {"emg": {"fs": 2000, "nCh": 16},"trigger_emg":{"fs": 4000, "nCh": 1},"ts": {"fs": 800, "nCh": 1}}
 """Dictionary containing the signals information."""
 
 
@@ -85,22 +50,25 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         Dictionary containing the signal data packets, each with shape (nSamp, nCh);
         the keys must match with those of the "sigInfo" dictionary.
     """
-    nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
-    nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
+    nSampEMG, nChEMG = 5 * BUFF_SIZE, sigInfo["emg"]["nCh"]
+    nSampTs = 1 * BUFF_SIZE
+    nSampTrigger = 5 * BUFF_SIZE
 
     # ADC parameters
     vRef = 4
+    gain = 3
     nBit = 24
 
-    dataEMG = bytearray()
-    dataBat = bytearray()
-    dataCounter = bytearray()
+    dataEMG = bytearray()    
+    dataTrigger = bytearray()
     dataTs = bytearray()
+
     for i in range(BUFF_SIZE):
-        dataEMG.extend(bytearray(data[i * 252 : i * 252 + 240]))
-        dataBat.extend(bytearray(data[i * 252 + 240 : i * 252 + 241]))
-        dataCounter.extend(bytearray(data[i * 252 + 241 : i * 252 + 243]))
-        dataTs.extend(bytearray(data[i * 252 + 244 : i * 252 + 252]))
+        dataEMG.extend(bytearray(data[i * 256 : i * 256 + 240]))
+        dataTrigger.extend(bytearray(data[i * 256 + 240 : i * 256 + 245]))
+        dataTs.extend(bytearray(data[i * 256 + 248 : i * 256 + 256]))
+
+
 
     # Convert 24-bit to 32-bit integer
     pos = 0
@@ -108,24 +76,17 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataEMG[pos] > 127 else 0
         dataEMG.insert(pos, prefix)
         pos += 4
-    emgADC = np.asarray(
+    emgAdc = np.asarray(
         struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32
     ).reshape(nSampEMG, nChEMG)
 
     # ADC readings to mV
-    emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
+    emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
-
-    # Read battery and packet counter
-    battery = np.asarray(
-        struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.uint8
-    ).reshape(nSampBat, 1)
-    counter = np.asarray(
-        struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.uint8
-    ).reshape(nSampCounter, 1)
+    trigger = np.asarray(struct.unpack(f">{nSampTrigger}B",dataTrigger),dtype = np.float32).reshape(-1,1)
     ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
         nSampTs, 1
     )
 
-    return {"emg": emg, "battery": battery, "counter": counter, "ts": ts}
+    return {"emg": emg,"trigger_emg":trigger, "ts": ts}

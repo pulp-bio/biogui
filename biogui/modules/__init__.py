@@ -18,5 +18,6 @@ limitations under the License.
 
 from .forwarding import ForwardingController
 from .trigger import TriggerController
+from .teleprompter import TeleprompterController
 
-__all__ = ["ForwardingController", "TriggerController"]
+__all__ = ["ForwardingController", "TriggerController", "TeleprompterController"]
