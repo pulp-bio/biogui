@@ -58,12 +58,10 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
         devices = QMediaDevices.audioInputs()
         self.audioDeviceComboBox.addItems([dev.description() for dev in devices])
 
-        # Validation for sample rate (Hz) and packet size (bytes)
+        # Validation for sample rate (Hz)
         self.sampleRateTextField.setValidator(QIntValidator(8000, 192000, self))
-        self.packetSizeTextField.setValidator(QIntValidator(1, 1_000_000, self))
         # Set default values
         self.sampleRateTextField.setText("48000")
-        self.packetSizeTextField.setText("1920")
 
         self.destroyed.connect(self.deleteLater)
 
@@ -82,12 +80,33 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
                 False,
                 'The "sample rate" field is invalid.',
             )
-        if not self.packetSizeTextField.hasAcceptableInput():
+
+        #check smapling rate supported by device
+        devices = QMediaDevices.audioInputs()
+        selected_device: QAudioDevice | None = next(
+            (d for d in devices if d.description() == device),
+            None,
+        )
+        if not selected_device:
             return DataSourceConfigResult(
                 DataSourceType.MIC,
                 {},
                 False,
-                'The "packet size" field is invalid.',
+                'Selected audio device is not available.',
+            )
+        
+        fmt = QAudioFormat()
+        fmt.setSampleRate(int(self.sampleRateTextField.text()))
+        #It might be modifiable in the future
+        fmt.setChannelCount(1)
+        fmt.setSampleFormat(QAudioFormat.SampleFormat.Int16)
+
+        if not selected_device.isFormatSupported(fmt):
+            return DataSourceConfigResult(
+                DataSourceType.MIC,
+                {},
+                False,
+                f'Selected audio device does not support the sample rate of {self.sampleRateTextField.text()} Hz., sample rate must be between {selected_device.minimumSampleRate()} and {selected_device.maximumSampleRate()} Hz.',
             )
 
         return DataSourceConfigResult(
@@ -95,7 +114,6 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
             dataSourceConfig={
                 "deviceName": device,
                 "sampleRate": int(self.sampleRateTextField.text()),
-                "packetSize": int(self.packetSizeTextField.text()),
             },
             isValid=True,
             errMessage="",
@@ -106,14 +124,11 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
             self.audioDeviceComboBox.setCurrentText(device)
         if rate := config.get("sampleRate"):
             self.sampleRateTextField.setText(str(rate))
-        if size := config.get("packetSize"):
-            self.packetSizeTextField.setText(str(size))
 
     def getFieldsInTabOrder(self) -> list[QWidget]:
         return [
             self.audioDeviceComboBox,
             self.sampleRateTextField,
-            self.packetSizeTextField,
         ]
 
 
