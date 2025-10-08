@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import math
+from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QFont
@@ -252,6 +253,12 @@ class TeleprompterController(QObject):
     Controller for the teleprompter. On streaming start, displays a START screen,
     then iterates through sentences, calls the widget to highlight words for each sentence,
     then moves to next.
+    Parameters
+    ----------
+    streamingControllers : MappingProxyType
+        Read-only reference to the streaming controller dictionary.
+    parent : QObject or None, default=None
+        Parent QObject.
 
     Attributes
     ----------
@@ -263,12 +270,13 @@ class TeleprompterController(QObject):
         List of sentences loaded from JSON.
     _index: int
         Current sentence index.
-    _streamingControllers: dict of str: StreamingController
-        References to all streaming controllers for setTrigger calls.
+    _streamingControllers: MappingProxyType
+        Read-only reference to the streaming controller dictionary.
     """
-
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(
+            self, streamingControllers: MappingProxyType, parent: QObject | None = None
+        ) -> None:
+        super().__init__(parent)
         self._confWidget = _TeleprompterConfigWidget()
         self._confWidget.parentController = self
 
@@ -284,7 +292,7 @@ class TeleprompterController(QObject):
         self._durationStart = 0
         self._durationRest = 0
         self._index = 0
-        self._streamingControllers: dict[str, object] = {}
+        self._streamingControllers = streamingControllers
         self._voicedRepeats = 1
         self._silentRepeats = 1
         self._currentVoiced = 0
@@ -302,6 +310,7 @@ class TeleprompterController(QObject):
         mainWin.moduleContainer.layout().removeWidget(self._confWidget)
         self._confWidget.deleteLater()
         mainController.streamingStopped.disconnect(self._stopTeleprompter)
+        mainController.streamingStarted.disconnect(self._startTeleprompter)
 
     def _startTeleprompter(self) -> None:
         if not self._confWidget.teleprompterGroupBox.isChecked() or not self._confWidget.config:
