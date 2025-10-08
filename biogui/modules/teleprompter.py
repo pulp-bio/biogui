@@ -296,14 +296,12 @@ class TeleprompterController(QObject):
         mainWin.moduleContainer.layout().addWidget(self._confWidget)
         mainController.streamingStarted.connect(self._startTeleprompter)
         mainController.streamingStopped.connect(self._stopTeleprompter)
-        mainController.appClosed.connect(self._stopTeleprompter)
         self._streamingControllers = mainController.streamingControllers
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         mainWin.moduleContainer.layout().removeWidget(self._confWidget)
         self._confWidget.deleteLater()
         mainController.streamingStopped.disconnect(self._stopTeleprompter)
-        mainController.appClosed.disconnect(self._stopTeleprompter)
 
     def _startTeleprompter(self) -> None:
         if not self._confWidget.teleprompterGroupBox.isChecked() or not self._confWidget.config:
