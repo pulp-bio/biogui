@@ -123,6 +123,15 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if signal_type["type"] == "ultrasound":
             self.label14.setEnabled(True)
             self.ultrasoundModeComboBox.setEnabled(True)
+
+            self.filterGroupBox.setEnabled(False)
+            self.filterGroupBox.setToolTip(
+                        "Filtering is not recommended for A-Mode and M-Mode ultrasound data"
+                    )
+            self.notchFilterGroupBox.setEnabled(False)
+            self.notchFilterGroupBox.setToolTip(
+                                "Powerline filtering is not applicable to ultrasound spatial data"
+                            )
         else:
             self.label14.setEnabled(False)
             self.ultrasoundModeComboBox.setEnabled(False)
