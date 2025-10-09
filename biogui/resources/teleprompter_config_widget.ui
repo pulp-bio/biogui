@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TriggerConfigWidget</class>
- <widget class="QWidget" name="TriggerConfigWidget">
+ <class>TeleprompterConfigWidget</class>
+ <widget class="QWidget" name="TeleprompterConfigWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,18 +15,15 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QGroupBox" name="triggerGroupBox">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
+    <widget class="QGroupBox" name="teleprompterGroupBox">
      <property name="title">
-      <string>Trigger configuration</string>
+      <string>Configure triggers</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
      <property name="checkable">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="checked">
       <bool>false</bool>
@@ -36,7 +33,7 @@
        <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
       </property>
       <item row="3" column="0">
-       <widget class="QPushButton" name="browseTriggerConfigButton">
+       <widget class="QPushButton" name="browseTeleprompterConfigButton">
         <property name="toolTip">
          <string>The JSON file must contain specific fields</string>
         </property>
@@ -46,7 +43,7 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QLabel" name="triggerConfigPathLabel">
+       <widget class="QLabel" name="teleprompterConfigPathLabel">
         <property name="text">
          <string/>
         </property>

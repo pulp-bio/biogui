@@ -28,7 +28,7 @@ from .local_socket import (
 )
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
-
+from .microphone import MicrophoneConfigWidget, MicrophoneDataSourceWorker
 
 def getConfigWidget(
     dataSourceType: DataSourceType, parent: QWidget
@@ -52,6 +52,7 @@ def getConfigWidget(
         DataSourceType.TCP: TCPConfigWidget,
         DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.LOCAL_SOCK: LocalSocketConfigWidget,
+        DataSourceType.MIC: MicrophoneConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
 
@@ -88,6 +89,7 @@ def getDataSourceWorker(
         DataSourceType.SERIAL: SerialDataSourceWorker,
         DataSourceType.TCP: TCPDataSourceWorker,
         DataSourceType.LOCAL_SOCK: LocalSocketDataSourceWorker,
+        DataSourceType.MIC: MicrophoneDataSourceWorker,
     }
     return dataSourceDict[dataSourceType](packetSize, startSeq, stopSeq, **kwargs)
 
