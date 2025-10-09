@@ -124,7 +124,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     def _initializeModeSpecificData(self) -> None:
         """Initialize data structures based on ultrasound mode."""
         self._plots = []
-        self._lastRenderedScan = -1
 
         if self._ultrasoundMode == "M-Mode":
             if self._nCh != 1:
