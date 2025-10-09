@@ -18,7 +18,6 @@ limitations under the License.
 """
 
 # TODO: Check Axis
-# TODO: Fix time
 
 from __future__ import annotations
 
@@ -285,8 +284,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._timeTracker += data.shape[0]
         self._spsTracker += data.shape[0]
 
-        for samples in data:
-            self._dataQueue.append(samples)
+        self._dataQueue.extend(data)
 
     def _refreshPlot(self) -> None:
         """Plot the given data."""
@@ -341,8 +339,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._mModeBuffer = np.roll(self._mModeBuffer, -1, axis=1)
         self._mModeBuffer[:, -1] = a_line_data
 
-        # Setup rect on first update (when image has proper dimensions)
-        if hasattr(self, "_needsRectSetup") and self._needsRectSetup:
+        # Setup rect on first update
+        if self._needsRectSetup:
             depth_mm = (
                 (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.NUM_SAMPLES
             )
