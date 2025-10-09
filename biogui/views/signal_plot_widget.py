@@ -17,8 +17,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# TODO: Check Axis => adc
-
 from __future__ import annotations
 
 from collections import deque
@@ -74,7 +72,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         List containing the references to the PlotItem objects.
     """
 
-    # TODO: review deque data reading for time series, a-mode, m-mode
     # Constants
     MMODE_TIME_WINDOW = 400  # Show more history
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
@@ -130,6 +127,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._lastRenderedScan = -1
 
         if self._ultrasoundMode == "M-Mode":
+            if self._nCh != 1:
+                raise ValueError("M-Mode only supports single channel data")
             self._mModeBuffer = np.zeros((self.NUM_SAMPLES, self.MMODE_TIME_WINDOW))
 
     def _createDataQueue(self, renderLen: int, kwargs: dict) -> deque:
@@ -322,10 +321,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _calculateDistanceAxis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display."""
-        # TODO: Check calculation
-        # sample_distance_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000)
-        # return np.arange(self.NUM_SAMPLES) * sample_distance_mm
-
         # Calculate minimum depth based on ADC start delay
         min_depth = (self.SPEED_OF_SOUND * self.ADC_START_DELAY) / 2  # in meters
 
@@ -362,9 +357,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         """Plot data as M-Mode with enhanced quality."""
         # Extract latest A-line
         latest_samples = self._getLatestScanData()
-        a_line_data = (
-            latest_samples[:, 0] if self._nCh == 1 else np.mean(latest_samples, axis=1)
-        )
+        a_line_data = latest_samples[:, 0]
 
         # Update M-Mode buffer (scroll left, add new data on right)
         self._mModeBuffer = np.roll(self._mModeBuffer, -1, axis=1)
