@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# TODO: Check Axis
+# TODO: Check Axis => adc
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from collections import deque
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QLocale, QTimer, Slot
+from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
 from ..ui.signal_plot_widget_ui import Ui_SignalPlotWidget
@@ -74,11 +74,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         List containing the references to the PlotItem objects.
     """
 
+    # TODO: review deque data reading for time series, a-mode, m-mode
     # Constants
     MMODE_TIME_WINDOW = 400  # Show more history
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
     SPS_UPDATE_RATE = 1000  # ms
     SPEED_OF_SOUND = 1540  # m/s in tissue
+    # TODO: start_adcsampl - start_ppg?
+    ADC_START_DELAY = 9e-6  # s, ADC start delay (from WULPUS)
 
     def __init__(
         self,
@@ -107,6 +110,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             self.NUM_SAMPLES = signal_type["num_samples"]
             # Store the measurement period for time calculations
             self._meas_period_us = signal_type.get("meas_period", None)
+            self._adc_sampling_freq = signal_type.get("adc_sampling_freq", None)
 
         # Initialize mode-specific data structures
         self._initializeModeSpecificData()
@@ -187,18 +191,33 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         """Configure axes for A-Mode display."""
         plot_item = self.graphWidget.getPlotItem()
         plot_item.showAxis("bottom")
+        plot_item.showAxis("left")
 
-        axis_item = plot_item.getAxis("bottom")
-        axis_item.enableAutoSIPrefix(False)
+        # Disable auto SI prefix for consistent mm display
+        bottom_axis = plot_item.getAxis("bottom")
+        bottom_axis.enableAutoSIPrefix(False)
 
-        plot_item.setLabel("bottom", "Distance", "mm")
+        left_axis = plot_item.getAxis("left")
+        left_axis.enableAutoSIPrefix(False)
+
+        plot_item.setLabel("bottom", "Depth", units="mm")
+        plot_item.setLabel("left", "Amplitude", units="ADC code")
 
     def _setupMModeAxes(self) -> None:
         """Configure axes for M-Mode display."""
         plot_item = self.graphWidget.getPlotItem()
         plot_item.showAxis("bottom")
-        plot_item.setLabel("bottom", "Time", "s")
-        plot_item.setLabel("left", "Distance", "mm")
+        plot_item.showAxis("left")
+
+        # Disable auto SI prefix
+        bottom_axis = plot_item.getAxis("bottom")
+        bottom_axis.enableAutoSIPrefix(False)
+
+        left_axis = plot_item.getAxis("left")
+        left_axis.enableAutoSIPrefix(False)
+
+        plot_item.setLabel("bottom", "Time", units="s")
+        plot_item.setLabel("left", "Depth", units="mm")
 
     def _setupLinePlots(self) -> None:
         """Setup line plots for A-Mode and Time-Series."""
@@ -228,19 +247,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # self._imageItem.setLookupTable(None)
         self._imageItem.setImage(self._mModeBuffer.T, autoLevels=True)
 
-        # Calculate scaling - but defer setRect to first data update
-        # to avoid the TypeError
         self._needsRectSetup = True  # Flag for first update
 
     def _getLatestScanData(self) -> np.ndarray:
         """Extract the latest complete scan from the data queue."""
         return np.asarray(self._dataQueue)[-self.NUM_SAMPLES :]
-
-    def _calculateDistanceAxis(self) -> np.ndarray:
-        """Calculate distance axis for ultrasound display."""
-        # TODO: Check calculation
-        sample_distance_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000)
-        return np.arange(self.NUM_SAMPLES) * sample_distance_mm
 
     @Slot(int)
     def reInitPlot(self, renderLenMs) -> None:
@@ -303,12 +314,32 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             # Convert to seconds: scans * period_in_microseconds / 1e6
             scan_count = self._timeTracker // self.NUM_SAMPLES
             elapsed_time = scan_count * self._meas_period_us / 1e6
-            self.timeLabel.setText(f"{QLocale().toString(elapsed_time, 'f', 2)} s")
+            self.timeLabel.setText(f"{elapsed_time:.2f} s")
         else:
             # Fallback to using sampling frequency
-            self.timeLabel.setText(
-                f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
-            )
+            elapsed_time = self._timeTracker / self._fs
+            self.timeLabel.setText(f"{elapsed_time:.2f} s")
+
+    def _calculateDistanceAxis(self) -> np.ndarray:
+        """Calculate distance axis for ultrasound display."""
+        # TODO: Check calculation
+        # sample_distance_mm = (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000)
+        # return np.arange(self.NUM_SAMPLES) * sample_distance_mm
+
+        # Calculate minimum depth based on ADC start delay
+        min_depth = (self.SPEED_OF_SOUND * self.ADC_START_DELAY) / 2  # in meters
+
+        # Calculate maximum acquisition time
+        max_time = self.NUM_SAMPLES / self._adc_sampling_freq  # in seconds
+
+        # Calculate maximum depth
+        max_depth = (self.SPEED_OF_SOUND * max_time) / 2 + min_depth  # in meters
+
+        # Create linearly spaced depth array and convert to millimeters
+        depths_m = np.linspace(min_depth, max_depth, self.NUM_SAMPLES)
+        depths_mm = depths_m * 1e3  # Convert to millimeters
+
+        return depths_mm
 
     def _refreshAModePlot(self) -> None:
         """Plot data as A-Mode."""
@@ -339,13 +370,24 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._mModeBuffer = np.roll(self._mModeBuffer, -1, axis=1)
         self._mModeBuffer[:, -1] = a_line_data
 
-        # Setup rect on first update
+        # Setup rect on first update (when image has proper dimensions)
         if self._needsRectSetup:
-            depth_mm = (
-                (self.SPEED_OF_SOUND * 1000) / (2 * self._fs * 1000) * self.NUM_SAMPLES
+            # Calculate depth range including ADC start delay
+            depths_mm = self._calculateDistanceAxis()
+            min_depth_mm = depths_mm[0]
+            max_depth_mm = depths_mm[-1]
+            depth_range_mm = max_depth_mm - min_depth_mm
+
+            # Calculate time window
+            time_s = self.MMODE_TIME_WINDOW * (
+                self.NUM_SAMPLES / self._adc_sampling_freq
             )
-            time_s = self.MMODE_TIME_WINDOW * (self.NUM_SAMPLES / self._fs)
-            self._imageItem.setRect(pg.QtCore.QRectF(0, 0, time_s, depth_mm))
+
+            # Set rect: x=0, y=min_depth, width=time, height=depth_range
+            # Note: PyQtGraph's ImageItem uses (x, y, width, height) format
+            self._imageItem.setRect(
+                pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm)
+            )
             self._needsRectSetup = False
 
         # Update image with better contrast settings

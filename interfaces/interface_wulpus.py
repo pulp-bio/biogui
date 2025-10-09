@@ -21,6 +21,7 @@ limitations under the License.
 """
 
 import logging
+
 import numpy as np
 
 # baudrate = 4000000
@@ -511,14 +512,14 @@ biceps_exercise_config = WulpusUssConfig(
     capt_timeout=3000,
 )
 
-wulpus_config = waterbath_config
+wulpus_config = biceps_exercise_config
 
 packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 """Number of bytes in each package."""
 
 startSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),  # Send restart first
-    # 2.5,  # Wait 2.5 seconds (wulpus gui convention)
+    0.5,
     wulpus_config.get_conf_package(),  # Send configuration which acts as start command
 ]
 """
@@ -536,13 +537,21 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
+# Calculate effective sampling rate for render buffer
+# This is how fast samples actually arrive at the queue (averaged over time)
+meas_period_s = wulpus_config.meas_period / 1e6  # Convert µs to seconds
+effective_sampling_rate = wulpus_config.num_samples / meas_period_s
+
+
 sigInfo: dict = {
     "ultrasound": {
-        "fs": int(wulpus_config.sampling_freq / 1000),  # Convert to kHz
+        "fs": effective_sampling_rate,
         "nCh": 1,  # Single channel A-mode data,
         "signal_type": {
             "type": "ultrasound",
             "num_samples": wulpus_config.num_samples,
+            "meas_period": wulpus_config.meas_period,
+            "adc_sampling_freq": wulpus_config.sampling_freq,
         },
     }
 }
