@@ -17,6 +17,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+# TODO: Check Axis
+# TODO: Fix time
+
 from __future__ import annotations
 
 from collections import deque
@@ -97,11 +100,14 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._chSpacing = chSpacing
 
         # read ultrasound mode if available
+        self._meas_period_us = None
         self._ultrasoundMode = kwargs.get("ultrasoundMode", False)
 
         if self._ultrasoundMode:
             signal_type = kwargs["signal_type"]
             self.NUM_SAMPLES = signal_type["num_samples"]
+            # Store the measurement period for time calculations
+            self._meas_period_us = signal_type.get("meas_period", None)
 
         # Initialize mode-specific data structures
         self._initializeModeSpecificData()
@@ -294,6 +300,18 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         else:
             self._refreshTimeSeriesPlot()
 
+    def _setTimeLabel(self):
+        if self._meas_period_us:
+            # Convert to seconds: scans * period_in_microseconds / 1e6
+            scan_count = self._timeTracker // self.NUM_SAMPLES
+            elapsed_time = scan_count * self._meas_period_us / 1e6
+            self.timeLabel.setText(f"{QLocale().toString(elapsed_time, 'f', 2)} s")
+        else:
+            # Fallback to using sampling frequency
+            self.timeLabel.setText(
+                f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
+            )
+
     def _refreshAModePlot(self) -> None:
         """Plot data as A-Mode."""
         latest_samples = self._getLatestScanData()
@@ -309,9 +327,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                 skipFiniteCheck=True,
             )
 
-        # TODO: Translate into time instead of number of scans?
-        scan_count = self._timeTracker // self.NUM_SAMPLES
-        self.timeLabel.setText(f"A-Mode Scan: {scan_count}")
+        self._setTimeLabel()
 
     def _refreshMModePlot(self) -> None:
         """Plot data as M-Mode with enhanced quality."""
@@ -344,9 +360,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
         )
 
-        # TODO: Translate into time instead of number of scans?
-        scan_count = self._timeTracker // self.NUM_SAMPLES
-        self.timeLabel.setText(f"M-Mode: {scan_count} scans")
+        self._setTimeLabel()
 
     def _refreshTimeSeriesPlot(self) -> None:
         """Plot data as time series."""
@@ -357,9 +371,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                 skipFiniteCheck=True,
             )
 
-        self.timeLabel.setText(
-            f"{QLocale().toString(self._timeTracker / self._fs, 'f', 2)} s"
-        )
+        self._setTimeLabel()
 
     def _refreshSamplingRate(self) -> None:
         """Refresh the sampling rate."""
