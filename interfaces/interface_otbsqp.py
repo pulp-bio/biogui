@@ -105,9 +105,21 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": 2000, "nCh": 64},
-    "aux": {"fs": 2000, "nCh": 2},
-    "imu": {"fs": 2000, "nCh": 4},
+    "emg": {
+        "fs": 2000,
+        "nCh": 64,
+        "signal_type": {"type": "time-series"},
+    },
+    "aux": {
+        "fs": 2000,
+        "nCh": 2,
+        "signal_type": {"type": "time-series"},
+    },
+    "imu": {
+        "fs": 2000,
+        "nCh": 4,
+        "signal_type": {"type": "time-series"},
+    },
 }
 """Dictionary containing the signals information."""
 

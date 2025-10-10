@@ -102,7 +102,15 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {"ppg": {"fs": 4096, "nCh": 2}}
+sigInfo: dict = {
+    "ppg": {
+        "fs": 4096,
+        "nCh": 2,
+        "signal_type": {
+            "type": "time-series",
+        },
+    }
+}
 """Dictionary containing the signals information."""
 
 
