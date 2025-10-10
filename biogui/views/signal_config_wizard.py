@@ -36,7 +36,7 @@ class SignalConfigWizardPage(QWizardPage):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : dict | None, default=None
+    signal_type : dict
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
@@ -52,12 +52,14 @@ class SignalConfigWizardPage(QWizardPage):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: dict | None = None,
+        signal_type: dict,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = SignalConfigWidget(sigName, fs, nCh, signal_type, parent=parent)
+        self._configWidget = SignalConfigWidget(
+            sigName, fs, nCh, signal_type, parent=parent
+        )
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)
         self.setLayout(layout)
