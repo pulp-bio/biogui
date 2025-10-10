@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,7 +40,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : dict | None, default=None
+    signal_type : dict
         Type of the signal.
     parent : QWidget or None, default=None
         Parent widget.
@@ -55,7 +56,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: dict | None = None,
+        signal_type: dict,
         parent: QWidget | None = None,
         edit: bool = False,
         **kwargs,
@@ -126,12 +127,12 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             self.filterGroupBox.setEnabled(False)
             self.filterGroupBox.setToolTip(
-                        "Filtering is not recommended for A-Mode and M-Mode ultrasound data"
-                    )
+                "Filtering is not recommended for A-Mode and M-Mode ultrasound data"
+            )
             self.notchFilterGroupBox.setEnabled(False)
             self.notchFilterGroupBox.setToolTip(
-                                "Powerline filtering is not applicable to ultrasound spatial data"
-                            )
+                "Powerline filtering is not applicable to ultrasound spatial data"
+            )
         else:
             self.label14.setEnabled(False)
             self.ultrasoundModeComboBox.setEnabled(False)
@@ -258,7 +259,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._sigConfig["maxRange"] = maxRange
 
         if self.ultrasoundModeComboBox.isEnabled():
-            self._sigConfig["ultrasoundMode"] = self.ultrasoundModeComboBox.currentText()
+            self._sigConfig["ultrasoundMode"] = (
+                self.ultrasoundModeComboBox.currentText()
+            )
 
         logging.info(f"SignalConfigWidget: {self._sigConfig=}")
 

@@ -92,6 +92,30 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
         if sigName in ("acq_ts", "trigger"):
             return None, '"acq_ts" and "trigger" are reserved signal names.'
 
+        # Validate signal_type
+        sigData = module.sigInfo[sigName]
+        if "signal_type" not in sigData:
+            return (
+                None,
+                f'Signal "{sigName}" is missing the required "signal_type" field.',
+            )
+
+        if not isinstance(sigData["signal_type"], dict):
+            return None, f'Signal "{sigName}": "signal_type" must be a dictionary.'
+
+        if "type" not in sigData["signal_type"]:
+            return (
+                None,
+                f'Signal "{sigName}": "signal_type" dictionary must contain a "type" key.',
+            )
+
+        validTypes = ("ultrasound", "time-series")
+        if sigData["signal_type"]["type"] not in validTypes:
+            return (
+                None,
+                f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["signal_type"]["type"]}".',
+            )
+
     return (
         InterfaceModule(
             packetSize=module.packetSize,
