@@ -37,9 +37,21 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "ppg": {"fs": 128, "nCh": 1},
-    "ecg": {"fs": 128, "nCh": 1},
-    "acc": {"fs": 12.8, "nCh": 3},
+    "ppg": {
+        "fs": 128,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+    "ecg": {
+        "fs": 128,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+    "acc": {
+        "fs": 12.8,
+        "nCh": 3,
+        "signal_type": {"type": "time-series"},
+    },
 }
 """Dictionary containing the signals information."""
 

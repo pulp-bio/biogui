@@ -37,7 +37,18 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {"manusData": {"fs": 120, "nCh": 24}, "manusTs": {"fs": 120, "nCh": 1}}
+sigInfo: dict = {
+    "manusData": {
+        "fs": 120,
+        "nCh": 24,
+        "signal_type": {"type": "time-series"},
+    },
+    "manusTs": {
+        "fs": 120,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+}
 """Dictionary containing the signals information."""
 
 

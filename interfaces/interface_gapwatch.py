@@ -62,10 +62,26 @@ interpreted as delays (in seconds) between commands.
 """
 
 sigInfo: dict = {
-    "emg": {"fs": FS, "nCh": 16},
-    "battery": {"fs": FS // 5, "nCh": 1},
-    "counter": {"fs": FS // 5, "nCh": 1},
-    "ts": {"fs": FS // 5, "nCh": 1},
+    "emg": {
+        "fs": FS,
+        "nCh": 16,
+        "signal_type": {"type": "time-series"},
+    },
+    "battery": {
+        "fs": FS // 5,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+    "counter": {
+        "fs": FS // 5,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+    "ts": {
+        "fs": FS // 5,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
 }
 """Dictionary containing the signals information."""
 
