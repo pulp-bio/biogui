@@ -77,8 +77,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
     SPS_UPDATE_RATE = 1000  # ms
     SPEED_OF_SOUND = 1540  # m/s in tissue
-    # TODO: start_adcsampl - start_ppg?
-    ADC_START_DELAY = 9e-6  # s, ADC start delay (from WULPUS)
 
     def __init__(
         self,
@@ -98,16 +96,18 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._nCh = nCh
         self._chSpacing = chSpacing
 
-        # read ultrasound mode if available
+        # read signal type
+        self._signal_type: dict = kwargs["signal_type"]
         self._meas_period_us = None
-        self._ultrasoundMode = kwargs.get("ultrasoundMode", False)
 
-        if self._ultrasoundMode:
-            signal_type = kwargs["signal_type"]
-            self.NUM_SAMPLES = signal_type["num_samples"]
+        if self._signal_type.get("type") == "ultrasound":
+            self._ultrasoundMode = kwargs["ultrasoundMode"]
+            self.ADC_START_DELAY = self._signal_type["adc_start_delay"]
+            # TODO: signal type type is now required
+            self.NUM_SAMPLES: int = self._signal_type["num_samples"]
             # Store the measurement period for time calculations
-            self._meas_period_us = signal_type.get("meas_period", None)
-            self._adc_sampling_freq = signal_type.get("adc_sampling_freq", None)
+            self._meas_period_us = self._signal_type["meas_period"]
+            self._adc_sampling_freq = self._signal_type["adc_sampling_freq"]
 
         # Initialize mode-specific data structures
         self._initializeModeSpecificData()

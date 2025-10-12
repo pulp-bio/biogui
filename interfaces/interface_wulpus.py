@@ -539,19 +539,22 @@ interpreted as delays (in seconds) between commands.
 
 # Calculate effective sampling rate for render buffer
 # This is how fast samples actually arrive at the queue (averaged over time)
+# TODO: calculation probably wrong
 meas_period_s = wulpus_config.meas_period / 1e6  # Convert µs to seconds
 effective_sampling_rate = wulpus_config.num_samples / meas_period_s
 
+adc_start_delay = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
 
 sigInfo: dict = {
     "ultrasound": {
         "fs": effective_sampling_rate,
-        "nCh": 1,  # Single channel A-mode data,
+        "nCh": 1,
         "signal_type": {
             "type": "ultrasound",
             "num_samples": wulpus_config.num_samples,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,
+            "adc_start_delay": adc_start_delay,
         },
     }
 }
