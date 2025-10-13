@@ -253,14 +253,12 @@ class WulpusRxTxConfigGen:
             optimized_switching: Bool value to activate an algorithm for minimizing switching artifacts
         """
         if self.tx_rx_len >= TX_RX_MAX_NUM_OF_CONFIGS:
-            raise ValueError(
-                "Maximum number of configs is " + str(TX_RX_MAX_NUM_OF_CONFIGS)
-            )
+            raise ValueError(f"Maximum number of configs is {TX_RX_MAX_NUM_OF_CONFIGS}")
 
         if any(channel > MAX_CH_ID for channel in tx_channels) or any(
             channel > MAX_CH_ID for channel in rx_channels
         ):
-            raise ValueError("RX and TX channel ID must be less than " + str(MAX_CH_ID))
+            raise ValueError(f"RX and TX channel ID must be less than {MAX_CH_ID}")
 
         if any(channel < 0 for channel in tx_channels) or any(
             channel < 0 for channel in rx_channels
@@ -461,8 +459,10 @@ class WulpusUssConfig:
 
 
 # Create waterbath wulpus configuration
-rx_tx_config = WulpusRxTxConfigGen()
-rx_tx_config.add_config(tx_channels=[7], rx_channels=[7], optimized_switching=True)
+rx_tx_waterbath_config = WulpusRxTxConfigGen()
+rx_tx_waterbath_config.add_config(
+    tx_channels=[7], rx_channels=[7], optimized_switching=True
+)
 
 
 # ! number of samples is hardcoded in the wulpus firmware at the moment to 400
@@ -476,9 +476,9 @@ waterbath_config = WulpusUssConfig(
     sampling_freq=4000000.0,
     num_samples=400,
     rx_gain=6.8,
-    num_txrx_configs=1,
-    tx_configs=rx_tx_config.get_tx_configs(),  # only channel 7 with optimized switching
-    rx_configs=rx_tx_config.get_rx_configs(),  # only channel 7 with optimized switching
+    num_txrx_configs=rx_tx_waterbath_config.tx_rx_len,
+    tx_configs=rx_tx_waterbath_config.get_tx_configs(),  # only channel 7 with optimized switching
+    rx_configs=rx_tx_waterbath_config.get_rx_configs(),  # only channel 7 with optimized switching
     start_hvmuxrx=500,
     start_ppg=500,
     turnon_adc=5,
@@ -490,19 +490,33 @@ waterbath_config = WulpusUssConfig(
 
 
 # Create biceps exercise wulpus configuration
+rx_tx_biceps_config = WulpusRxTxConfigGen()
+rx_tx_biceps_config.add_config(
+    tx_channels=[3],
+    rx_channels=[3],
+    optimized_switching=True,
+)
+rx_tx_biceps_config.add_config(
+    tx_channels=[7],
+    rx_channels=[7],
+    optimized_switching=True,
+)
+
+
 biceps_exercise_config = WulpusUssConfig(
-    num_acqs=100,
+    num_acqs=2000,
     dcdc_turnon=19530,
-    meas_period=20000,
+    # meas_period=20000,
+    meas_period=200000,
     trans_freq=2250000,
-    pulse_freq=1000000,
+    pulse_freq=2250000,
     num_pulses=2,
     sampling_freq=8000000.0,
     num_samples=400,
-    rx_gain=6.8,
-    num_txrx_configs=1,
-    tx_configs=rx_tx_config.get_tx_configs(),  # only channel 7 with optimized switching
-    rx_configs=rx_tx_config.get_rx_configs(),  # only channel 7 with optimized switching
+    rx_gain=30.8,
+    num_txrx_configs=rx_tx_biceps_config.tx_rx_len,
+    tx_configs=rx_tx_biceps_config.get_tx_configs(),  # only channel 7 with optimized switching
+    rx_configs=rx_tx_biceps_config.get_rx_configs(),  # only channel 7 with optimized switching
     start_hvmuxrx=498,
     start_ppg=500,
     turnon_adc=5,
@@ -537,62 +551,116 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-# Calculate effective sampling rate for render buffer
-# This is how fast samples actually arrive at the queue (averaged over time)
-# TODO: calculation probably wrong
-meas_period_s = wulpus_config.meas_period / 1e6  # Convert µs to seconds
-effective_sampling_rate = wulpus_config.num_samples / meas_period_s
 
+def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | None:
+    """
+    Get the active RX channel for a specific TX/RX configuration.
+    Assumes each configuration has at most one active RX channel.
+    """
+    if config_id >= config.num_txrx_configs:
+        return None
+
+    rx_config_bits = config.rx_configs[config_id]
+
+    # Find the active RX channel
+    for channel_id in range(8):
+        switch_id = RX_MAP[channel_id]
+        if (rx_config_bits >> switch_id) & 1:
+            return channel_id
+
+    return None  # No RX channel active (TX-only config)
+
+
+# Each configuration gets data every (num_txrx_configs * meas_period) due to round-robin
+meas_period_s = wulpus_config.meas_period / 1e6  # Convert to seconds
+period_per_config_s = meas_period_s * wulpus_config.num_txrx_configs
+
+# Effective sampling rate: samples delivered per second for each configuration
+samples_per_second_per_config = wulpus_config.num_samples / period_per_config_s
+
+# ADC start delay relative to pulse generation
 adc_start_delay = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
 
-sigInfo: dict = {
-    "ultrasound": {
-        "fs": effective_sampling_rate,
+# Build sigInfo and mapping: one signal per active configuration
+sigInfo: dict = {}
+config_to_signal_name: dict[int, str] = {}  # Maps config_id -> signal_name
+
+for config_id in range(wulpus_config.num_txrx_configs):
+    rx_channel = get_rx_channel_for_config(wulpus_config, config_id)
+
+    if rx_channel is None:
+        # TX-only config, skip
+        logging.info(f"WULPUS Config {config_id}: TX-only, skipping")
+        continue
+
+    # Generate signal name
+    if wulpus_config.num_txrx_configs == 1:
+        signal_name = "ultrasound"
+    else:
+        signal_name = f"ultrasound_cfg{config_id}_rx{rx_channel}"
+
+    # Store mapping
+    config_to_signal_name[config_id] = signal_name
+
+    sigInfo[signal_name] = {
+        "fs": samples_per_second_per_config,
         "nCh": 1,
         "signal_type": {
             "type": "ultrasound",
+            "config_id": config_id,
+            "rx_channel": rx_channel,
             "num_samples": wulpus_config.num_samples,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,
             "adc_start_delay": adc_start_delay,
         },
     }
-}
+
+    logging.info(
+        f"WULPUS Config {config_id}: Created signal '{signal_name}' "
+        f"(RX Ch{rx_channel}, fs={samples_per_second_per_config:.2f} Hz)"
+    )
+
+if len(sigInfo) == 0:
+    raise ValueError(
+        "No active RX configurations found in WULPUS setup. "
+        "At least one configuration must have an active RX channel."
+    )
+
 """Dictionary containing the signals information."""
 
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Function to decode the binary data received from the device into signals.
-
-    Parameters
-    ----------
-    data : bytes
-        A packet of bytes.
-
-    Returns
-    -------
-    dict of (str: ndarray)
-        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
-        the keys must match with those of the "sigInfo" dictionary.
+    Decode binary data received from WULPUS into signals.
     """
-
-    logging.info(f"Wulpus Interface: {data[:20]=}")
-
-    # Check if data starts with b'START\n' start sequence (i.e. if the data is aligned)
+    # Validate start sequence
     if data[:6] != b"START\n":
         raise ValueError(
-            "WULPUS INTERFACE ERROR: Data packet does not start with expected b'START\\n' sequence. Hence, the data is not aligned."
+            "WULPUS INTERFACE ERROR: Data packet does not start with expected "
+            "b'START\\n' sequence. Data alignment error."
         )
 
     # remove b'START\n' from data
     data = data[6:]
 
     rf_arr = np.frombuffer(data[7:], dtype="<i2")
-    acq_nr = data[4]
-    tx_rx_id = np.frombuffer(data[5:7], dtype="<u2")[0]
+    tx_rx_id = data[4]
+    acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
 
     logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     logging.info(f"Wulpus Interface: {rf_arr[:8]=}\n")
 
-    return {"ultrasound": rf_arr.reshape(-1, 1)}
+    # Build result dictionary with all signals
+    result = {}
+
+    for signal_name in sigInfo.keys():
+        # Check if this signal corresponds to the current config_id
+        if config_to_signal_name.get(tx_rx_id) == signal_name:
+            # This signal is active in this acquisition
+            result[signal_name] = rf_arr.reshape(-1, 1)
+        else:
+            # This signal is not active in this acquisition - return empty array
+            result[signal_name] = np.empty((0, 1), dtype=np.int16)
+
+    return result
