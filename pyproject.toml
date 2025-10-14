@@ -13,3 +13,8 @@ dependencies = [
     "scipy>=1.15.3",
     "shiboken6>=6.9.2",
 ]
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.10.7",
+]
