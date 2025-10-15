@@ -174,8 +174,11 @@ class MModePlotMode(BasePlotMode):
         # Check if we have enough data in buffer
         if len(self._incoming_buffer) < self._num_samples:
             # This shouldn't happen if pending_scans > 0, but safety check
-            self._pending_scans = 0
-            return
+            raise ValueError(
+                "mmode_plot_mode.py: not enough samples in buffer for one acquisition. This should not happen..."
+            )
+            # self._pending_scans = 0
+            # return
 
         # Extract exactly ONE complete scan
         scan_data = np.array(
