@@ -193,7 +193,7 @@ class AModePlotMode(BasePlotMode):
 
     def reinitialize(self, render_len_ms: int) -> None:
         """Re-initialize with new render length."""
-        render_len_samples = int(round(render_len_ms / 1000 * self.fs))
+        render_len_samples = self._num_samples
         new_queue = deque(maxlen=render_len_samples)
 
         # Pre-fill with zeros
