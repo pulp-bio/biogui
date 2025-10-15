@@ -68,10 +68,8 @@ class AModePlotMode(BasePlotMode):
         self._adc_sampling_freq = signal_type["adc_sampling_freq"]
         self._meas_period_us = signal_type.get("meas_period")
 
-        # Calculate render length in samples
-        render_len_samples = int(round(renderLenMs / 1000 * fs))
-
         # Initialize data queue
+        render_len_samples = self._num_samples
         self._data_queue = deque(maxlen=render_len_samples)
 
         # Pre-fill with existing data or zeros
