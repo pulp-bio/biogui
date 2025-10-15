@@ -163,39 +163,42 @@ class MModePlotMode(BasePlotMode):
 
     def render(self) -> None:
         """
-        Render ONE complete scan to the M-Mode buffer.
+        Render all pending scans to the M-Mode buffer.
 
-        This ensures each scan is only plotted once, preventing duplication
-        when the refresh rate is faster than the data acquisition rate.
+        This ensures we stay up-to-date even when data arrives faster
+        than the display refresh rate.
         """
-        if self._pending_scans == 0 or self._image_item is None:
+        if not self.has_new_data() or self._image_item is None:
             return
 
-        # Check if we have enough data in buffer
-        if len(self._incoming_buffer) < self._num_samples:
-            # This shouldn't happen if pending_scans > 0, but safety check
-            raise ValueError(
-                "mmode_plot_mode.py: not enough samples in buffer for one acquisition. This should not happen..."
-            )
-            # self._pending_scans = 0
-            # return
+        scans_to_process = self._pending_scans
 
-        # Extract exactly ONE complete scan
-        scan_data = np.array(
-            [self._incoming_buffer.popleft() for _ in range(self._num_samples)]
-        )
+        # Extract all pending scans from the incoming buffer
+        all_scans = []
+        for _ in range(scans_to_process):
+            # Extract one complete scan (num_samples samples)
+            single_scan = []
+            for _ in range(self._num_samples):
+                single_scan.append(self._incoming_buffer.popleft())
+            all_scans.append(single_scan)
 
-        # Update M-Mode buffer (scroll left, add new data on right)
-        self._mmode_buffer = np.roll(self._mmode_buffer, -1, axis=1)
-        self._mmode_buffer[:, -1] = scan_data[:, 0]
+        # Convert to numpy array: shape (scans_to_process, num_samples, 1)
+        all_scans = np.array(all_scans)
 
-        # Setup rect on first update
+        # Scroll the M-Mode buffer to the left by scans_to_process columns
+        self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
+
+        # Add all new scans at the right side of the buffer
+        self._mmode_buffer[:, -scans_to_process:] = all_scans[:, :, 0].T
+
+        # Setup image rect on first update
         if self._needs_rect_setup:
             self._setup_image_rect()
             self._needs_rect_setup = False
 
-        # Update image with contrast settings
-        data_min, data_max = scan_data.min(), scan_data.max()
+        # Update the displayed image (only once per render call)
+        data_min = self._mmode_buffer.min()
+        data_max = self._mmode_buffer.max()
         level_range = data_max - data_min if data_max != data_min else 1.0
 
         self._image_item.setImage(
@@ -204,9 +207,9 @@ class MModePlotMode(BasePlotMode):
             levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
         )
 
-        # Decrement pending scans and increment scan count
-        self._pending_scans -= 1
-        self._scan_count += 1
+        # Update counters
+        self._pending_scans -= scans_to_process
+        self._scan_count += scans_to_process
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""
