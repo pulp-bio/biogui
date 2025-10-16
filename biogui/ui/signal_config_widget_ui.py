@@ -15,15 +15,16 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QFrame,
-    QGroupBox, QLabel, QLineEdit, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
+    QFormLayout, QFrame, QGroupBox, QHBoxLayout,
+    QLabel, QLineEdit, QSizePolicy, QVBoxLayout,
+    QWidget)
 
 class Ui_SignalConfigWidget(object):
     def setupUi(self, SignalConfigWidget):
         if not SignalConfigWidget.objectName():
             SignalConfigWidget.setObjectName(u"SignalConfigWidget")
-        SignalConfigWidget.resize(475, 559)
+        SignalConfigWidget.resize(475, 772)
         self.verticalLayout = QVBoxLayout(SignalConfigWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout1 = QFormLayout()
@@ -187,6 +188,72 @@ class Ui_SignalConfigWidget(object):
 
         self.formLayout.setWidget(8, QFormLayout.ItemRole.LabelRole, self.label14)
 
+        self.label15 = QLabel(self.plotGroupBox)
+        self.label15.setObjectName(u"label15")
+        self.label15.setEnabled(False)
+
+        self.formLayout.setWidget(9, QFormLayout.ItemRole.LabelRole, self.label15)
+
+        self.vboxLayout = QVBoxLayout()
+        self.vboxLayout.setObjectName(u"vboxLayout")
+        self.showRawCheckBox = QCheckBox(self.plotGroupBox)
+        self.showRawCheckBox.setObjectName(u"showRawCheckBox")
+        self.showRawCheckBox.setEnabled(False)
+        self.showRawCheckBox.setChecked(True)
+
+        self.vboxLayout.addWidget(self.showRawCheckBox)
+
+        self.showFilteredCheckBox = QCheckBox(self.plotGroupBox)
+        self.showFilteredCheckBox.setObjectName(u"showFilteredCheckBox")
+        self.showFilteredCheckBox.setEnabled(False)
+
+        self.vboxLayout.addWidget(self.showFilteredCheckBox)
+
+        self.showEnvelopeCheckBox = QCheckBox(self.plotGroupBox)
+        self.showEnvelopeCheckBox.setObjectName(u"showEnvelopeCheckBox")
+        self.showEnvelopeCheckBox.setEnabled(False)
+
+        self.vboxLayout.addWidget(self.showEnvelopeCheckBox)
+
+
+        self.formLayout.setLayout(9, QFormLayout.ItemRole.FieldRole, self.vboxLayout)
+
+        self.label16 = QLabel(self.plotGroupBox)
+        self.label16.setObjectName(u"label16")
+        self.label16.setEnabled(False)
+
+        self.formLayout.setWidget(10, QFormLayout.ItemRole.LabelRole, self.label16)
+
+        self.hboxLayout = QHBoxLayout()
+        self.hboxLayout.setObjectName(u"hboxLayout")
+        self.lowFreqSpinBox = QDoubleSpinBox(self.plotGroupBox)
+        self.lowFreqSpinBox.setObjectName(u"lowFreqSpinBox")
+        self.lowFreqSpinBox.setEnabled(False)
+        self.lowFreqSpinBox.setMinimum(0.000000000000000)
+        self.lowFreqSpinBox.setMaximum(50.000000000000000)
+        self.lowFreqSpinBox.setSingleStep(0.050000000000000)
+        self.lowFreqSpinBox.setValue(0.500000000000000)
+
+        self.hboxLayout.addWidget(self.lowFreqSpinBox)
+
+        self.label = QLabel(self.plotGroupBox)
+        self.label.setObjectName(u"label")
+
+        self.hboxLayout.addWidget(self.label)
+
+        self.highFreqSpinBox = QDoubleSpinBox(self.plotGroupBox)
+        self.highFreqSpinBox.setObjectName(u"highFreqSpinBox")
+        self.highFreqSpinBox.setEnabled(False)
+        self.highFreqSpinBox.setMinimum(0.000000000000000)
+        self.highFreqSpinBox.setMaximum(50.000000000000000)
+        self.highFreqSpinBox.setSingleStep(0.050000000000000)
+        self.highFreqSpinBox.setValue(2.000000000000000)
+
+        self.hboxLayout.addWidget(self.highFreqSpinBox)
+
+
+        self.formLayout.setLayout(10, QFormLayout.ItemRole.FieldRole, self.hboxLayout)
+
         self.chSpacingTextField = QLineEdit(self.plotGroupBox)
         self.chSpacingTextField.setObjectName(u"chSpacingTextField")
 
@@ -296,6 +363,14 @@ class Ui_SignalConfigWidget(object):
         self.label12.setText(QCoreApplication.translate("SignalConfigWidget", u"Minimum range (in a.u.):", None))
         self.label13.setText(QCoreApplication.translate("SignalConfigWidget", u"Maximum range (in a.u.):", None))
         self.label14.setText(QCoreApplication.translate("SignalConfigWidget", u"Ultrasound mode:", None))
+        self.label15.setText(QCoreApplication.translate("SignalConfigWidget", u"Display options:", None))
+        self.showRawCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Raw Data", None))
+        self.showFilteredCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Filtered Data", None))
+        self.showEnvelopeCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Envelope", None))
+        self.label16.setText(QCoreApplication.translate("SignalConfigWidget", u"Bandpass Range (MHz):", None))
+        self.lowFreqSpinBox.setSuffix(QCoreApplication.translate("SignalConfigWidget", u" MHz", None))
+        self.label.setText(QCoreApplication.translate("SignalConfigWidget", u"to", None))
+        self.highFreqSpinBox.setSuffix(QCoreApplication.translate("SignalConfigWidget", u" MHz", None))
 #if QT_CONFIG(tooltip)
         self.chSpacingTextField.setToolTip(QCoreApplication.translate("SignalConfigWidget", u"Spacing between the channels in the signal unit (only for multi-channel signals)", None))
 #endif // QT_CONFIG(tooltip)

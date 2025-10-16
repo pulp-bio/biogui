@@ -6,6 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from .base_plot_mode import BasePlotMode
+from .ultrasound_filters import UltrasoundFilter
 
 
 class AModePlotMode(BasePlotMode):
@@ -68,6 +69,23 @@ class AModePlotMode(BasePlotMode):
         self._adc_sampling_freq = signal_type["adc_sampling_freq"]
         self._meas_period_us = signal_type.get("meas_period")
 
+        # Ultrasound filter configuration
+        self._show_raw = config.get("showRaw", True)
+        self._show_filtered = config.get("showFiltered", False)
+        self._show_envelope = config.get("showEnvelope", False)
+
+        # Initialize ultrasound filter
+        enable_bandpass = config.get("enableBandpass", False)
+        bandpass_low = config.get("bandpassLow", self._adc_sampling_freq / 2 * 0.1)
+        bandpass_high = config.get("bandpassHigh", self._adc_sampling_freq / 2 * 0.9)
+
+        self._us_filter = UltrasoundFilter(
+            sampling_freq=self._adc_sampling_freq,
+            low_cutoff=bandpass_low,
+            high_cutoff=bandpass_high,
+            enabled=enable_bandpass,
+        )
+
         # Initialize data queue
         render_len_samples = self._num_samples
         self._data_queue = deque(maxlen=render_len_samples)
@@ -97,7 +115,7 @@ class AModePlotMode(BasePlotMode):
         return len(self._data_queue) >= self._num_samples
 
     def setup_plot(self, graph_widget) -> None:
-        """Setup A-Mode plot with depth axis."""
+        """Setup A-Mode plot with depth axis and multiple display options."""
         self._graph_widget = graph_widget
         graph_widget.clear()
 
@@ -121,42 +139,118 @@ class AModePlotMode(BasePlotMode):
 
         # Get colormap
         cm = pg.colormap.get("CET-C1")
-        cm.setMappingMode("diverging")  # type: ignore
-        lut = cm.getLookupTable(nPts=self.n_ch, mode="qcolor")  # type: ignore
+        cm.setMappingMode("diverging")
+        lut = cm.getLookupTable(nPts=self.n_ch, mode="qcolor")
 
-        # Create placeholder plots
+        # Create plot dictionaries for different display modes
+        self._raw_plots = []
+        self._filtered_plots = []
+        self._envelope_plots = []
+
         depth_axis = self._calculate_distance_axis()
         latest_samples = self._get_latest_scan_data()
 
+        # Precompute filtered and envelope data
+        filtered_data = (
+            self._filter_data(latest_samples)
+            if self._show_filtered or self._show_envelope
+            else None
+        )
+        envelope_data = (
+            self._get_envelope(filtered_data) if self._show_envelope else None
+        )
+
         for i in range(self.n_ch):
-            pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
-            a_mode_data = latest_samples[:, i]
+            color = lut[i]
             vertical_offset = self.ch_spacing * (self.n_ch - i - 1)
 
-            plot_item_obj = graph_widget.plot(
-                depth_axis,
-                a_mode_data + vertical_offset,
-                pen=pen,
-            )
-            self._plots.append(plot_item_obj)
+            # Raw data plot (blue)
+            if self._show_raw:
+                pen = pg.mkPen(color=color, width=1, style=pg.QtCore.Qt.SolidLine)
+                raw_plot = graph_widget.plot(
+                    depth_axis,
+                    latest_samples[:, i] + vertical_offset,
+                    pen=pen,
+                    name=f"Raw Ch{i}",
+                )
+                self._raw_plots.append(raw_plot)
+            else:
+                self._raw_plots.append(None)
+
+            # Filtered data plot (green)
+            if self._show_filtered:
+                pen = pg.mkPen(color="g", width=1, style=pg.QtCore.Qt.DashLine)
+                filt_plot = graph_widget.plot(
+                    depth_axis,
+                    filtered_data[:, i] + vertical_offset,
+                    pen=pen,
+                    name=f"Filtered Ch{i}",
+                )
+                self._filtered_plots.append(filt_plot)
+            else:
+                self._filtered_plots.append(None)
+
+            # Envelope plot (red)
+            if self._show_envelope:
+                pen = pg.mkPen(color="r", width=2, style=pg.QtCore.Qt.SolidLine)
+                env_plot = graph_widget.plot(
+                    depth_axis,
+                    envelope_data[:, i] + vertical_offset,
+                    pen=pen,
+                    name=f"Envelope Ch{i}",
+                )
+                self._envelope_plots.append(env_plot)
+            else:
+                self._envelope_plots.append(None)
+
+        # Add legend if multiple display modes are active
+        if sum([self._show_raw, self._show_filtered, self._show_envelope]) > 1:
+            plot_item.addLegend()
 
     def render(self) -> None:
-        """Update the A-Mode plots."""
-        if not self._plots or not self.has_new_data():
+        """Update the A-Mode plots with all display modes."""
+        if not self.has_new_data():
             return
 
         latest_samples = self._get_latest_scan_data()
         distance_axis = self._calculate_distance_axis()
 
+        # Precompute filtered and envelope data if needed
+        filtered_data = None
+        envelope_data = None
+
+        if self._show_filtered or self._show_envelope:
+            filtered_data = self._filter_data(latest_samples)
+
+        if self._show_envelope:
+            envelope_data = self._get_envelope(filtered_data)
+
         for i in range(self.n_ch):
-            a_mode_data = latest_samples[:, i]
             vertical_offset = self.ch_spacing * (self.n_ch - i - 1)
 
-            self._plots[i].setData(
-                distance_axis,
-                a_mode_data + vertical_offset,
-                skipFiniteCheck=True,
-            )
+            # Update raw data
+            if self._raw_plots[i] is not None:
+                self._raw_plots[i].setData(
+                    distance_axis,
+                    latest_samples[:, i] + vertical_offset,
+                    skipFiniteCheck=True,
+                )
+
+            # Update filtered data
+            if self._filtered_plots[i] is not None:
+                self._filtered_plots[i].setData(
+                    distance_axis,
+                    filtered_data[:, i] + vertical_offset,
+                    skipFiniteCheck=True,
+                )
+
+            # Update envelope
+            if self._envelope_plots[i] is not None:
+                self._envelope_plots[i].setData(
+                    distance_axis,
+                    envelope_data[:, i] + vertical_offset,
+                    skipFiniteCheck=True,
+                )
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""
@@ -219,3 +313,11 @@ class AModePlotMode(BasePlotMode):
             The internal data queue.
         """
         return self._data_queue
+
+    def _filter_data(self, data_in: np.ndarray) -> np.ndarray:
+        """Apply bandpass filter to data using UltrasoundFilter."""
+        return self._us_filter.filter_data(data_in)
+
+    def _get_envelope(self, data_in: np.ndarray) -> np.ndarray:
+        """Calculate envelope using UltrasoundFilter."""
+        return UltrasoundFilter.get_envelope(data_in)
