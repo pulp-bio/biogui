@@ -525,7 +525,7 @@ biceps_exercise_config = WulpusUssConfig(
     capt_timeout=3000,
 )
 
-wulpus_config = biceps_exercise_config
+wulpus_config = waterbath_config
 
 packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 """Number of bytes in each package."""

@@ -23,7 +23,7 @@ import logging
 
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QButtonGroup, QWidget
 
 from biogui.ui.signal_config_widget_ui import Ui_SignalConfigWidget
 
@@ -64,6 +64,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         super().__init__(parent)
 
         self.setupUi(self)
+
+        # Track if M-Mode display handlers are connected (to avoid disconnect warnings)
+        self._mmode_handlers_connected = False
 
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
@@ -133,6 +136,56 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.notchFilterGroupBox.setToolTip(
                 "Powerline filtering is not applicable to ultrasound spatial data"
             )
+
+            # Enable ultrasound-specific filter controls
+            self.label15.setEnabled(True)
+
+            # For M-Mode: use radio buttons (only one view at a time)
+            # For A-Mode: use checkboxes (can show multiple)
+            self.showRawCheckBox.setEnabled(True)
+            self.showFilteredCheckBox.setEnabled(True)
+            self.showEnvelopeCheckBox.setEnabled(True)
+
+            # Enable bandpass controls
+            self.label16.setEnabled(True)  # "Bandpass Range (MHz):" label
+            self.lowFreqSpinBox.setEnabled(False)  # Initially disabled
+            self.highFreqSpinBox.setEnabled(False)
+
+            # Use ADC sampling frequency for ultrasound, not the measurement rate
+            adc_fs = signal_type.get("adc_sampling_freq", fs)
+            nyquist_mhz = adc_fs / 2 / 1e6
+
+            # Connect ultrasound mode change to update display options
+            self.ultrasoundModeComboBox.currentTextChanged.connect(
+                self._onUltrasoundModeChange
+            )
+
+            # Initially configure display options based on mode
+            self._configureDisplayOptionsForMode(
+                self.ultrasoundModeComboBox.currentText()
+            )
+
+            # Set default bandpass range based on ADC sampling frequency
+            default_low = adc_fs / 2 * 0.1 / 1e6  # 10% of Nyquist in MHz
+            default_high = adc_fs / 2 * 0.9 / 1e6  # 90% of Nyquist in MHz
+            min_freq_mhz = 0.3  # 300 kHz minimum
+            default_low = max(min_freq_mhz, default_low)
+
+            self.lowFreqSpinBox.setRange(0.1, nyquist_mhz)
+            self.highFreqSpinBox.setRange(0.1, nyquist_mhz)
+
+            # Only set default values if NOT in edit mode
+            if not edit:
+                self.lowFreqSpinBox.setValue(default_low)
+                self.highFreqSpinBox.setValue(default_high)
+
+            # Connect show filtered/envelope to auto-enable bandpass
+            self.showFilteredCheckBox.toggled.connect(self._updateBandpassState)
+            self.showEnvelopeCheckBox.toggled.connect(self._updateBandpassState)
+
+            # Initialize bandpass state
+            self._updateBandpassState()
+
         else:
             self.label14.setEnabled(False)
             self.ultrasoundModeComboBox.setEnabled(False)
@@ -172,6 +225,17 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.freq2TextField.clear()
         else:
             self.freq2TextField.setEnabled(True)
+
+    def _updateBandpassState(self) -> None:
+        """Auto-enable bandpass filter if filtered/envelope display is active."""
+        needs_filter = (
+            self.showFilteredCheckBox.isChecked()
+            or self.showEnvelopeCheckBox.isChecked()
+        )
+
+        # Enable/disable frequency controls
+        self.lowFreqSpinBox.setEnabled(needs_filter)
+        self.highFreqSpinBox.setEnabled(needs_filter)
 
     def _onRangeModeChange(self, rangeMode: str) -> None:
         """Detect if range mode has changed"""
@@ -263,6 +327,26 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.ultrasoundModeComboBox.currentText()
             )
 
+            # Add ultrasound display configuration
+            self._sigConfig["showRaw"] = self.showRawCheckBox.isChecked()
+            self._sigConfig["showFiltered"] = self.showFilteredCheckBox.isChecked()
+            self._sigConfig["showEnvelope"] = self.showEnvelopeCheckBox.isChecked()
+
+            # Bandpass wird automatisch aktiviert wenn filtered/envelope gezeigt wird
+            bandpass_needed = (
+                self._sigConfig["showFiltered"] or self._sigConfig["showEnvelope"]
+            )
+            self._sigConfig["enableBandpass"] = bandpass_needed
+
+            if bandpass_needed:
+                self._sigConfig["bandpassLow"] = (
+                    self.lowFreqSpinBox.value() * 1e6
+                )  # Convert to Hz
+                self._sigConfig["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6
+            else:
+                self._sigConfig["bandpassLow"] = 0.0
+                self._sigConfig["bandpassHigh"] = 0.0
+
         logging.info(f"SignalConfigWidget: {self._sigConfig=}")
 
         return True, ""
@@ -317,6 +401,91 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.label13.setEnabled(False)
             self.maxRangeTextField.setEnabled(False)
 
-        # 3. Ultrasound settingss
+        # 3. Ultrasound settings
         if "ultrasoundMode" in sigConfig:
             self.ultrasoundModeComboBox.setCurrentText(sigConfig["ultrasoundMode"])
+
+            # Restore ultrasound display settings
+            if "showRaw" in sigConfig:
+                self.showRawCheckBox.setChecked(sigConfig["showRaw"])
+            if "showFiltered" in sigConfig:
+                self.showFilteredCheckBox.setChecked(sigConfig["showFiltered"])
+            if "showEnvelope" in sigConfig:
+                self.showEnvelopeCheckBox.setChecked(sigConfig["showEnvelope"])
+
+            # Restore bandpass filter settings
+            if "bandpassLow" in sigConfig and "bandpassHigh" in sigConfig:
+                self.lowFreqSpinBox.setValue(
+                    sigConfig["bandpassLow"] / 1e6
+                )  # Convert from Hz to MHz
+                self.highFreqSpinBox.setValue(sigConfig["bandpassHigh"] / 1e6)
+
+            # Re-apply mode configuration after prefilling
+            self._configureDisplayOptionsForMode(sigConfig["ultrasoundMode"])
+
+    def _onUltrasoundModeChange(self, mode: str) -> None:
+        """Detect if ultrasound mode has changed and adjust display options."""
+        self._configureDisplayOptionsForMode(mode)
+
+    def _configureDisplayOptionsForMode(self, mode: str) -> None:
+        """Configure display options based on ultrasound mode (A-Mode vs M-Mode)."""
+        if mode == "M-Mode":
+            # For M-Mode: Only allow one option at a time
+            # Disconnect first if already connected to avoid RuntimeWarning
+            if self._mmode_handlers_connected:
+                self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+                self.showFilteredCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+                self.showEnvelopeCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+
+            # Connect the handlers
+            self.showRawCheckBox.toggled.connect(self._onMModeDisplayToggle)
+            self.showFilteredCheckBox.toggled.connect(self._onMModeDisplayToggle)
+            self.showEnvelopeCheckBox.toggled.connect(self._onMModeDisplayToggle)
+            self._mmode_handlers_connected = True
+
+            # Make sure at least one is checked
+            if not any(
+                [
+                    self.showRawCheckBox.isChecked(),
+                    self.showFilteredCheckBox.isChecked(),
+                    self.showEnvelopeCheckBox.isChecked(),
+                ]
+            ):
+                self.showRawCheckBox.setChecked(True)
+        else:
+            # For A-Mode: Allow multiple selections
+            # Disconnect M-Mode handlers if they are connected
+            if self._mmode_handlers_connected:
+                self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+                self.showFilteredCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+                self.showEnvelopeCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
+                self._mmode_handlers_connected = False
+
+    def _onMModeDisplayToggle(self, checked: bool) -> None:
+        """Handle M-Mode display toggle - ensure only one option is selected."""
+        if not checked:
+            # Don't allow unchecking if it's the only one checked
+            if not any(
+                [
+                    self.showRawCheckBox.isChecked(),
+                    self.showFilteredCheckBox.isChecked(),
+                    self.showEnvelopeCheckBox.isChecked(),
+                ]
+            ):
+                # Re-check the sender
+                sender = self.sender()
+                if sender:
+                    sender.setChecked(True)
+            return
+
+        # If checked, uncheck the others
+        sender = self.sender()
+        if sender == self.showRawCheckBox:
+            self.showFilteredCheckBox.setChecked(False)
+            self.showEnvelopeCheckBox.setChecked(False)
+        elif sender == self.showFilteredCheckBox:
+            self.showRawCheckBox.setChecked(False)
+            self.showEnvelopeCheckBox.setChecked(False)
+        elif sender == self.showEnvelopeCheckBox:
+            self.showRawCheckBox.setChecked(False)
+            self.showFilteredCheckBox.setChecked(False)
