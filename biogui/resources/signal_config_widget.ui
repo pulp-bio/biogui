@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>475</width>
+    <width>551</width>
     <height>772</height>
    </rect>
   </property>
@@ -308,14 +308,14 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Display options:</string>
+         <string>US Processing Mode:</string>
         </property>
        </widget>
       </item>
       <item row="9" column="1">
-       <layout class="QVBoxLayout">
+       <layout class="QVBoxLayout" name="usProcessingModeLayout">
         <item>
-         <widget class="QCheckBox" name="showRawCheckBox">
+         <widget class="QRadioButton" name="showRawCheckBox">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -328,89 +328,79 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="showFilteredCheckBox">
+         <widget class="QRadioButton" name="showFilteredCheckBox">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>Show Filtered Data</string>
+           <string>Show Bandpass Filtered Data</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="showEnvelopeCheckBox">
+         <widget class="QRadioButton" name="showEnvelopeCheckBox">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>Show Envelope</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="10" column="0">
-       <widget class="QLabel" name="label16">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Bandpass Range (MHz):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="1">
-       <layout class="QHBoxLayout">
-        <item>
-         <widget class="QDoubleSpinBox" name="lowFreqSpinBox">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="suffix">
-           <string> MHz</string>
-          </property>
-          <property name="minimum">
-           <double>0.000000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>50.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.050000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.500000000000000</double>
+           <string>Show Envelope of Bandpass Filtered Data</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>to</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QDoubleSpinBox" name="highFreqSpinBox">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="suffix">
-           <string> MHz</string>
-          </property>
-          <property name="minimum">
-           <double>0.000000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>50.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.050000000000000</double>
-          </property>
-          <property name="value">
-           <double>2.000000000000000</double>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QDoubleSpinBox" name="lowFreqSpinBox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="suffix">
+             <string> MHz</string>
+            </property>
+            <property name="minimum">
+             <double>0.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>50.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.050000000000000</double>
+            </property>
+            <property name="value">
+             <double>0.500000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item alignment="Qt::AlignmentFlag::AlignHCenter">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>to</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="highFreqSpinBox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="suffix">
+             <string> MHz</string>
+            </property>
+            <property name="minimum">
+             <double>0.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>50.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.050000000000000</double>
+            </property>
+            <property name="value">
+             <double>2.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>

@@ -6,7 +6,6 @@ import numpy as np
 import pyqtgraph as pg
 
 from .base_plot_mode import BasePlotMode
-from .ultrasound_filters import UltrasoundFilter
 
 
 class AModePlotMode(BasePlotMode):
@@ -18,13 +17,13 @@ class AModePlotMode(BasePlotMode):
     Parameters
     ----------
     fs : float
-        Sampling frequency.
+        Sampling frequency (measurement rate).
     nCh : int
         Number of channels.
     chSpacing : float
         Spacing between each channel in the plot.
     renderLenMs : int
-        Length of the window in the plot (in ms).
+        Length of the window in the plot (in ms) - not used for A-Mode.
     **config : dict
         Additional configuration options, including:
         - signal_type: Dict with ultrasound configuration
@@ -37,17 +36,19 @@ class AModePlotMode(BasePlotMode):
     _data_queue : deque
         Ring buffer for storing data.
     _plots : list
-        List of PlotDataItem references.
+        List of PlotDataItem references for each channel.
     _num_samples : int
         Number of samples per scan.
     _adc_start_delay : float
         ADC start delay in seconds.
     _adc_sampling_freq : float
-        ADC sampling frequency.
-    _meas_period_us : float
+        ADC sampling frequency in Hz.
+    _meas_period_us : float or None
         Measurement period in microseconds.
     _scan_count : int
         Number of complete scans processed.
+    _graph_widget : PlotWidget or None
+        Reference to the plot widget.
     """
 
     SPEED_OF_SOUND = 1540  # m/s in tissue
@@ -73,18 +74,6 @@ class AModePlotMode(BasePlotMode):
         self._show_raw = config.get("showRaw", True)
         self._show_filtered = config.get("showFiltered", False)
         self._show_envelope = config.get("showEnvelope", False)
-
-        # Initialize ultrasound filter
-        enable_bandpass = config.get("enableBandpass", False)
-        bandpass_low = config.get("bandpassLow", self._adc_sampling_freq / 2 * 0.1)
-        bandpass_high = config.get("bandpassHigh", self._adc_sampling_freq / 2 * 0.9)
-
-        self._us_filter = UltrasoundFilter(
-            sampling_freq=self._adc_sampling_freq,
-            low_cutoff=bandpass_low,
-            high_cutoff=bandpass_high,
-            enabled=enable_bandpass,
-        )
 
         # Initialize data queue
         render_len_samples = self._num_samples
@@ -131,7 +120,7 @@ class AModePlotMode(BasePlotMode):
         left_axis.enableAutoSIPrefix(False)
 
         plot_item.setLabel("bottom", "Depth", units="mm")
-        plot_item.setLabel("left", "Amplitude", units="ADC code")
+        plot_item.setLabel("left", "Amplitude", units="a.u.")
 
         # Set Y range if provided
         if "minRange" in self.config and "maxRange" in self.config:
@@ -142,69 +131,31 @@ class AModePlotMode(BasePlotMode):
         cm.setMappingMode("diverging")
         lut = cm.getLookupTable(nPts=self.n_ch, mode="qcolor")
 
-        # Create plot dictionaries for different display modes
-        self._raw_plots = []
-        self._filtered_plots = []
-        self._envelope_plots = []
-
-        depth_axis = self._calculate_distance_axis()
         latest_samples = self._get_latest_scan_data()
 
-        # Precompute filtered and envelope data
-        filtered_data = (
-            self._filter_data(latest_samples)
-            if self._show_filtered or self._show_envelope
-            else None
-        )
-        envelope_data = (
-            self._get_envelope(filtered_data) if self._show_envelope else None
-        )
+        # Apply sqrt compression for envelope data (display only)
+        us_config = self.config.get("ultrasoundFilterConfig", {})
+        if us_config.get("processingMode") == "envelope":
+            latest_samples = np.sqrt(np.abs(latest_samples))
 
+        distance_axis = self._calculate_distance_axis()
+
+        self._plots = []
         for i in range(self.n_ch):
             color = lut[i]
             vertical_offset = self.ch_spacing * (self.n_ch - i - 1)
 
-            # Raw data plot (blue)
-            if self._show_raw:
-                pen = pg.mkPen(color=color, width=1, style=pg.QtCore.Qt.SolidLine)
-                raw_plot = graph_widget.plot(
-                    depth_axis,
-                    latest_samples[:, i] + vertical_offset,
-                    pen=pen,
-                    name=f"Raw Ch{i}",
-                )
-                self._raw_plots.append(raw_plot)
-            else:
-                self._raw_plots.append(None)
+            pen = pg.mkPen(color=color, width=1.5)
+            plot = graph_widget.plot(
+                distance_axis,
+                latest_samples[:, i] + vertical_offset,
+                pen=pen,
+                name=f"Ch{i}",
+            )
+            self._plots.append(plot)
 
-            # Filtered data plot (green)
-            if self._show_filtered:
-                pen = pg.mkPen(color="g", width=1, style=pg.QtCore.Qt.DashLine)
-                filt_plot = graph_widget.plot(
-                    depth_axis,
-                    filtered_data[:, i] + vertical_offset,
-                    pen=pen,
-                    name=f"Filtered Ch{i}",
-                )
-                self._filtered_plots.append(filt_plot)
-            else:
-                self._filtered_plots.append(None)
-
-            # Envelope plot (red)
-            if self._show_envelope:
-                pen = pg.mkPen(color="r", width=2, style=pg.QtCore.Qt.SolidLine)
-                env_plot = graph_widget.plot(
-                    depth_axis,
-                    envelope_data[:, i] + vertical_offset,
-                    pen=pen,
-                    name=f"Envelope Ch{i}",
-                )
-                self._envelope_plots.append(env_plot)
-            else:
-                self._envelope_plots.append(None)
-
-        # Add legend if multiple display modes are active
-        if sum([self._show_raw, self._show_filtered, self._show_envelope]) > 1:
+        # Add legend if multi-channel
+        if self.n_ch > 1:
             plot_item.addLegend()
 
     def render(self) -> None:
@@ -213,42 +164,21 @@ class AModePlotMode(BasePlotMode):
             return
 
         latest_samples = self._get_latest_scan_data()
+
+        # Apply sqrt compression for envelope data (display only)
+        us_config = self.config.get("ultrasoundFilterConfig", {})
+        if us_config.get("processingMode") == "envelope":
+            latest_samples = np.sqrt(np.abs(latest_samples))
+
         distance_axis = self._calculate_distance_axis()
-
-        # Precompute filtered and envelope data if needed
-        filtered_data = None
-        envelope_data = None
-
-        if self._show_filtered or self._show_envelope:
-            filtered_data = self._filter_data(latest_samples)
-
-        if self._show_envelope:
-            envelope_data = self._get_envelope(filtered_data)
 
         for i in range(self.n_ch):
             vertical_offset = self.ch_spacing * (self.n_ch - i - 1)
 
-            # Update raw data
-            if self._raw_plots[i] is not None:
-                self._raw_plots[i].setData(
+            if self._plots[i] is not None:
+                self._plots[i].setData(
                     distance_axis,
                     latest_samples[:, i] + vertical_offset,
-                    skipFiniteCheck=True,
-                )
-
-            # Update filtered data
-            if self._filtered_plots[i] is not None:
-                self._filtered_plots[i].setData(
-                    distance_axis,
-                    filtered_data[:, i] + vertical_offset,
-                    skipFiniteCheck=True,
-                )
-
-            # Update envelope
-            if self._envelope_plots[i] is not None:
-                self._envelope_plots[i].setData(
-                    distance_axis,
-                    envelope_data[:, i] + vertical_offset,
                     skipFiniteCheck=True,
                 )
 
@@ -313,11 +243,3 @@ class AModePlotMode(BasePlotMode):
             The internal data queue.
         """
         return self._data_queue
-
-    def _filter_data(self, data_in: np.ndarray) -> np.ndarray:
-        """Apply bandpass filter to data using UltrasoundFilter."""
-        return self._us_filter.filter_data(data_in)
-
-    def _get_envelope(self, data_in: np.ndarray) -> np.ndarray:
-        """Calculate envelope using UltrasoundFilter."""
-        return UltrasoundFilter.get_envelope(data_in)
