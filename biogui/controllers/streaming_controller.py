@@ -26,11 +26,11 @@ import time
 from types import MappingProxyType
 
 import numpy as np
-import scipy
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from .. import data_sources
-from ..utils import DecodeFn, SigData, InterfaceModule
+from ..utils import DecodeFn, InterfaceModule, SigData
+from .signal_filters import SignalFilter, create_filter
 
 
 class _FileWriterWorker(QObject):
@@ -272,14 +272,7 @@ class _Preprocessor(QObject):
     decodeFn : DecodeFn
         Decode function.
     sigsConfigs : dict
-        Dictionary with the configuration for each signal, namely:
-        - "fs": the sampling frequency;
-        - "nCh": the number of channels;
-        - "filtType": the filter type (optional);
-        - "freqs": list with the cut-off frequencies (optional);
-        - "filtOrder" the filter order (optional);
-        - "notchFreq": frequency of the notch filter (optional);
-        - "qFactor": quality factor of the notch filter (optional).
+        Dictionary with the configuration for each signal.
     parent : QObject or None, default=None
         Parent QObject.
 
@@ -287,25 +280,17 @@ class _Preprocessor(QObject):
     ----------
     _decodeFn : DecodeFn
         Decode function.
-    _fs : dict of (str: float)
-        Dictionary with the sampling frequency for each signal.
-    _sosButter : dict
-        Dictionary with Butterworth filter parameters.
-    _ziButter : dict
-        Dictionary with Butterworth filter states.
-    _baNotch : dict
-        Dictionary with powerline noise filter parameters.
-    _ziNotch : dict
-        Dictionary with powerline noise filter states.
+    _filters : dict of (str: SignalFilter)
+        Dictionary mapping signal names to their filter instances.
 
     Class attributes
     ----------------
     rawSignalsReady : Signal
-        Qt Signal emitted when all the decoded signals from a data source are ready to be saved.
+        Qt Signal emitted when decoded signals are ready (before filtering).
     signalsReady : Signal
-        Qt Signal emitted when all the decoded signals from a data source are ready for visualization.
+        Qt Signal emitted when processed signals are ready (after filtering).
     errorOccurred : Signal
-        Qt Signal emitted when a configuration error occurs.
+        Qt Signal emitted when an error occurs.
     """
 
     rawSignalsReady = Signal(list)
@@ -318,73 +303,41 @@ class _Preprocessor(QObject):
         super().__init__(parent)
 
         self._decodeFn = decodeFn
-        self._fs = {}
-        self._sosButter: dict = {}
-        self._ziButter: dict = {}
-        self._baNotch: dict = {}
-        self._ziNotch: dict = {}
+        self._filters: dict[str, SignalFilter] = {}
 
-        for iSigName, iSigConfig in sigsConfigs.items():
-            self._fs[iSigName] = iSigConfig["fs"]
-            # Optionally, configure filtering
-            self.configFilter(iSigName, iSigConfig)
+        # Initialize filters for each signal
+        for sigName, sigConfig in sigsConfigs.items():
+            # Get signal type information
+            signal_type_info = sigConfig.get("signal_type", {})
+
+            # Create appropriate filter
+            signal_filter = create_filter(
+                signal_type_info, sigConfig["fs"], sigConfig["nCh"]
+            )
+
+            # Configure the filter
+            signal_filter.configure(sigConfig)
+
+            self._filters[sigName] = signal_filter
 
     def configFilter(self, sigName: str, sigConfig: dict) -> None:
         """
-        Configure a per-signal filter from the given settings.
+        Reconfigure a signal's filter from the given settings.
 
         Parameters
         ----------
         sigName : str
             Signal name.
         sigConfig : dict
-            Dictionary with the signal configuration for filtering, namely:
-            - "fs": the sampling frequency;
-            - "nCh": the number of channels;
-            - "filtType": the filter type (optional);
-            - "freqs": list with the cut-off frequencies (optional);
-            - "filtOrder": the filter order (optional);
-            - "notchFreq": frequency of the notch filter (optional);
-            - "qFactor": quality factor of the notch filter (optional).
+            Dictionary with the signal configuration.
         """
-        # 1. Butterworth filter:
-        if "filtType" not in sigConfig:
-            # 1.1. If configuration is empty, remove previous filter (if present)
-            self._sosButter.pop(sigName, None)
-            self._ziButter.pop(sigName, None)
-        else:
-            # 1.2. Create filter
-            freqs = sigConfig["freqs"]
-            sosButter = scipy.signal.butter(
-                N=sigConfig["filtOrder"],
-                Wn=freqs if len(freqs) > 1 else freqs[0],
-                fs=sigConfig["fs"],
-                btype=sigConfig["filtType"],
-                output="sos",
-            )
-            self._sosButter[sigName] = sosButter
-            self._ziButter[sigName] = np.stack(
-                [scipy.signal.sosfilt_zi(sosButter) for _ in range(sigConfig["nCh"])],
-                axis=-1,
-            )
-
-        # 2. Powerline noise filter:
-        if "notchFreq" not in sigConfig:
-            # 2.1. If configuration is empty, remove previous filter (if present)
-            self._baNotch.pop(sigName, None)
-            self._ziNotch.pop(sigName, None)
-        else:
-            # 2.2. Create filter
-            b, a = scipy.signal.iirnotch(
-                w0=sigConfig["notchFreq"],
-                Q=sigConfig["qFactor"],
-                fs=sigConfig["fs"],
-            )
-            self._baNotch[sigName] = (b, a)
-            self._ziNotch[sigName] = np.stack(
-                [scipy.signal.lfilter_zi(b, a) for _ in range(sigConfig["nCh"])],
-                axis=-1,
-            )
+        if sigName in self._filters:
+            try:
+                self._filters[sigName].configure(sigConfig)
+            except Exception as e:
+                self.errorOccurred.emit(
+                    f"Failed to configure filter for {sigName}: {e}"
+                )
 
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -397,15 +350,18 @@ class _Preprocessor(QObject):
             New data packet.
         """
         acq_ts = time.time()
+
+        # Decode data
         try:
             dataDec = self._decodeFn(data)
-        except (Exception,) as e:
+        except Exception as e:
             self.errorOccurred.emit(
                 f"The provided decode function failed with the following exception:\n{e}."
             )
             return
 
-        if dataDec.keys() != self._fs.keys():
+        # Validate decoded signals match configured signals
+        if dataDec.keys() != self._filters.keys():
             self.errorOccurred.emit(
                 "The provided decode function and configured signals do not match."
             )
@@ -413,36 +369,30 @@ class _Preprocessor(QObject):
 
         rawSignals = []
         signals = []
+
+        # Process each signal
         for sigName, sigData in dataDec.items():
+            # Store raw data (always unprocessed for file saving)
             rawSignals.append(SigData(sigName, sigData, acq_ts))
             dtype = sigData.dtype
 
-            # Filtering
+            # Apply filtering/processing
             try:
-                if sigName in self._sosButter:
-                    sigData, self._ziButter[sigName] = scipy.signal.sosfilt(
-                        self._sosButter[sigName],
-                        sigData,
-                        axis=0,
-                        zi=self._ziButter[sigName],
-                    )
-                if sigName in self._baNotch:
-                    sigData, self._ziNotch[sigName] = scipy.signal.lfilter(
-                        *self._baNotch[sigName],
-                        sigData,
-                        axis=0,
-                        zi=self._ziNotch[sigName],
-                    )
-            except ValueError:
+                signal_filter = self._filters[sigName]
+                if signal_filter.is_enabled():
+                    sigData = signal_filter.process(sigData)
+            except Exception as e:
                 self.errorOccurred.emit(
-                    "An error occurred during filtering, check the settings."
+                    f"An error occurred during processing of {sigName}: {e}"
                 )
                 return
+
+            # Store processed data (for visualization and forwarding)
             signals.append(SigData(sigName, sigData.astype(dtype), acq_ts))
 
-        # Emit raw and filtered signals
-        self.rawSignalsReady.emit(rawSignals)
-        self.signalsReady.emit(signals)
+        # Emit both raw and processed signals
+        self.rawSignalsReady.emit(rawSignals)  # → File Writer (raw RF data)
+        self.signalsReady.emit(signals)  # → Visualization + Forwarding (processed)
 
 
 class StreamingController(QObject):
