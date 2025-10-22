@@ -494,12 +494,12 @@ rx_tx_biceps_config = WulpusRxTxConfigGen()
 rx_tx_biceps_config.add_config(
     tx_channels=[3],
     rx_channels=[3],
-    optimized_switching=True,
+    optimized_switching=False,
 )
 rx_tx_biceps_config.add_config(
     tx_channels=[7],
     rx_channels=[7],
-    optimized_switching=True,
+    optimized_switching=False,
 )
 
 
@@ -648,7 +648,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
 
     logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
-    logging.info(f"Wulpus Interface: {rf_arr[:8]=}\n")
+    logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
     # Build result dictionary with all signals
     result = {}
