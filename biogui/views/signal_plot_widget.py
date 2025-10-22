@@ -90,6 +90,13 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # Store parameters
         self._sig_name = sigName
         self._render_len_ms = renderLenMs
+        self._signal_type = kwargs.get("signal_type", {})
+
+        # Set appropriate label for sampling rate display
+        if self._is_ultrasound():
+            self.label1.setText("Pulse Repetition Frequency (PRF):")
+        else:
+            self.label1.setText("Sampling rate:")
 
         # Determine plot mode and create appropriate instance
         self._plot_mode = self._create_plot_mode(
@@ -163,6 +170,17 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._sps_timer.setInterval(self.SPS_UPDATE_RATE)
         self._sps_timer.timeout.connect(self._refresh_sampling_rate)
 
+    def _is_ultrasound(self) -> bool:
+        """
+        Check if the current signal is an ultrasound signal.
+
+        Returns
+        -------
+        bool
+            True if ultrasound, False otherwise.
+        """
+        return self._signal_type.get("type") == "ultrasound"
+
     @property
     def dataQueue(self) -> deque:
         """
@@ -176,6 +194,16 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             The current data queue from the plot mode.
         """
         return self._plot_mode.get_data_queue()
+
+    @property
+    def bufferState(self) -> dict | None:
+        """
+        Property representing the buffer state for M-Mode plots.
+        This allows preserving M-Mode buffer data when reconfiguring the plot.
+        """
+        if hasattr(self._plot_mode, "get_buffer_state"):
+            return self._plot_mode.get_buffer_state()
+        return None
 
     @Slot(int)
     def reInitPlot(self, renderLenMs: int) -> None:
@@ -227,4 +255,18 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     def _refresh_sampling_rate(self) -> None:
         """Refresh the sampling rate display."""
         sample_count = self._plot_mode.sample_count
-        self.spsLabel.setText(f"{sample_count} sps")
+
+        if self._is_ultrasound():
+            num_samples = self._signal_type.get(
+                "num_samples", 400
+            )  # Default 400 for wulpus
+
+            if num_samples > 0:
+                prf = sample_count / num_samples
+                self.spsLabel.setText(f"{prf:.2f} Hz (PRF)")
+            else:
+                # Fallback if num_samples not available
+                self.spsLabel.setText(f"{sample_count} sps")
+        else:
+            # For time-series signals: display SPS
+            self.spsLabel.setText(f"{sample_count:.2f} sps")
