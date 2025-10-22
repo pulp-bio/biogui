@@ -178,8 +178,8 @@ class MainController(QObject):
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(False)
         self._mainWin.stopStreamingButton.setEnabled(True)
-        self._mainWin.streamConfGroupBox.setEnabled(False)
-        self._mainWin.moduleContainer.setEnabled(False)
+        # self._mainWin.streamConfGroupBox.setEnabled(False)
+        # self._mainWin.moduleContainer.setEnabled(False)
 
         # Emit "start" Qt Signal (for pluggable modules)
         self.streamingStarted.emit()
@@ -202,8 +202,8 @@ class MainController(QObject):
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(True)
         self._mainWin.stopStreamingButton.setEnabled(False)
-        self._mainWin.streamConfGroupBox.setEnabled(True)
-        self._mainWin.moduleContainer.setEnabled(True)
+        # self._mainWin.streamConfGroupBox.setEnabled(True)
+        # self._mainWin.moduleContainer.setEnabled(True)
 
     def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
         """Add a data source, given its configuration."""
@@ -502,6 +502,9 @@ class MainController(QObject):
         # Update streaming controller settings
         self._streamingControllers[dataSource].editSigConfig(sigName, sigConfig)
 
+        # Check if streaming is currently active
+        isStreaming = not self._mainWin.startStreamingButton.isEnabled()
+
         # Handle plot widget:
         # - case 1: ON -> ON
         # - case 2: ON -> OFF
@@ -527,6 +530,10 @@ class MainController(QObject):
                 )
                 self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
+                # If streaming is active, start the timers immediately
+                if isStreaming:
+                    newSignalPlotWidget.startTimers()
+
             oldSignalPlotWidget.deleteLater()
         elif "chSpacing" in sigConfig:  # case 3
             newSignalPlotWidget = SignalPlotWidget(
@@ -540,6 +547,10 @@ class MainController(QObject):
             self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
             self._mainWin.plotsLayout.addWidget(newSignalPlotWidget)
             self._signalPlotWidgets[plotId] = newSignalPlotWidget
+
+            # If streaming is active, start the timers immediately
+            if isStreaming:
+                newSignalPlotWidget.startTimers()
 
         # Save new settings
         self._config[dataSource]["sigsConfigs"][sigName] = sigConfig
