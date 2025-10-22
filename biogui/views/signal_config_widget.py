@@ -19,8 +19,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import logging
-
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtWidgets import QButtonGroup, QWidget
@@ -70,7 +68,19 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
-        self.freqLabel.setText(str(fs))
+
+        if signal_type["type"] == "ultrasound":
+            self.label3.setText("Pulse Repetition Frequency (PRF):")
+
+            num_samples = signal_type.get(
+                "num_samples", 400
+            )  # default value for wulpus
+            prf = fs / num_samples if num_samples > 0 else fs
+            self.freqLabel.setText(f"{prf:.2f} Hz")
+        else:
+            self.label3.setText("Sampling rate (sps):")
+            self.freqLabel.setText(f"{fs:.2f}")
+
         if nCh == 1:
             self.label10.setEnabled(False)
             self.chSpacingTextField.setEnabled(False)
