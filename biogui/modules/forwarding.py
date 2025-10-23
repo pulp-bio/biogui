@@ -236,12 +236,15 @@ class _ForwardingWorker(QObject):
                 self._buffers[dataSourceId][sigData.sigName]["queue"].append(samples)
 
         # Check if all buffers are full
-        bufferFilled = all(
-            len(sigBuffers["queue"]) >= sigBuffers["winLen"]
-            for dataSourceBuffers in self._buffers.values()
-            for sigBuffers in dataSourceBuffers.values()
-        )
-        if bufferFilled:
+        while True:
+            bufferFilled = all(
+                len(sigBuffers["queue"]) >= sigBuffers["winLen"]
+                for dataSourceBuffers in self._buffers.values()
+                for sigBuffers in dataSourceBuffers.values()
+            )
+            if not bufferFilled:
+                break
+
             data = bytearray()
             for dataSourceBuffers in self._buffers.values():
                 for sigBuffers in dataSourceBuffers.values():
