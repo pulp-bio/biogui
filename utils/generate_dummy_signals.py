@@ -97,7 +97,7 @@ def main():
             mean += prng.normal(scale=50.0)
 
             # Fastest signal: 128 sps, 10 samples generated at once
-            # -> set timer interval corresponding to one tenth of 128 sps, i.e., 78 ms
+            # -> set timer interval corresponding to 10 samples / 128 sps, i.e., 78 ms
             time.sleep(0.078)
 
     except KeyboardInterrupt:
