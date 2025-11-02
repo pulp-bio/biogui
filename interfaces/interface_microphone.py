@@ -16,9 +16,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import numpy as np
-import struct
 import time
+
+import numpy as np
+
 # Number of bytes in each audio packet; must match the packetSize configured in MicrophoneConfigWidget
 packetSize: int = 1920
 """Number of bytes in each package."""
@@ -31,7 +32,18 @@ stopSeq: list[bytes] = []
 """Sequence of commands to stop the device (none for microphone)."""
 
 # Signal information: audio stream with a default sample rate and channel count
-sigInfo: dict = {"audio": {"fs": 48000, "nCh": 1}, "ts": {"fs": 25, "nCh": 1}}
+sigInfo: dict = {
+    "audio": {
+        "fs": 48000,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+    "ts": {
+        "fs": 25,
+        "nCh": 1,
+        "signal_type": {"type": "time-series"},
+    },
+}
 """Dictionary containing the signals information."""
 
 
@@ -55,7 +67,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     nCh = sigInfo["audio"]["nCh"]
     nSamp = arr.size // nCh
     audio = arr.reshape(nSamp, nCh).astype(np.float32) / np.iinfo(np.int16).max
-    #add timestamp at reception
+    # add timestamp at reception
     ts = time.time()
-    ts = np.asarray(ts, dtype=np.float64).reshape(-1,1)
+    ts = np.asarray(ts, dtype=np.float64).reshape(-1, 1)
     return {"audio": audio, "ts": ts}
