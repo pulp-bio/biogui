@@ -130,6 +130,7 @@ class MainController(QObject):
         self._streamingControllers: dict[str, StreamingController] = {}
         self._signalPlotWidgets: dict[str, SignalPlotWidget] = {}
         self._config: dict = {}
+        self._isStreaming = False
 
         # Setup UI data source tree
         self.dataSourceModel = QStandardItemModel(self)
@@ -180,6 +181,12 @@ class MainController(QObject):
         self._mainWin.stopStreamingButton.setEnabled(True)
         # self._mainWin.streamConfGroupBox.setEnabled(False)
         # self._mainWin.moduleContainer.setEnabled(False)
+        self._isStreaming = True
+
+        # Disable edit button if a data source is currently selected
+        currentIdx = self._mainWin.dataSourceTree.currentIndex()
+        if currentIdx.isValid() and self.dataSourceModel.hasChildren(currentIdx):
+            self._mainWin.editButton.setEnabled(False)
 
         # Emit "start" Qt Signal (for pluggable modules)
         self.streamingStarted.emit()
@@ -204,6 +211,12 @@ class MainController(QObject):
         self._mainWin.stopStreamingButton.setEnabled(False)
         # self._mainWin.streamConfGroupBox.setEnabled(True)
         # self._mainWin.moduleContainer.setEnabled(True)
+        self._isStreaming = False
+
+        # Re-enable edit button if something is selected
+        currentIdx = self._mainWin.dataSourceTree.currentIndex()
+        if currentIdx.isValid():
+            self._mainWin.editButton.setEnabled(True)
 
     def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
         """Add a data source, given its configuration."""
@@ -330,9 +343,13 @@ class MainController(QObject):
         if self.dataSourceModel.hasChildren(idx):  # data source
             self._mainWin.deleteDataSourceButton.setEnabled(True)
             self._mainWin.editButton.clicked.connect(self._editDataSourceHandler)
+            # Disable edit button if streaming is active
+            if self._isStreaming:
+                self._mainWin.editButton.setEnabled(False)
         else:  # signal
             self._mainWin.deleteDataSourceButton.setEnabled(False)
             self._mainWin.editButton.clicked.connect(self._editSignalHandler)
+            # Signal editing is always allowed, even during streaming
 
     def _addDataSourceHandler(self) -> None:
         """Handler for adding a new data source."""
