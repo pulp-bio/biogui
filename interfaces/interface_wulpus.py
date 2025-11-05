@@ -647,8 +647,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     tx_rx_id = data[4]
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
 
-    logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
-    logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
+    # logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
+    # logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
     # Build result dictionary with all signals
     result = {}

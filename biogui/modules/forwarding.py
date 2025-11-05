@@ -25,8 +25,13 @@ from itertools import islice
 from types import MappingProxyType
 
 import numpy as np
-from PySide6.QtCore import Qt, QLocale, QObject, QThread, Signal
-from PySide6.QtGui import QIntValidator, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QLocale, QObject, Qt, QThread, Signal
+from PySide6.QtGui import (
+    QDoubleValidator,
+    QIntValidator,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtNetwork import QLocalSocket, QTcpSocket
 from PySide6.QtWidgets import QMessageBox, QWidget
 
@@ -232,8 +237,7 @@ class _ForwardingWorker(QObject):
         for sigData in dataPacket:
             if sigData.sigName not in self._buffers[dataSourceId]:
                 continue
-            for samples in sigData.data:
-                self._buffers[dataSourceId][sigData.sigName]["queue"].append(samples)
+            self._buffers[dataSourceId][sigData.sigName]["queue"].extend(sigData.data)
 
         # Check if all buffers are full
         while True:
@@ -276,7 +280,7 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
 
         # Validation rules
         lo = QLocale()
-        winValidator = QIntValidator(bottom=1, top=10000)
+        winValidator = QDoubleValidator(bottom=0.001, top=100000.0, decimals=3)
         self.winLenTextField.setValidator(winValidator)
         self.winStrideTextField.setValidator(winValidator)
         minPort, maxPort = 1024, 49151
@@ -507,7 +511,9 @@ class ForwardingController(QObject):
                 }
 
             # Connect the forwarding worker to the streaming controller
-            streamingController.signalsReady.connect(self._forwardingWorker.forward)
+            streamingController.signalsReady.connect(
+                self._forwardingWorker.forward, Qt.QueuedConnection
+            )
         self._forwardingWorker.initBuffers(buffersConfig)
 
         # Set socket configuration
