@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import scipy.signal
-from scipy.signal import hilbert
 
 
 class SignalFilter(ABC):
@@ -173,171 +172,26 @@ class TimeSeriesFilter(SignalFilter):
         return (self._sos_butter is not None) or (self._ba_notch is not None)
 
 
-class UltrasoundFilter(SignalFilter):
+class PassthroughFilter(SignalFilter):
     """
-    Bandpass filter and envelope detector for ultrasound RF signals.
+    Passthrough filter that returns data unchanged.
 
-    This is the same filter used in WULPUS GUI.
-
-    Parameters
-    ----------
-    adc_sampling_freq : float
-        ADC sampling frequency in Hz.
-
-    Attributes
-    ----------
-    _sampling_freq : float
-        ADC sampling frequency in Hz.
-    _processing_mode : str
-        One of: "raw", "filtered", "envelope".
-    _low_cutoff : float
-        Lower cutoff frequency in Hz.
-    _high_cutoff : float
-        Upper cutoff frequency in Hz.
-    _trans_width : float
-        Transition width in Hz.
-    _n_taps : int
-        Number of filter taps.
-    _filt_b : ndarray or None
-        Filter coefficients (numerator).
-    _filt_a : int
-        Filter coefficients (denominator), always 1 for FIR.
+    Used for signal types that don't require preprocessing filtering,
+    such as ultrasound signals where filtering is handled in the
+    visualization layer.
     """
-
-    def __init__(self, adc_sampling_freq: float) -> None:
-        self._sampling_freq = adc_sampling_freq
-        self._processing_mode = "raw"
-        self._low_cutoff = None
-        self._high_cutoff = None
-        self._trans_width = 0.2e6
-        self._n_taps = 31
-        self._filt_b = None
-        self._filt_a = 1
 
     def configure(self, sigConfig: dict) -> None:
-        """
-        Configure ultrasound processing from config.
-
-        Parameters
-        ----------
-        sigConfig : dict
-            Configuration with optional key:
-            - "ultrasoundFilterConfig": Dict with:
-                - "processingMode": "raw", "filtered", or "envelope"
-                - "lowCutoff": Low frequency cutoff in Hz
-                - "highCutoff": High frequency cutoff in Hz
-                - "transWidth": Transition width in Hz (optional, default 0.2 MHz)
-                - "nTaps": Number of filter taps (optional, default 31)
-        """
-        us_config = sigConfig.get("ultrasoundFilterConfig", {})
-        self._processing_mode = us_config.get("processingMode", "raw")
-
-        # Only design filter if needed
-        if self._processing_mode in ("filtered", "envelope"):
-            self._low_cutoff = us_config.get("lowCutoff", self._sampling_freq * 0.1)
-            self._high_cutoff = us_config.get("highCutoff", self._sampling_freq * 0.45)
-            self._trans_width = us_config.get("transWidth", 0.2e6)
-            self._n_taps = us_config.get("nTaps", 31)
-
-            self._design_filter()
-        else:
-            self._filt_b = None
-
-    def _design_filter(self) -> None:
-        """
-        Design bandpass filter using Remez algorithm.
-        """
-        nyquist = self._sampling_freq / 2
-
-        # Build frequency bands (same as wulpus-gui)
-        low_stop = self._low_cutoff - self._trans_width
-        high_stop = self._high_cutoff + self._trans_width
-
-        # Clamp to valid range
-        if low_stop < 0:
-            print(
-                f"Warning: Lower transition band is negative ({low_stop / 1e6:.3f} MHz)."
-            )
-            print(f"  Adjusting to 0 Hz...")
-            low_stop = 0
-
-        if high_stop >= nyquist:
-            print(
-                f"Warning: Upper transition band meets/exceeds Nyquist "
-                f"({high_stop / 1e6:.3f} MHz >= {nyquist / 1e6:.3f} MHz)."
-            )
-            # Leave small margin (0.1%) below Nyquist
-            high_stop = nyquist * 0.999
-
-            # If this makes high_stop <= high_cutoff, adjust high_cutoff too
-            if high_stop <= self._high_cutoff:
-                print(
-                    f"  Adjusting high_cutoff from {self._high_cutoff / 1e6:.3f} MHz "
-                    f"to {high_stop * 0.95 / 1e6:.3f} MHz"
-                )
-                self._high_cutoff = high_stop * 0.95
-
-        # Build frequency array (same order as WULPUS GUI)
-        temp = [0, low_stop, self._low_cutoff, self._high_cutoff, high_stop, nyquist]
-
-        # Verify monotonicity
-        for i in range(len(temp) - 1):
-            if temp[i] >= temp[i + 1]:
-                raise ValueError(
-                    f"Non-monotonic filter bands. Bands: "
-                    f"{[f'{f / 1e6:.3f} MHz' for f in temp]}"
-                )
-
-        print(f"Designing filter with bands: {[f'{f / 1e6:.3f} MHz' for f in temp]}")
-
-        try:
-            # Design filter (identical to WULPUS GUI)
-            self._filt_b = scipy.signal.remez(
-                self._n_taps,
-                temp,
-                [0, 1, 0],
-                fs=self._sampling_freq,
-                maxiter=2500,
-            )
-            print(
-                f"Filter designed successfully. "
-                f"Gain at passband: {np.sum(self._filt_b):.3f}"
-            )
-        except Exception as e:
-            raise ValueError(f"Filter design failed: {e}")
+        """No-op configuration."""
+        pass
 
     def process(self, data: np.ndarray) -> np.ndarray:
-        """
-        Apply ultrasound processing based on mode.
-
-        Parameters
-        ----------
-        data : ndarray
-            Input RF data with shape (nSamp, nCh).
-
-        Returns
-        -------
-        ndarray
-            Processed data (raw, filtered, or envelope).
-        """
-        if self._processing_mode == "raw":
-            return data
-
-        if self._filt_b is None:
-            raise ValueError("Ultrasound filter not configured")
-
-        # Apply bandpass filter (same as wulpus-gui: filtfilt)
-        processed_data = scipy.signal.filtfilt(self._filt_b, self._filt_a, data, axis=0)
-
-        # Optionally compute envelope (same as wulpus-gui: abs(hilbert))
-        if self._processing_mode == "envelope":
-            processed_data = np.abs(hilbert(processed_data, axis=0))
-
-        return processed_data
+        """Return data unchanged."""
+        return data
 
     def is_enabled(self) -> bool:
-        """Check if processing is enabled."""
-        return self._processing_mode != "raw"
+        """Passthrough filter is never enabled."""
+        return False
 
 
 def create_filter(signal_type_info: dict, fs: float, n_ch: int) -> SignalFilter:
@@ -349,7 +203,6 @@ def create_filter(signal_type_info: dict, fs: float, n_ch: int) -> SignalFilter:
     signal_type_info : dict
         Signal type information with:
         - "type": "time-series" or "ultrasound"
-        - "adc_sampling_freq": ADC sampling frequency (for ultrasound)
     fs : float
         Sampling frequency (measurement rate for ultrasound, actual fs for time-series).
     n_ch : int
@@ -363,8 +216,9 @@ def create_filter(signal_type_info: dict, fs: float, n_ch: int) -> SignalFilter:
     signal_type = signal_type_info.get("type", "time-series")
 
     if signal_type == "ultrasound":
-        # Use ADC sampling frequency for ultrasound
-        adc_fs = signal_type_info.get("adc_sampling_freq", fs)
-        return UltrasoundFilter(adc_fs)
+        # Ultrasound signals: no preprocessing filtering
+        # Filtering happens in plot modes (A-Mode, M-Mode)
+        return PassthroughFilter()
     else:
+        # Time-series signals: apply Butterworth/Notch filters
         return TimeSeriesFilter(fs, n_ch)
