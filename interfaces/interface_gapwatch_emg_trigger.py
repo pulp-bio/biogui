@@ -31,7 +31,11 @@ startSeq: list[bytes] = [bytes([0xAA, 3, 0x04, 250, 1]), 1.0, b"="]
 stopSeq: list[bytes] = [b":"]
 """Sequence of commands to stop the device."""
 
-sigInfo: dict = {"emg": {"fs": 2000, "nCh": 16},"trigger_emg":{"fs": 4000, "nCh": 1},"ts": {"fs": 800, "nCh": 1}}
+sigInfo: dict = {
+    "emg": {"fs": 2000, "nCh": 16},
+    "trigger_emg": {"fs": 4000, "nCh": 1},
+    "ts": {"fs": 800, "nCh": 1},
+}
 """Dictionary containing the signals information."""
 
 
@@ -59,7 +63,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     gain = 3
     nBit = 24
 
-    dataEMG = bytearray()    
+    dataEMG = bytearray()
     dataTrigger = bytearray()
     dataTs = bytearray()
 
@@ -67,8 +71,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         dataEMG.extend(bytearray(data[i * 256 : i * 256 + 240]))
         dataTrigger.extend(bytearray(data[i * 256 + 240 : i * 256 + 245]))
         dataTs.extend(bytearray(data[i * 256 + 248 : i * 256 + 256]))
-
-
 
     # Convert 24-bit to 32-bit integer
     pos = 0
@@ -84,9 +86,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
-    trigger = np.asarray(struct.unpack(f">{nSampTrigger}B",dataTrigger),dtype = np.float32).reshape(-1,1)
+    trigger = np.asarray(
+        struct.unpack(f">{nSampTrigger}B", dataTrigger), dtype=np.float32
+    ).reshape(-1, 1)
     ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
         nSampTs, 1
     )
 
-    return {"emg": emg,"trigger_emg":trigger, "ts": ts}
+    return {"emg": emg, "trigger_emg": trigger, "ts": ts}

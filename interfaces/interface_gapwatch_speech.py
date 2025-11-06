@@ -89,7 +89,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     nSampEMG, nChEMG = 5 * BUFF_SIZE, 16
     nSampBat = nSampCounter = nSampTs = 1 * BUFF_SIZE
 
-    channels = [0,1,2,3,4,5,6,7]  
+    channels = [0, 1, 2, 3, 4, 5, 6, 7]
 
     # ADC parameters
     vRef = 4
