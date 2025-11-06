@@ -18,3 +18,8 @@ dependencies = [
 dev = [
     "matplotlib>=3.10.7",
 ]
+
+[tool.ruff]
+exclude = [
+  "*ui.py",
+]
