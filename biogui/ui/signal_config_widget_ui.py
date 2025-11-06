@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QDoubleSpinBox, QFormLayout,
-    QFrame, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QRadioButton, QSizePolicy, QVBoxLayout,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
+    QFormLayout, QFrame, QGroupBox, QHBoxLayout,
+    QLabel, QLineEdit, QSizePolicy, QVBoxLayout,
     QWidget)
 
 class Ui_SignalConfigWidget(object):
@@ -196,20 +196,20 @@ class Ui_SignalConfigWidget(object):
 
         self.usProcessingModeLayout = QVBoxLayout()
         self.usProcessingModeLayout.setObjectName(u"usProcessingModeLayout")
-        self.showRawCheckBox = QRadioButton(self.plotGroupBox)
+        self.showRawCheckBox = QCheckBox(self.plotGroupBox)
         self.showRawCheckBox.setObjectName(u"showRawCheckBox")
         self.showRawCheckBox.setEnabled(False)
         self.showRawCheckBox.setChecked(True)
 
         self.usProcessingModeLayout.addWidget(self.showRawCheckBox)
 
-        self.showFilteredCheckBox = QRadioButton(self.plotGroupBox)
+        self.showFilteredCheckBox = QCheckBox(self.plotGroupBox)
         self.showFilteredCheckBox.setObjectName(u"showFilteredCheckBox")
         self.showFilteredCheckBox.setEnabled(False)
 
         self.usProcessingModeLayout.addWidget(self.showFilteredCheckBox)
 
-        self.showEnvelopeCheckBox = QRadioButton(self.plotGroupBox)
+        self.showEnvelopeCheckBox = QCheckBox(self.plotGroupBox)
         self.showEnvelopeCheckBox.setObjectName(u"showEnvelopeCheckBox")
         self.showEnvelopeCheckBox.setEnabled(False)
 
@@ -357,7 +357,7 @@ class Ui_SignalConfigWidget(object):
         self.label12.setText(QCoreApplication.translate("SignalConfigWidget", u"Minimum range (in a.u.):", None))
         self.label13.setText(QCoreApplication.translate("SignalConfigWidget", u"Maximum range (in a.u.):", None))
         self.label14.setText(QCoreApplication.translate("SignalConfigWidget", u"Ultrasound mode:", None))
-        self.label15.setText(QCoreApplication.translate("SignalConfigWidget", u"US Processing Mode:", None))
+        self.label15.setText(QCoreApplication.translate("SignalConfigWidget", u"Display Options:", None))
         self.showRawCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Raw Data", None))
         self.showFilteredCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Bandpass Filtered Data", None))
         self.showEnvelopeCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Show Envelope of Bandpass Filtered Data", None))
