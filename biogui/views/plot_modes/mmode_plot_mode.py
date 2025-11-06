@@ -6,6 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from .base_plot_mode import BasePlotMode
+from .ultrasound_filters import UltrasoundFilter
 
 
 class MModePlotMode(BasePlotMode):
@@ -28,6 +29,12 @@ class MModePlotMode(BasePlotMode):
     **config : dict
         Additional configuration options, including:
         - signal_type: Dict with ultrasound configuration
+        - showRaw: Show raw RF data (only one can be True for M-Mode)
+        - showFiltered: Show filtered data
+        - showEnvelope: Show envelope
+        - enableBandpass: Enable bandpass filter
+        - bandpassLow: Low cutoff frequency in Hz
+        - bandpassHigh: High cutoff frequency in Hz
 
     Attributes
     ----------
@@ -51,6 +58,10 @@ class MModePlotMode(BasePlotMode):
         Measurement period in microseconds.
     _scan_count : int
         Total number of scans processed.
+    _display_mode : str
+        Display mode: "raw", "filtered", or "envelope".
+    _us_filter : UltrasoundFilter
+        Ultrasound filter instance.
     """
 
     MMODE_TIME_WINDOW = 300  # Number of A-lines to display
@@ -87,6 +98,31 @@ class MModePlotMode(BasePlotMode):
         self._image_item = None
         self._needs_rect_setup = True
         self._graph_widget = None
+
+        # M-Mode display configuration (only one mode at a time)
+        self._show_raw = config.get("showRaw", True)
+        self._show_filtered = config.get("showFiltered", False)
+        self._show_envelope = config.get("showEnvelope", False)
+
+        # Determine which mode to display (only one should be True for M-Mode)
+        if self._show_envelope:
+            self._display_mode = "envelope"
+        elif self._show_filtered:
+            self._display_mode = "filtered"
+        else:
+            self._display_mode = "raw"
+
+        # Initialize ultrasound filter
+        enable_bandpass = config.get("enableBandpass", False)
+        bandpass_low = config.get("bandpassLow", self._adc_sampling_freq / 2 * 0.1)
+        bandpass_high = config.get("bandpassHigh", self._adc_sampling_freq / 2 * 0.9)
+
+        self._us_filter = UltrasoundFilter(
+            sampling_freq=self._adc_sampling_freq,
+            low_cutoff=bandpass_low,
+            high_cutoff=bandpass_high,
+            enabled=enable_bandpass,
+        )
 
     def add_data(self, data: np.ndarray) -> None:
         """
@@ -164,19 +200,19 @@ class MModePlotMode(BasePlotMode):
                 single_scan.append(self._incoming_buffer.popleft())
             all_scans.append(single_scan)
 
+        # Convert to numpy array: shape (scans_to_process, num_samples, 1)
         all_scans = np.array(all_scans)
+
+        # Process scans based on display mode (filtered/envelope/raw)
         processed_scans = []
         for i in range(scans_to_process):
-            scan = all_scans[i, :, :]
-            scan_1d = scan[:, 0]  # Remove channel dimension
+            scan = all_scans[i, :, :]  # Shape: (num_samples, 1)
+            processed = self._process_scan_data(scan)
+            processed_scans.append(processed[:, 0])  # Remove channel dimension
 
-            # Apply sqrt if data looks like envelope (all positive)
-            if scan_1d.min() >= 0:
-                scan_1d = np.sqrt(np.abs(scan_1d))
-
-            processed_scans.append(scan_1d)
-
-        processed_scans = np.array(processed_scans).T
+        processed_scans = np.array(
+            processed_scans
+        ).T  # Shape: (num_samples, scans_to_process)
 
         # Scroll the M-Mode buffer to the left by scans_to_process columns
         self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
@@ -247,6 +283,35 @@ class MModePlotMode(BasePlotMode):
         depths_mm = depths_m * 1e3  # Convert to millimeters
 
         return depths_mm
+
+    def _process_scan_data(self, scan_data: np.ndarray) -> np.ndarray:
+        """
+        Process scan data based on display mode.
+
+        Parameters
+        ----------
+        scan_data : ndarray
+            Raw scan data (shape: [num_samples, 1])
+
+        Returns
+        -------
+        ndarray
+            Processed scan data based on display mode.
+        """
+        if self._display_mode == "raw":
+            return scan_data
+        elif self._display_mode == "filtered":
+            return self._us_filter.filter_data(scan_data)
+        elif self._display_mode == "envelope":
+            filtered = self._us_filter.filter_data(scan_data)
+            envelope = UltrasoundFilter.get_envelope(filtered)
+
+            envelope = np.sqrt(envelope)
+
+            return envelope
+
+        else:
+            return scan_data
 
     def reinitialize(self, render_len_ms: int) -> None:
         """

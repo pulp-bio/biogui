@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QLocale
 from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtWidgets import QButtonGroup, QWidget
+from PySide6.QtWidgets import QWidget
 
 from biogui.ui.signal_config_widget_ui import Ui_SignalConfigWidget
 
@@ -78,8 +78,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             prf = fs / num_samples if num_samples > 0 else fs
             self.freqLabel.setText(f"{prf:.2f} Hz")
         else:
-            self.label3.setText("Sampling rate (sps):")
-            self.freqLabel.setText(f"{fs:.2f}")
+            self.freqLabel.setText(str(fs))
 
         if nCh == 1:
             self.label10.setEnabled(False)
@@ -110,7 +109,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             f"Float between {lo.toString(minFreq)} and {lo.toString(maxFreq)}"
         )
         freqValidator = QDoubleValidator(bottom=minFreq, top=maxFreq, decimals=nDec)
-        freqValidator.setNotation(QDoubleValidator.StandardNotation)  # type: ignore
+        freqValidator.setNotation(QDoubleValidator.Notation.StandardNotation)
         self.freq1TextField.setValidator(freqValidator)
         self.freq2TextField.setValidator(freqValidator)
         orderValidator = QIntValidator(bottom=1, top=10)
@@ -133,9 +132,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.filtTypeComboBox.currentTextChanged.connect(self._onFiltTypeChange)
         self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
 
-        # Configure based on signal type
-        if signal_type["type"] == "ultrasound":
-            # Hide time-series filters
+        # Activate ultrasound dropdown only for ultrasound signals
+        if signal_type.get("type") == "ultrasound":
+            # Hide traditional filtering for ultrasound
             self.filterGroupBox.setVisible(False)
             self.notchFilterGroupBox.setVisible(False)
 
@@ -146,13 +145,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             # Enable processing mode section
             self.label15.setEnabled(True)
 
-            # Create button group for exclusive selection
-            self._usProcessingGroup = QButtonGroup(self)
-            self._usProcessingGroup.addButton(self.showRawCheckBox, 0)
-            self._usProcessingGroup.addButton(self.showFilteredCheckBox, 1)
-            self._usProcessingGroup.addButton(self.showEnvelopeCheckBox, 2)
-
-            # Enable all processing mode options
+            # Enable all processing mode options (as checkboxes)
             self.showRawCheckBox.setEnabled(True)
             self.showFilteredCheckBox.setEnabled(True)
             self.showEnvelopeCheckBox.setEnabled(True)
@@ -172,10 +165,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.lowFreqSpinBox.setValue(default_low)
                 self.highFreqSpinBox.setValue(default_high)
 
-            # Connect processing mode changes to enable/disable frequency controls
-            self._usProcessingGroup.buttonToggled.connect(
-                self._onUsProcessingModeChange
-            )
+            # Connect checkbox changes to enable/disable frequency controls
+            self.showFilteredCheckBox.toggled.connect(self._onUsProcessingModeChange)
+            self.showEnvelopeCheckBox.toggled.connect(self._onUsProcessingModeChange)
 
             # Connect ultrasound mode change
             self.ultrasoundModeComboBox.currentTextChanged.connect(
@@ -223,43 +215,24 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         config = self._sigConfig.copy()
 
         signal_type = config.get("signal_type", {})
-
         if signal_type.get("type") == "ultrasound":
-            # Ultrasound processing configuration
-
-            # Determine processing mode based on radio button selection
-            if self.showEnvelopeCheckBox.isChecked():
-                processing_mode = "envelope"
-            elif self.showFilteredCheckBox.isChecked():
-                processing_mode = "filtered"
-            else:  # showRawCheckBox
-                processing_mode = "raw"
-
-            # Configure ultrasound filter
-            if processing_mode != "raw":
-                config["ultrasoundFilterConfig"] = {
-                    "processingMode": processing_mode,
-                    "lowCutoff": self.lowFreqSpinBox.value() * 1e6,  # MHz to Hz
-                    "highCutoff": self.highFreqSpinBox.value() * 1e6,  # MHz to Hz
-                    "transWidth": 0.2e6,  # 200 kHz transition width
-                    "nTaps": 31,  # Number of filter taps
-                }
-            else:
-                config["ultrasoundFilterConfig"] = {
-                    "processingMode": "raw",
-                }
-
             # Ultrasound visualization mode
             config["ultrasoundMode"] = self.ultrasoundModeComboBox.currentText()
 
-            # Display options for visualization (keep existing behavior)
+            # Display options for visualization
             config["showRaw"] = self.showRawCheckBox.isChecked()
             config["showFiltered"] = self.showFilteredCheckBox.isChecked()
             config["showEnvelope"] = self.showEnvelopeCheckBox.isChecked()
 
-            # Bandpass settings for plot mode (for backwards compatibility)
-            config["bandpassLow"] = self.lowFreqSpinBox.value() * 1e6
-            config["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6
+            # Bandpass is enabled if filtered or envelope is shown
+            config["enableBandpass"] = (
+                self.showFilteredCheckBox.isChecked()
+                or self.showEnvelopeCheckBox.isChecked()
+            )
+
+            # Bandpass settings for plot mode
+            config["bandpassLow"] = self.lowFreqSpinBox.value() * 1e6  # MHz to Hz
+            config["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6  # MHz to Hz
 
         return config
 
@@ -271,17 +244,6 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.freq2TextField.clear()
         else:
             self.freq2TextField.setEnabled(True)
-
-    def _updateBandpassState(self) -> None:
-        """Auto-enable bandpass filter if filtered/envelope display is active."""
-        needs_filter = (
-            self.showFilteredCheckBox.isChecked()
-            or self.showEnvelopeCheckBox.isChecked()
-        )
-
-        # Enable/disable frequency controls
-        self.lowFreqSpinBox.setEnabled(needs_filter)
-        self.highFreqSpinBox.setEnabled(needs_filter)
 
     def _onRangeModeChange(self, rangeMode: str) -> None:
         """Detect if range mode has changed"""
@@ -309,179 +271,150 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """
         lo = QLocale()
 
-        signal_type = self._sigConfig.get("signal_type", {})
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
+        if self.filterGroupBox.isChecked():
+            if not self.freq1TextField.hasAcceptableInput():
+                return False, 'The "Frequency 1" field is invalid.'
+            freq1 = lo.toFloat(self.freq1TextField.text())[0]
+            freqs = [freq1]
 
-        if signal_type.get("type") == "ultrasound":
-            # Validate ultrasound configuration
+            if self.freq2TextField.isEnabled():
+                if not self.freq2TextField.hasAcceptableInput():
+                    return False, 'The "Frequency 2" field is invalid.'
+                freq2 = lo.toFloat(self.freq2TextField.text())[0]
 
-            # Check if at least one processing mode is selected
-            if not (
-                self.showRawCheckBox.isChecked()
-                or self.showFilteredCheckBox.isChecked()
-                or self.showEnvelopeCheckBox.isChecked()
-            ):
-                return False, "Please select a processing mode for ultrasound data."
-
-            # Validate frequency settings if filtering is enabled
-            if (
-                self.showFilteredCheckBox.isChecked()
-                or self.showEnvelopeCheckBox.isChecked()
-            ):
-                low_freq = self.lowFreqSpinBox.value()
-                high_freq = self.highFreqSpinBox.value()
-
-                if low_freq >= high_freq:
+                if freq2 <= freq1:
                     return (
                         False,
-                        "Low cutoff frequency must be less than high cutoff frequency.",
+                        "The 2nd critical frequency cannot be lower than the 1st critical frequency.",
                     )
+                freqs.append(freq2)
 
-                # Check if frequencies are reasonable
-                adc_fs = signal_type.get("adc_sampling_freq", self._sigConfig["fs"])
-                nyquist_mhz = adc_fs / 2 / 1e6
+            if not self.filtOrderTextField.hasAcceptableInput():
+                return False, 'The "filter order" field is invalid.'
 
-                if high_freq > nyquist_mhz:
-                    return (
-                        False,
-                        f"High cutoff frequency cannot exceed Nyquist frequency ({nyquist_mhz:.2f} MHz).",
-                    )
+            self._sigConfig["filtType"] = self.filtTypeComboBox.currentText()
+            self._sigConfig["freqs"] = freqs
+            self._sigConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[0]
 
-            # Store configuration
-            if self.showEnvelopeCheckBox.isChecked():
-                processing_mode = "envelope"
-            elif self.showFilteredCheckBox.isChecked():
-                processing_mode = "filtered"
-            else:
-                processing_mode = "raw"
+        # 1.2. Powerline noise filter
+        if self.notchFilterGroupBox.isChecked():
+            if not self.qFactorTextField.hasAcceptableInput():
+                return False, 'The "Quality factor" field is invalid.'
+            self._sigConfig["notchFreq"] = lo.toFloat(
+                self.notchFreqComboBox.currentText()
+            )[0]
+            self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
 
-            if processing_mode != "raw":
-                self._sigConfig["ultrasoundFilterConfig"] = {
-                    "processingMode": processing_mode,
-                    "lowCutoff": self.lowFreqSpinBox.value() * 1e6,
-                    "highCutoff": self.highFreqSpinBox.value() * 1e6,
-                    "transWidth": 0.2e6,
-                    "nTaps": 31,
-                }
-            else:
-                self._sigConfig["ultrasoundFilterConfig"] = {
-                    "processingMode": "raw",
-                }
+        # 2. Plot settings
+        if not self.plotGroupBox.isChecked():
+            return True, ""
 
-            self._sigConfig["ultrasoundMode"] = (
-                self.ultrasoundModeComboBox.currentText()
-            )
-            self._sigConfig["showRaw"] = self.showRawCheckBox.isChecked()
-            self._sigConfig["showFiltered"] = self.showFilteredCheckBox.isChecked()
-            self._sigConfig["showEnvelope"] = self.showEnvelopeCheckBox.isChecked()
-            self._sigConfig["bandpassLow"] = self.lowFreqSpinBox.value() * 1e6
-            self._sigConfig["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6
+        if not self.chSpacingTextField.hasAcceptableInput():
+            return False, 'The "channel spacing" field is invalid.'
+        self._sigConfig["chSpacing"] = lo.toFloat(self.chSpacingTextField.text())[0]
+        if self.rangeModeComboBox.currentText() == "Manual":
+            if not self.minRangeTextField.hasAcceptableInput():
+                return False, 'The "minimum range" field is invalid.'
+            minRange = lo.toFloat(self.minRangeTextField.text())[0]
+            if not self.maxRangeTextField.hasAcceptableInput():
+                return False, 'The "maximum range" field is invalid.'
+            maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
+            if maxRange <= minRange:
+                return (
+                    False,
+                    "The maximum range cannot be lower than the minimum range.",
+                )
 
-        else:
-            # Time-series validation (original code)
-            # 1. Filtering settings:
-            # 1.1. Butterworth filter
-            if self.filterGroupBox.isChecked():
-                if not self.freq1TextField.hasAcceptableInput():
-                    return False, 'The "Frequency 1" field is invalid.'
-                freq1 = lo.toFloat(self.freq1TextField.text())[0]
-                freqs = [freq1]
+            self._sigConfig["minRange"] = minRange
+            self._sigConfig["maxRange"] = maxRange
 
-                if self.freq2TextField.isEnabled():
-                    if not self.freq2TextField.hasAcceptableInput():
-                        return False, 'The "Frequency 2" field is invalid.'
-                    freq2 = lo.toFloat(self.freq2TextField.text())[0]
-
-                    if freq2 <= freq1:
-                        return (
-                            False,
-                            "The 2nd critical frequency cannot be lower than the 1st critical frequency.",
-                        )
-                    freqs.append(freq2)
-
-                if not self.filtOrderTextField.hasAcceptableInput():
-                    return False, 'The "filter order" field is invalid.'
-
-                self._sigConfig["filtType"] = self.filtTypeComboBox.currentText()
-                self._sigConfig["freqs"] = freqs
-                self._sigConfig["filtOrder"] = lo.toInt(self.filtOrderTextField.text())[
-                    0
+        # 3. Ultrasound-specific validation
+        if self.ultrasoundModeComboBox.isEnabled():
+            # Validate that at least one display option is selected
+            if not any(
+                [
+                    self.showRawCheckBox.isChecked(),
+                    self.showFilteredCheckBox.isChecked(),
+                    self.showEnvelopeCheckBox.isChecked(),
                 ]
+            ):
+                return (
+                    False,
+                    "At least one display option must be selected for ultrasound data.",
+                )
 
-            # 1.2. Notch filter
-            if self.notchFilterGroupBox.isChecked():
-                if not self.qFactorTextField.hasAcceptableInput():
-                    return False, 'The "quality factor" field is invalid.'
-
-                self._sigConfig["notchFreq"] = lo.toFloat(
-                    self.notchFreqComboBox.currentText()
-                )[0]
-                self._sigConfig["qFactor"] = lo.toInt(self.qFactorTextField.text())[0]
-
-        # 2. Plot settings (common for both signal types)
-        if self.plotGroupBox.isChecked():
-            if self._sigConfig["nCh"] > 1:
-                if not self.chSpacingTextField.hasAcceptableInput():
-                    return False, 'The "channel spacing" field is invalid.'
-                self._sigConfig["chSpacing"] = lo.toFloat(
-                    self.chSpacingTextField.text()
-                )[0]
-            else:
-                self._sigConfig["chSpacing"] = 0
-
-            # 2.1. Range
-            if self.rangeModeComboBox.currentText() == "Manual":
-                if not self.minRangeTextField.hasAcceptableInput():
-                    return False, 'The "minimum range" field is invalid.'
-                if not self.maxRangeTextField.hasAcceptableInput():
-                    return False, 'The "maximum range" field is invalid.'
-
-                minRange = lo.toFloat(self.minRangeTextField.text())[0]
-                maxRange = lo.toFloat(self.maxRangeTextField.text())[0]
-                if maxRange <= minRange:
+            # For M-Mode, validate that exactly one option is selected
+            if self.ultrasoundModeComboBox.currentText() == "M-Mode":
+                checked_count = sum(
+                    [
+                        self.showRawCheckBox.isChecked(),
+                        self.showFilteredCheckBox.isChecked(),
+                        self.showEnvelopeCheckBox.isChecked(),
+                    ]
+                )
+                if checked_count > 1:
                     return (
                         False,
-                        "The maximum range cannot be lower than the minimum range.",
+                        "M-Mode can only display one data type at a time (Raw, Filtered, or Envelope).",
                     )
-
-                self._sigConfig["minRange"] = minRange
-                self._sigConfig["maxRange"] = maxRange
 
         return True, ""
 
-    def _prefill(self, kwargs: dict) -> None:
-        """Pre-fill the form with provided configuration."""
+    def _prefill(self, kwargs: dict):
+        """Pre-fill the form with the provided configuration."""
         lo = QLocale()
 
-        signal_type = self._sigConfig.get("signal_type", {})
+        # 1. Filtering settings:
+        # 1.1. Butterworth filter
+        if "filtType" in kwargs:
+            self.filterGroupBox.setChecked(True)
+            self.filtTypeComboBox.setCurrentText(kwargs["filtType"])
+            freqs = kwargs["freqs"]
+            self.freq1TextField.setText(lo.toString(freqs[0]))
+            if len(freqs) == 2:
+                self.freq2TextField.setEnabled(True)
+                self.freq2TextField.setText(lo.toString(freqs[1]))
+            self.filtOrderTextField.setText(lo.toString(kwargs["filtOrder"]))
+        else:
+            self.filterGroupBox.setChecked(False)
 
-        if signal_type.get("type") == "ultrasound":
-            # Prefill ultrasound-specific configuration
-            us_config = kwargs.get("ultrasoundFilterConfig", {})
-            processing_mode = us_config.get("processingMode", "raw")
+        # 1.2. Powerline noise filter
+        if "notchFreq" in kwargs:
+            self.notchFilterGroupBox.setChecked(True)
+            self.notchFreqComboBox.setCurrentText(lo.toString(int(kwargs["notchFreq"])))
+            self.qFactorTextField.setText(lo.toString(kwargs["qFactor"]))
+        else:
+            self.notchFilterGroupBox.setChecked(False)
 
-            # Set processing mode radio button
-            if processing_mode == "envelope":
-                self.showEnvelopeCheckBox.setChecked(True)
-            elif processing_mode == "filtered":
-                self.showFilteredCheckBox.setChecked(True)
-            else:
-                self.showRawCheckBox.setChecked(True)
+        # 2. Plot settings
+        if "chSpacing" not in kwargs:
+            self.plotGroupBox.setChecked(False)
+            return
 
-            # Prefill frequencies
-            if "lowCutoff" in us_config:
-                self.lowFreqSpinBox.setValue(us_config["lowCutoff"] / 1e6)  # Hz to MHz
-            if "highCutoff" in us_config:
-                self.highFreqSpinBox.setValue(
-                    us_config["highCutoff"] / 1e6
-                )  # Hz to MHz
+        self.plotGroupBox.setChecked(True)
+        self.chSpacingTextField.setText(lo.toString(kwargs["chSpacing"]))
+        if "minRange" in kwargs and "maxRange" in kwargs:
+            self.rangeModeComboBox.setCurrentText("Manual")
+            self.minRangeTextField.setText(lo.toString(kwargs["minRange"]))
+            self.maxRangeTextField.setText(lo.toString(kwargs["maxRange"]))
+            self.label12.setEnabled(True)
+            self.minRangeTextField.setEnabled(True)
+            self.label13.setEnabled(True)
+            self.maxRangeTextField.setEnabled(True)
+        else:
+            self.rangeModeComboBox.setCurrentText("Automatic")
+            self.label12.setEnabled(False)
+            self.minRangeTextField.setEnabled(False)
+            self.label13.setEnabled(False)
+            self.maxRangeTextField.setEnabled(False)
 
-            # Prefill ultrasound visualization mode
-            if "ultrasoundMode" in kwargs:
-                idx = self.ultrasoundModeComboBox.findText(kwargs["ultrasoundMode"])
-                if idx >= 0:
-                    self.ultrasoundModeComboBox.setCurrentIndex(idx)
+        # 3. Ultrasound settings
+        if "ultrasoundMode" in kwargs:
+            self.ultrasoundModeComboBox.setCurrentText(kwargs["ultrasoundMode"])
 
-            # Prefill display options (backwards compatibility)
+            # Restore ultrasound display settings
             if "showRaw" in kwargs:
                 self.showRawCheckBox.setChecked(kwargs["showRaw"])
             if "showFiltered" in kwargs:
@@ -489,44 +422,15 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             if "showEnvelope" in kwargs:
                 self.showEnvelopeCheckBox.setChecked(kwargs["showEnvelope"])
 
-            # Prefill bandpass settings (backwards compatibility)
-            if "bandpassLow" in kwargs:
-                self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)
-            if "bandpassHigh" in kwargs:
+            # Restore bandpass filter settings
+            if "bandpassLow" in kwargs and "bandpassHigh" in kwargs:
+                self.lowFreqSpinBox.setValue(
+                    kwargs["bandpassLow"] / 1e6
+                )  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
-        else:
-            # Time-series prefill (original code)
-            # 1. Filtering
-            # 1.1. Butterworth filter
-            if "filtType" in kwargs:
-                self.filterGroupBox.setChecked(True)
-                self.filtTypeComboBox.setCurrentText(kwargs["filtType"])
-
-                freqs = kwargs["freqs"]
-                self.freq1TextField.setText(lo.toString(freqs[0]))
-                if len(freqs) > 1:
-                    self.freq2TextField.setText(lo.toString(freqs[1]))
-
-                self.filtOrderTextField.setText(str(kwargs["filtOrder"]))
-
-            # 1.2. Notch filter
-            if "notchFreq" in kwargs:
-                self.notchFilterGroupBox.setChecked(True)
-                self.notchFreqComboBox.setCurrentText(str(int(kwargs["notchFreq"])))
-                self.qFactorTextField.setText(str(kwargs["qFactor"]))
-
-        # 2. Plot settings (common for both)
-        if "chSpacing" in kwargs:
-            self.plotGroupBox.setChecked(True)
-            if self._sigConfig["nCh"] > 1:
-                self.chSpacingTextField.setText(lo.toString(kwargs["chSpacing"]))
-
-            # 2.1. Range
-            if "minRange" in kwargs:
-                self.rangeModeComboBox.setCurrentText("Manual")
-                self.minRangeTextField.setText(lo.toString(kwargs["minRange"]))
-                self.maxRangeTextField.setText(lo.toString(kwargs["maxRange"]))
+            # Re-apply mode configuration after prefilling
+            self._configureDisplayOptionsForMode(kwargs["ultrasoundMode"])
 
     def _onUltrasoundModeChange(self, mode: str) -> None:
         """Detect if ultrasound mode has changed and adjust display options."""
