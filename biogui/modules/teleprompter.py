@@ -10,7 +10,7 @@ JSON structure:
     "durationPerSentence": 2000,
     "numberofRepeatsVoiced": 1,
     "numberofRepeatsSilent": 1
-    
+
 }
 
 Copyright 2025 Mattia Orlandi, Pierangelo Maria Rapa
@@ -64,9 +64,19 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
         config = json.load(f)
 
     provided = set(config.keys())
-    valid = {"sentences", "durationStart", "durationPerSentence", "numberofRepeatsVoiced", "numberofRepeatsSilent", "durationRest"}
+    valid = {
+        "sentences",
+        "durationStart",
+        "durationPerSentence",
+        "numberofRepeatsVoiced",
+        "numberofRepeatsSilent",
+        "durationRest",
+    }
     if provided != valid:
-        return None, "JSON must contain exactly 'sentences', 'durationStart', 'durationPerSentence', 'numberofRepeatsVoiced', 'numberofRepeatsSilent', and 'durationRest'."
+        return (
+            None,
+            "JSON must contain exactly 'sentences', 'durationStart', 'durationPerSentence', 'numberofRepeatsVoiced', 'numberofRepeatsSilent', and 'durationRest'.",
+        )
 
     if not isinstance(config["sentences"], list) or len(config["sentences"]) == 0:
         return None, "'sentences' must be a non-empty list of strings."
@@ -76,11 +86,20 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
 
     if not isinstance(config["durationStart"], int) or config["durationStart"] < 0:
         return None, "'durationStart' must be a non-negative integer (milliseconds)."
-    if not isinstance(config["durationPerSentence"], int) or config["durationPerSentence"] <= 0:
+    if (
+        not isinstance(config["durationPerSentence"], int)
+        or config["durationPerSentence"] <= 0
+    ):
         return None, "'durationPerSentence' must be a positive integer (milliseconds)."
-    if not isinstance(config["numberofRepeatsVoiced"], int) or config["numberofRepeatsVoiced"] < 0:
+    if (
+        not isinstance(config["numberofRepeatsVoiced"], int)
+        or config["numberofRepeatsVoiced"] < 0
+    ):
         return None, "'numberofRepeatsVoiced' must be a non-negative integer."
-    if not isinstance(config["numberofRepeatsSilent"], int) or config["numberofRepeatsSilent"] < 0:
+    if (
+        not isinstance(config["numberofRepeatsSilent"], int)
+        or config["numberofRepeatsSilent"] < 0
+    ):
         return None, "'numberofRepeatsSilent' must be a non-negative integer."
     if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
         return None, "'durationRest' must be a non-negative integer (milliseconds)."
@@ -90,10 +109,13 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
 
 class _TeleprompterWidget(QWidget):
     restFinished = Signal()
+
     def displayRest(self, duration_ms: int) -> None:
         """Display a rest period message."""
         self._modeLabel.setText(f"<span style='font-size:20px;'>REST</span>")
-        self._label.setText(f"<span style='font-size: 32px; font-weight: bold;'>REST</span>")
+        self._label.setText(
+            f"<span style='font-size: 32px; font-weight: bold;'>REST</span>"
+        )
         try:
             self._wordTimer.stop()
         except AttributeError:
@@ -103,6 +125,7 @@ class _TeleprompterWidget(QWidget):
         self._wordTimer.setSingleShot(True)
         self._wordTimer.timeout.connect(self.restFinished.emit)
         self._wordTimer.start()
+
     """
     Widget that displays text, highlighting each word.
 
@@ -142,7 +165,9 @@ class _TeleprompterWidget(QWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def displaySentence(self, sentence: str, duration_ms: int, is_voiced: bool = True) -> None:
+    def displaySentence(
+        self, sentence: str, duration_ms: int, is_voiced: bool = True
+    ) -> None:
         """Highlight words with timing based on word length relative to total characters. Show mode label."""
         mode_text = "VOICED" if is_voiced else "SILENT"
         self._modeLabel.setText(f"<span style='font-size:20px;'>{mode_text}</span>")
@@ -199,7 +224,9 @@ class _TeleprompterWidget(QWidget):
 
     def displayStart(self, text: str) -> None:
         """Display a plain start text centered."""
-        self._label.setText(f"<span style='font-size: 32px; font-weight: bold;'>{text}</span>")
+        self._label.setText(
+            f"<span style='font-size: 32px; font-weight: bold;'>{text}</span>"
+        )
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.widgetClosed.emit()
@@ -273,9 +300,10 @@ class TeleprompterController(QObject):
     _streamingControllers: MappingProxyType
         Read-only reference to the streaming controller dictionary.
     """
+
     def __init__(
-            self, streamingControllers: MappingProxyType, parent: QObject | None = None
-        ) -> None:
+        self, streamingControllers: MappingProxyType, parent: QObject | None = None
+    ) -> None:
         super().__init__(parent)
         self._confWidget = _TeleprompterConfigWidget()
         self._confWidget.parentController = self
@@ -313,7 +341,10 @@ class TeleprompterController(QObject):
         mainController.streamingStarted.disconnect(self._startTeleprompter)
 
     def _startTeleprompter(self) -> None:
-        if not self._confWidget.teleprompterGroupBox.isChecked() or not self._confWidget.config:
+        if (
+            not self._confWidget.teleprompterGroupBox.isChecked()
+            or not self._confWidget.config
+        ):
             return
         config = self._confWidget.config
         self._sentences = config["sentences"]
@@ -345,7 +376,9 @@ class TeleprompterController(QObject):
         trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
         for ctrl in self._streamingControllers.values():
             ctrl.setTrigger(trigger_value)
-        self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
+        self._teleWidget.displaySentence(
+            self._sentences[self._index], self._duration, is_voiced=True
+        )
         self._timer.start(self._duration)
 
     def _showNextSentence(self) -> None:
@@ -357,13 +390,17 @@ class TeleprompterController(QObject):
                 trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
                 for ctrl in self._streamingControllers.values():
                     ctrl.setTrigger(trigger_value)
-                self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
+                self._teleWidget.displaySentence(
+                    self._sentences[self._index], self._duration, is_voiced=True
+                )
                 self._timer.start(self._duration)
             else:
                 trigger_value = (self._index + 1) * 1000 + self._currentSilent * 10 + 0
                 for ctrl in self._streamingControllers.values():
                     ctrl.setTrigger(trigger_value)
-                self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=False)
+                self._teleWidget.displaySentence(
+                    self._sentences[self._index], self._duration, is_voiced=False
+                )
                 self._timer.start(self._duration)
             return
 

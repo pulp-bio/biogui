@@ -178,7 +178,9 @@ class _TriggerWidget(QWidget):
                 except ValueError:
                     painter.setFont(QFont("Arial", 48))
                 painter.drawText(
-                    pixmap.rect(), Qt.AlignCenter, mainText.upper().replace(" ", "\n")  # type: ignore
+                    pixmap.rect(),
+                    Qt.AlignCenter,
+                    mainText.upper().replace(" ", "\n"),  # type: ignore
                 )
 
         painter.end()
