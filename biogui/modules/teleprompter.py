@@ -31,14 +31,12 @@ limitations under the License.
 from __future__ import annotations
 
 import json
-import logging
-import os
 import math
 from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QColor, QFont
-from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QVBoxLayout, QWidget
 
 from biogui.controllers import MainController
 from biogui.ui.teleprompter_config_widget_ui import Ui_TeleprompterConfigWidget
@@ -112,9 +110,9 @@ class _TeleprompterWidget(QWidget):
 
     def displayRest(self, duration_ms: int) -> None:
         """Display a rest period message."""
-        self._modeLabel.setText(f"<span style='font-size:20px;'>REST</span>")
+        self._modeLabel.setText("<span style='font-size:20px;'>REST</span>")
         self._label.setText(
-            f"<span style='font-size: 32px; font-weight: bold;'>REST</span>"
+            "<span style='font-size: 32px; font-weight: bold;'>REST</span>"
         )
         try:
             self._wordTimer.stop()
