@@ -110,7 +110,6 @@ if __name__ == "__main__":
 
     # Enable logging
     if args["log"]:
-
         import logging
 
         logging.basicConfig(level=logging.INFO)
