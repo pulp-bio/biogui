@@ -30,6 +30,7 @@ from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
 from .microphone import MicrophoneConfigWidget, MicrophoneDataSourceWorker
 
+
 def getConfigWidget(
     dataSourceType: DataSourceType, parent: QWidget
 ) -> DataSourceConfigWidget:
