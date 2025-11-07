@@ -21,9 +21,10 @@ import struct
 
 import numpy as np
 
-BUFF_SIZE = 40
 FS = 2000
-GAIN = 1
+GAIN = 6
+TEST_ADC = True
+BUFF_SIZE = FS // 50
 
 FS_MAP = {
     500: 0x06,
@@ -46,7 +47,7 @@ packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
 startSeq: list[bytes | float] = [
-    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]),
+    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN] | (0x05 if TEST_ADC else 0x00), 1]),
     1.0,
     b"=",
 ]
