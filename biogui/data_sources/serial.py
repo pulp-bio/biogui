@@ -241,8 +241,11 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
+        # Accumulate new data
         self._buffer.append(self._serialPort.readAll())
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
+            data = self._buffer.left(self._packetSize).data()
             self.dataPacketReady.emit(data)
             self._buffer.remove(0, self._packetSize)

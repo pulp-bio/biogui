@@ -194,7 +194,7 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
         self._localServer.close()
         self._buffer = QByteArray()
 
-        logging.info("DataWorker: TCP communication stopped.")
+        logging.info("DataWorker: local communication stopped.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
@@ -210,12 +210,19 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
             elif type(c) is float:
                 time.sleep(c)
 
-        logging.info("DataWorker: TCP communication started.")
+        logging.info("DataWorker: local communication started.")
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
-        self._buffer.append(self._clientSock.readAll())  # type: ignore
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
+        # Guard
+        if self._clientSock is None:
+            return
+
+        # Accumulate new data
+        self._buffer.append(self._clientSock.readAll())
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
+            data = self._buffer.left(self._packetSize).data()
             self.dataPacketReady.emit(data)
             self._buffer.remove(0, self._packetSize)
