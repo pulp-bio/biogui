@@ -224,8 +224,14 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
-        self._buffer.append(self._clientSock.readAll())  # type: ignore
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
+        if self._clientSock is None:
+            return
+
+        # Accumulate new data
+        self._buffer.append(self._clientSock.readAll())
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
+            data = self._buffer.left(self._packetSize).data()
             self.dataPacketReady.emit(data)
             self._buffer.remove(0, self._packetSize)

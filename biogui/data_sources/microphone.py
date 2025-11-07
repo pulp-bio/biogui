@@ -31,7 +31,9 @@ from PySide6.QtMultimedia import (
 )
 from PySide6.QtWidgets import QWidget
 
-from ..ui.microphone_data_source_config_widget_ui import Ui_MicrophoneDataSourceConfigWidget
+from ..ui.microphone_data_source_config_widget_ui import (
+    Ui_MicrophoneDataSourceConfigWidget,
+)
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
@@ -40,7 +42,9 @@ from .base import (
 )
 
 
-class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget):
+class MicrophoneConfigWidget(
+    DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget
+):
     """
     Widget to configure the system microphone audio source.
 
@@ -81,7 +85,7 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
                 'The "sample rate" field is invalid.',
             )
 
-        #check smapling rate supported by device
+        # check smapling rate supported by device
         devices = QMediaDevices.audioInputs()
         selected_device: QAudioDevice | None = next(
             (d for d in devices if d.description() == device),
@@ -92,12 +96,12 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
                 DataSourceType.MIC,
                 {},
                 False,
-                'Selected audio device is not available.',
+                "Selected audio device is not available.",
             )
-        
+
         fmt = QAudioFormat()
         fmt.setSampleRate(int(self.sampleRateTextField.text()))
-        #It might be modifiable in the future
+        # It might be modifiable in the future
         fmt.setChannelCount(1)
         fmt.setSampleFormat(QAudioFormat.SampleFormat.Int16)
 
@@ -106,7 +110,7 @@ class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConf
                 DataSourceType.MIC,
                 {},
                 False,
-                f'Selected audio device does not support the sample rate of {self.sampleRateTextField.text()} Hz., sample rate must be between {selected_device.minimumSampleRate()} and {selected_device.maximumSampleRate()} Hz.',
+                f"Selected audio device does not support the sample rate of {self.sampleRateTextField.text()} Hz., sample rate must be between {selected_device.minimumSampleRate()} and {selected_device.maximumSampleRate()} Hz.",
             )
 
         return DataSourceConfigResult(
@@ -139,6 +143,7 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
     Constructor signature matches getDataSourceWorker factory:
       (packetSize, startSeq, stopSeq, deviceName, sampleRate)
     """
+
     def __init__(
         self,
         packetSize: int,
@@ -187,7 +192,9 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logging.warning("DataWorker: setBufferSize not available on this Qt version.")(self._device, self.fmt, self)
+            logging.warning(
+                "DataWorker: setBufferSize not available on this Qt version."
+            )(self._device, self.fmt, self)
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:
@@ -229,9 +236,12 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         """Emit fixed-size packets from the audio buffer."""
         if not self._ioDevice:
             return
-        data = self._ioDevice.readAll()
-        self._buffer.append(data)
-        if self._buffer.size() >= self._packetSize:
+
+        # Accumulate new data
+        self._buffer.append(self._ioDevice.readAll())
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
             packet = self._buffer.left(self._packetSize)
             self.dataPacketReady.emit(packet.data())
             self._buffer.remove(0, self._packetSize)
