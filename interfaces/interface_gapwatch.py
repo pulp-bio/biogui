@@ -23,7 +23,7 @@ import numpy as np
 
 FS = 1000
 GAIN = 6
-TEST_ADC = True
+TEST_ADC = False
 BUFF_SIZE = FS // 50
 
 FS_MAP = {
