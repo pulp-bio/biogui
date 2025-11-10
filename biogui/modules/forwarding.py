@@ -264,6 +264,8 @@ class _ForwardingWorker(QObject):
         # Disconnect socket
         if self._socket is not None:
             self._socket.close()
+            self._socket.deleteLater()
+            self._socket = None
 
 
 class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):

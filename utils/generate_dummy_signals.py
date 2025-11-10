@@ -134,16 +134,20 @@ def main():
         while not stop_event.is_set():
             # 1st signal: 4 channels of square wave
             data1 = []
+            new_phase = phase1
             for _ in range(4):
-                data_i, phase1 = _square_chunk(fs1 // 50, fs1, gain1, phase1)
+                data_i, new_phase = _square_chunk(fs1 // 50, fs1, gain1, phase1)
                 data1.append(data_i)
+            phase1 = new_phase
             data1 = np.column_stack(data1).astype(np.float32)
 
             # 2nd signal: 2 channels of sine wave
             data2 = []
+            new_phase = phase2
             for _ in range(2):
-                data_i, phase2 = _sine_chunk(fs2 // 50, fs2, gain2, phase2)
+                data_i, new_phase = _sine_chunk(fs2 // 50, fs2, gain2, phase2)
                 data2.append(data_i)
+            phase2 = new_phase
             data2 = np.column_stack(data2).astype(np.float32)
 
             # Send data to TCP server
