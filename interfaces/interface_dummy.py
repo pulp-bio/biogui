@@ -19,10 +19,45 @@ limitations under the License.
 
 import numpy as np
 
-packetSize: int = 192
+
+FS_DICT = {
+    200: 0x01,
+    500: 0x02,
+    1000: 0x03,
+}
+GAIN_DICT = {
+    1: 0x00,
+    2: 0x10,
+    4: 0x20,
+    8: 0x30,
+}
+"""Dummy protocol: the script excepts a start command comprising:
+- 1 byte: sampling frequency code for sig1;
+- 1 byte: gain code for sig1;
+- 1 byte: sampling frequency code for sig2;
+- 1 byte: gain code for sig2;
+- 1 byte: start command (b':').
+The script will then generate signals accordingly.
+"""
+
+FS1 = 200
+GAIN1 = 2
+FS2 = 1000
+GAIN2 = 8
+N_SAMP1 = FS1 // 50
+N_SAMP2 = FS2 // 50
+"""Dummy signal parameters."""
+
+packetSize: int = 4 * (4 * N_SAMP1 + 2 * N_SAMP2)
 """Number of bytes in each package."""
 
-startSeq: list[bytes | float] = [b":"]
+startSeq: list[bytes | float] = [
+    bytes([FS_DICT[FS1], GAIN_DICT[GAIN1]]),
+    0.05,
+    bytes([FS_DICT[FS2], GAIN_DICT[GAIN2]]),
+    0.05,
+    b":",
+]
 """
 Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
@@ -34,7 +69,7 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {"sig1": {"fs": 128, "nCh": 4}, "sig2": {"fs": 51.2, "nCh": 2}}
+sigInfo: dict = {"sig1": {"fs": FS1, "nCh": 4}, "sig2": {"fs": FS2, "nCh": 2}}
 """Dictionary containing the signals information."""
 
 
@@ -54,8 +89,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         the keys must match with those of the "sigInfo" dictionary.
     """
     dataTmp = np.frombuffer(data, dtype=np.float32)
-    nSamp1, nSamp2 = 10, 4
-    sig1 = dataTmp[: nSamp1 * 4].reshape(nSamp1, 4)
-    sig2 = dataTmp[nSamp1 * 4 :].reshape(nSamp2, 2)
+    sig1 = dataTmp[: N_SAMP1 * 4].reshape(N_SAMP1, 4)
+    sig2 = dataTmp[N_SAMP1 * 4 :].reshape(N_SAMP2, 2)
 
     return {"sig1": sig1, "sig2": sig2}

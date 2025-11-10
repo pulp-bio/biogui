@@ -18,11 +18,33 @@ limitations under the License.
 """
 
 import socket
+import struct
 import sys
 import threading
 import time
 
 import numpy as np
+
+
+FS_DICT = {
+    0x01: 200,
+    0x02: 500,
+    0x03: 1000,
+}
+GAIN_DICT = {
+    0x00: 1,
+    0x10: 2,
+    0x20: 4,
+    0x30: 8,
+}
+"""Dummy protocol: the script excepts a start command comprising:
+- 1 byte: sampling frequency code for sig1;
+- 1 byte: gain code for sig1;
+- 1 byte: sampling frequency code for sig2;
+- 1 byte: gain code for sig2;
+- 1 byte: start command (b':').
+The script will then generate signals accordingly.
+"""
 
 
 def _listen_for_stop(sock, stop_event):
@@ -37,6 +59,24 @@ def _listen_for_stop(sock, stop_event):
         pass
     except Exception as e:
         sys.exit(f"Error while listening for stop command: {e}.")
+
+
+def _square_chunk(n_samp: int, fs: float, gain: int, phase: float):
+    phase_inc = 2 * np.pi / fs  # 1 Hz
+    k = np.arange(n_samp)
+    ph = (phase + phase_inc * k) % (2 * np.pi)
+    samples = np.where(ph < 2 * np.pi * 0.5, gain, -gain)
+    new_phase = (phase + phase_inc * n_samp) % (2 * np.pi)
+    return samples, new_phase
+
+
+def _sine_chunk(n_samp: int, fs: float, gain: int, phase: float):
+    phase_inc = 2 * np.pi / fs  # 1 Hz
+    k = np.arange(n_samp)
+    ph = (phase + phase_inc * k) % (2 * np.pi)
+    samples = gain * np.sin(ph)
+    new_phase = (phase + phase_inc * n_samp) % (2 * np.pi)
+    return samples, new_phase
 
 
 def main():
@@ -69,6 +109,14 @@ def main():
         print(f"Connected to server at {addr}:{port}.")
 
         # Wait for start command
+        conf = sock.recv(2)
+        fs1 = FS_DICT[struct.unpack("B", conf[0:1])[0]]
+        gain1 = GAIN_DICT[struct.unpack("B", conf[1:2])[0]]
+        print(f"1st signal: fs={fs1} Hz, gain={gain1}.")
+        conf = sock.recv(2)
+        fs2 = FS_DICT[struct.unpack("B", conf[0:1])[0]]
+        gain2 = GAIN_DICT[struct.unpack("B", conf[1:2])[0]]
+        print(f"2nd signal: fs={fs2} Hz, gain={gain2}.")
         cmd = sock.recv(1)
         print(f'Received "{cmd}" command from server, starting transmission.')
 
@@ -81,24 +129,29 @@ def main():
         listener_thread.start()
 
         # Start generating signals
-        prng = np.random.default_rng(seed=42)
-        mean = 0.0
+        phase1 = 0.0
+        phase2 = 0.0
         while not stop_event.is_set():
-            # 1st signal: 4 channels, 10 samples, 128sps
-            data1 = prng.normal(loc=mean, scale=100.0, size=(10, 4)).astype(np.float32)
-            # 2nd signal: 2 channel, 4 samples, 51.2sps
-            data2 = prng.normal(loc=mean, scale=100.0, size=(4, 2)).astype(np.float32)
+            # 1st signal: 4 channels of square wave
+            data1 = []
+            for _ in range(4):
+                data_i, phase1 = _square_chunk(fs1 // 50, fs1, gain1, phase1)
+                data1.append(data_i)
+            data1 = np.column_stack(data1).astype(np.float32)
+
+            # 2nd signal: 2 channels of sine wave
+            data2 = []
+            for _ in range(2):
+                data_i, phase2 = _sine_chunk(fs2 // 50, fs2, gain2, phase2)
+                data2.append(data_i)
+            data2 = np.column_stack(data2).astype(np.float32)
 
             # Send data to TCP server
             data = np.concatenate((data1.flatten(), data2.flatten()))
             sock.sendall(data.tobytes())
 
-            # Update mean
-            mean += prng.normal(scale=50.0)
-
-            # Fastest signal: 128 sps, 10 samples generated at once
-            # -> set timer interval corresponding to 10 samples / 128 sps, i.e., 78 ms
-            time.sleep(0.078)
+            # Emulate acquisition
+            time.sleep(0.02)
 
     except KeyboardInterrupt:
         print("\nExiting program...")
