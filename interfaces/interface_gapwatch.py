@@ -21,7 +21,7 @@ import struct
 
 import numpy as np
 
-FS = 2000
+FS = 1000
 GAIN = 6
 TEST_ADC = True
 BUFF_SIZE = FS // 50
@@ -42,6 +42,8 @@ GAIN_MAP = {
     8: 0x50,
     12: 0x60,
 }
+
+CH_ORDER = np.asarray([0, 1, 12, 13, 2, 3, 4, 5, 10, 11, 8, 9, 14, 15, 6, 7])
 
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
@@ -117,6 +119,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
+
+    # Reorder channels
+    emg = emg[:, CH_ORDER]
 
     # Read battery and packet counter
     battery = np.asarray(
