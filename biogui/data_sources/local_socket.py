@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import time
 
-from PySide6.QtCore import QByteArray
+from PySide6.QtCore import QByteArray, QThread
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QWidget
 
@@ -179,11 +179,11 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
-                if type(c) is bytes:
+                if isinstance(c, (bytes, bytearray)):
                     self._clientSock.write(c)
-                elif type(c) is float:
-                    time.sleep(c)
-            self._clientSock.flush()
+                    self._clientSock.waitForBytesWritten(1000)
+                elif isinstance(c, float):
+                    QThread.msleep(int(c * 1000))
 
             # Close socket
             self._clientSock.close()
@@ -205,10 +205,11 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
 
         # Start command
         for c in self._startSeq:
-            if type(c) is bytes:
+            if isinstance(c, (bytes, bytearray)):
                 self._clientSock.write(c)
-            elif type(c) is float:
-                time.sleep(c)
+                self._clientSock.waitForBytesWritten(1000)
+            elif isinstance(c, float):
+                QThread.msleep(int(c * 1000))
 
         logging.info("DataWorker: local communication started.")
 
