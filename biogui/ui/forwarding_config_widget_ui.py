@@ -134,7 +134,7 @@ class Ui_ForwardingConfigWidget(object):
         self.socketGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Socket settings", None))
         self.label3.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Socket type:", None))
         self.socketTypeComboBox.setItemText(0, QCoreApplication.translate("ForwardingConfigWidget", u"TCP", None))
-        self.socketTypeComboBox.setItemText(1, QCoreApplication.translate("ForwardingConfigWidget", u"Local", None))
+        self.socketTypeComboBox.setItemText(1, QCoreApplication.translate("ForwardingConfigWidget", u"UNIX", None))
 
         self.label4.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Socket address:", None))
         self.socketAddressTextField.setText(QCoreApplication.translate("ForwardingConfigWidget", u"127.0.0.1", None))
