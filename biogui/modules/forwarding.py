@@ -20,14 +20,15 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import socket
 from collections import deque
 from itertools import islice
+from sys import platform
 from types import MappingProxyType
 
 import numpy as np
 from PySide6.QtCore import Qt, QLocale, QObject, QThread, Signal
 from PySide6.QtGui import QIntValidator, QStandardItem, QStandardItemModel
-from PySide6.QtNetwork import QLocalSocket, QTcpSocket
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
@@ -67,87 +68,6 @@ def getCheckedSignals(dataSourceModel: QStandardItemModel) -> dict[str, list[str
     return checkedSigs
 
 
-class _Socket(QObject):
-    """
-    Abstraction for Qt-based sockets.
-
-    Parameters
-    ----------
-    socketConfig : dict
-        Dictionary containing the configuration of the socket:
-        - for TCP sockets, the server address and port;
-        - for local sockets, the server path.
-    parent : QObject or None, default=None
-        Parent QObject.
-
-    Attributes
-    ----------
-    _socketConfig : dict
-        Dictionary containing the configuration of the socket.
-    _socket : QTcpSocket or QLocalSocket
-        Actual socket instance.
-
-    Class attributes
-    ----------------
-    errorOccurred : Signal
-        Qt Signal emitted when an error occurs.
-    """
-
-    errorOccurred = Signal(int)
-
-    def __init__(self, socketConfig: dict, parent: QObject | None = None) -> None:
-        super().__init__(parent)
-
-        if "socketAddress" in socketConfig:
-            self._socketConfig = {
-                "socketAddress": socketConfig["socketAddress"],
-                "socketPort": socketConfig["socketPort"],
-            }
-
-            self._socket = QTcpSocket(self)
-        else:
-            self._socketConfig = {"socketPath": socketConfig["socketPath"]}
-
-            self._socket = QLocalSocket(self)
-
-        self._socket.errorOccurred.connect(self.errorOccurred.emit)
-
-    def connectToServer(self) -> None:
-        """Connect the socket to the given server."""
-        if isinstance(self._socket, QTcpSocket):
-            self._socket.connectToHost(
-                self._socketConfig["socketAddress"], self._socketConfig["socketPort"]
-            )
-        elif isinstance(self._socket, QLocalSocket):
-            self._socket.connectToServer(self._socketConfig["socketPath"])
-
-    def isConnected(self) -> bool:
-        if isinstance(self._socket, QTcpSocket):
-            return self._socket.state() == QTcpSocket.ConnectedState  # type: ignore
-        elif isinstance(self._socket, QLocalSocket):
-            return self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
-
-        return False  # should never happen
-
-    def write(self, data: bytes) -> None:
-        """Write bytes to the socket and then flush."""
-        self._socket.write(data)
-        self._socket.flush()
-
-    def close(self) -> None:
-        """Close the socket."""
-        if (
-            isinstance(self._socket, QTcpSocket)
-            and self._socket.state() == QTcpSocket.ConnectedState  # type: ignore
-        ):
-            self._socket.disconnectFromHost()
-        elif (
-            isinstance(self._socket, QLocalSocket)
-            and self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
-        ):
-            self._socket.disconnectFromServer()
-
-
 class _ForwardingWorker(QObject):
     """
     Worker that forwards the acquired data.
@@ -170,8 +90,9 @@ class _ForwardingWorker(QObject):
     def __init__(self) -> None:
         super().__init__()
 
-        self._socketConfig: dict = {}
-        self._socket: _Socket | None = None
+        self._socketConfig = {}
+        self._socket: socket.socket | None = None
+        self._connected = False
         self._buffers = {}
 
     @property
@@ -203,13 +124,26 @@ class _ForwardingWorker(QObject):
 
     def connectToServer(self) -> None:
         """Create the socket and connect to the specified server."""
-        self._socket = _Socket(self._socketConfig, parent=self)
-        self._socket.errorOccurred.connect(
-            lambda: self.errorOccurred.emit(
-                "ForwardingWorker: cannot connect to server."
-            )
-        )
-        self._socket.connectToServer()
+        if not self._socketConfig:  # empty configuration (should never happen)
+            return
+
+        try:
+            if "socketAddress" in self._socketConfig:  # TCP socket
+                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._socket.connect(
+                    (
+                        self._socketConfig["socketAddress"],
+                        self._socketConfig["socketPort"],
+                    )
+                )
+            else:  # UNIX
+                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self._socket.connect(self._socketConfig["socketPath"])
+        except Exception as e:
+            self.errorOccurred.emit(f"ForwardingWorker: cannot connect to server: {e}.")
+            return
+
+        self._connected = True
 
     @Slot(list)
     def forward(self, dataPacket: list[SigData]) -> None:
@@ -222,7 +156,7 @@ class _ForwardingWorker(QObject):
             Data to process.
         """
         # If connection is not established, do nothing
-        if self._socket is None or not self._socket.isConnected():
+        if self._socket is None or not self._connected:
             return
 
         # Get data source ID
@@ -255,7 +189,7 @@ class _ForwardingWorker(QObject):
                     data.extend(np.asarray(queue)[:winLen].tobytes())
                     # Shift by step length
                     sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
-            self._socket.write(data)
+            self._socket.sendall(data)
 
     def reset(self) -> None:
         """Reset the worker."""
@@ -264,7 +198,6 @@ class _ForwardingWorker(QObject):
         # Disconnect socket
         if self._socket is not None:
             self._socket.close()
-            self._socket.deleteLater()
             self._socket = None
 
 
@@ -288,11 +221,16 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.socketPortTextField.setValidator(portValidator)
 
-        # By default, TCP is selected -> hide local socket option
+        # By default, TCP is selected -> hide UNIX socket option
         self.label6.hide()
         self.socketPathTextField.hide()
 
         self.socketTypeComboBox.currentTextChanged.connect(self._onComboBoxChange)
+
+        # Disable UNIX socket option on Windows
+        if platform == "win32":
+            index = self.socketTypeComboBox.findText("UNIX")
+            self.socketTypeComboBox.model().item(index).setEnabled(False)  # type: ignore
 
     def validateConfig(self) -> tuple[dict | None, str]:
         """
@@ -327,7 +265,7 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
 
             return config, ""
 
-        if self.socketTypeComboBox.currentText() == "Local":
+        if self.socketTypeComboBox.currentText() == "UNIX":
             config["socketPath"] = self.socketPathTextField.text()
 
             return config, ""
@@ -341,16 +279,16 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
             self.socketAddressTextField.show()
             self.label5.show()
             self.socketPortTextField.show()
-            # Hide local options
+            # Hide UNIX options
             self.label6.hide()
             self.socketPathTextField.hide()
-        elif socketType == "Local":
+        elif socketType == "UNIX":
             # Hide TCP options
             self.label4.hide()
             self.socketAddressTextField.hide()
             self.label5.hide()
             self.socketPortTextField.hide()
-            # Show local options
+            # Show UNIX options
             self.label6.show()
             self.socketPathTextField.show()
 

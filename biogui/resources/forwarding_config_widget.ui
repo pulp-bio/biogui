@@ -83,7 +83,7 @@
            </item>
            <item>
             <property name="text">
-             <string>Local</string>
+             <string>UNIX</string>
             </property>
            </item>
           </widget>
