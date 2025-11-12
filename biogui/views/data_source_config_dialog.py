@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+from sys import platform
 
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
@@ -151,6 +152,11 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._configWidget = data_sources.getConfigWidget(dataSourceType, self)
         self.dataSourceConfigContainer.addWidget(self._configWidget)
         self._updateTabOrder()
+
+        # Disable Unix socket option on Windows
+        if platform == "win32":
+            index = self.dataSourceComboBox.findText("Unix socket")
+            self.dataSourceComboBox.model().item(index).setEnabled(False)  # type: ignore
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)

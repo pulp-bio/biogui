@@ -83,7 +83,7 @@
            </item>
            <item>
             <property name="text">
-             <string>UNIX</string>
+             <string>Unix</string>
             </property>
            </item>
           </widget>

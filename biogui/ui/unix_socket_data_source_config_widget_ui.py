@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'local_socket_data_source_config_widget.ui'
+## Form generated from reading UI file 'unix_socket_data_source_config_widget.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -18,33 +18,33 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QFormLayout, QLabel, QLineEdit,
     QSizePolicy, QWidget)
 
-class Ui_LocalSocketDataSourceConfigWidget(object):
-    def setupUi(self, LocalSocketDataSourceConfigWidget):
-        if not LocalSocketDataSourceConfigWidget.objectName():
-            LocalSocketDataSourceConfigWidget.setObjectName(u"LocalSocketDataSourceConfigWidget")
-        LocalSocketDataSourceConfigWidget.resize(400, 44)
-        self.formLayout = QFormLayout(LocalSocketDataSourceConfigWidget)
+class Ui_UnixSocketDataSourceConfigWidget(object):
+    def setupUi(self, UnixSocketDataSourceConfigWidget):
+        if not UnixSocketDataSourceConfigWidget.objectName():
+            UnixSocketDataSourceConfigWidget.setObjectName(u"UnixSocketDataSourceConfigWidget")
+        UnixSocketDataSourceConfigWidget.resize(400, 44)
+        self.formLayout = QFormLayout(UnixSocketDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
-        self.label = QLabel(LocalSocketDataSourceConfigWidget)
+        self.label = QLabel(UnixSocketDataSourceConfigWidget)
         self.label.setObjectName(u"label")
         self.label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
         self.label.setWordWrap(False)
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
 
-        self.socketPathTextField = QLineEdit(LocalSocketDataSourceConfigWidget)
+        self.socketPathTextField = QLineEdit(UnixSocketDataSourceConfigWidget)
         self.socketPathTextField.setObjectName(u"socketPathTextField")
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.socketPathTextField)
 
 
-        self.retranslateUi(LocalSocketDataSourceConfigWidget)
+        self.retranslateUi(UnixSocketDataSourceConfigWidget)
 
-        QMetaObject.connectSlotsByName(LocalSocketDataSourceConfigWidget)
+        QMetaObject.connectSlotsByName(UnixSocketDataSourceConfigWidget)
     # setupUi
 
-    def retranslateUi(self, LocalSocketDataSourceConfigWidget):
-        LocalSocketDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("LocalSocketDataSourceConfigWidget", u"Local Socket Data Source Configuration", None))
-        self.label.setText(QCoreApplication.translate("LocalSocketDataSourceConfigWidget", u"Socket path:", None))
+    def retranslateUi(self, UnixSocketDataSourceConfigWidget):
+        UnixSocketDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("UnixSocketDataSourceConfigWidget", u"Local Socket Data Source Configuration", None))
+        self.label.setText(QCoreApplication.translate("UnixSocketDataSourceConfigWidget", u"Socket path:", None))
     # retranslateUi
 

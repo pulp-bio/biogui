@@ -41,9 +41,9 @@ The script will then generate signals accordingly.
 """
 
 FS1 = 200
-GAIN1 = 2
+GAIN1 = 1
 FS2 = 1000
-GAIN2 = 8
+GAIN2 = 4
 N_SAMP1 = FS1 // 50
 N_SAMP2 = FS2 // 50
 """Dummy signal parameters."""

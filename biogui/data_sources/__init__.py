@@ -22,13 +22,14 @@ from __future__ import annotations
 from PySide6.QtWidgets import QWidget
 
 from .base import DataSourceConfigWidget, DataSourceType, DataSourceWorker
-from .local_socket import (
-    LocalSocketConfigWidget,
-    LocalSocketDataSourceWorker,
+from .unix_socket import (
+    UnixSocketConfigWidget,
+    UnixSocketDataSourceWorker,
 )
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
 from .microphone import MicrophoneConfigWidget, MicrophoneDataSourceWorker
+
 
 def getConfigWidget(
     dataSourceType: DataSourceType, parent: QWidget
@@ -51,7 +52,7 @@ def getConfigWidget(
     configWidgetDict = {
         DataSourceType.TCP: TCPConfigWidget,
         DataSourceType.SERIAL: SerialConfigWidget,
-        DataSourceType.LOCAL_SOCK: LocalSocketConfigWidget,
+        DataSourceType.UNIX_SOCK: UnixSocketConfigWidget,
         DataSourceType.MIC: MicrophoneConfigWidget,
     }
     return configWidgetDict[dataSourceType](parent)
@@ -88,7 +89,7 @@ def getDataSourceWorker(
     dataSourceDict = {
         DataSourceType.SERIAL: SerialDataSourceWorker,
         DataSourceType.TCP: TCPDataSourceWorker,
-        DataSourceType.LOCAL_SOCK: LocalSocketDataSourceWorker,
+        DataSourceType.UNIX_SOCK: UnixSocketDataSourceWorker,
         DataSourceType.MIC: MicrophoneDataSourceWorker,
     }
     return dataSourceDict[dataSourceType](packetSize, startSeq, stopSeq, **kwargs)

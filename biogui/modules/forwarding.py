@@ -136,7 +136,7 @@ class _ForwardingWorker(QObject):
                         self._socketConfig["socketPort"],
                     )
                 )
-            else:  # UNIX
+            else:  # Unix
                 self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 self._socket.connect(self._socketConfig["socketPath"])
         except Exception as e:
@@ -221,15 +221,15 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.socketPortTextField.setValidator(portValidator)
 
-        # By default, TCP is selected -> hide UNIX socket option
+        # By default, TCP is selected -> hide Unix socket option
         self.label6.hide()
         self.socketPathTextField.hide()
 
         self.socketTypeComboBox.currentTextChanged.connect(self._onComboBoxChange)
 
-        # Disable UNIX socket option on Windows
+        # Disable Unix socket option on Windows
         if platform == "win32":
-            index = self.socketTypeComboBox.findText("UNIX")
+            index = self.socketTypeComboBox.findText("Unix")
             self.socketTypeComboBox.model().item(index).setEnabled(False)  # type: ignore
 
     def validateConfig(self) -> tuple[dict | None, str]:
@@ -265,7 +265,7 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
 
             return config, ""
 
-        if self.socketTypeComboBox.currentText() == "UNIX":
+        if self.socketTypeComboBox.currentText() == "Unix":
             config["socketPath"] = self.socketPathTextField.text()
 
             return config, ""
@@ -279,16 +279,16 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
             self.socketAddressTextField.show()
             self.label5.show()
             self.socketPortTextField.show()
-            # Hide UNIX options
+            # Hide Unix options
             self.label6.hide()
             self.socketPathTextField.hide()
-        elif socketType == "UNIX":
+        elif socketType == "Unix":
             # Hide TCP options
             self.label4.hide()
             self.socketAddressTextField.hide()
             self.label5.hide()
             self.socketPortTextField.hide()
-            # Show UNIX options
+            # Show Unix options
             self.label6.show()
             self.socketPathTextField.show()
 
