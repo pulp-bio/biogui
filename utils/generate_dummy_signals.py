@@ -25,6 +25,33 @@ import time
 
 import numpy as np
 
+type Endpoint = str | tuple[str, int]
+
+
+def parse_endpoint(endpoint: str) -> Endpoint:
+    """
+    Parse an endpoint string into a Unix socket or address:port pair.
+
+    Arguments
+    ---------
+    endpoint : str
+        Endpoint string, either a Unix socket path or "address:port" pair.
+
+    Returns
+    -------
+    Endpoint
+        Parsed endpoint.
+    """
+    if ":" in endpoint:
+        address, port_str = endpoint.split(":")
+        try:
+            port = int(port_str)
+        except ValueError:
+            raise ValueError(f"Invalid port number: {port_str}")
+        return (address, port)
+    else:
+        return endpoint
+
 
 FS_DICT = {
     0x01: 200,
@@ -62,7 +89,7 @@ def _listen_for_stop(sock, stop_event):
 
 
 def _square_chunk(n_samp: int, fs: float, gain: int, phase: float):
-    phase_inc = 2 * np.pi / fs  # 1 Hz
+    phase_inc = 2 * np.pi * 5 / fs  # 5 Hz
     k = np.arange(n_samp)
     ph = (phase + phase_inc * k) % (2 * np.pi)
     samples = np.where(ph < 2 * np.pi * 0.5, gain, -gain)
@@ -71,7 +98,7 @@ def _square_chunk(n_samp: int, fs: float, gain: int, phase: float):
 
 
 def _sine_chunk(n_samp: int, fs: float, gain: int, phase: float):
-    phase_inc = 2 * np.pi / fs  # 1 Hz
+    phase_inc = 2 * np.pi * 10 / fs  # 10 Hz
     k = np.arange(n_samp)
     ph = (phase + phase_inc * k) % (2 * np.pi)
     samples = gain * np.sin(ph)
@@ -81,32 +108,37 @@ def _sine_chunk(n_samp: int, fs: float, gain: int, phase: float):
 
 def main():
     # Parse inputs
-    if len(sys.argv) not in (2, 3):
-        sys.exit("Usage: python3 generate_dummy_signals.py [ADDRESS] PORT")
-
-    if len(sys.argv) == 2:
-        addr = "127.0.0.1"
-    else:
-        addr = sys.argv[1]
-    try:
-        port = int(sys.argv[-1])
-    except ValueError:
-        sys.exit("Port is not an integer.")
+    if len(sys.argv) != 2:
+        sys.exit(
+            "Usage: python3 generate_dummy_signals.py ADDRESS:PORT | UNIX_SOCKET_PATH"
+        )
+    endpoint = parse_endpoint(sys.argv[1])
 
     stop_event = None
     listener_thread = None
     sock = None
     try:
-        # Create TCP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Create socketmatch emg_endpoint:
+        match endpoint:
+            case str():
+                if sys.platform == "win32":
+                    sys.exit("Unix sockets are not supported on Windows.")
+
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            case (str(), int()):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            case _:
+                raise ValueError("Invalid endpoint type.")
+
         while True:
             try:
-                sock.connect((addr, port))
+                sock.connect(endpoint)
                 break
             except ConnectionRefusedError:
                 print("Connection refused, retrying in a second...")
                 time.sleep(1)
-        print(f"Connected to server at {addr}:{port}.")
+        print(f"Connected to server at {endpoint}.")
 
         # Wait for start command
         conf = sock.recv(2)

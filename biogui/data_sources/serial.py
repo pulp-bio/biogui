@@ -20,7 +20,6 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-import time
 
 from PySide6.QtCore import QByteArray, QIODevice, QLocale, QThread
 from PySide6.QtGui import QIcon, QIntValidator
