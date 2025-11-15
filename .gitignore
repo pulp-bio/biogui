@@ -1,9 +1,3 @@
-bicep_tracking_sol.ipynb
-wulpus_user_manual.pdf
-wulpus_user_manual.txt
-wulpus_gui.py
-*.bio
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
