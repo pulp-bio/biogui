@@ -28,6 +28,8 @@ from matplotlib.widgets import Slider
 
 def read_bio_file(file_path: str) -> dict:
     """
+    Read a .bio file and extract all signals, timestamps, and triggers.
+
     Parameters
     ----------
     file_path : str
@@ -36,7 +38,16 @@ def read_bio_file(file_path: str) -> dict:
     Returns
     -------
     dict
-        Dictionary containing timestamp, signals and trigger.
+        Dictionary with structure:
+        {
+            'timestamp': {'data': ndarray, 'fs': float},
+            'signal_name': {'data': ndarray, 'fs': float},
+            ...
+            'trigger': {'data': ndarray, 'fs': float}  # if present
+        }
+
+        Note: trigger values are stored in signals['trigger']['data']
+              NOT as a separate top-level key!
     """
     dtypeMap = {
         "?": np.dtype("bool"),
@@ -101,7 +112,7 @@ def read_bio_file(file_path: str) -> dict:
 
         # 3. Trigger (optional)
         if is_trigger:
-            trigger = np.frombuffer(f.read(), dtype=np.int32).reshape(n_samp_base, 1)
+            trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
 
     return signals
