@@ -496,11 +496,11 @@ rx_tx_biceps_config.add_config(
     rx_channels=[3],
     optimized_switching=False,
 )
-rx_tx_biceps_config.add_config(
-    tx_channels=[7],
-    rx_channels=[7],
-    optimized_switching=False,
-)
+# rx_tx_biceps_config.add_config(
+#     tx_channels=[7],
+#     rx_channels=[7],
+#     optimized_switching=False,
+# )
 
 
 biceps_exercise_config = WulpusUssConfig(
@@ -514,8 +514,8 @@ biceps_exercise_config = WulpusUssConfig(
     num_samples=400,
     rx_gain=30.8,
     num_txrx_configs=rx_tx_biceps_config.tx_rx_len,
-    tx_configs=rx_tx_biceps_config.get_tx_configs(),  # only channel 7 with optimized switching
-    rx_configs=rx_tx_biceps_config.get_rx_configs(),  # only channel 7 with optimized switching
+    tx_configs=rx_tx_biceps_config.get_tx_configs(),
+    rx_configs=rx_tx_biceps_config.get_rx_configs(),
     start_hvmuxrx=498,
     start_ppg=500,
     turnon_adc=5,
@@ -525,7 +525,7 @@ biceps_exercise_config = WulpusUssConfig(
     capt_timeout=3000,
 )
 
-wulpus_config = waterbath_config
+wulpus_config = biceps_exercise_config
 
 packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 """Number of bytes in each package."""
