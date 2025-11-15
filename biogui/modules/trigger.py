@@ -113,12 +113,16 @@ class _TriggerWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle("Trigger Viewer")
-        self.resize(480, 480)
+        self.resize(600, 600)
 
         self._label = QLabel(self)
         self._qColor = QColor("black" if detectTheme() == "light" else "white")
 
         self._imageFolder = ""
+        # Store last render parameters for re-rendering on resize
+        self._lastMainText = ""
+        self._lastImagePath = ""
+        self._lastSubText = ""
 
     @property
     def imageFolder(self) -> str:
@@ -146,6 +150,11 @@ class _TriggerWidget(QWidget):
         subText : str
             If provided (during rest), the countdown number as a string.
         """
+        # Store parameters for potential re-render
+        self._lastMainText = mainText
+        self._lastImagePath = imagePath
+        self._lastSubText = subText
+
         pixmap = QPixmap(self.width(), self.height())
         pixmap.fill(Qt.transparent)  # type: ignore
 
@@ -154,10 +163,19 @@ class _TriggerWidget(QWidget):
         painter.setPen(self._qColor)
 
         if imagePath:
-            # Display the image file scaled to widget size
+            # Display the image file scaled to widget size, preserving aspect ratio
             fullPath = os.path.join(self._imageFolder, imagePath)
-            img = QPixmap(fullPath).scaled(self.width(), self.height())
-            painter.drawPixmap(0, 0, img)
+            img = QPixmap(fullPath).scaled(
+                self.width(),
+                self.height(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+            # Center the image
+            x = (self.width() - img.width()) // 2
+            y = (self.height() - img.height()) // 2
+            painter.drawPixmap(x, y, img)
+
         else:
             if subText:
                 # Rest period: draw upcoming label and countdown
@@ -185,6 +203,13 @@ class _TriggerWidget(QWidget):
 
         painter.end()
         self._label.setPixmap(pixmap)
+
+    def resizeEvent(self, event) -> None:
+        """Re-render when window is resized."""
+        super().resizeEvent(event)
+        self._label.resize(self.size())
+        if self._lastMainText:  # Only if we've rendered something
+            self.renderImage(self._lastMainText, self._lastImagePath, self._lastSubText)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.widgetClosed.emit()
