@@ -63,9 +63,14 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         "durationStart",
         "durationRest",
         "imageFolder",
+        "alternating",  # Optional
     }
-    if providedKeys != validKeys:
-        return None, "The provided keys are not valid."
+    requiredKeys = validKeys - {"alternating"}
+
+    if not requiredKeys.issubset(providedKeys):
+        return None, "Required keys are missing."
+    if not providedKeys.issubset(validKeys):
+        return None, "Invalid keys provided."
 
     # Check values
     if not isinstance(config["nReps"], int) or config["nReps"] <= 0:
@@ -76,6 +81,11 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         return None, "The duration of the start period must be a non-negative int."
     if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
         return None, "The duration of the rest period must be a non-negative int."
+
+    # Validate alternating if provided
+    if "alternating" in config:
+        if not isinstance(config["alternating"], bool):
+            return None, "alternating must be true or false."
 
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
@@ -349,8 +359,16 @@ class TriggerController(QObject):
             return
 
         if self._restFlag:
-            # Start a new rest interval
+            # Check rest duration
             restMs = self._confWidget.config["durationRest"]
+
+            # Skip rest phase entirely if durationRest is 0 (continuous mode)
+            if restMs == 0:
+                self._restFlag = False
+                self._updateTriggerAndImage()  # Immediately proceed to next trigger
+                return
+
+            # Start a new rest interval (only if restMs > 0)
             # Compute initial seconds for countdown (round up)
             self._restCounter = math.ceil(restMs / 1000)
             # Determine upcoming stimulus label
@@ -429,10 +447,27 @@ class TriggerController(QObject):
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
 
-        # Build trigger IDs and replicate each label nReps times
-        for i, k in enumerate(self._confWidget.config["triggers"].keys()):
+        # Build trigger IDs
+        trigger_names = list(self._confWidget.config["triggers"].keys())
+        for i, k in enumerate(trigger_names):
             self._triggerIds[k] = i + 1
-            self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
+
+        # Create trigger sequence based on alternating flag
+        alternating = self._confWidget.config.get("alternating", False)
+
+        self._triggerLabels = []
+        if alternating:
+            # Alternating mode: [T1, T2, T1, T2, ...] x nReps
+            for _ in range(self._confWidget.config["nReps"]):
+                for trigger_name in trigger_names:
+                    self._triggerLabels.append(trigger_name)
+        else:
+            # Blocked mode (default, original behavior): [T1, T1, ..., T2, T2, ...]
+            for trigger_name in trigger_names:
+                self._triggerLabels.extend(
+                    [trigger_name] * self._confWidget.config["nReps"]
+                )
+
         self._triggerLabels.append("last_stop")
 
         self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
