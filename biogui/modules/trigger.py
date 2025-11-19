@@ -365,36 +365,36 @@ class TriggerController(QObject):
             # Skip rest phase entirely if durationRest is 0 (continuous mode)
             if restMs == 0:
                 self._restFlag = False
-                self._updateTriggerAndImage()  # Immediately proceed to next trigger
-                return
-
-            # Start a new rest interval (only if restMs > 0)
-            # Compute initial seconds for countdown (round up)
-            self._restCounter = math.ceil(restMs / 1000)
-            # Determine upcoming stimulus label
-            if self._triggerCounter < len(self._triggerLabels):
-                nextLabel = self._triggerLabels[self._triggerCounter]
-                self._upcomingLabel = nextLabel
+                # Don't recurse - just fall through to stimulus code below
             else:
-                self._upcomingLabel = ""
-            # Draw countdown with upcoming label
-            self._triggerWidget.renderImage(
-                self._upcomingLabel, "", str(self._restCounter)
-            )
-            # Force triggers to zero during rest
-            for streamingController in self._streamingControllers.values():
-                streamingController.setTrigger(0)
-            logging.info(
-                f"Rest started: upcoming='{self._upcomingLabel}' \
-                countdown={self._restCounter}s (durationRest={restMs}ms)."
-            )
-            # Schedule end of rest after exactly restMs
-            QTimer.singleShot(restMs, self._endRest)
-            # Begin per-second countdown updates
-            self._countdownTimer.start()
+                # Start a new rest interval (only if restMs > 0)
+                # Compute initial seconds for countdown (round up)
+                self._restCounter = math.ceil(restMs / 1000)
+                # Determine upcoming stimulus label
+                if self._triggerCounter < len(self._triggerLabels):
+                    nextLabel = self._triggerLabels[self._triggerCounter]
+                    self._upcomingLabel = nextLabel
+                else:
+                    self._upcomingLabel = ""
+                # Draw countdown with upcoming label
+                self._triggerWidget.renderImage(
+                    self._upcomingLabel, "", str(self._restCounter)
+                )
+                # Force triggers to zero during rest
+                for streamingController in self._streamingControllers.values():
+                    streamingController.setTrigger(0)
+                logging.info(
+                    f"Rest started: upcoming='{self._upcomingLabel}' \
+                    countdown={self._restCounter}s (durationRest={restMs}ms)."
+                )
+                # Schedule end of rest after exactly restMs
+                QTimer.singleShot(restMs, self._endRest)
+                # Begin per-second countdown updates
+                self._countdownTimer.start()
+                return  # ← Exit here for rest phase
 
-        else:
-            # Stimulus interval
+        # Stimulus interval (executed when _restFlag is False)
+        if not self._restFlag:
             triggerLabel = self._triggerLabels[self._triggerCounter]
             if triggerLabel != "last_stop":
                 newTrigger = self._triggerIds[triggerLabel]
