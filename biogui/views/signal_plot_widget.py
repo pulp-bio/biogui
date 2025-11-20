@@ -258,8 +258,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         if self._is_ultrasound():
             num_samples = self._signal_type.get(
-                "num_samples", 400
-            )  # Default 400 for wulpus
+                "num_samples", 397
+            )  # Default for wulpus
 
             if num_samples > 0:
                 prf = sample_count / num_samples
