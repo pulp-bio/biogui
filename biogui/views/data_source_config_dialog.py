@@ -191,7 +191,11 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         # Populate interface modules ComboBox
         self._interfaceModules = _loadInterfacesFromDirectory()
+        # Add placeholder as first item
+        self.interfaceModuleComboBox.addItem("-- Choose Interface --")
         self.interfaceModuleComboBox.addItems(self._interfaceModules.keys())
+        # Set current index to 0 (the placeholder)
+        self.interfaceModuleComboBox.setCurrentIndex(0)
 
         # Create data source configuration widget
         dataSources = list(
@@ -248,7 +252,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _onInterfaceModuleChange(self, displayName: str) -> None:
         """Handle interface module selection from ComboBox."""
-        if displayName == "":
+        # Ignore placeholder and empty strings
+        if displayName == "" or displayName == "-- Choose Interface --":
             return
 
         interfacePath = self._interfaceModules.get(displayName)
@@ -265,7 +270,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                 buttons=QMessageBox.Retry,
                 defaultButton=QMessageBox.Retry,
             )
-            self.interfaceModuleComboBox.setCurrentIndex(-1)
+            self.interfaceModuleComboBox.setCurrentIndex(0)  # Reset to placeholder
             return
 
         self._dataSourceConfig["interfacePath"] = interfacePath
