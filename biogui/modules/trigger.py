@@ -396,7 +396,7 @@ class TriggerController(QObject):
         # Stimulus interval (executed when _restFlag is False)
         if not self._restFlag:
             triggerLabel = self._triggerLabels[self._triggerCounter]
-            if triggerLabel != "last_stop":
+            if triggerLabel != "stop":
                 newTrigger = self._triggerIds[triggerLabel]
                 imagePath = self._confWidget.config["triggers"][triggerLabel]
             else:
@@ -410,7 +410,41 @@ class TriggerController(QObject):
             logging.info(f"Trigger updated: {newTrigger} (label: {triggerLabel}).")
 
             self._triggerCounter += 1
-            self._restFlag = True
+
+            # Check if this was the stop trigger - if so, we're done
+            if triggerLabel == "stop":
+                # Don't start timer, just let it finish
+                self._stopTriggerGen()
+                return
+
+            # Determine if we should enter rest phase after this trigger
+            alternating = self._confWidget.config.get("alternating", False)
+            numTriggerTypes = len(self._confWidget.config["triggers"])
+
+            if alternating:
+                # In alternating mode, rest after every complete set of trigger types
+                # But NOT before the stop trigger
+                if self._triggerCounter % numTriggerTypes == 0:
+                    # Check if next trigger is "stop"
+                    if (
+                        self._triggerCounter < len(self._triggerLabels)
+                        and self._triggerLabels[self._triggerCounter] == "stop"
+                    ):
+                        self._restFlag = False
+                    else:
+                        self._restFlag = True
+                else:
+                    self._restFlag = False
+            else:
+                # In blocked mode, check if next is stop
+                if (
+                    self._triggerCounter < len(self._triggerLabels)
+                    and self._triggerLabels[self._triggerCounter] == "stop"
+                ):
+                    self._restFlag = False
+                else:
+                    self._restFlag = True
+
             # After `durationTrigger` ms, call this same function again
             self._timer.start(self._confWidget.config["durationTrigger"])
 
@@ -468,15 +502,15 @@ class TriggerController(QObject):
                     [trigger_name] * self._confWidget.config["nReps"]
                 )
 
-        self._triggerLabels.append("last_stop")
+        self._triggerLabels.append("stop")
 
         self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
-        # Show an initial “start” label
+        # Show an initial "start" label and begin with rest phase to show upcoming gesture
         self._restFlag = True
         self._triggerWidget.renderImage("start", "")
         self._triggerWidget.show()
 
-        # Wait for durationStart before firing the very first stimulus
+        # Wait for durationStart before showing the first rest phase (with upcoming gesture)
         self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
