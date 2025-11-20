@@ -210,8 +210,12 @@ class SerialDataSourceWorker(DataSourceWorker):
         if not self._serialPort.open(QIODevice.ReadWrite):  # type: ignore
             errMsg = f"Cannot open serial port due to the following error:\n{self._serialPort.errorString()}."
             self.errorOccurred.emit(errMsg)
-            logging.error("DataWorker: {errMsg}")
+            logging.error(f"DataWorker: {errMsg}")
             return
+
+        # Set DTR and RTS signals to enable data transmission (required on Windows)
+        self._serialPort.setDataTerminalReady(True)
+        self._serialPort.setRequestToSend(True)
 
         # Start command
         for c in self._startSeq:
