@@ -1,20 +1,8 @@
 """
 This script reads the .bio file and plots the acquired signal.
 
-
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Licensed under the Apache License, Version 2.0
 """
 
 import argparse
@@ -28,25 +16,6 @@ from matplotlib import pyplot as plt
 def read_bio_file(file_path: str) -> dict:
     """
     Read a .bio file and extract all signals, timestamps, and triggers.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the .bio file.
-
-    Returns
-    -------
-    dict
-        Dictionary with structure:
-        {
-            'timestamp': {'data': ndarray, 'fs': float},
-            'signal_name': {'data': ndarray, 'fs': float},
-            ...
-            'trigger': {'data': ndarray, 'fs': float}  # if present
-        }
-
-        Note: trigger values are stored in signals['trigger']['data']
-              NOT as a separate top-level key!
     """
     dtypeMap = {
         "?": np.dtype("bool"),
@@ -62,13 +31,10 @@ def read_bio_file(file_path: str) -> dict:
         "d": np.dtype("float64"),
     }
 
-    # Read data
     with open(file_path, "rb") as f:
-        # Read number of signals
         n_signals = struct.unpack("<I", f.read(4))[0]
-
-        # Read other metadata
         fs_base, n_samp_base = struct.unpack("<fI", f.read(8))
+
         signals = {}
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", f.read(4))[0]
@@ -76,20 +42,16 @@ def read_bio_file(file_path: str) -> dict:
                 0
             ].decode()
             fs, n_samp, n_ch, dtype = struct.unpack("<f2Ic", f.read(13))
-            dtype = dtypeMap[dtype.decode("ascii")]
 
-            # Initialize signal array
             signals[sig_name] = {
                 "fs": fs,
                 "n_samp": n_samp,
                 "n_ch": n_ch,
-                "dtype": dtype,
+                "dtype": dtypeMap[dtype.decode("ascii")],
             }
 
-        # Read whether the trigger is available
         is_trigger = struct.unpack("<?", f.read(1))[0]
 
-        # Read actual signals:
         # 1. Timestamp
         ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
             n_samp_base, 1
@@ -104,12 +66,13 @@ def read_bio_file(file_path: str) -> dict:
             n_samp = sig_data.pop("n_samp")
             n_ch = sig_data.pop("n_ch")
             dtype = sig_data.pop("dtype")
+
             data = np.frombuffer(
                 f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
             ).reshape(n_samp, n_ch)
             sig_data["data"] = data
 
-        # 3. Trigger (optional)
+        # 3. Trigger
         if is_trigger:
             trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
@@ -121,77 +84,51 @@ def plot_signal_mmode(
     sig_name: str, sig_data: dict, samples_per_acquisition: int = 400
 ):
     """
-    Plot a single signal in M-mode (time vs depth with intensity as color).
-
-    Parameters
-    ----------
-    sig_name : str
-        Name of the signal.
-    sig_data : dict
-        Dictionary containing the signal data.
-    samples_per_acquisition : int
-        Number of samples per acquisition (default: 400).
+    Plot a single signal in M-mode (time vs depth).
+    Removed colorbar/intensity scale.
     """
     data = sig_data["data"]
     fs = sig_data["fs"]
     n_samp, n_ch = data.shape
 
-    # Calculate number of acquisitions
     n_acquisitions = n_samp // samples_per_acquisition
 
     if n_acquisitions == 0:
-        print(
-            f"Warning: Signal '{sig_name}' has not enough samples for even one acquisition (need {samples_per_acquisition}, got {n_samp}). Skipping."
-        )
+        print(f"Warning: Signal '{sig_name}' skipped (not enough samples).")
         return
 
-    # Reshape data into acquisitions: (n_acquisitions, samples_per_acquisition, n_ch)
+    # Reshape data
     truncated_samples = n_acquisitions * samples_per_acquisition
     data_reshaped = data[:truncated_samples, :].reshape(
         n_acquisitions, samples_per_acquisition, n_ch
     )
 
-    # Time axis: time of each acquisition
+    # Axes setup
     acquisition_duration = samples_per_acquisition / fs
     time_axis = np.arange(n_acquisitions) * acquisition_duration
-
-    # Depth axis: sample index within each acquisition
     depth_axis = np.arange(samples_per_acquisition)
 
-    # Create figure with subplots for each channel
     fig, axes = plt.subplots(
-        nrows=n_ch,
-        sharex=True,
-        figsize=(16, n_ch * 4),
-        layout="constrained",
+        nrows=n_ch, sharex=True, figsize=(16, n_ch * 4), layout="constrained"
     )
-
-    # Handle single channel case (axes is not a list)
     if n_ch == 1:
         axes = [axes]
 
     fig.suptitle(f"{sig_name} - M-mode")
 
-    # Plot M-mode for each channel
     for i in range(n_ch):
-        # Transpose so depth is on y-axis and time on x-axis
-        mmode_data = data_reshaped[
-            :, :, i
-        ].T  # Shape: (samples_per_acquisition, n_acquisitions)
+        mmode_data = data_reshaped[:, :, i].T
 
-        # Calculate dynamic level range for better contrast (like in mmode_plot_mode.py)
-        data_min = mmode_data.min()
-        data_max = mmode_data.max()
-        level_range = data_max - data_min if data_max != data_min else 1.0
+        # Dynamic level range calculation
+        data_min, data_max = mmode_data.min(), mmode_data.max()
+        level_range = (data_max - data_min) if data_max != data_min else 1.0
+        vmin, vmax = data_min - 0.1 * level_range, data_max + 0.1 * level_range
 
-        # Set vmin and vmax with some margin for better visibility
-        vmin = data_min - 0.1 * level_range
-        vmax = data_max + 0.1 * level_range
-
-        im = axes[i].imshow(
+        # Plot without assigning to variable 'im', since we don't need the handle for colorbar
+        axes[i].imshow(
             mmode_data,
             aspect="auto",
-            cmap="viridis",  # Using viridis like in mmode_plot_mode.py
+            cmap="viridis",
             extent=[time_axis[0], time_axis[-1], depth_axis[-1], depth_axis[0]],
             interpolation="nearest",
             vmin=vmin,
@@ -199,27 +136,16 @@ def plot_signal_mmode(
         )
         axes[i].set_ylabel(f"Channel {i}\nDepth (sample)")
         axes[i].grid(False)
-
-        # Add colorbar
-        plt.colorbar(im, ax=axes[i], label="Intensity")
+        # Removed: plt.colorbar(...)
 
     axes[-1].set_xlabel("Time (s)")
 
 
 def plot_signal_standard(sig_name: str, sig_data: dict):
-    """
-    Standard plot for a single signal.
-
-    Parameters
-    ----------
-    sig_name : str
-        Name of the signal.
-    sig_data : dict
-        Dictionary containing the signal data.
-    """
+    """Standard plot for a single signal."""
     n_samp, n_ch = sig_data["data"].shape
-
     t = np.arange(n_samp) / sig_data["fs"]
+
     fig, axes = plt.subplots(
         nrows=n_ch,
         sharex="all",
@@ -233,17 +159,7 @@ def plot_signal_standard(sig_name: str, sig_data: dict):
 
 
 def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
-    """
-    Plot ultrasound signals in M-mode, and timestamp/trigger in standard mode.
-
-    Parameters
-    ----------
-    signals : dict
-        Dictionary containing the signal data.
-    samples_per_acquisition : int
-        Number of samples per acquisition (default: 400).
-    """
-    # Plot data signals in M-mode
+    """Orchestrator for M-mode plotting."""
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
         if sig_name not in ["timestamp", "trigger"]:
@@ -251,9 +167,8 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
             data_signal_count += 1
 
     if data_signal_count == 0:
-        sys.exit("Error: No data signals found in the file (only timestamp/trigger).")
+        sys.exit("Error: No data signals found.")
 
-    # Plot timestamp and trigger in standard mode
     for sig_name, sig_data in signals.items():
         if sig_name in ["timestamp", "trigger"]:
             plot_signal_standard(sig_name, sig_data)
@@ -261,47 +176,28 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
     plt.show()
 
 
-def plot_standard(signals: dict):
-    """
-    Standard plot for all signals.
-
-    Parameters
-    ----------
-    signals : dict
-        Dictionary containing the signal data.
-    """
-    for sig_name, sig_data in signals.items():
-        plot_signal_standard(sig_name, sig_data)
-
-    plt.show()
-
-
 def main():
-    # Parse arguments
     parser = argparse.ArgumentParser(description="Plot signals from .bio files")
     parser.add_argument("file_path", type=str, help="Path to the .bio file")
     parser.add_argument(
-        "--ultrasound",
-        action="store_true",
-        help="Display ultrasound data in M-mode (time vs depth)",
+        "--ultrasound", action="store_true", help="Display ultrasound data in M-mode"
     )
     parser.add_argument(
         "--samples-per-acquisition",
         type=int,
         default=400,
-        help="Number of samples per acquisition for M-mode (default: 400)",
+        help="Samples per acquisition (default: 400)",
     )
 
     args = parser.parse_args()
-
-    # Read signals
     signals = read_bio_file(args.file_path)
 
-    # Plot based on mode
     if args.ultrasound:
         plot_ultrasound_mmode(signals, args.samples_per_acquisition)
     else:
-        plot_standard(signals)
+        for sig_name, sig_data in signals.items():
+            plot_signal_standard(sig_name, sig_data)
+        plt.show()
 
 
 if __name__ == "__main__":
