@@ -73,7 +73,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.label3.setText("Pulse Repetition Frequency (PRF):")
 
             num_samples = signal_type.get(
-                "num_samples", 400
+                "num_samples", 397
             )  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
             self.freqLabel.setText(f"{prf:.2f} Hz")

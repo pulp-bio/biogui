@@ -25,6 +25,7 @@ import logging
 import numpy as np
 
 # baudrate = 4000000
+# 397 ultrasound samples + 3 imu acceleration samples (x, y, z)
 ACQ_LENGTH_SAMPLES = 400
 
 # Protocol related
@@ -331,7 +332,7 @@ class WulpusUssConfig:
         pulse_freq=225e4,
         num_pulses=2,
         sampling_freq=USS_CAPTURE_ACQ_RATES[0],
-        num_samples=400,
+        num_samples=ACQ_LENGTH_SAMPLES,
         rx_gain=PGA_GAIN[-10],
         num_txrx_configs=1,
         tx_configs=[0],
@@ -474,7 +475,7 @@ waterbath_config = WulpusUssConfig(
     pulse_freq=1000000,
     num_pulses=11,
     sampling_freq=4000000.0,
-    num_samples=400,
+    num_samples=ACQ_LENGTH_SAMPLES,
     rx_gain=6.8,
     num_txrx_configs=rx_tx_waterbath_config.tx_rx_len,
     tx_configs=rx_tx_waterbath_config.get_tx_configs(),  # only channel 7 with optimized switching
@@ -511,7 +512,7 @@ biceps_exercise_config = WulpusUssConfig(
     pulse_freq=2250000,
     num_pulses=2,
     sampling_freq=8000000.0,
-    num_samples=400,
+    num_samples=ACQ_LENGTH_SAMPLES,
     rx_gain=30.8,
     num_txrx_configs=rx_tx_biceps_config.tx_rx_len,
     tx_configs=rx_tx_biceps_config.get_tx_configs(),
@@ -575,7 +576,8 @@ meas_period_s = wulpus_config.meas_period / 1e6  # Convert to seconds
 period_per_config_s = meas_period_s * wulpus_config.num_txrx_configs
 
 # Effective sampling rate: samples delivered per second for each configuration
-samples_per_second_per_config = wulpus_config.num_samples / period_per_config_s
+# subtract 3 samples for IMU data
+samples_per_second_per_config = (wulpus_config.num_samples - 3) / period_per_config_s
 
 # ADC start delay relative to pulse generation
 adc_start_delay = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
@@ -608,7 +610,8 @@ for config_id in range(wulpus_config.num_txrx_configs):
             "type": "ultrasound",
             "config_id": config_id,
             "rx_channel": rx_channel,
-            "num_samples": wulpus_config.num_samples,
+            # Adjust num_samples to exclude IMU data
+            "num_samples": wulpus_config.num_samples - 3,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,
             "adc_start_delay": adc_start_delay,
@@ -619,6 +622,18 @@ for config_id in range(wulpus_config.num_txrx_configs):
         f"WULPUS Config {config_id}: Created signal '{signal_name}' "
         f"(RX Ch{rx_channel}, fs={samples_per_second_per_config:.2f} Hz)"
     )
+
+
+# Add IMU signal
+sigInfo["imu"] = {
+    "fs": 1.0 / meas_period_s,
+    "nCh": 3,
+    "signal_type": {
+        "type": "time-series",
+    },
+}
+logging.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
+
 
 if len(sigInfo) == 0:
     raise ValueError(
@@ -647,6 +662,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     tx_rx_id = data[4]
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
 
+    # The last 3 samples are IMU data
+    us_samples = rf_arr[:-3]
+    imu_samples = rf_arr[-3:]
+
     # logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     # logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
@@ -654,10 +673,14 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     result = {}
 
     for signal_name in sigInfo.keys():
+        if signal_name == "imu":
+            result[signal_name] = imu_samples.reshape(1, 3)
+            continue
         # Check if this signal corresponds to the current config_id
         if config_to_signal_name.get(tx_rx_id) == signal_name:
             # This signal is active in this acquisition
-            result[signal_name] = rf_arr.reshape(-1, 1)
+            result[signal_name] = us_samples.reshape(-1, 1)
+            continue
         else:
             # This signal is not active in this acquisition - return empty array
             result[signal_name] = np.empty((0, 1), dtype=np.int16)

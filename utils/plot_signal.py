@@ -81,7 +81,7 @@ def read_bio_file(file_path: str) -> dict:
 
 
 def plot_signal_mmode(
-    sig_name: str, sig_data: dict, samples_per_acquisition: int = 400
+    sig_name: str, sig_data: dict, samples_per_acquisition: int = 397
 ):
     """
     Plot a single signal in M-mode (time vs depth).
@@ -158,11 +158,11 @@ def plot_signal_standard(sig_name: str, sig_data: dict):
         axes[i][0].plot(t, sig_data["data"][:, i])
 
 
-def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
+def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
     """Orchestrator for M-mode plotting."""
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
-        if sig_name not in ["timestamp", "trigger"]:
+        if sig_name not in ["timestamp", "trigger", "imu"]:
             plot_signal_mmode(sig_name, sig_data, samples_per_acquisition)
             data_signal_count += 1
 
@@ -170,7 +170,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
         sys.exit("Error: No data signals found.")
 
     for sig_name, sig_data in signals.items():
-        if sig_name in ["timestamp", "trigger"]:
+        if sig_name in ["timestamp", "trigger", "imu"]:
             plot_signal_standard(sig_name, sig_data)
 
     plt.show()
@@ -185,8 +185,8 @@ def main():
     parser.add_argument(
         "--samples-per-acquisition",
         type=int,
-        default=400,
-        help="Samples per acquisition (default: 400)",
+        default=397,
+        help="Samples per acquisition (default: 397)",
     )
 
     args = parser.parse_args()
