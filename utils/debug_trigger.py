@@ -1,4 +1,7 @@
+import argparse
+import os
 import struct
+import sys
 
 import numpy as np
 
@@ -6,18 +9,6 @@ import numpy as np
 def read_bio_file(file_path: str) -> dict:
     """
     Read a .bio file and return signals and triggers.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the .bio file.
-
-    Returns
-    -------
-    dict
-        Dictionary with keys:
-        - 'signals': Dict of signal_name -> {'data': np.ndarray, 'fs': float}
-        - 'trigger': np.ndarray (1D array of trigger values)
     """
     dtypeMap = {
         "?": np.dtype("bool"),
@@ -83,45 +74,85 @@ def read_bio_file(file_path: str) -> dict:
         # 3. Trigger (optional)
         trigger = None
         if is_trigger:
+            # Read rest of file as trigger data
             trigger = np.frombuffer(f.read(), dtype=np.uint32)
 
     return {"signals": signals, "trigger": trigger}
 
 
-file = "/home/enzo/Documents/ba-thesis/biogui/wulpus_fist_open_2025-11-16_12-36-53.bio"
-# file = "/home/enzo/Documents/ba-thesis/biogui/wulpus_open_fist_2025-11-18_09-45-45.bio"
-data = read_bio_file(file)
-trigger = data["trigger"]
+def analyze_triggers(trigger_data: np.ndarray):
+    """
+    Analyzes and prints statistics about the trigger blocks.
+    """
+    if trigger_data is None:
+        print("[-] No trigger data found in this file.")
+        return
 
-# Filter REST
-non_rest = trigger[trigger != 0]
+    # Filter REST (assuming 0 is rest)
+    non_rest = trigger_data[trigger_data != 0]
 
-# Count blocks
-blocks = []
-if len(non_rest) > 0:
-    current_val = non_rest[0]
-    current_count = 1
+    blocks = []
+    if len(non_rest) > 0:
+        current_val = non_rest[0]
+        current_count = 1
 
-    for val in non_rest[1:]:
-        if val == current_val:
-            current_count += 1
-        else:
-            blocks.append((current_val, current_count))
-            current_val = val
-            current_count = 1
-    blocks.append((current_val, current_count))
+        for val in non_rest[1:]:
+            if val == current_val:
+                current_count += 1
+            else:
+                blocks.append((current_val, current_count))
+                current_val = val
+                current_count = 1
+        blocks.append((current_val, current_count))
 
-print("Blocks:")
-for i, (val, count) in enumerate(blocks):
-    label = "fist" if val == 1 else "open"
-    print(f"{i + 1:2d}. {label} ({val}): {count}")
+    if not blocks:
+        print("[-] Trigger channel found, but contains no non-zero events.")
+        return
 
-print()
-fist_blocks = [c for v, c in blocks if v == 1]
-open_blocks = [c for v, c in blocks if v == 2]
-print(f"Fist blocks ({len(fist_blocks)}): {fist_blocks}")
-print(f"Open blocks ({len(open_blocks)}): {open_blocks}")
-print()
-print(f"Total fist: {sum(fist_blocks)}")
-print(f"Total open: {sum(open_blocks)}")
-print(f"Difference: {sum(fist_blocks) - sum(open_blocks)}")
+    print("Blocks:")
+    print("-" * 30)
+    for i, (val, count) in enumerate(blocks):
+        # Dynamic label mapping based on user logic
+        label = "fist" if val == 1 else ("open" if val == 2 else "unknown")
+        print(f"{i + 1:2d}. {label:<7} (Val: {val}): {count} samples")
+
+    print("-" * 30)
+    fist_blocks = [c for v, c in blocks if v == 1]
+    open_blocks = [c for v, c in blocks if v == 2]
+
+    print(f"Fist blocks count: {len(fist_blocks)} | Samples: {fist_blocks}")
+    print(f"Open blocks count: {len(open_blocks)} | Samples: {open_blocks}")
+    print("-" * 30)
+
+    sum_fist = sum(fist_blocks)
+    sum_open = sum(open_blocks)
+
+    print(f"Total samples fist: {sum_fist}")
+    print(f"Total samples open: {sum_open}")
+    print(f"Difference        : {sum_fist - sum_open}")
+
+
+def main():
+    # Setup CLI arguments
+    parser = argparse.ArgumentParser(description="Analyze triggers inside a .bio file.")
+    parser.add_argument("filename", type=str, help="Path to the .bio file to analyze")
+
+    args = parser.parse_args()
+
+    # Check if file exists
+    if not os.path.isfile(args.filename):
+        print(f"Error: File '{args.filename}' not found.")
+        sys.exit(1)
+
+    print(f"Processing: {args.filename} ...\n")
+
+    try:
+        data = read_bio_file(args.filename)
+        analyze_triggers(data["trigger"])
+    except Exception as e:
+        print(f"Error processing file: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
