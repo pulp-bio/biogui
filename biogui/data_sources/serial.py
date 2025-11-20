@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import time
 
-from PySide6.QtCore import QByteArray, QIODevice, QLocale
+from PySide6.QtCore import QByteArray, QIODevice, QLocale, QThread
 from PySide6.QtGui import QIcon, QIntValidator
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
@@ -204,6 +204,16 @@ class SerialDataSourceWorker(DataSourceWorker):
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
 
+    def _sendStartSequence(self):
+        for c in self._startSeq:
+            if type(c) is bytes:
+                self._serialPort.write(c)
+                # make sure the full command is sent
+                while self._serialPort.bytesToWrite() > 0:
+                    self._serialPort.waitForBytesWritten(100)
+            elif type(c) is float:
+                time.sleep(c)
+
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
         # Open port
@@ -218,14 +228,7 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort.setRequestToSend(True)
 
         # Start command
-        for c in self._startSeq:
-            if type(c) is bytes:
-                self._serialPort.write(c)
-                # make sure the full command is sent
-                while self._serialPort.bytesToWrite() > 0:
-                    self._serialPort.waitForBytesWritten(100)
-            elif type(c) is float:
-                time.sleep(c)
+        self._sendStartSequence()
 
         logging.info("DataWorker: serial communication started.")
 
@@ -252,14 +255,15 @@ class SerialDataSourceWorker(DataSourceWorker):
         # If the stop command is lost, the device is still streaming, the loop below might become infinite.
         # We implement a retry mechanism to resend the stop command and a timeout.
         attempts = 0
-        max_attempts = 100  # safety break to prevent infinite loop
+        max_attempts = 30  # safety break to prevent infinite loop
 
-        while self._serialPort.waitForReadyRead(500):
+        while self._serialPort.waitForReadyRead(300):
             self._serialPort.clear()
             attempts += 1
+            QThread.msleep(150)
 
-            # Resend stop command every 10 attempts
-            if attempts % 10 == 0:
+            # Resend stop command every 4 attempts
+            if attempts % 3 == 0:
                 logging.warning(
                     "DataWorker: Device still sending data, resending stop command."
                 )
