@@ -23,7 +23,6 @@ import sys
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.widgets import Slider
 
 
 def read_bio_file(file_path: str) -> dict:
@@ -118,11 +117,11 @@ def read_bio_file(file_path: str) -> dict:
     return signals
 
 
-def plot_signal_amode(
+def plot_signal_mmode(
     sig_name: str, sig_data: dict, samples_per_acquisition: int = 400
 ):
     """
-    Plot a single signal in A-mode with a slider to navigate through acquisitions.
+    Plot a single signal in M-mode (time vs depth with intensity as color).
 
     Parameters
     ----------
@@ -146,50 +145,65 @@ def plot_signal_amode(
         )
         return
 
-    # Reshape data into acquisitions
+    # Reshape data into acquisitions: (n_acquisitions, samples_per_acquisition, n_ch)
     truncated_samples = n_acquisitions * samples_per_acquisition
     data_reshaped = data[:truncated_samples, :].reshape(
         n_acquisitions, samples_per_acquisition, n_ch
     )
 
-    # Time axis for one acquisition
-    t = np.arange(samples_per_acquisition) / fs
+    # Time axis: time of each acquisition
+    acquisition_duration = samples_per_acquisition / fs
+    time_axis = np.arange(n_acquisitions) * acquisition_duration
+
+    # Depth axis: sample index within each acquisition
+    depth_axis = np.arange(samples_per_acquisition)
 
     # Create figure with subplots for each channel
     fig, axes = plt.subplots(
         nrows=n_ch,
         sharex=True,
-        squeeze=False,
-        figsize=(16, n_ch * 3),
+        figsize=(16, n_ch * 4),
+        layout="constrained",
     )
-    fig.subplots_adjust(bottom=0.15)
-    fig.suptitle(f"{sig_name} - A-mode (Acquisition 1/{n_acquisitions})")
 
-    # Initialize plots for each channel
-    lines = []
+    # Handle single channel case (axes is not a list)
+    if n_ch == 1:
+        axes = [axes]
+
+    fig.suptitle(f"{sig_name} - M-mode")
+
+    # Plot M-mode for each channel
     for i in range(n_ch):
-        (line,) = axes[i][0].plot(t, data_reshaped[0, :, i])
-        axes[i][0].set_ylabel(f"Channel {i}")
-        axes[i][0].grid(True)
-        lines.append(line)
+        # Transpose so depth is on y-axis and time on x-axis
+        mmode_data = data_reshaped[
+            :, :, i
+        ].T  # Shape: (samples_per_acquisition, n_acquisitions)
 
-    axes[-1][0].set_xlabel("Time (s)")
+        # Calculate dynamic level range for better contrast (like in mmode_plot_mode.py)
+        data_min = mmode_data.min()
+        data_max = mmode_data.max()
+        level_range = data_max - data_min if data_max != data_min else 1.0
 
-    # Create slider
-    ax_slider = fig.add_axes([0.2, 0.05, 0.6, 0.03])
-    slider = Slider(ax_slider, "Acquisition", 1, n_acquisitions, valinit=1, valstep=1)
+        # Set vmin and vmax with some margin for better visibility
+        vmin = data_min - 0.1 * level_range
+        vmax = data_max + 0.1 * level_range
 
-    # Update function for slider
-    def update(val):
-        acq_idx = int(slider.val) - 1
-        for i in range(n_ch):
-            lines[i].set_ydata(data_reshaped[acq_idx, :, i])
-        fig.suptitle(
-            f"{sig_name} - A-mode (Acquisition {acq_idx + 1}/{n_acquisitions})"
+        im = axes[i].imshow(
+            mmode_data,
+            aspect="auto",
+            cmap="viridis",  # Using viridis like in mmode_plot_mode.py
+            extent=[time_axis[0], time_axis[-1], depth_axis[-1], depth_axis[0]],
+            interpolation="nearest",
+            vmin=vmin,
+            vmax=vmax,
         )
-        fig.canvas.draw_idle()
+        axes[i].set_ylabel(f"Channel {i}\nDepth (sample)")
+        axes[i].grid(False)
 
-    slider.on_changed(update)
+        # Add colorbar
+        plt.colorbar(im, ax=axes[i], label="Intensity")
+
+    axes[-1].set_xlabel("Time (s)")
 
 
 def plot_signal_standard(sig_name: str, sig_data: dict):
@@ -218,9 +232,9 @@ def plot_signal_standard(sig_name: str, sig_data: dict):
         axes[i][0].plot(t, sig_data["data"][:, i])
 
 
-def plot_ultrasound_amode(signals: dict, samples_per_acquisition: int = 400):
+def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 400):
     """
-    Plot ultrasound signals in A-mode with sliders, and timestamp/trigger in standard mode.
+    Plot ultrasound signals in M-mode, and timestamp/trigger in standard mode.
 
     Parameters
     ----------
@@ -229,11 +243,11 @@ def plot_ultrasound_amode(signals: dict, samples_per_acquisition: int = 400):
     samples_per_acquisition : int
         Number of samples per acquisition (default: 400).
     """
-    # Plot data signals in A-mode
+    # Plot data signals in M-mode
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
         if sig_name not in ["timestamp", "trigger"]:
-            plot_signal_amode(sig_name, sig_data, samples_per_acquisition)
+            plot_signal_mmode(sig_name, sig_data, samples_per_acquisition)
             data_signal_count += 1
 
     if data_signal_count == 0:
@@ -269,13 +283,13 @@ def main():
     parser.add_argument(
         "--ultrasound",
         action="store_true",
-        help="Display ultrasound data in A-mode with acquisition slider",
+        help="Display ultrasound data in M-mode (time vs depth)",
     )
     parser.add_argument(
         "--samples-per-acquisition",
         type=int,
         default=400,
-        help="Number of samples per acquisition for A-mode (default: 400)",
+        help="Number of samples per acquisition for M-mode (default: 400)",
     )
 
     args = parser.parse_args()
@@ -285,7 +299,7 @@ def main():
 
     # Plot based on mode
     if args.ultrasound:
-        plot_ultrasound_amode(signals, args.samples_per_acquisition)
+        plot_ultrasound_mmode(signals, args.samples_per_acquisition)
     else:
         plot_standard(signals)
 
