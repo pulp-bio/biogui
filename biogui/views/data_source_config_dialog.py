@@ -179,6 +179,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         Path to the output directory.
     """
 
+    # Placeholder text for interface selection
+    _INTERFACE_PLACEHOLDER = "-- Choose Interface --"
+
     def __init__(
         self,
         dataSourceType: data_sources.DataSourceType | None = None,
@@ -192,7 +195,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         # Populate interface modules ComboBox
         self._interfaceModules = _loadInterfacesFromDirectory()
         # Add placeholder as first item
-        self.interfaceModuleComboBox.addItem("-- Choose Interface --")
+        self.interfaceModuleComboBox.addItem(self._INTERFACE_PLACEHOLDER)
         self.interfaceModuleComboBox.addItems(self._interfaceModules.keys())
         # Set current index to 0 (the placeholder)
         self.interfaceModuleComboBox.setCurrentIndex(0)
@@ -252,8 +255,11 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _onInterfaceModuleChange(self, displayName: str) -> None:
         """Handle interface module selection from ComboBox."""
-        # Ignore placeholder and empty strings
-        if displayName == "" or displayName == "-- Choose Interface --":
+        # If placeholder is selected, remove interface from config
+        if displayName == "" or displayName == self._INTERFACE_PLACEHOLDER:
+            # Remove interface from config if it exists
+            self._dataSourceConfig.pop("interfacePath", None)
+            self._dataSourceConfig.pop("interfaceModule", None)
             return
 
         interfacePath = self._interfaceModules.get(displayName)
@@ -270,7 +276,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                 buttons=QMessageBox.Retry,
                 defaultButton=QMessageBox.Retry,
             )
-            self.interfaceModuleComboBox.setCurrentIndex(0)  # Reset to placeholder
+            # Reset to placeholder on error
+            self.interfaceModuleComboBox.setCurrentIndex(0)
             return
 
         self._dataSourceConfig["interfacePath"] = interfacePath
