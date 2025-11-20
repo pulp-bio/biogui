@@ -229,12 +229,8 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         logging.info("DataWorker: serial communication started.")
 
-    def stopCollecting(self) -> None:
-        """Stop data collection."""
-
-        logging.info("DataWorker: serial communication stopped.")
-
-        # Stop command
+    def _sendStopSequence(self) -> None:
+        """Send the stop sequence to the serial port."""
         for c in self._stopSeq:
             if type(c) is bytes:
                 self._serialPort.write(c)
@@ -244,9 +240,37 @@ class SerialDataSourceWorker(DataSourceWorker):
             elif type(c) is float:
                 time.sleep(c)
 
+    def stopCollecting(self) -> None:
+        """Stop data collection."""
+
+        logging.info("DataWorker: serial communication stopped.")
+
+        # Stop command
+        self._sendStopSequence()
+
         # Reset input buffer and close port
+        # If the stop command is lost, the device is still streaming, the loop below might become infinite.
+        # We implement a retry mechanism to resend the stop command and a timeout.
+        attempts = 0
+        max_attempts = 100  # safety break to prevent infinite loop
+
         while self._serialPort.waitForReadyRead(500):
             self._serialPort.clear()
+            attempts += 1
+
+            # Resend stop command every 10 attempts
+            if attempts % 10 == 0:
+                logging.warning(
+                    "DataWorker: Device still sending data, resending stop command."
+                )
+                self._sendStopSequence()
+
+            if attempts >= max_attempts:
+                logging.error(
+                    "DataWorker: Device failed to stop streaming. Forcing port close."
+                )
+                break
+
         self._serialPort.close()
         self._buffer = QByteArray()
 
