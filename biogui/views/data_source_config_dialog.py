@@ -19,6 +19,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import glob
 import importlib.util
 import os
 
@@ -27,6 +28,30 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 from biogui import data_sources
 from biogui.ui.data_source_config_dialog_ui import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule
+
+
+def _loadInterfacesFromDirectory() -> dict[str, str]:
+    """
+    Load all interface modules from the interfaces directory.
+
+    Returns
+    -------
+    dict[str, str]
+        Dictionary mapping display names to full file paths.
+    """
+    interfaces_dir = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "..", "interfaces"
+    )
+    interfaces_dir = os.path.abspath(interfaces_dir)
+
+    interface_files = {}
+    if os.path.isdir(interfaces_dir):
+        for filepath in glob.glob(os.path.join(interfaces_dir, "interface_*.py")):
+            filename = os.path.basename(filepath)
+            display_name = filename[10:-3]  # Remove 'interface_' and '.py'
+            interface_files[display_name] = filepath
+
+    return dict(sorted(interface_files.items()))
 
 
 def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
@@ -164,6 +189,10 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.setupUi(self)
 
+        # Populate interface modules ComboBox
+        self._interfaceModules = _loadInterfacesFromDirectory()
+        self.interfaceModuleComboBox.addItems(self._interfaceModules.keys())
+
         # Create data source configuration widget
         dataSources = list(
             map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
@@ -178,7 +207,9 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
-        self.browseInterfaceModuleButton.clicked.connect(self._browseInterfaceModule)
+        self.interfaceModuleComboBox.currentTextChanged.connect(
+            self._onInterfaceModuleChange
+        )
         self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
@@ -203,7 +234,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _updateTabOrder(self) -> None:
         """Update the tab order when the data source widget changes."""
-        self.setTabOrder(self.browseInterfaceModuleButton, self.dataSourceComboBox)
+        self.setTabOrder(self.interfaceModuleComboBox, self.dataSourceComboBox)
 
         tabOrderedFields = self._configWidget.getFieldsInTabOrder()
         if not tabOrderedFields:
@@ -215,29 +246,30 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
         self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
-    def _browseInterfaceModule(self) -> None:
-        """Browse files to select the module containing the decode function."""
-        interfacePath, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Python module containing the decode function",
-            filter="*.py",
-        )
-        if interfacePath != "":
-            # Load interface module
-            interfaceModule, errMessage = _loadInterfaceFromFile(interfacePath)
-            if interfaceModule is None:
-                QMessageBox.critical(
-                    self,
-                    "Invalid Python file",
-                    errMessage,
-                    buttons=QMessageBox.Retry,  # type: ignore
-                    defaultButton=QMessageBox.Retry,  # type: ignore
-                )
-                return
-            self._dataSourceConfig["interfacePath"] = interfacePath
-            self._dataSourceConfig["interfaceModule"] = interfaceModule
+    def _onInterfaceModuleChange(self, displayName: str) -> None:
+        """Handle interface module selection from ComboBox."""
+        if displayName == "":
+            return
 
-            self.interfaceModulePathLabel.setText(interfacePath)
+        interfacePath = self._interfaceModules.get(displayName)
+        if interfacePath is None:
+            return
+
+        # Load interface module
+        interfaceModule, errMessage = _loadInterfaceFromFile(interfacePath)
+        if interfaceModule is None:
+            QMessageBox.critical(
+                self,
+                "Invalid Python file",
+                errMessage,
+                buttons=QMessageBox.Retry,
+                defaultButton=QMessageBox.Retry,
+            )
+            self.interfaceModuleComboBox.setCurrentIndex(-1)
+            return
+
+        self._dataSourceConfig["interfacePath"] = interfacePath
+        self._dataSourceConfig["interfaceModule"] = interfaceModule
 
     def _browseOutDir(self) -> None:
         """Browse directory where the data will be saved."""
@@ -336,13 +368,14 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         interfacePath = dataSourceConfig["interfacePath"]
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
-        displayText = (
-            interfacePath
-            if len(interfacePath) <= 40
-            else interfacePath[:17] + "..." + interfacePath[-20:]
-        )
-        self.interfaceModulePathLabel.setText(displayText)
-        self.interfaceModulePathLabel.setToolTip(interfacePath)
+
+        # Find and select the interface in the ComboBox
+        filename = os.path.basename(interfacePath)
+        if filename.startswith("interface_") and filename.endswith(".py"):
+            displayName = filename[10:-3]
+            index = self.interfaceModuleComboBox.findText(displayName)
+            if index >= 0:
+                self.interfaceModuleComboBox.setCurrentIndex(index)
 
         # 2. Data source-specific config
         self._configWidget.prefill(dataSourceConfig)
