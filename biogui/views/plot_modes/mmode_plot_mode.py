@@ -171,7 +171,7 @@ class MModePlotMode(BasePlotMode):
         graph_widget.addItem(self._image_item)
 
         # Set colormap
-        colormap = pg.colormap.get("viridis")
+        colormap = pg.colormap.get("CET-L2")
         self._image_item.setColorMap(colormap)
 
         # Display initial empty buffer
