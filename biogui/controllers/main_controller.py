@@ -386,6 +386,33 @@ class MainController(QObject):
         # Reconnect itemChanged handler
         self.dataSourceModel.itemChanged.connect(self._signalCheckedHandler)
 
+        # If this is a Wulpus data source, add a config button
+        interface_path = dataSourceConfig.get("interfacePath", "")
+        if "wulpus" in interface_path.lower():
+            from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
+
+            # Create container widget with horizontal layout
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.setContentsMargins(0, 2, 5, 2)
+
+            # Add stretch to push button to the right
+            layout.addStretch()
+
+            # Create config button
+            config_button = QPushButton("⚙")
+            config_button.setMaximumWidth(30)
+            config_button.setMaximumHeight(24)
+            config_button.setToolTip("Configure WULPUS hardware")
+            config_button.setProperty("dataSource", str(streamingController))
+            config_button.clicked.connect(self._openWulpusConfigDialog)
+
+            layout.addWidget(config_button)
+
+            # Add the container to the tree view
+            index = self.dataSourceModel.indexFromItem(dataSourceNode)
+            self._mainWin.dataSourceTree.setIndexWidget(index, container)
+
         # Relayout plots
         self._relayoutPlots()
 
@@ -395,7 +422,12 @@ class MainController(QObject):
         # Inform other modules that a new source is available
         self.streamingControllersChanged.emit()
 
+        # Expand the tree to show signals
         self._mainWin.dataSourceTree.expandAll()
+
+        # Also explicitly expand this specific item to be sure
+        index = self.dataSourceModel.indexFromItem(dataSourceNode)
+        self._mainWin.dataSourceTree.setExpanded(index, True)
 
     def _deleteDataSource(self, dataSourceItem: QStandardItem) -> None:
         """Delete a data source, given data source item."""
@@ -419,6 +451,7 @@ class MainController(QObject):
         del self._streamingControllers[dataSource]
         del self._config[dataSource]
 
+        # Relayout remaining plots
         # Update UI data source tree
         self.dataSourceModel.removeRow(dataSourceItem.row())
 
@@ -713,3 +746,198 @@ class MainController(QObject):
 
         # Relayout plots
         self._relayoutPlots()
+
+    def _openWulpusConfigDialog(self):
+        """Open configuration dialog for WULPUS hardware."""
+        import logging
+        import sys
+        from pathlib import Path
+
+        from biogui.utils import InterfaceModule
+        from biogui.views.wulpus_config_dialog import WulpusConfigDialog
+
+        interfaces_path = Path(__file__).parent.parent.parent / "interfaces"
+        if str(interfaces_path) not in sys.path:
+            sys.path.insert(0, str(interfaces_path))
+
+        import interface_wulpus as wulpus_interface
+
+        dialog = WulpusConfigDialog(parent=self._mainWin)
+
+        # Load current configuration into dialog
+        current_config = wulpus_interface.wulpus_config
+        dialog.configWidget.load_config(current_config)
+
+        if dialog.exec():
+            new_config = dialog.get_config()
+            if not new_config:
+                return
+
+            was_streaming = self._isStreaming
+            if was_streaming:
+                reply = QMessageBox.warning(
+                    self._mainWin,
+                    "Streaming Active",
+                    "Streaming will be stopped to apply the configuration.\n\nContinue?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes,
+                )
+                if reply == QMessageBox.No:
+                    return
+                self.stopStreaming()
+
+            wulpus_interface.wulpus_config = new_config
+            wulpus_interface.packetSize = new_config.num_samples * 2 + 7 + 6
+            wulpus_interface.startSeq = [
+                new_config.get_restart_package(),
+                0.5,
+                new_config.get_conf_package(),
+            ]
+            wulpus_interface.stopSeq = [new_config.get_restart_package()]
+
+            # Rebuild signal info with new configuration
+            meas_period_s = new_config.meas_period / 1e6
+            period_per_config_s = meas_period_s * new_config.num_txrx_configs
+            samples_per_second = (new_config.num_samples - 3) / period_per_config_s
+            adc_start_delay = (new_config.start_adcsampl - new_config.start_ppg) * 1e-6
+
+            new_sigInfo = {}
+            new_config_to_signal_name = {}
+            for config_id in range(new_config.num_txrx_configs):
+                rx_channel = wulpus_interface.get_rx_channel_for_config(
+                    new_config, config_id
+                )
+                if rx_channel is None:
+                    continue
+
+                signal_name = (
+                    "ultrasound"
+                    if new_config.num_txrx_configs == 1
+                    else f"ultrasound_cfg{config_id}_rx{rx_channel}"
+                )
+
+                new_config_to_signal_name[config_id] = signal_name
+
+                new_sigInfo[signal_name] = {
+                    "fs": samples_per_second,
+                    "nCh": 1,
+                    "signal_type": {
+                        "type": "ultrasound",
+                        "config_id": config_id,
+                        "rx_channel": rx_channel,
+                        "num_samples": new_config.num_samples - 3,
+                        "meas_period": new_config.meas_period,
+                        "adc_sampling_freq": new_config.sampling_freq,
+                        "adc_start_delay": adc_start_delay,
+                    },
+                }
+
+            new_sigInfo["imu"] = {
+                "fs": 1.0 / meas_period_s,
+                "nCh": 3,
+                "signal_type": {"type": "time-series"},
+            }
+
+            wulpus_interface.sigInfo = new_sigInfo
+            wulpus_interface.config_to_signal_name = new_config_to_signal_name
+
+            # Identify Wulpus sources and check if signal structure changed
+            updated_count = 0
+            sources_to_recreate = []
+            sources_to_update = []
+
+            for ds_name, ds_config in self._config.items():
+                interface_path = ds_config.get("interfacePath", "")
+                if "wulpus" not in interface_path.lower():
+                    continue
+
+                old_sig_names = set(ds_config["interfaceModule"].sigInfo.keys())
+                new_sig_names = set(new_sigInfo.keys())
+
+                if old_sig_names != new_sig_names:
+                    sources_to_recreate.append((ds_name, ds_config))
+                else:
+                    sources_to_update.append((ds_name, ds_config))
+
+            # Recreate sources where signal structure changed
+            for ds_name, old_ds_config in sources_to_recreate:
+                # Find the item in the tree
+                for row in range(self.dataSourceModel.rowCount()):
+                    item = self.dataSourceModel.item(row)
+                    if item and item.text() == ds_name:
+                        # Delete old source
+                        self._deleteDataSource(item)
+
+                        # Create new config with updated interface module (without sigsConfigs)
+                        new_ds_config = {
+                            k: v for k, v in old_ds_config.items() if k != "sigsConfigs"
+                        }
+                        new_ds_config["interfaceModule"] = InterfaceModule(
+                            packetSize=wulpus_interface.packetSize,
+                            startSeq=wulpus_interface.startSeq,
+                            stopSeq=wulpus_interface.stopSeq,
+                            sigInfo=wulpus_interface.sigInfo,
+                            decodeFn=wulpus_interface.decodeFn,
+                        )
+
+                        # Preserve old signal configs where names match, create new for others
+                        old_sigsConfigs = old_ds_config.get("sigsConfigs", {})
+                        new_sigsConfigs = {}
+                        for sig_name, sig_info in new_sigInfo.items():
+                            if sig_name in old_sigsConfigs:
+                                # Keep old config but update metadata from new sigInfo
+                                new_sigsConfigs[sig_name] = old_sigsConfigs[
+                                    sig_name
+                                ].copy()
+                                new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
+                                new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
+                                new_sigsConfigs[sig_name]["signal_type"] = sig_info.get(
+                                    "signal_type", {}
+                                )
+                            else:
+                                # Create new default config for new signal
+                                new_sigsConfigs[sig_name] = {
+                                    "fs": sig_info["fs"],
+                                    "nCh": sig_info["nCh"],
+                                    "signal_type": sig_info.get("signal_type", {}),
+                                    "chSpacing": 1.0,
+                                }
+
+                        # Re-add the source with new config
+                        self._addDataSource(new_ds_config, new_sigsConfigs)
+                        updated_count += 1
+                        break
+
+            # Update sources where signal structure didn't change
+            for ds_name, ds_config in sources_to_update:
+                new_interface_module = InterfaceModule(
+                    packetSize=wulpus_interface.packetSize,
+                    startSeq=wulpus_interface.startSeq,
+                    stopSeq=wulpus_interface.stopSeq,
+                    sigInfo=wulpus_interface.sigInfo,
+                    decodeFn=wulpus_interface.decodeFn,
+                )
+
+                ds_config["interfaceModule"] = new_interface_module
+
+                if ds_name in self._streamingControllers:
+                    self._streamingControllers[ds_name].editDataSourceConfig(ds_config)
+                    updated_count += 1
+
+            self._mainWin.statusBar().showMessage(
+                f"WULPUS configuration updated ({updated_count} source(s))", 5000
+            )
+
+            if updated_count > 0:
+                msg = f"Configuration applied to {updated_count} data source(s)."
+                if sources_to_recreate:
+                    msg += f"\n\n{len(sources_to_recreate)} source(s) were recreated due to signal structure changes."
+                if was_streaming:
+                    msg += "\n\nRestart streaming to use the new configuration."
+                QMessageBox.information(self._mainWin, "Configuration Updated", msg)
+            else:
+                QMessageBox.information(
+                    self._mainWin,
+                    "Configuration Saved",
+                    "Configuration saved for new data sources.",
+                )
