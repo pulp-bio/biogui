@@ -97,8 +97,10 @@ class TimeSeriesPlotMode(BasePlotMode):
         for i in range(self.n_ch):
             pen = pg.mkPen(color=lut[i], width=1)  # type: ignore
             plot_item = graph_widget.plot(
-                ys[i] + self.ch_spacing * (self.n_ch - i - 1), pen=pen
+                ys[i] + self.ch_spacing * (self.n_ch - i - 1),
+                pen=pen,
             )
+            plot_item.setClipToView(True)
             self._plots.append(plot_item)
 
     def render(self) -> None:

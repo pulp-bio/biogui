@@ -87,6 +87,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         self.setupUi(self)
 
+        try:
+            self.graphWidget.useOpenGL(True)
+        except Exception as e:
+            print(f"[WARN] OpenGL not available: {e}")
+
         # Store parameters
         self._sig_name = sigName
         self._render_len_ms = renderLenMs
@@ -157,11 +162,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _setup_graph_widget(self, sig_name: str) -> None:
         """Configure the graph widget."""
-        try:
-            self.graphWidget.useOpenGL(True)
-        except Exception:
-            print(f"[WARN] {sig_name}: OpenGL not available, using software rendering")
-
         self.graphWidget.setTitle(sig_name)
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
