@@ -88,9 +88,12 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self.setupUi(self)
 
         try:
-            self.graphWidget.useOpenGL(True)
-        except Exception as e:
-            print(f"[WARN] OpenGL not available: {e}")
+            from PySide6.QtOpenGLWidgets import QOpenGLWidget
+
+            gl_widget = QOpenGLWidget()
+            self.graphWidget.setViewport(gl_widget)
+        except Exception:
+            pass  # Fallback to software rendering
 
         # Store parameters
         self._sig_name = sigName
@@ -162,6 +165,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _setup_graph_widget(self, sig_name: str) -> None:
         """Configure the graph widget."""
+        self.graphWidget.setAntialiasing(True)
+
         self.graphWidget.setTitle(sig_name)
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
