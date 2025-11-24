@@ -507,7 +507,7 @@ rx_tx_biceps_config.add_config(
 biceps_exercise_config = WulpusUssConfig(
     num_acqs=2000,
     dcdc_turnon=19530,
-    meas_period=20000,
+    meas_period=25000,
     trans_freq=2250000,
     pulse_freq=2250000,
     num_pulses=2,
