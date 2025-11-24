@@ -198,7 +198,6 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
-        self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
 
     def __str__(self):
@@ -229,9 +228,12 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         # Clear the serial port buffer
         self._serialPort.clear()
+        self._buffer = QByteArray()
 
         # Start command
         self._sendStartSequence()
+
+        self._serialPort.readyRead.connect(self._collectData)
 
         logging.info("DataWorker: serial communication started.")
 
@@ -248,22 +250,24 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-
         logging.info("DataWorker: serial communication stopped.")
 
-        # Stop command
+        # Disconnect readyRead to stop processing incoming data
+        try:
+            self._serialPort.readyRead.disconnect(self._collectData)
+        except RuntimeError:
+            pass
+
+        # Send stop command
         self._sendStopSequence()
 
-        # Reset input buffer and close port
-        # If the stop command is lost, the device is still streaming, the loop below might become infinite.
-        # We implement a retry mechanism to resend the stop command and a timeout.
         attempts = 0
         max_attempts = 30  # safety break to prevent infinite loop
 
         while self._serialPort.waitForReadyRead(300):
             self._serialPort.clear()
             attempts += 1
-            QThread.msleep(150)
+            QThread.msleep(100)
 
             # Resend stop command every 3 attempts
             if attempts % 3 == 0:
