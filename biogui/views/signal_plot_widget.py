@@ -157,6 +157,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _setup_graph_widget(self, sig_name: str) -> None:
         """Configure the graph widget."""
+        try:
+            self.graphWidget.useOpenGL(True)
+        except Exception:
+            print(f"[WARN] {sig_name}: OpenGL not available, using software rendering")
+
         self.graphWidget.setTitle(sig_name)
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
@@ -245,6 +250,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _refresh_plot(self) -> None:
         """Refresh the plot if new data is available."""
+        # skip rendering if plot is not displayed
+        if not self.isVisible():
+            return
+
         if self._plot_mode.has_new_data():
             self._plot_mode.render()
 
