@@ -255,34 +255,40 @@ class MainController(QObject):
                     if plotId in self._signalPlotWidgets:
                         visiblePlots.append(self._signalPlotWidgets[plotId])
 
-        # Clear the grid layout
-        while self._mainWin.plotsGridLayout.count():
-            item = self._mainWin.plotsGridLayout.takeAt(0)
-            if item.widget():
-                item.widget().setParent(None)
+        numPlots = len(visiblePlots)
 
         # Calculate grid dimensions
-        numPlots = len(visiblePlots)
         if numPlots == 0:
+            # Hide all plots without removing them
+            for plotWidget in self._signalPlotWidgets.values():
+                plotWidget.hide()
             return
 
-        # Grid layout logic:
-        # 1-2 plots: 1 column
-        # 3-4 plots: 2 columns
-        # 5+ plots: 2 columns (can be extended to 3 if needed)
         if numPlots <= 2:
             numCols = 1
         else:
             numCols = 2
 
-        numRows = math.ceil(numPlots / numCols)
+        for plotWidget in self._signalPlotWidgets.values():
+            if plotWidget not in visiblePlots:
+                plotWidget.hide()
+                # Remove from layout but keep parent
+                self._mainWin.plotsGridLayout.removeWidget(plotWidget)
 
-        # Add plots to grid
+        # Then, add/reposition visible widgets
         for idx, plotWidget in enumerate(visiblePlots):
             row = idx // numCols
             col = idx % numCols
+
+            # Check current position
+            current_item = self._mainWin.plotsGridLayout.itemAtPosition(row, col)
+
+            if current_item is None or current_item.widget() != plotWidget:
+                # Need to move this widget
+                self._mainWin.plotsGridLayout.removeWidget(plotWidget)
+                self._mainWin.plotsGridLayout.addWidget(plotWidget, row, col)
+
             plotWidget.show()
-            self._mainWin.plotsGridLayout.addWidget(plotWidget, row, col)
 
     def startStreaming(self) -> None:
         """Start streaming."""

@@ -64,7 +64,7 @@ class MModePlotMode(BasePlotMode):
         Ultrasound filter instance.
     """
 
-    MMODE_TIME_WINDOW = 300  # Number of A-lines to display
+    MMODE_TIME_WINDOW = 250  # Number of A-lines to display
     SPEED_OF_SOUND = 1540  # m/s in tissue
 
     def __init__(
@@ -225,7 +225,7 @@ class MModePlotMode(BasePlotMode):
             self._setup_image_rect()
             self._needs_rect_setup = False
 
-        # Update the displayed image (only once per render call)
+        # Update the displayed image
         data_min = self._mmode_buffer.min()
         data_max = self._mmode_buffer.max()
         level_range = data_max - data_min if data_max != data_min else 1.0

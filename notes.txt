@@ -1,0 +1,9 @@
+done: change m-mode grayscale
+done: default path for collected data
+done: flushing before starting does not seem to work as intended
+done: checkbox for plots
+
+checkbox to imediately display just saved data with plot_signal.py (+ultrasound option)
+wulpus configuration
+if using triggers add checkbox to automatically plot collected data
+wulpus on table track imu drift + check displacing it consistently

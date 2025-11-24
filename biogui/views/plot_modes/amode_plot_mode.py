@@ -197,6 +197,7 @@ class AModePlotMode(BasePlotMode):
                     pen=pen,
                     name=f"Raw Ch{i}",
                 )
+                raw_plot.setClipToView(True)
                 self._raw_plots.append(raw_plot)
             else:
                 self._raw_plots.append(None)
@@ -210,6 +211,7 @@ class AModePlotMode(BasePlotMode):
                     pen=pen,
                     name=f"Filtered Ch{i}",
                 )
+                filt_plot.setClipToView(True)
                 self._filtered_plots.append(filt_plot)
             else:
                 self._filtered_plots.append(None)
@@ -225,6 +227,7 @@ class AModePlotMode(BasePlotMode):
                     pen=pen,
                     name=f"Envelope Ch{i}",
                 )
+                env_plot.setClipToView(True)
                 self._envelope_plots.append(env_plot)
             else:
                 self._envelope_plots.append(None)
