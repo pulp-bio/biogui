@@ -478,7 +478,7 @@ class StreamingController(QObject):
         }
 
         # Optionally, create file writer worker and thread
-        self._fileWriterWorker, self._fileWriterThreads = None, None
+        self._fileWriterWorker, self._fileWriterThread = None, None
         if filePath:
             self._fileWriterWorker = _FileWriterWorker(filePath, self._sigInfo)
             self._fileWriterThread = QThread(self)
@@ -541,6 +541,7 @@ class StreamingController(QObject):
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
+        self._dataSourceThread.destroyed.connect(self._dataSourceWorker.deleteLater)
 
         # 2. Pre-processing settings
         self._preprocessor = _Preprocessor(
@@ -555,11 +556,12 @@ class StreamingController(QObject):
             return
 
         # 3.2. Otherwise, initialize file writer
-        self._fileWriterWorker = _FileWriterWorker(filePath, interfaceModule.sigInfo)
+        self._fileWriterWorker = _FileWriterWorker(filePath, self._sigInfo)
         self._fileWriterThread = QThread(self)
         self._fileWriterWorker.moveToThread(self._fileWriterThread)
         self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
         self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)
+        self._fileWriterThread.destroyed.connect(self._fileWriterWorker.deleteLater)
 
     def editSigConfig(self, sigName: str, sigConfig: dict) -> None:
         """

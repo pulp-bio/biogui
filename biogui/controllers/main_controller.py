@@ -586,13 +586,14 @@ class MainController(QObject):
 
         # Update streaming controller
         oldDataSourceId = str(self._streamingControllers[dataSourceToEdit])
+        # Add sigsConfigs to newDataSourceConfig before calling editDataSourceConfig
+        newDataSourceConfig["sigsConfigs"] = sigsConfigs
         self._streamingControllers[dataSourceToEdit].editDataSourceConfig(
-            newDataSourceConfig, sigsConfigs
+            newDataSourceConfig
         )
         newDataSourceId = str(self._streamingControllers[dataSourceToEdit])
 
         # Update configuration
-        newDataSourceConfig["sigsConfigs"] = sigsConfigs
         self._config[dataSourceToEdit] = newDataSourceConfig
 
         # Update tree
