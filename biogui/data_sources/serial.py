@@ -227,6 +227,9 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort.setDataTerminalReady(True)
         self._serialPort.setRequestToSend(True)
 
+        # Clear the serial port buffer
+        self._serialPort.clear()
+
         # Start command
         self._sendStartSequence()
 
@@ -262,7 +265,7 @@ class SerialDataSourceWorker(DataSourceWorker):
             attempts += 1
             QThread.msleep(150)
 
-            # Resend stop command every 4 attempts
+            # Resend stop command every 3 attempts
             if attempts % 3 == 0:
                 logging.warning(
                     "DataWorker: Device still sending data, resending stop command."
