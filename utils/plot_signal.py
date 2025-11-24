@@ -128,7 +128,7 @@ def plot_signal_mmode(
         axes[i].imshow(
             mmode_data,
             aspect="auto",
-            cmap="viridis",
+            cmap="gray",
             extent=[time_axis[0], time_axis[-1], depth_axis[-1], depth_axis[0]],
             interpolation="nearest",
             vmin=vmin,
