@@ -4,7 +4,7 @@
     "open hand": "open_hand.png"
   },
   "nReps": 2,
-  "durationTrigger": 5000,
+  "durationTrigger": 2500,
   "durationStart": 2000,
   "durationRest": 3000,
   "alternating": true,
