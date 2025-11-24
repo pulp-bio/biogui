@@ -221,7 +221,11 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
         self._dataSourceConfig = {}
-        self._outDirPath = None
+        # Set default output directory to ./data/
+        self._outDirPath = os.path.join(os.getcwd(), "data")
+        # Create the directory if it doesn't exist
+        os.makedirs(self._outDirPath, exist_ok=True)
+        self.outDirPathLabel.setText(self._outDirPath)
 
         # Pre-fill with provided configuration
         if kwargs:
