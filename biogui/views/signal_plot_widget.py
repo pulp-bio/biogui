@@ -169,8 +169,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _setup_graph_widget(self, sig_name: str) -> None:
         """Configure the graph widget."""
-        self.graphWidget.setAntialiasing(True)
-
         self.graphWidget.setTitle(sig_name)
         self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
