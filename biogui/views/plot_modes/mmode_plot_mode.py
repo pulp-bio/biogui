@@ -168,6 +168,8 @@ class MModePlotMode(BasePlotMode):
 
         # Create image item
         self._image_item = pg.ImageItem()
+        # Optimization: automatic downsampling for image
+        self._image_item.setAutoDownsample(True)
         graph_widget.addItem(self._image_item)
 
         # Set colormap
