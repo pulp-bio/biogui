@@ -19,6 +19,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import logging
 from collections import deque
 
 import numpy as np
@@ -93,6 +94,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             gl_widget = QOpenGLWidget()
             self.graphWidget.setViewport(gl_widget)
         except Exception:
+            logging.error(
+                "Failed to initialize OpenGL widget, falling back to software rendering"
+            )
             pass  # Fallback to software rendering
 
         # Store parameters
