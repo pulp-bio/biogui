@@ -221,7 +221,6 @@ configuration_package = [
             "capt_timeout", "Capture timeout time [us]", "limit", 0, 65535, "<u2"
         ),
     ],
-    [_ConfigBytes("num_acqs", "Number of acquisitions", "limit", 0, 10000000, None)],
 ]
 
 
@@ -325,7 +324,6 @@ class WulpusRxTxConfigGen:
 class WulpusUssConfig:
     def __init__(
         self,
-        num_acqs=100,
         dcdc_turnon=195300,
         meas_period=321965,
         trans_freq=225e4,
@@ -356,7 +354,6 @@ class WulpusUssConfig:
             raise ValueError(f"Invalid RX gain. Must be one of {PGA_GAIN}")
 
         # Parse basic settings
-        self.num_acqs = int(num_acqs)
         self.dcdc_turnon = int(dcdc_turnon)
         self.meas_period = int(meas_period)
         self.trans_freq = int(trans_freq)
@@ -468,7 +465,6 @@ rx_tx_waterbath_config.add_config(
 
 # ! number of samples is hardcoded in the wulpus firmware at the moment to 400
 waterbath_config = WulpusUssConfig(
-    num_acqs=100,
     dcdc_turnon=100,
     meas_period=228885,
     trans_freq=2250000,
@@ -505,7 +501,6 @@ rx_tx_biceps_config.add_config(
 
 
 biceps_exercise_config = WulpusUssConfig(
-    num_acqs=2000,
     dcdc_turnon=19530,
     meas_period=25000,
     trans_freq=2250000,

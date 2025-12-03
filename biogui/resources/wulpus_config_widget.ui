@@ -53,16 +53,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="loadConfigButton">
-        <property name="toolTip">
-         <string>Load configuration from a JSON file</string>
-        </property>
-        <property name="text">
-         <string>Load from JSON</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="saveConfigButton">
         <property name="toolTip">
          <string>Save current configuration to a JSON file</string>

@@ -45,11 +45,6 @@ class Ui_WulpusConfigWidget(object):
 
         self.presetHorizontalLayout.addWidget(self.presetComboBox)
 
-        self.loadConfigButton = QPushButton(self.presetGroupBox)
-        self.loadConfigButton.setObjectName(u"loadConfigButton")
-
-        self.presetHorizontalLayout.addWidget(self.loadConfigButton)
-
         self.saveConfigButton = QPushButton(self.presetGroupBox)
         self.saveConfigButton.setObjectName(u"saveConfigButton")
 
@@ -295,10 +290,6 @@ class Ui_WulpusConfigWidget(object):
 #if QT_CONFIG(tooltip)
         self.presetComboBox.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Select a predefined configuration or create a custom one", None))
 #endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.loadConfigButton.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Load configuration from a JSON file", None))
-#endif // QT_CONFIG(tooltip)
-        self.loadConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Load from JSON", None))
 #if QT_CONFIG(tooltip)
         self.saveConfigButton.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Save current configuration to a JSON file", None))
 #endif // QT_CONFIG(tooltip)
