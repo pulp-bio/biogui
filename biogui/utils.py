@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from typing import Callable, TypeAlias
 
 import numpy as np
-from PySide6.QtCore import Slot
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication
 

@@ -19,7 +19,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import math
 from types import MappingProxyType
 
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
