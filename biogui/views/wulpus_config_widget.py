@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 
 from biogui.ui.wulpus_config_widget_ui import Ui_WulpusConfigWidget
 from interfaces.interface_wulpus import (
-    ACQ_LENGTH_SAMPLES,
     PGA_GAIN,
     RX_MAP,
     TX_MAP,
@@ -47,13 +46,48 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
         self._current_config: WulpusUssConfig | None = None
         self._tx_rx_configs: list[dict[str, Any]] = []
+        self._presets_dir = self._get_presets_directory()
+        self._loading_preset = False  # Flag to prevent marking as custom while loading
 
         self._setup_validators()
         self._populate_combo_boxes()
+        self._populate_presets()
         self._connect_signals()
-        self._load_preset("Biceps Exercise")
 
         logger.info("WulpusConfigWidget initialized")
+
+    def _get_presets_directory(self) -> Path:
+        """Get the presets directory path, creating it if necessary."""
+        # Get the biogui root directory (two levels up from this file)
+        biogui_root = Path(__file__).parent.parent.parent
+        presets_dir = biogui_root / "presets" / "wulpus"
+
+        # Create directory if it doesn't exist
+        presets_dir.mkdir(parents=True, exist_ok=True)
+
+        return presets_dir
+
+    def _populate_presets(self) -> None:
+        """Populate the preset combo box from JSON files in the presets directory."""
+        self.presetComboBox.clear()
+
+        # Add "Custom" as the first item
+        self.presetComboBox.addItem("Custom")
+
+        # Scan for JSON files in the presets directory
+        if self._presets_dir.exists():
+            preset_files = sorted(self._presets_dir.glob("*.json"))
+            for preset_file in preset_files:
+                # Use filename without extension as preset name
+                preset_name = preset_file.stem
+                self.presetComboBox.addItem(preset_name)
+
+        # Set default to first preset if available, otherwise Custom
+        if self.presetComboBox.count() > 1:
+            self.presetComboBox.setCurrentIndex(1)  # First preset after "Custom"
+            self._load_preset(self.presetComboBox.currentText())
+        else:
+            self.presetComboBox.setCurrentIndex(0)  # "Custom"
 
     def _setup_validators(self) -> None:
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
@@ -82,7 +116,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _connect_signals(self) -> None:
         self.presetComboBox.currentTextChanged.connect(self._on_preset_changed)
-        self.loadConfigButton.clicked.connect(self._load_from_json)
         self.saveConfigButton.clicked.connect(self._save_to_json)
         self.addTxRxConfigButton.clicked.connect(self._add_tx_rx_config)
         self.removeTxRxConfigButton.clicked.connect(self._remove_tx_rx_config)
@@ -111,6 +144,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.rxGainComboBox.currentIndexChanged.connect(self._mark_as_custom)
 
     def _mark_as_custom(self) -> None:
+        # Don't mark as custom if we're currently loading a preset
+        if self._loading_preset:
+            return
+
         if self.presetComboBox.currentText() != "Custom":
             self.presetComboBox.blockSignals(True)
             self.presetComboBox.setCurrentText("Custom")
@@ -121,120 +158,96 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             self._load_preset(preset_name)
 
     def _load_preset(self, preset_name: str) -> None:
+        """Load a preset from a JSON file in the presets directory."""
         logger.info(f"Loading preset: {preset_name}")
 
-        if preset_name == "Biceps Exercise":
-            self._load_biceps_preset()
-        elif preset_name == "Waterbath":
-            self._load_waterbath_preset()
+        preset_file = self._presets_dir / f"{preset_name}.json"
 
-        self.statusLabel.setText(f"Status: Loaded preset '{preset_name}'")
+        if not preset_file.exists():
+            QMessageBox.warning(
+                self,
+                "Preset Not Found",
+                f"Preset file '{preset_name}.json' not found in presets directory.",
+            )
+            return
 
-    def _load_biceps_preset(self) -> None:
-        self.dcdcTurnonLineEdit.setText("19530")
-        self.measPeriodLineEdit.setText("25000")
-        self.transFreqLineEdit.setText("2250000")
-        self.pulseFreqLineEdit.setText("2250000")
-        self.numPulsesLineEdit.setText("2")
-        self.numSamplesLineEdit.setText(str(ACQ_LENGTH_SAMPLES))
-        idx = self.samplingFreqComboBox.findData(8000000.0)
-        if idx >= 0:
-            self.samplingFreqComboBox.setCurrentIndex(idx)
-        idx = self.rxGainComboBox.findData(30.8)
-        if idx >= 0:
-            self.rxGainComboBox.setCurrentIndex(idx)
-        self.startHvmuxrxLineEdit.setText("498")
-        self.startPpgLineEdit.setText("500")
-        self.turnonAdcLineEdit.setText("5")
-        self.startPgainbiasLineEdit.setText("5")
-        self.startAdcsampleLineEdit.setText("509")
-        self.restartCaptLineEdit.setText("3000")
-        self.captTimeoutLineEdit.setText("3000")
-        self._clear_tx_rx_configs()
-        self._tx_rx_configs = [
-            {"tx_channels": [3], "rx_channels": [3], "optimized_switching": False}
-        ]
-        self._update_tx_rx_table()
+        try:
+            # Set flag to prevent marking as custom during load
+            self._loading_preset = True
 
-    def _load_waterbath_preset(self) -> None:
-        self.dcdcTurnonLineEdit.setText("100")
-        self.measPeriodLineEdit.setText("228885")
-        self.transFreqLineEdit.setText("2250000")
-        self.pulseFreqLineEdit.setText("1000000")
-        self.numPulsesLineEdit.setText("11")
-        self.numSamplesLineEdit.setText(str(ACQ_LENGTH_SAMPLES))
-        idx = self.samplingFreqComboBox.findData(4000000.0)
-        if idx >= 0:
-            self.samplingFreqComboBox.setCurrentIndex(idx)
-        idx = self.rxGainComboBox.findData(6.8)
-        if idx >= 0:
-            self.rxGainComboBox.setCurrentIndex(idx)
-        self.startHvmuxrxLineEdit.setText("500")
-        self.startPpgLineEdit.setText("500")
-        self.turnonAdcLineEdit.setText("5")
-        self.startPgainbiasLineEdit.setText("5")
-        self.startAdcsampleLineEdit.setText("503")
-        self.restartCaptLineEdit.setText("3000")
-        self.captTimeoutLineEdit.setText("3000")
-        self._clear_tx_rx_configs()
-        self._tx_rx_configs = [
-            {"tx_channels": [7], "rx_channels": [7], "optimized_switching": True}
-        ]
-        self._update_tx_rx_table()
+            with open(preset_file, "r") as f:
+                config_data = json.load(f)
+            self._apply_config_dict(config_data)
+            self.statusLabel.setText(f"Status: Loaded preset '{preset_name}'")
+            logger.info(f"Loaded preset from {preset_file}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Load Error", f"Failed to load preset: {str(e)}")
+            logger.error(f"Failed to load preset from {preset_file}: {e}")
+        finally:
+            # Reset flag after loading
+            self._loading_preset = False
 
     def load_config(self, config: WulpusUssConfig) -> None:
         """Load an existing configuration into the widget."""
-        self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
-        self.measPeriodLineEdit.setText(str(config.meas_period))
-        self.transFreqLineEdit.setText(str(config.trans_freq))
-        self.pulseFreqLineEdit.setText(str(config.pulse_freq))
-        self.numPulsesLineEdit.setText(str(config.num_pulses))
-        self.numSamplesLineEdit.setText(str(config.num_samples))
+        # Set flag to prevent marking as custom during load
+        self._loading_preset = True
 
-        idx = self.samplingFreqComboBox.findData(config.sampling_freq)
-        if idx >= 0:
-            self.samplingFreqComboBox.setCurrentIndex(idx)
+        try:
+            self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
+            self.measPeriodLineEdit.setText(str(config.meas_period))
+            self.transFreqLineEdit.setText(str(config.trans_freq))
+            self.pulseFreqLineEdit.setText(str(config.pulse_freq))
+            self.numPulsesLineEdit.setText(str(config.num_pulses))
+            self.numSamplesLineEdit.setText(str(config.num_samples))
 
-        idx = self.rxGainComboBox.findData(config.rx_gain)
-        if idx >= 0:
-            self.rxGainComboBox.setCurrentIndex(idx)
+            idx = self.samplingFreqComboBox.findData(config.sampling_freq)
+            if idx >= 0:
+                self.samplingFreqComboBox.setCurrentIndex(idx)
 
-        self.startHvmuxrxLineEdit.setText(str(config.start_hvmuxrx))
-        self.startPpgLineEdit.setText(str(config.start_ppg))
-        self.turnonAdcLineEdit.setText(str(config.turnon_adc))
-        self.startPgainbiasLineEdit.setText(str(config.start_pgainbias))
-        self.startAdcsampleLineEdit.setText(str(config.start_adcsampl))
-        self.restartCaptLineEdit.setText(str(config.restart_capt))
-        self.captTimeoutLineEdit.setText(str(config.capt_timeout))
+            idx = self.rxGainComboBox.findData(config.rx_gain)
+            if idx >= 0:
+                self.rxGainComboBox.setCurrentIndex(idx)
 
-        self._tx_rx_configs.clear()
-        for i in range(config.num_txrx_configs):
-            tx_bits = int(config.tx_configs[i])
-            rx_bits = int(config.rx_configs[i])
+            self.startHvmuxrxLineEdit.setText(str(config.start_hvmuxrx))
+            self.startPpgLineEdit.setText(str(config.start_ppg))
+            self.turnonAdcLineEdit.setText(str(config.turnon_adc))
+            self.startPgainbiasLineEdit.setText(str(config.start_pgainbias))
+            self.startAdcsampleLineEdit.setText(str(config.start_adcsampl))
+            self.restartCaptLineEdit.setText(str(config.restart_capt))
+            self.captTimeoutLineEdit.setText(str(config.capt_timeout))
 
-            tx_channels = [ch for ch in range(8) if (tx_bits >> TX_MAP[ch]) & 1]
-            rx_channels = [ch for ch in range(8) if (rx_bits >> RX_MAP[ch]) & 1]
+            self._tx_rx_configs.clear()
+            for i in range(config.num_txrx_configs):
+                tx_bits = int(config.tx_configs[i])
+                rx_bits = int(config.rx_configs[i])
 
-            # Try to detect optimized switching by checking if RX bits appear in TX config
-            # This happens when optimized switching pre-activates RX channels during TX
-            optimized = False
-            for ch in rx_channels:
-                if (tx_bits >> RX_MAP[ch]) & 1:
-                    optimized = True
-                    break
+                tx_channels = [ch for ch in range(8) if (tx_bits >> TX_MAP[ch]) & 1]
+                rx_channels = [ch for ch in range(8) if (rx_bits >> RX_MAP[ch]) & 1]
 
-            self._tx_rx_configs.append(
-                {
-                    "tx_channels": tx_channels if tx_channels else [0],
-                    "rx_channels": rx_channels if rx_channels else [0],
-                    "optimized_switching": optimized,
-                }
-            )
+                # Try to detect optimized switching by checking if RX bits appear in TX config
+                # This happens when optimized switching pre-activates RX channels during TX
+                optimized = False
+                for ch in rx_channels:
+                    if (tx_bits >> RX_MAP[ch]) & 1:
+                        optimized = True
+                        break
 
-        self._update_tx_rx_table()
-        self.presetComboBox.setCurrentText("Custom")
-        self.statusLabel.setText("Status: Loaded current configuration")
-        logger.info("Loaded existing config into widget")
+                self._tx_rx_configs.append(
+                    {
+                        "tx_channels": tx_channels if tx_channels else [0],
+                        "rx_channels": rx_channels if rx_channels else [0],
+                        "optimized_switching": optimized,
+                    }
+                )
+
+            self._update_tx_rx_table()
+            self.presetComboBox.setCurrentText("Custom")
+            self.statusLabel.setText("Status: Loaded current configuration")
+            logger.info("Loaded existing config into widget")
+        finally:
+            # Reset flag after loading
+            self._loading_preset = False
 
     def _add_tx_rx_config(self) -> None:
         dialog = TxRxConfigDialog(self)
@@ -327,30 +340,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             self._tx_rx_configs[row]["optimized_switching"] = bool(state)
             self._mark_as_custom()
 
-    def _load_from_json(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Configuration", "", "JSON Files (*.json)"
-        )
-        if not file_path:
-            return
-
-        try:
-            with open(file_path, "r") as f:
-                config_data = json.load(f)
-            self._apply_config_dict(config_data)
-            self.statusLabel.setText(f"Status: Loaded from {Path(file_path).name}")
-            self._mark_as_custom()
-            logger.info(f"Loaded configuration from {file_path}")
-
-        except Exception as e:
-            QMessageBox.critical(
-                self, "Load Error", f"Failed to load configuration: {str(e)}"
-            )
-            logger.error(f"Failed to load config from {file_path}: {e}")
-
     def _save_to_json(self) -> None:
+        """Save current configuration as a preset in the presets directory."""
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Configuration", "", "JSON Files (*.json)"
+            self, "Save Preset", str(self._presets_dir), "JSON Files (*.json)"
         )
         if not file_path:
             return
@@ -366,6 +359,21 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
             self.statusLabel.setText(f"Status: Saved to {Path(file_path).name}")
             logger.info(f"Saved configuration to {file_path}")
+
+            # Refresh presets dropdown if saved in presets directory
+            if Path(file_path).parent == self._presets_dir:
+                current_text = self.presetComboBox.currentText()
+                self._populate_presets()
+                # Try to select the newly saved preset
+                preset_name = Path(file_path).stem
+                idx = self.presetComboBox.findText(preset_name)
+                if idx >= 0:
+                    self.presetComboBox.setCurrentIndex(idx)
+                else:
+                    # Restore previous selection if possible
+                    idx = self.presetComboBox.findText(current_text)
+                    if idx >= 0:
+                        self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
             QMessageBox.critical(
@@ -383,7 +391,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 optimized_switching=config["optimized_switching"],
             )
         return WulpusUssConfig(
-            num_acqs=200,  # dummy number, this value is not used in the biogui
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
             trans_freq=int(self.transFreqLineEdit.text()),
@@ -425,6 +432,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         }
 
     def _apply_config_dict(self, config_dict: dict) -> None:
+        # Note: _loading_preset flag should be set by caller
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
         self.transFreqLineEdit.setText(str(config_dict["trans_freq"]))
