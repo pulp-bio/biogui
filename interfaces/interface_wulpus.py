@@ -455,52 +455,16 @@ class WulpusUssConfig:
                              BIOGUI INTERFACE PARAMETERS
 """
 
-
-# Create waterbath wulpus configuration
-rx_tx_waterbath_config = WulpusRxTxConfigGen()
-rx_tx_waterbath_config.add_config(
-    tx_channels=[7], rx_channels=[7], optimized_switching=True
-)
-
-
-# ! number of samples is hardcoded in the wulpus firmware at the moment to 400
-waterbath_config = WulpusUssConfig(
-    dcdc_turnon=100,
-    meas_period=228885,
-    trans_freq=2250000,
-    pulse_freq=1000000,
-    num_pulses=11,
-    sampling_freq=4000000.0,
-    num_samples=ACQ_LENGTH_SAMPLES,
-    rx_gain=6.8,
-    num_txrx_configs=rx_tx_waterbath_config.tx_rx_len,
-    tx_configs=rx_tx_waterbath_config.get_tx_configs(),  # only channel 7 with optimized switching
-    rx_configs=rx_tx_waterbath_config.get_rx_configs(),  # only channel 7 with optimized switching
-    start_hvmuxrx=500,
-    start_ppg=500,
-    turnon_adc=5,
-    start_pgainbias=5,
-    start_adcsampl=503,
-    restart_capt=3000,
-    capt_timeout=3000,
-)
-
-
 # Create biceps exercise wulpus configuration
-rx_tx_biceps_config = WulpusRxTxConfigGen()
-rx_tx_biceps_config.add_config(
+rx_tx_config = WulpusRxTxConfigGen()
+rx_tx_config.add_config(
     tx_channels=[3],
     rx_channels=[3],
     optimized_switching=False,
 )
-# rx_tx_biceps_config.add_config(
-#     tx_channels=[7],
-#     rx_channels=[7],
-#     optimized_switching=False,
-# )
 
 
-biceps_exercise_config = WulpusUssConfig(
+wulpus_config = WulpusUssConfig(
     dcdc_turnon=19530,
     meas_period=25000,
     trans_freq=2250000,
@@ -509,9 +473,9 @@ biceps_exercise_config = WulpusUssConfig(
     sampling_freq=8000000.0,
     num_samples=ACQ_LENGTH_SAMPLES,
     rx_gain=30.8,
-    num_txrx_configs=rx_tx_biceps_config.tx_rx_len,
-    tx_configs=rx_tx_biceps_config.get_tx_configs(),
-    rx_configs=rx_tx_biceps_config.get_rx_configs(),
+    num_txrx_configs=rx_tx_config.tx_rx_len,
+    tx_configs=rx_tx_config.get_tx_configs(),
+    rx_configs=rx_tx_config.get_rx_configs(),
     start_hvmuxrx=498,
     start_ppg=500,
     turnon_adc=5,
@@ -520,8 +484,6 @@ biceps_exercise_config = WulpusUssConfig(
     restart_capt=3000,
     capt_timeout=3000,
 )
-
-wulpus_config = biceps_exercise_config
 
 packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 """Number of bytes in each package."""
