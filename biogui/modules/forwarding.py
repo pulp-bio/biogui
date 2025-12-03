@@ -25,7 +25,7 @@ from itertools import islice
 from types import MappingProxyType
 
 import numpy as np
-from PySide6.QtCore import QLocale, QObject, Qt, QThread, Signal
+from PySide6.QtCore import QLocale, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtGui import (
     QDoubleValidator,
     QIntValidator,
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
 from biogui.ui.forwarding_config_widget_ui import Ui_ForwardingConfigWidget
-from biogui.utils import SigData, Slot
+from biogui.utils import SigData
 from biogui.views import MainWindow
 
 
