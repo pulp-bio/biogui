@@ -36,8 +36,7 @@ class WulpusConfigDialog(QDialog):
 
     def accept(self):
         try:
-            config = self.configWidget.get_current_config()
-            self._config = config
+            self._config = self.configWidget.get_current_config()
             self.configWidget.statusLabel.setText("Status: Configuration validated")
             super().accept()
         except Exception as e:
