@@ -136,7 +136,6 @@ def plot_signal_mmode(
         )
         axes[i].set_ylabel(f"Channel {i}\nDepth (sample)")
         axes[i].grid(False)
-        # Removed: plt.colorbar(...)
 
     axes[-1].set_xlabel("Time (s)")
 
@@ -162,7 +161,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
     """Orchestrator for M-mode plotting."""
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
-        if sig_name not in ["timestamp", "trigger", "imu"]:
+        if sig_name not in ["timestamp", "trigger", "imu", "counter"]:
             plot_signal_mmode(sig_name, sig_data, samples_per_acquisition)
             data_signal_count += 1
 
@@ -195,8 +194,10 @@ def main():
     if args.ultrasound:
         plot_ultrasound_mmode(signals, args.samples_per_acquisition)
     else:
+        # Plot all signals except counter (not interesting for visualization)
         for sig_name, sig_data in signals.items():
-            plot_signal_standard(sig_name, sig_data)
+            if sig_name != "counter":
+                plot_signal_standard(sig_name, sig_data)
         plt.show()
 
 

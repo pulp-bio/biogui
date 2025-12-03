@@ -374,6 +374,9 @@ class MainController(QObject):
 
         # Add signal items with checkboxes
         for sigName, sigConfig in sigsConfigs.items():
+            # Skip hidden signals (e.g., counter)
+            if interfaceModule.sigInfo[sigName].get("hidden", False):
+                continue
             sigItem = QStandardItem(sigName)
             sigItem.setEditable(False)
             sigItem.setFlags(sigItem.flags() | Qt.ItemIsUserCheckable)  # type: ignore
