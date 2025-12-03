@@ -591,6 +591,17 @@ sigInfo["imu"] = {
 }
 logging.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
 
+# Add Counter signal to track packet sequence numbers
+sigInfo["counter"] = {
+    "fs": 1.0 / meas_period_s,
+    "nCh": 1,
+    "hidden": True,  # Counter is metadata, not meant for visualization
+    "signal_type": {
+        "type": "time-series",
+    },
+}
+logging.info(f"WULPUS: Created signal 'counter' (fs={1.0 / meas_period_s:.2f} Hz)")
+
 
 if len(sigInfo) == 0:
     raise ValueError(
@@ -630,6 +641,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     result = {}
 
     for signal_name in sigInfo.keys():
+        if signal_name == "counter":
+            # Store counter value to track packet sequence numbers
+            result[signal_name] = np.array([[acq_nr]], dtype=np.uint16)
+            continue
         if signal_name == "imu":
             result[signal_name] = imu_samples.reshape(1, 3)
             continue

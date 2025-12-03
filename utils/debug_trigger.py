@@ -80,6 +80,42 @@ def read_bio_file(file_path: str) -> dict:
     return {"signals": signals, "trigger": trigger}
 
 
+def print_file_info(signals: dict, trigger: np.ndarray):
+    """
+    Print information about the .bio file format and detected signals.
+    """
+    print("=" * 60)
+    print("FILE INFORMATION")
+    print("=" * 60)
+
+    # Count signal types
+    signal_names = [s for s in signals.keys() if s != "timestamp"]
+    print(f"\nDetected {len(signal_names)} signal(s):")
+    for sig_name in signal_names:
+        sig_data = signals[sig_name]
+        print(
+            f"  - {sig_name}: {sig_data['data'].shape[0]} samples, "
+            f"{sig_data['data'].shape[1]} channel(s), "
+            f"fs={sig_data['fs']:.2f} Hz, dtype={sig_data['data'].dtype}"
+        )
+
+    # Check for counter signal (new format)
+    has_counter = "counter" in signals
+    if has_counter:
+        print("\n   This file includes COUNTER data (new format)")
+    else:
+        print("\n⚠ This file does NOT include counter data (old format)")
+
+    # Trigger info
+    if trigger is not None:
+        print(f"\nTrigger data present: {len(trigger)} samples")
+    else:
+        print("\nNo trigger data in this file")
+
+    print("=" * 60)
+    print()
+
+
 def analyze_triggers(trigger_data: np.ndarray):
     """
     Analyzes and prints statistics about the trigger blocks.
@@ -148,6 +184,11 @@ def main():
 
     try:
         data = read_bio_file(args.filename)
+
+        # Print file format information
+        print_file_info(data["signals"], data["trigger"])
+
+        # Analyze triggers
         analyze_triggers(data["trigger"])
     except Exception as e:
         print(f"Error processing file: {e}")

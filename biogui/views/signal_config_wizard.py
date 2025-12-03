@@ -127,15 +127,22 @@ class SignalConfigWizard(QWizard):
         self.setWindowTitle("Signal Configuration")
 
         # Populate wizard
+        self._sigsConfigs = {}
         for sigName in sigInfo:
+            # Skip hidden signals (e.g., counter) in wizard
+            if sigInfo[sigName].get("hidden", False):
+                # Add default config for hidden signals
+                self._sigsConfigs[sigName] = {
+                    "fs": sigInfo[sigName]["fs"],
+                    "nCh": sigInfo[sigName]["nCh"],
+                }
+                continue
             self.addPage(
                 SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self)
             )
 
         finishButton = self.button(QWizard.FinishButton)  # type: ignore
         finishButton.clicked.connect(self.onFinishedClicked)
-
-        self._sigsConfigs = {}
 
     @property
     def sigsConfigs(self) -> dict:

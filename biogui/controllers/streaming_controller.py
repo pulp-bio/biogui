@@ -473,7 +473,9 @@ class StreamingController(QObject):
 
         # Store signal specifications
         self._sigInfo = {
-            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh")}
+            iSigName: {
+                k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")
+            }
             for iSigName, iSigInfo in sigsConfigs.items()
         }
 
