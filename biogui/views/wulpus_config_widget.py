@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
@@ -21,16 +19,11 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QTableWidgetItem,
-    QVBoxLayout,
     QWidget,
 )
 
-# Add interfaces directory to Python path
-interfaces_path = Path(__file__).parent.parent.parent / "interfaces"
-if str(interfaces_path) not in sys.path:
-    sys.path.insert(0, str(interfaces_path))
-
-from interface_wulpus import (
+from biogui.ui.wulpus_config_widget_ui import Ui_WulpusConfigWidget
+from interfaces.interface_wulpus import (
     ACQ_LENGTH_SAMPLES,
     PGA_GAIN,
     RX_MAP,
@@ -39,8 +32,6 @@ from interface_wulpus import (
     WulpusRxTxConfigGen,
     WulpusUssConfig,
 )
-
-from biogui.ui.wulpus_config_widget_ui import Ui_WulpusConfigWidget
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +56,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         logger.info("WulpusConfigWidget initialized")
 
     def _setup_validators(self) -> None:
-        self.numAcqsLineEdit.setValidator(QIntValidator(0, 100000000))
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
         self.measPeriodLineEdit.setValidator(QIntValidator(0, 1000000))  # No minimum
         self.transFreqLineEdit.setValidator(QIntValidator(0, 10000000))
@@ -101,7 +91,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         # Enable double-click to edit TX/RX configs
         self.txRxTableWidget.doubleClicked.connect(lambda: self._edit_tx_rx_config())
         for widget in [
-            self.numAcqsLineEdit,
             self.dcdcTurnonLineEdit,
             self.measPeriodLineEdit,
             self.transFreqLineEdit,
@@ -142,7 +131,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.statusLabel.setText(f"Status: Loaded preset '{preset_name}'")
 
     def _load_biceps_preset(self) -> None:
-        self.numAcqsLineEdit.setText("2000")
         self.dcdcTurnonLineEdit.setText("19530")
         self.measPeriodLineEdit.setText("25000")
         self.transFreqLineEdit.setText("2250000")
@@ -169,7 +157,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._update_tx_rx_table()
 
     def _load_waterbath_preset(self) -> None:
-        self.numAcqsLineEdit.setText("100")
         self.dcdcTurnonLineEdit.setText("100")
         self.measPeriodLineEdit.setText("228885")
         self.transFreqLineEdit.setText("2250000")
@@ -197,7 +184,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def load_config(self, config: WulpusUssConfig) -> None:
         """Load an existing configuration into the widget."""
-        self.numAcqsLineEdit.setText(str(config.num_acqs))
         self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
         self.measPeriodLineEdit.setText(str(config.meas_period))
         self.transFreqLineEdit.setText(str(config.trans_freq))
@@ -397,7 +383,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 optimized_switching=config["optimized_switching"],
             )
         return WulpusUssConfig(
-            num_acqs=int(self.numAcqsLineEdit.text()),
+            num_acqs=200,  # dummy number, this value is not used in the biogui
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
             trans_freq=int(self.transFreqLineEdit.text()),
@@ -420,7 +406,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _get_config_dict(self) -> dict:
         return {
-            "num_acqs": int(self.numAcqsLineEdit.text()),
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
             "trans_freq": int(self.transFreqLineEdit.text()),
@@ -440,7 +425,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         }
 
     def _apply_config_dict(self, config_dict: dict) -> None:
-        self.numAcqsLineEdit.setText(str(config_dict["num_acqs"]))
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
         self.transFreqLineEdit.setText(str(config_dict["trans_freq"]))

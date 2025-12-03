@@ -25,6 +25,7 @@ from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
 
+from biogui.utils import InterfaceModule
 from biogui.views import (
     DataSourceConfigDialog,
     MainWindow,
@@ -32,6 +33,8 @@ from biogui.views import (
     SignalConfigWizard,
     SignalPlotWidget,
 )
+from biogui.views.wulpus_config_dialog import WulpusConfigDialog
+from interfaces import interface_wulpus
 
 from ..utils import SigData
 from .streaming_controller import StreamingController
@@ -748,24 +751,12 @@ class MainController(QObject):
         self._relayoutPlots()
 
     def _openWulpusConfigDialog(self):
-        """Open configuration dialog for WULPUS hardware."""
-        import logging
-        import sys
-        from pathlib import Path
-
-        from biogui.utils import InterfaceModule
-        from biogui.views.wulpus_config_dialog import WulpusConfigDialog
-
-        interfaces_path = Path(__file__).parent.parent.parent / "interfaces"
-        if str(interfaces_path) not in sys.path:
-            sys.path.insert(0, str(interfaces_path))
-
-        import interface_wulpus as wulpus_interface
+        """Open configuration dialog for WULPUS."""
 
         dialog = WulpusConfigDialog(parent=self._mainWin)
 
         # Load current configuration into dialog
-        current_config = wulpus_interface.wulpus_config
+        current_config = interface_wulpus.wulpus_config
         dialog.configWidget.load_config(current_config)
 
         if dialog.exec():
@@ -786,14 +777,14 @@ class MainController(QObject):
                     return
                 self.stopStreaming()
 
-            wulpus_interface.wulpus_config = new_config
-            wulpus_interface.packetSize = new_config.num_samples * 2 + 7 + 6
-            wulpus_interface.startSeq = [
+            interface_wulpus.wulpus_config = new_config
+            interface_wulpus.packetSize = new_config.num_samples * 2 + 7 + 6
+            interface_wulpus.startSeq = [
                 new_config.get_restart_package(),
                 0.5,
                 new_config.get_conf_package(),
             ]
-            wulpus_interface.stopSeq = [new_config.get_restart_package()]
+            interface_wulpus.stopSeq = [new_config.get_restart_package()]
 
             # Rebuild signal info with new configuration
             meas_period_s = new_config.meas_period / 1e6
@@ -804,7 +795,7 @@ class MainController(QObject):
             new_sigInfo = {}
             new_config_to_signal_name = {}
             for config_id in range(new_config.num_txrx_configs):
-                rx_channel = wulpus_interface.get_rx_channel_for_config(
+                rx_channel = interface_wulpus.get_rx_channel_for_config(
                     new_config, config_id
                 )
                 if rx_channel is None:
@@ -838,8 +829,8 @@ class MainController(QObject):
                 "signal_type": {"type": "time-series"},
             }
 
-            wulpus_interface.sigInfo = new_sigInfo
-            wulpus_interface.config_to_signal_name = new_config_to_signal_name
+            interface_wulpus.sigInfo = new_sigInfo
+            interface_wulpus.config_to_signal_name = new_config_to_signal_name
 
             # Identify Wulpus sources and check if signal structure changed
             updated_count = 0
@@ -873,11 +864,11 @@ class MainController(QObject):
                             k: v for k, v in old_ds_config.items() if k != "sigsConfigs"
                         }
                         new_ds_config["interfaceModule"] = InterfaceModule(
-                            packetSize=wulpus_interface.packetSize,
-                            startSeq=wulpus_interface.startSeq,
-                            stopSeq=wulpus_interface.stopSeq,
-                            sigInfo=wulpus_interface.sigInfo,
-                            decodeFn=wulpus_interface.decodeFn,
+                            packetSize=interface_wulpus.packetSize,
+                            startSeq=interface_wulpus.startSeq,
+                            stopSeq=interface_wulpus.stopSeq,
+                            sigInfo=interface_wulpus.sigInfo,
+                            decodeFn=interface_wulpus.decodeFn,
                         )
 
                         # Preserve old signal configs where names match, create new for others
@@ -911,11 +902,11 @@ class MainController(QObject):
             # Update sources where signal structure didn't change
             for ds_name, ds_config in sources_to_update:
                 new_interface_module = InterfaceModule(
-                    packetSize=wulpus_interface.packetSize,
-                    startSeq=wulpus_interface.startSeq,
-                    stopSeq=wulpus_interface.stopSeq,
-                    sigInfo=wulpus_interface.sigInfo,
-                    decodeFn=wulpus_interface.decodeFn,
+                    packetSize=interface_wulpus.packetSize,
+                    startSeq=interface_wulpus.startSeq,
+                    stopSeq=interface_wulpus.stopSeq,
+                    sigInfo=interface_wulpus.sigInfo,
+                    decodeFn=interface_wulpus.decodeFn,
                 )
 
                 ds_config["interfaceModule"] = new_interface_module
