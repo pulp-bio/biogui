@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'forwarding_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.0
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,14 +16,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QGroupBox,
-    QHeaderView, QLabel, QLineEdit, QSizePolicy,
-    QTreeView, QVBoxLayout, QWidget)
+    QHeaderView, QLabel, QLineEdit, QRadioButton,
+    QSizePolicy, QTreeView, QVBoxLayout, QWidget)
 
 class Ui_ForwardingConfigWidget(object):
     def setupUi(self, ForwardingConfigWidget):
         if not ForwardingConfigWidget.objectName():
             ForwardingConfigWidget.setObjectName(u"ForwardingConfigWidget")
-        ForwardingConfigWidget.resize(400, 453)
+        ForwardingConfigWidget.resize(400, 550)
         self.verticalLayout1 = QVBoxLayout(ForwardingConfigWidget)
         self.verticalLayout1.setObjectName(u"verticalLayout1")
         self.forwardGroupBox = QGroupBox(ForwardingConfigWidget)
@@ -36,9 +36,29 @@ class Ui_ForwardingConfigWidget(object):
 
         self.verticalLayout2.addWidget(self.dataSourceTree)
 
+        self.modeGroupBox = QGroupBox(self.forwardGroupBox)
+        self.modeGroupBox.setObjectName(u"modeGroupBox")
+        self.modeGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.verticalLayout3 = QVBoxLayout(self.modeGroupBox)
+        self.verticalLayout3.setObjectName(u"verticalLayout3")
+        self.frameBasedRadioButton = QRadioButton(self.modeGroupBox)
+        self.frameBasedRadioButton.setObjectName(u"frameBasedRadioButton")
+        self.frameBasedRadioButton.setChecked(True)
+
+        self.verticalLayout3.addWidget(self.frameBasedRadioButton)
+
+        self.windowBasedRadioButton = QRadioButton(self.modeGroupBox)
+        self.windowBasedRadioButton.setObjectName(u"windowBasedRadioButton")
+
+        self.verticalLayout3.addWidget(self.windowBasedRadioButton)
+
+
+        self.verticalLayout2.addWidget(self.modeGroupBox)
+
         self.windowGroupBox = QGroupBox(self.forwardGroupBox)
         self.windowGroupBox.setObjectName(u"windowGroupBox")
         self.windowGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.windowGroupBox.setEnabled(False)
         self.formLayout1 = QFormLayout(self.windowGroupBox)
         self.formLayout1.setObjectName(u"formLayout1")
         self.label1 = QLabel(self.windowGroupBox)
@@ -121,6 +141,7 @@ class Ui_ForwardingConfigWidget(object):
 
 
         self.retranslateUi(ForwardingConfigWidget)
+        self.windowBasedRadioButton.toggled.connect(self.windowGroupBox.setEnabled)
 
         QMetaObject.connectSlotsByName(ForwardingConfigWidget)
     # setupUi
@@ -128,7 +149,16 @@ class Ui_ForwardingConfigWidget(object):
     def retranslateUi(self, ForwardingConfigWidget):
         ForwardingConfigWidget.setWindowTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Forwarding Configuration Widget", None))
         self.forwardGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Forwarding configuration", None))
-        self.windowGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Window settings", None))
+        self.modeGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Forwarding mode", None))
+        self.frameBasedRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Frame-based (forward complete frames immediately)", None))
+#if QT_CONFIG(tooltip)
+        self.frameBasedRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Forward data as soon as a complete frame arrives (recommended for real-time streaming)", None))
+#endif // QT_CONFIG(tooltip)
+        self.windowBasedRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window-based (accumulate samples)", None))
+#if QT_CONFIG(tooltip)
+        self.windowBasedRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Accumulate samples into windows of specified length (for batch processing)", None))
+#endif // QT_CONFIG(tooltip)
+        self.windowGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Window settings (for window-based mode)", None))
         self.label1.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window length (in ms):", None))
         self.label2.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window stride (in ms):", None))
         self.socketGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Socket settings", None))

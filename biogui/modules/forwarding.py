@@ -163,6 +163,9 @@ class _ForwardingWorker(QObject):
         Instance of _Socket.
     _buffers : dict
         Dictionary containing one buffer per signal.
+    _frameBasedMode : bool
+        If True, forward immediately when frame is complete (ignores window settings).
+        If False, use traditional window-based accumulation.
 
     Class attributes
     ----------------
@@ -178,6 +181,7 @@ class _ForwardingWorker(QObject):
         self._socketConfig: dict = {}
         self._socket: _Socket | None = None
         self._buffers = {}
+        self._frameBasedMode: bool = True  # Default to frame-based
 
     @property
     def socketConfig(self) -> dict:
@@ -187,6 +191,8 @@ class _ForwardingWorker(QObject):
     @socketConfig.setter
     def socketConfig(self, socketConfig: dict) -> None:
         self._socketConfig = socketConfig
+        # Extract frame-based mode setting
+        self._frameBasedMode = socketConfig.get("frameBasedMode", True)
 
     def initBuffers(self, buffersConfig: dict) -> None:
         """
@@ -239,26 +245,67 @@ class _ForwardingWorker(QObject):
                 continue
             self._buffers[dataSourceId][sigData.sigName]["queue"].extend(sigData.data)
 
+        # Forward logic depends on mode
+        if self._frameBasedMode:
+            self._forwardFrameBased(dataSourceId)
+        else:
+            self._forwardWindowBased(dataSourceId)
+
+    def _forwardFrameBased(self, dataSourceId: str) -> None:
+        """
+        Frame-based forwarding: Forward all non-empty signals immediately.
+
+        For WULPUS multi-config: Only one ultrasound config is active per frame,
+        so this automatically forwards cfg0+imu, then cfg1+imu, etc. sequentially.
+        """
+        # Check which signals have data
+        signals_with_data = sorted(
+            [
+                sigName
+                for sigName, sigBuffers in self._buffers[dataSourceId].items()
+                if len(sigBuffers["queue"]) > 0
+            ]
+        )
+
+        if not signals_with_data:
+            return
+
+        # Forward all available data
+        data = bytearray()
+        for sigName in signals_with_data:
+            sigBuffers = self._buffers[dataSourceId][sigName]
+            queue = sigBuffers["queue"]
+
+            # Take all available data
+            data.extend(np.asarray(queue).tobytes())
+
+            # Clear the queue (frame-based = no windowing)
+            sigBuffers["queue"].clear()
+
+        self._socket.write(data)
+
+    def _forwardWindowBased(self, dataSourceId: str) -> None:
+        """
+        Traditional window-based forwarding: Wait until all buffers are full.
+        """
         # Check if all buffers are full
         while True:
             bufferFilled = all(
                 len(sigBuffers["queue"]) >= sigBuffers["winLen"]
-                for dataSourceBuffers in self._buffers.values()
-                for sigBuffers in dataSourceBuffers.values()
+                for sigBuffers in self._buffers[dataSourceId].values()
             )
             if not bufferFilled:
                 break
 
             data = bytearray()
-            for dataSourceBuffers in self._buffers.values():
-                for sigBuffers in dataSourceBuffers.values():
-                    queue = sigBuffers["queue"]
-                    winLen = sigBuffers["winLen"]
-                    stepLen = sigBuffers["stepLen"]
-                    # Convert to bytes
-                    data.extend(np.asarray(queue)[:winLen].tobytes())
-                    # Shift by step length
-                    sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
+            for sigBuffers in sorted(self._buffers[dataSourceId].values()):
+                queue = sigBuffers["queue"]
+                winLen = sigBuffers["winLen"]
+                stepLen = sigBuffers["stepLen"]
+                # Convert to bytes
+                data.extend(np.asarray(queue)[:winLen].tobytes())
+                # Shift by step length
+                sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
             self._socket.write(data)
 
     def reset(self) -> None:
@@ -312,15 +359,23 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         # Read and validate configuration
         config = {}
 
-        # 1. Window settings
-        if not self.winLenTextField.hasAcceptableInput():
-            return None, 'The "Window length" field is invalid.'
-        config["winLenS"] = lo.toFloat(self.winLenTextField.text())[0] / 1000
-        if not self.winStrideTextField.hasAcceptableInput():
-            return None, 'The "Window stride" field is invalid.'
-        config["winStrideS"] = lo.toFloat(self.winStrideTextField.text())[0] / 1000
+        # 1. Forwarding mode
+        config["frameBasedMode"] = self.frameBasedRadioButton.isChecked()
 
-        # 2. Socket settings
+        # 2. Window settings (only for window-based mode)
+        if not config["frameBasedMode"]:
+            if not self.winLenTextField.hasAcceptableInput():
+                return None, 'The "Window length" field is invalid.'
+            config["winLenS"] = lo.toFloat(self.winLenTextField.text())[0] / 1000
+            if not self.winStrideTextField.hasAcceptableInput():
+                return None, 'The "Window stride" field is invalid.'
+            config["winStrideS"] = lo.toFloat(self.winStrideTextField.text())[0] / 1000
+        else:
+            # Frame-based: use minimal window settings (1 sample)
+            config["winLenS"] = 0.001
+            config["winStrideS"] = 0.001
+
+        # 3. Socket settings
         if self.socketTypeComboBox.currentText() == "TCP":
             if not self.socketPortTextField.hasAcceptableInput():
                 return None, "The provided socket port is not valid."
@@ -493,9 +548,12 @@ class ForwardingController(QObject):
             self._handleErrors(errMsg)
             return
 
-        # Compute buffer sizes for the signals of interest
+        # Extract mode and window settings
+        frameBasedMode = config.pop("frameBasedMode", True)
         winLenS = config.pop("winLenS")
         winStrideS = config.pop("winStrideS")
+
+        # Compute buffer sizes for the signals of interest
         buffersConfig = {}
         for dataSourceId, sigNames in sigsToForward.items():
             buffersConfig[dataSourceId] = {}
@@ -503,8 +561,16 @@ class ForwardingController(QObject):
             streamingController = self._streamingControllers[dataSourceId]
             for sigName in sigNames:
                 fs = streamingController.sigInfo[sigName]["fs"]
-                winLen = int(round(winLenS * fs))
-                stepLen = int(round(winStrideS * fs))
+
+                if frameBasedMode:
+                    # Frame-based: minimal buffering (just enough for 1 sample)
+                    winLen = 1
+                    stepLen = 1
+                else:
+                    # Window-based: traditional behavior
+                    winLen = int(round(winLenS * fs))
+                    stepLen = int(round(winStrideS * fs))
+
                 buffersConfig[dataSourceId][sigName] = {
                     "winLen": winLen,
                     "stepLen": stepLen,
@@ -516,7 +582,8 @@ class ForwardingController(QObject):
             )
         self._forwardingWorker.initBuffers(buffersConfig)
 
-        # Set socket configuration
+        # Set socket configuration (including mode)
+        config["frameBasedMode"] = frameBasedMode
         self._forwardingWorker.socketConfig = config
 
         # Start thread

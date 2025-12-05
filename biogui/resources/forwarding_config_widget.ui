@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>453</height>
+    <height>550</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,12 +27,50 @@
        <widget class="QTreeView" name="dataSourceTree"/>
       </item>
       <item>
-       <widget class="QGroupBox" name="windowGroupBox">
+       <widget class="QGroupBox" name="modeGroupBox">
         <property name="title">
-         <string>Window settings</string>
+         <string>Forwarding mode</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout3">
+         <item>
+          <widget class="QRadioButton" name="frameBasedRadioButton">
+           <property name="text">
+            <string>Frame-based (forward complete frames immediately)</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="toolTip">
+            <string>Forward data as soon as a complete frame arrives (recommended for real-time streaming)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="windowBasedRadioButton">
+           <property name="text">
+            <string>Window-based (accumulate samples)</string>
+           </property>
+           <property name="toolTip">
+            <string>Accumulate samples into windows of specified length (for batch processing)</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="windowGroupBox">
+        <property name="title">
+         <string>Window settings (for window-based mode)</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
         </property>
         <layout class="QFormLayout" name="formLayout1">
          <item row="0" column="0">
@@ -140,5 +178,12 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>windowBasedRadioButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>windowGroupBox</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+ </connections>
 </ui>
