@@ -564,7 +564,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
 
     # Generate signal name
     if wulpus_config.num_txrx_configs == 1:
-        signal_name = f"ultrasound_rx{rx_channel}"
+        signal_name = "ultrasound"
     else:
         signal_name = f"ultrasound_cfg{config_id}_rx{rx_channel}"
 
@@ -578,7 +578,6 @@ for config_id in range(wulpus_config.num_txrx_configs):
             "type": "ultrasound",
             "config_id": config_id,
             "rx_channel": rx_channel,
-            # Adjust num_samples to exclude IMU data
             "num_samples": NUM_US_SAMPLES,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,

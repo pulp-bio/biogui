@@ -792,7 +792,7 @@ class MainController(QObject):
             # Rebuild signal info with new configuration
             meas_period_s = new_config.meas_period / 1e6
             period_per_config_s = meas_period_s * new_config.num_txrx_configs
-            samples_per_second = (new_config.num_samples - 3) / period_per_config_s
+            samples_per_second = interface_wulpus.NUM_US_SAMPLES / period_per_config_s
             adc_start_delay = (new_config.start_adcsampl - new_config.start_ppg) * 1e-6
 
             new_sigInfo = {}
@@ -819,7 +819,7 @@ class MainController(QObject):
                         "type": "ultrasound",
                         "config_id": config_id,
                         "rx_channel": rx_channel,
-                        "num_samples": new_config.num_samples - 3,
+                        "num_samples": interface_wulpus.NUM_US_SAMPLES,
                         "meas_period": new_config.meas_period,
                         "adc_sampling_freq": new_config.sampling_freq,
                         "adc_start_delay": adc_start_delay,
@@ -829,6 +829,13 @@ class MainController(QObject):
             new_sigInfo["imu"] = {
                 "fs": 1.0 / meas_period_s,
                 "nCh": 3,
+                "signal_type": {"type": "time-series"},
+            }
+
+            new_sigInfo["counter"] = {
+                "fs": 1.0 / meas_period_s,
+                "nCh": 1,
+                "hidden": True,
                 "signal_type": {"type": "time-series"},
             }
 
