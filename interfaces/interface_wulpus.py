@@ -24,9 +24,21 @@ import logging
 
 import numpy as np
 
-# baudrate = 4000000
-# 397 ultrasound samples + 3 imu acceleration samples (x, y, z)
+# ============================================================================
+# WULPUS Frame Structure
+# ============================================================================
+# Hardware sends 400 int16 values per acquisition frame:
+#   - First 397 samples: Ultrasound data from ADC
+#   - Last 3 samples: IMU acceleration (ax, ay, az)
 ACQ_LENGTH_SAMPLES = 400
+NUM_US_SAMPLES = 397
+NUM_IMU_SAMPLES = 3
+
+# Sanity check
+assert ACQ_LENGTH_SAMPLES == NUM_US_SAMPLES + NUM_IMU_SAMPLES, (
+    "Frame structure constants are inconsistent"
+)
+
 
 # Protocol related
 START_BYTE_CONF_PACK = 250
@@ -533,8 +545,7 @@ meas_period_s = wulpus_config.meas_period / 1e6  # Convert to seconds
 period_per_config_s = meas_period_s * wulpus_config.num_txrx_configs
 
 # Effective sampling rate: samples delivered per second for each configuration
-# subtract 3 samples for IMU data
-samples_per_second_per_config = (wulpus_config.num_samples - 3) / period_per_config_s
+samples_per_second_per_config = NUM_US_SAMPLES / period_per_config_s
 
 # ADC start delay relative to pulse generation
 adc_start_delay = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
@@ -568,7 +579,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
             "config_id": config_id,
             "rx_channel": rx_channel,
             # Adjust num_samples to exclude IMU data
-            "num_samples": wulpus_config.num_samples - 3,
+            "num_samples": NUM_US_SAMPLES,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,
             "adc_start_delay": adc_start_delay,
@@ -623,38 +634,45 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             "b'START\\n' sequence. Data alignment error."
         )
 
-    # remove b'START\n' from data
+    # Parse packet structure (after removing b'START\n'):
+    # [0:4]   = header (4 bytes)
+    # [4]     = tx_rx_id (config ID from hardware)
+    # [5:7]   = acq_nr (acquisition counter, uint16)
+    # [7:]    = rf_data (400 int16 samples: 397 US + 3 IMU)
     data = data[6:]
 
-    rf_arr = np.frombuffer(data[7:], dtype="<i2")
     tx_rx_id = data[4]
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
-
-    # The last 3 samples are IMU data
-    us_samples = rf_arr[:-3]
-    imu_samples = rf_arr[-3:]
+    rf_arr = np.frombuffer(data[7:], dtype="<i2")
 
     # logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     # logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
-    # Build result dictionary with all signals
+    # Split frame: first 397 samples = ultrasound, last 3 = IMU
+    us_samples = rf_arr[:NUM_US_SAMPLES]
+    imu_samples = rf_arr[NUM_US_SAMPLES : NUM_US_SAMPLES + NUM_IMU_SAMPLES]
+
+    # Optional: Detect frame loss via counter jumps
+    # (For multi-config: expected_config_id = acq_nr % num_configs)
+    # TODO: Add frame loss detection if need
+
+    # Build result dictionary
     result = {}
 
     for signal_name in sigInfo.keys():
         if signal_name == "counter":
             # Store counter value to track packet sequence numbers
             result[signal_name] = np.array([[acq_nr]], dtype=np.uint16)
-            continue
-        if signal_name == "imu":
+
+        elif signal_name == "imu":
             result[signal_name] = imu_samples.reshape(1, 3)
-            continue
-        # Check if this signal corresponds to the current config_id
-        if config_to_signal_name.get(tx_rx_id) == signal_name:
-            # This signal is active in this acquisition
-            result[signal_name] = us_samples.reshape(-1, 1)
-            continue
+
         else:
-            # This signal is not active in this acquisition - return empty array
-            result[signal_name] = np.empty((0, 1), dtype=np.int16)
+            # Ultrasound signal: check if this config is active in current frame
+            if config_to_signal_name.get(tx_rx_id) == signal_name:
+                result[signal_name] = us_samples.reshape(-1, 1)
+            else:
+                # Config not active in this frame
+                result[signal_name] = np.empty((0, 1), dtype=np.int16)
 
     return result
