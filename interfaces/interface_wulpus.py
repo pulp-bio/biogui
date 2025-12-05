@@ -564,7 +564,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
 
     # Generate signal name
     if wulpus_config.num_txrx_configs == 1:
-        signal_name = "ultrasound"
+        signal_name = f"ultrasound_rx{rx_channel}"
     else:
         signal_name = f"ultrasound_cfg{config_id}_rx{rx_channel}"
 
@@ -611,7 +611,6 @@ sigInfo["counter"] = {
         "type": "time-series",
     },
 }
-logging.info(f"WULPUS: Created signal 'counter' (fs={1.0 / meas_period_s:.2f} Hz)")
 
 
 if len(sigInfo) == 0:
@@ -627,6 +626,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
     Decode binary data received from WULPUS into signals.
     """
+
     # Validate start sequence
     if data[:6] != b"START\n":
         raise ValueError(
@@ -634,16 +634,22 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             "b'START\\n' sequence. Data alignment error."
         )
 
+    # Remove start sequence (b'START\n')
+    data = data[6:]
+
     # Parse packet structure (after removing b'START\n'):
     # [0:4]   = header (4 bytes)
     # [4]     = tx_rx_id (config ID from hardware)
     # [5:7]   = acq_nr (acquisition counter, uint16)
     # [7:]    = rf_data (400 int16 samples: 397 US + 3 IMU)
-    data = data[6:]
-
     tx_rx_id = data[4]
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
     rf_arr = np.frombuffer(data[7:], dtype="<i2")
+
+    if tx_rx_id != acq_nr % wulpus_config.num_txrx_configs:
+        raise ValueError(
+            f"tx_rx_id={tx_rx_id} does not match acq_nr % num_txrx_configs: {acq_nr} % {wulpus_config.num_txrx_configs} = {acq_nr % wulpus_config.num_txrx_configs}"
+        )
 
     # logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     # logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
@@ -652,16 +658,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     us_samples = rf_arr[:NUM_US_SAMPLES]
     imu_samples = rf_arr[NUM_US_SAMPLES : NUM_US_SAMPLES + NUM_IMU_SAMPLES]
 
-    # Optional: Detect frame loss via counter jumps
-    # (For multi-config: expected_config_id = acq_nr % num_configs)
-    # TODO: Add frame loss detection if need
-
-    # Build result dictionary
+    # Build result dictionary with all signals
     result = {}
 
     for signal_name in sigInfo.keys():
         if signal_name == "counter":
-            # Store counter value to track packet sequence numbers
+            # Store counter value to track packet sequence numbers (for loss detection)
             result[signal_name] = np.array([[acq_nr]], dtype=np.uint16)
 
         elif signal_name == "imu":
