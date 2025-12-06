@@ -24,6 +24,9 @@ import logging
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
+
 # ============================================================================
 # WULPUS Frame Structure
 # ============================================================================
@@ -559,7 +562,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
 
     if rx_channel is None:
         # TX-only config, skip
-        logging.info(f"WULPUS Config {config_id}: TX-only, skipping")
+        logger.info(f"WULPUS Config {config_id}: TX-only, skipping")
         continue
 
     # Generate signal name
@@ -585,7 +588,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
         },
     }
 
-    logging.info(
+    logger.info(
         f"WULPUS Config {config_id}: Created signal '{signal_name}' "
         f"(RX Ch{rx_channel}, fs={samples_per_second_per_config:.2f} Hz)"
     )
@@ -599,7 +602,7 @@ sigInfo["imu"] = {
         "type": "time-series",
     },
 }
-logging.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
+logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
 
 # Add Counter signal to track packet sequence numbers
 sigInfo["counter"] = {
@@ -650,8 +653,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             f"tx_rx_id={tx_rx_id} does not match acq_nr % num_txrx_configs: {acq_nr} % {wulpus_config.num_txrx_configs} = {acq_nr % wulpus_config.num_txrx_configs}"
         )
 
-    # logging.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
-    # logging.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
+    # logger.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
+    # logger.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
     # Split frame: first 397 samples = ultrasound, last 3 = IMU
     us_samples = rf_arr[:NUM_US_SAMPLES]
