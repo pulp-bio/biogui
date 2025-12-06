@@ -19,7 +19,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import logging
 from collections import deque
 
 import numpy as np
