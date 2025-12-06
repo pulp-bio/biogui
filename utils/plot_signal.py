@@ -169,7 +169,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
         sys.exit("Error: No data signals found.")
 
     for sig_name, sig_data in signals.items():
-        if sig_name in ["timestamp", "trigger", "imu"]:
+        if sig_name in ["timestamp", "trigger", "imu", "counter"]:
             plot_signal_standard(sig_name, sig_data)
 
     plt.show()
