@@ -40,6 +40,9 @@ from biogui.ui.forwarding_config_widget_ui import Ui_ForwardingConfigWidget
 from biogui.utils import SigData
 from biogui.views import MainWindow
 
+# Create logger for this module
+logger = logging.getLogger(__name__)
+
 
 def getCheckedSignals(dataSourceModel: QStandardItemModel) -> dict[str, list[str]]:
     """
@@ -257,8 +260,10 @@ class _ForwardingWorker(QObject):
 
         For WULPUS multi-config: Only one ultrasound config is active per frame,
         so this automatically forwards cfg0+imu, then cfg1+imu, etc. sequentially.
+
+        Signals are forwarded in ALPHABETICAL ORDER for consistent packet structure.
         """
-        # Check which signals have data
+        # Check which signals have data (sorted alphabetically for consistency)
         signals_with_data = sorted(
             [
                 sigName
@@ -282,11 +287,14 @@ class _ForwardingWorker(QObject):
             # Clear the queue (frame-based = no windowing)
             sigBuffers["queue"].clear()
 
+        logger.info(f"Forwarding packet: {len(data)} bytes")
         self._socket.write(data)
 
     def _forwardWindowBased(self, dataSourceId: str) -> None:
         """
         Traditional window-based forwarding: Wait until all buffers are full.
+
+        Signals are forwarded in ALPHABETICAL ORDER for consistent packet structure.
         """
         # Check if all buffers are full
         while True:
@@ -456,7 +464,7 @@ class ForwardingController(QObject):
         # Error handling
         self._forwardingWorker.errorOccurred.connect(self._handleErrors)
         self._forwardingWorker.errorOccurred.connect(
-            lambda: logging.error("ForwardingWorker: cannot connect to server.")
+            lambda: logger.error("ForwardingWorker: cannot connect to server.")
         )
 
         # Setup UI data source tree
@@ -528,7 +536,8 @@ class ForwardingController(QObject):
             dataSourceNode.setEditable(False)
             self.dataSourceModel.appendRow(dataSourceNode)
 
-            for sigName in streamingController.sigInfo:
+            # Sort signals alphabetically for consistent display
+            for sigName in sorted(streamingController.sigInfo.keys()):
                 sigNode = QStandardItem(sigName)
                 sigNode.setEditable(False)
                 sigNode.setFlags(sigNode.flags() | Qt.ItemIsUserCheckable)  # type: ignore
