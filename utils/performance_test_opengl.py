@@ -276,7 +276,7 @@ def compare_results(opengl, software):
         (rate_diff / software.sample_rate * 100) if software.sample_rate > 0 else 0
     )
 
-    print(f"\nSample Rate:")
+    print("\nSample Rate:")
     print(f"  OpenGL:   {opengl.sample_rate:.2f} samples/s")
     print(f"  Software: {software.sample_rate:.2f} samples/s")
     print(f"  Diff:     {rate_diff:+.2f} ({rate_pct:+.1f}%)")
@@ -284,14 +284,14 @@ def compare_results(opengl, software):
     cpu_diff = opengl.avg_cpu - software.avg_cpu
     cpu_pct = (cpu_diff / software.avg_cpu * 100) if software.avg_cpu > 0 else 0
 
-    print(f"\nCPU Usage:")
+    print("\nCPU Usage:")
     print(f"  OpenGL:   {opengl.avg_cpu:.2f}%")
     print(f"  Software: {software.avg_cpu:.2f}%")
     print(f"  Diff:     {cpu_diff:+.2f}% ({cpu_pct:+.1f}%)")
 
     mem_diff = opengl.avg_memory - software.avg_memory
 
-    print(f"\nMemory:")
+    print("\nMemory:")
     print(f"  OpenGL:   {opengl.avg_memory:.2f} MB")
     print(f"  Software: {software.avg_memory:.2f} MB")
     print(f"  Diff:     {mem_diff:+.2f} MB")
