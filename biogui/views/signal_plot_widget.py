@@ -88,16 +88,17 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         self.setupUi(self)
 
-        try:
-            from PySide6.QtOpenGLWidgets import QOpenGLWidget
+        # WARNING: OpenGL seems to performs worse than software rendering for this application!
+        # try:
+        #     from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-            gl_widget = QOpenGLWidget()
-            self.graphWidget.setViewport(gl_widget)
-        except Exception:
-            logging.error(
-                "Failed to initialize OpenGL widget, falling back to software rendering"
-            )
-            pass  # Fallback to software rendering
+        #     gl_widget = QOpenGLWidget()
+        #     self.graphWidget.setViewport(gl_widget)
+        # except Exception:
+        #     logging.error(
+        #         "Failed to initialize OpenGL widget, falling back to software rendering"
+        #     )
+        #     pass  # Fallback to software rendering
 
         # Store parameters
         self._sig_name = sigName
