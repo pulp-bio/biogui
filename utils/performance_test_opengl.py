@@ -51,16 +51,11 @@ class PerformanceMetrics:
             f"Performance Metrics - {self.mode} Rendering\n"
             f"{'=' * 60}\n"
             f"Test Duration:        {self.duration:.2f} s\n"
-            f"Frames Rendered:      {self.frames_rendered}\n"
-            f"Average FPS:          {self.fps:.2f}\n"
+            f"Data Processing Rate: {self.fps:.2f} samples/s\n"
             f"---\n"
             f"CPU Usage (avg):      {self.avg_cpu_percent:.2f}%\n"
             f"CPU Usage (max):      {self.max_cpu_percent:.2f}%\n"
             f"Memory Usage (avg):   {self.avg_memory_mb:.2f} MB\n"
-            f"---\n"
-            f"Frame Time (avg):     {self.avg_frame_time_ms:.3f} ms\n"
-            f"Frame Time (min):     {self.min_frame_time_ms:.3f} ms\n"
-            f"Frame Time (max):     {self.max_frame_time_ms:.3f} ms\n"
             f"{'=' * 60}\n"
         )
 
@@ -135,12 +130,14 @@ class PerformanceTestWindow(QMainWindow):
         layout.addWidget(multi_plot_widget, 2, 0, 1, 2)
 
         # Hook into all plot widgets' render methods
-        self._hook_render_methods()
+        # self._hook_render_methods()
 
         # Timer for generating dummy data
         self.data_timer = QTimer(self)
         self.data_timer.setInterval(10)  # 100 Hz data generation
         self.data_timer.timeout.connect(self._generate_and_add_data)
+        # Use precise timer to avoid being throttled by OpenGL
+        self.data_timer.setTimerType(Qt.TimerType.PreciseTimer)
 
         # Timer for collecting performance metrics
         self.metrics_timer = QTimer(self)
@@ -256,12 +253,11 @@ class PerformanceTestWindow(QMainWindow):
     def _generate_and_add_data(self):
         """Generate dummy data and add to all plots (simulating real-time streaming)."""
         # Generate the correct number of samples based on timer interval
-        # Timer interval is 10ms = 0.01s
-        # At 128 Hz, we should generate: 128 * 0.01 = 1.28 samples per interval
-        # We'll accumulate fractional samples and emit when we have at least 1
-
         if not hasattr(self, "_accumulated_samples"):
             self._accumulated_samples = 0.0
+            self._debug_counter = 0
+            self._last_debug_time = time.time()
+            self._total_samples_generated = 0  # Track total samples
 
         fs = 128  # Hz
         interval_s = self.data_timer.interval() / 1000.0  # Convert ms to seconds
@@ -273,6 +269,21 @@ class PerformanceTestWindow(QMainWindow):
 
         if n_samples == 0:
             return
+
+        # Track total samples generated
+        self._total_samples_generated += n_samples
+
+        # Debug output every second
+        self._debug_counter += 1
+        current_time = time.time()
+        if current_time - self._last_debug_time >= 1.0:
+            elapsed = current_time - self._last_debug_time
+            data_rate = self._debug_counter / elapsed
+            logging.info(
+                f"Data generation rate: {data_rate:.1f} Hz, {n_samples} samples/call"
+            )
+            self._debug_counter = 0
+            self._last_debug_time = current_time
 
         # Create synthetic signals for all plots
         t = time.time()
@@ -332,28 +343,39 @@ class PerformanceTestWindow(QMainWindow):
         # Calculate metrics
         elapsed_time = time.time() - self.test_start_time if self.test_start_time else 0
 
-        # Calculate actual FPS based on render calls
-        actual_fps = self.renders_count / elapsed_time if elapsed_time > 0 else 0
+        # Use our tracked sample count
+        total_samples = getattr(self, "_total_samples_generated", 0)
+        actual_sample_rate = total_samples / elapsed_time if elapsed_time > 0 else 0
+
+        # Expected sample rate at 128 Hz
+        expected_rate = 128.0
+        efficiency = (
+            (actual_sample_rate / expected_rate * 100) if expected_rate > 0 else 0
+        )
 
         metrics = PerformanceMetrics(
             mode="OpenGL" if self.use_opengl else "Software",
             duration=elapsed_time,
-            frames_rendered=self.renders_count,
+            frames_rendered=self.data_added_count,  # Timer calls
             avg_cpu_percent=(np.mean(self.cpu_samples) if self.cpu_samples else 0.0),
             max_cpu_percent=(np.max(self.cpu_samples) if self.cpu_samples else 0.0),
             avg_memory_mb=(
                 np.mean(self.memory_samples) if self.memory_samples else 0.0
             ),
-            avg_frame_time_ms=(
-                np.mean(self.render_times) if self.render_times else 0.0
-            ),
-            max_frame_time_ms=(np.max(self.render_times) if self.render_times else 0.0),
-            min_frame_time_ms=(np.min(self.render_times) if self.render_times else 0.0),
-            fps=actual_fps,
+            avg_frame_time_ms=0.0,
+            max_frame_time_ms=0.0,
+            min_frame_time_ms=0.0,
+            fps=actual_sample_rate,
         )
 
         # Store metrics for later comparison
         self.metrics = metrics
+
+        # Additional info
+        print(f"\nData Processing Rate: {actual_sample_rate:.2f} samples/s")
+        print(f"Expected Rate: {expected_rate:.2f} samples/s")
+        print(f"Efficiency: {efficiency:.1f}%")
+        print(f"Total Samples Generated: {total_samples}")
 
         # Print results
         print(metrics)
@@ -426,29 +448,15 @@ def compare_metrics(
     print("COMPARISON: OpenGL vs Software Rendering")
     print("=" * 60)
 
-    # FPS comparison
-    fps_diff = opengl_metrics.fps - software_metrics.fps
-    fps_percent = (
-        (fps_diff / software_metrics.fps * 100) if software_metrics.fps > 0 else 0
+    # Data processing rate comparison
+    rate_diff = opengl_metrics.fps - software_metrics.fps
+    rate_percent = (
+        (rate_diff / software_metrics.fps * 100) if software_metrics.fps > 0 else 0
     )
-    print(f"\nFPS:")
+    print(f"\nData Processing Rate (samples/s):")
     print(f"  OpenGL:   {opengl_metrics.fps:.2f}")
     print(f"  Software: {software_metrics.fps:.2f}")
-    print(f"  Diff:     {fps_diff:+.2f} ({fps_percent:+.1f}%)")
-
-    # Frame time comparison
-    frame_time_diff = (
-        opengl_metrics.avg_frame_time_ms - software_metrics.avg_frame_time_ms
-    )
-    frame_time_percent = (
-        (frame_time_diff / software_metrics.avg_frame_time_ms * 100)
-        if software_metrics.avg_frame_time_ms > 0
-        else 0
-    )
-    print(f"\nAverage Frame Time:")
-    print(f"  OpenGL:   {opengl_metrics.avg_frame_time_ms:.3f} ms")
-    print(f"  Software: {software_metrics.avg_frame_time_ms:.3f} ms")
-    print(f"  Diff:     {frame_time_diff:+.3f} ms ({frame_time_percent:+.1f}%)")
+    print(f"  Diff:     {rate_diff:+.2f} ({rate_percent:+.1f}%)")
 
     # CPU usage comparison
     cpu_diff = opengl_metrics.avg_cpu_percent - software_metrics.avg_cpu_percent
@@ -468,6 +476,36 @@ def compare_metrics(
     print(f"  OpenGL:   {opengl_metrics.avg_memory_mb:.2f} MB")
     print(f"  Software: {software_metrics.avg_memory_mb:.2f} MB")
     print(f"  Diff:     {mem_diff:+.2f} MB")
+
+    # Summary
+    print("\n" + "=" * 60)
+    print("SUMMARY:")
+    print("=" * 60)
+
+    # Check if data processing is significantly impacted
+    if rate_percent < -10:
+        print(
+            f"✗ OpenGL BLOCKS the event loop: {abs(rate_percent):.1f}% slower data processing!"
+        )
+        print("  → This means fewer data samples are processed")
+        print("  → Signals appear 'compressed' or 'choppy'")
+    elif rate_percent > 10:
+        print(f"✓ OpenGL processes data faster: {rate_percent:.1f}% improvement")
+    else:
+        print("≈ Similar data processing rate")
+
+    # Overall recommendation
+    print()
+    if cpu_diff < 0 and mem_diff < 50:
+        print("✓ RECOMMENDATION: Use OpenGL (lower CPU, acceptable memory)")
+    elif rate_percent < -10:
+        print("✗ RECOMMENDATION: Avoid OpenGL (blocks data processing!)")
+    elif cpu_diff > 20:
+        print("✗ RECOMMENDATION: Use Software rendering (much lower CPU usage)")
+    else:
+        print("≈ RECOMMENDATION: Both options are similar, Software is safer")
+
+    print("=" * 60 + "\n")
 
 
 def main():
