@@ -99,12 +99,12 @@ def print_file_info(signals: dict, trigger: np.ndarray):
             f"fs={sig_data['fs']:.2f} Hz, dtype={sig_data['data'].dtype}"
         )
 
-    # Check for counter signal (new format)
-    has_counter = "counter" in signals
-    if has_counter:
-        print("\n   This file includes COUNTER data (new format)")
+    # Check for acquisition_number signal (new format)
+    has_acquisition_number = "acquisition_number" in signals
+    if has_acquisition_number:
+        print("\n   This file includes ACQUISITION_NUMBER data (new format)")
     else:
-        print("\n⚠ This file does NOT include counter data (old format)")
+        print("\n⚠ This file does NOT include acquisition_number data (old format)")
 
     # Trigger info
     if trigger is not None:

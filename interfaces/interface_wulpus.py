@@ -604,11 +604,21 @@ sigInfo["imu"] = {
 }
 logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
 
-# Add Counter signal to track packet sequence numbers
-sigInfo["counter"] = {
+# Add Acquisition Number signal to track packet sequence numbers
+sigInfo["acquisition_number"] = {
     "fs": 1.0 / meas_period_s,
     "nCh": 1,
-    "hidden": True,  # Counter is metadata, not meant for visualization
+    "hidden": True,  # Acquisition number is metadata, not meant for visualization
+    "signal_type": {
+        "type": "time-series",
+    },
+}
+
+# Add TX/RX Config ID signal to track which configuration is active
+sigInfo["tx_rx_id"] = {
+    "fs": 1.0 / meas_period_s,
+    "nCh": 1,
+    "hidden": True,  # Config ID is metadata, not meant for visualization
     "signal_type": {
         "type": "time-series",
     },
@@ -642,7 +652,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     # Parse packet structure (after removing b'START\n'):
     # [0:4]   = header (4 bytes)
     # [4]     = tx_rx_id (config ID from hardware)
-    # [5:7]   = acq_nr (acquisition counter, uint16)
+    # [5:7]   = acq_nr (acquisition number, uint16)
     # [7:]    = rf_data (400 int16 samples: 397 US + 3 IMU)
     tx_rx_id = data[4]
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
@@ -664,9 +674,13 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     result = {}
 
     for signal_name in sigInfo.keys():
-        if signal_name == "counter":
-            # Store counter value to track packet sequence numbers (for loss detection)
+        if signal_name == "acquisition_number":
+            # Store acquisition number to track packet sequence numbers (for loss detection)
             result[signal_name] = np.array([[acq_nr]], dtype=np.uint16)
+
+        elif signal_name == "tx_rx_id":
+            # Store config ID to track which TX/RX configuration is active
+            result[signal_name] = np.array([[tx_rx_id]], dtype=np.uint8)
 
         elif signal_name == "imu":
             result[signal_name] = imu_samples.reshape(1, 3)

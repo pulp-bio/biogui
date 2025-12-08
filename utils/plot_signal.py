@@ -161,7 +161,13 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
     """Orchestrator for M-mode plotting."""
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
-        if sig_name not in ["timestamp", "trigger", "imu", "counter"]:
+        if sig_name not in [
+            "timestamp",
+            "trigger",
+            "imu",
+            "acquisition_number",
+            "tx_rx_id",
+        ]:
             plot_signal_mmode(sig_name, sig_data, samples_per_acquisition)
             data_signal_count += 1
 
@@ -169,7 +175,13 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
         sys.exit("Error: No data signals found.")
 
     for sig_name, sig_data in signals.items():
-        if sig_name in ["timestamp", "trigger", "imu", "counter"]:
+        if sig_name in [
+            "timestamp",
+            "trigger",
+            "imu",
+            "acquisition_number",
+            "tx_rx_id",
+        ]:
             plot_signal_standard(sig_name, sig_data)
 
     plt.show()
@@ -194,9 +206,9 @@ def main():
     if args.ultrasound:
         plot_ultrasound_mmode(signals, args.samples_per_acquisition)
     else:
-        # Plot all signals except counter (not interesting for visualization)
+        # Plot all signals except acquisition_number and tx_rx_id (not interesting for visualization)
         for sig_name, sig_data in signals.items():
-            if sig_name != "counter":
+            if sig_name not in ["acquisition_number", "tx_rx_id"]:
                 plot_signal_standard(sig_name, sig_data)
         plt.show()
 
