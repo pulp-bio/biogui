@@ -541,7 +541,7 @@ class ForwardingController(QObject):
                 sigNode = QStandardItem(sigName)
                 sigNode.setEditable(False)
                 sigNode.setFlags(sigNode.flags() | Qt.ItemIsUserCheckable)  # type: ignore
-                sigNode.setData(Qt.Unchecked, Qt.CheckStateRole)  # type: ignore
+                sigNode.setData(Qt.Checked, Qt.CheckStateRole)  # type: ignore
                 dataSourceNode.appendRow(sigNode)
 
         self._confWidget.dataSourceTree.expandAll()
