@@ -374,7 +374,7 @@ class MainController(QObject):
 
         # Add signal items with checkboxes
         for sigName, sigConfig in sigsConfigs.items():
-            # Skip hidden signals (e.g., counter)
+            # Skip hidden signals (e.g., acquisition_number, tx_rx_id)
             if interfaceModule.sigInfo[sigName].get("hidden", False):
                 continue
             sigItem = QStandardItem(sigName)
@@ -832,7 +832,14 @@ class MainController(QObject):
                 "signal_type": {"type": "time-series"},
             }
 
-            new_sigInfo["counter"] = {
+            new_sigInfo["acquisition_number"] = {
+                "fs": 1.0 / meas_period_s,
+                "nCh": 1,
+                "hidden": True,
+                "signal_type": {"type": "time-series"},
+            }
+
+            new_sigInfo["tx_rx_id"] = {
                 "fs": 1.0 / meas_period_s,
                 "nCh": 1,
                 "hidden": True,

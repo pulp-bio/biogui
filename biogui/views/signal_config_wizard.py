@@ -129,7 +129,7 @@ class SignalConfigWizard(QWizard):
         # Populate wizard
         self._sigsConfigs = {}
         for sigName in sigInfo:
-            # Skip hidden signals (e.g., counter) in wizard
+            # Skip hidden signals (e.g., acquisition_number, tx_rx_id) in wizard
             if sigInfo[sigName].get("hidden", False):
                 # Add default config for hidden signals
                 self._sigsConfigs[sigName] = {
