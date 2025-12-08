@@ -1,6 +1,20 @@
 """
 This module contains the WULPUS interface for ultrasound.
 
+Signal Configuration:
+--------------------
+The interface defines several signal types forwarded to BioGUI:
+- Ultrasound: One or more channels (depending on TX/RX configuration)
+- IMU: 3-channel accelerometer data (ax, ay, az)
+- acquisition_number: Packet sequence number (hidden, for loss detection)
+- tx_rx_id: Hardware configuration ID (hidden, for channel identification)
+
+Helper Functions:
+----------------
+- get_standard_signal_definitions(): Returns IMU + metadata signals (acquisition_number, tx_rx_id)
+
+This helper ensures DRY principle when dynamically reconfiguring signals.
+
 Portions derived from code by ETH Zurich (Apache-2.0).
 
 Copyright 2025 Enzo Baraldi
@@ -543,6 +557,32 @@ def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | 
     return None  # No RX channel active (TX-only config)
 
 
+def get_standard_signal_definitions(meas_period_s: float) -> dict:
+    """
+    Get standard signal definitions for WULPUS (IMU + metadata).
+    """
+    fs = 1.0 / meas_period_s
+    return {
+        "imu": {
+            "fs": fs,
+            "nCh": 3,
+            "signal_type": {"type": "time-series"},
+        },
+        "acquisition_number": {
+            "fs": fs,
+            "nCh": 1,
+            "hidden": True,
+            "signal_type": {"type": "time-series"},
+        },
+        "tx_rx_id": {
+            "fs": fs,
+            "nCh": 1,
+            "hidden": True,
+            "signal_type": {"type": "time-series"},
+        },
+    }
+
+
 # Each configuration gets data every (num_txrx_configs * meas_period) due to round-robin
 meas_period_s = wulpus_config.meas_period / 1e6  # Convert to seconds
 period_per_config_s = meas_period_s * wulpus_config.num_txrx_configs
@@ -594,35 +634,9 @@ for config_id in range(wulpus_config.num_txrx_configs):
     )
 
 
-# Add IMU signal
-sigInfo["imu"] = {
-    "fs": 1.0 / meas_period_s,
-    "nCh": 3,
-    "signal_type": {
-        "type": "time-series",
-    },
-}
+# Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
+sigInfo.update(get_standard_signal_definitions(meas_period_s))
 logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
-
-# Add Acquisition Number signal to track packet sequence numbers
-sigInfo["acquisition_number"] = {
-    "fs": 1.0 / meas_period_s,
-    "nCh": 1,
-    "hidden": True,  # Acquisition number is metadata, not meant for visualization
-    "signal_type": {
-        "type": "time-series",
-    },
-}
-
-# Add TX/RX Config ID signal to track which configuration is active
-sigInfo["tx_rx_id"] = {
-    "fs": 1.0 / meas_period_s,
-    "nCh": 1,
-    "hidden": True,  # Config ID is metadata, not meant for visualization
-    "signal_type": {
-        "type": "time-series",
-    },
-}
 
 
 if len(sigInfo) == 0:
