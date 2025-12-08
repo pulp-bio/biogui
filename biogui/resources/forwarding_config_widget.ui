@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <ui version="4.0">
  <class>ForwardingConfigWidget</class>
  <widget class="QWidget" name="ForwardingConfigWidget">
@@ -24,7 +24,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout2">
       <item>
-       <widget class="QTreeView" name="dataSourceTree"/>
+       <widget class="QTreeView" name="dataSourceTree" />
       </item>
       <item>
        <widget class="QGroupBox" name="modeGroupBox">
@@ -37,24 +37,26 @@
         <layout class="QVBoxLayout" name="verticalLayout3">
          <item>
           <widget class="QRadioButton" name="frameBasedRadioButton">
+           <property name="toolTip">
+            <string
+                                                >Forward data as soon as a complete frame arrives (recommended for real-time streaming)</string>
+           </property>
            <property name="text">
-            <string>Frame-based (forward complete frames immediately)</string>
+            <string>Frame-based (immediate)</string>
            </property>
            <property name="checked">
             <bool>true</bool>
-           </property>
-           <property name="toolTip">
-            <string>Forward data as soon as a complete frame arrives (recommended for real-time streaming)</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QRadioButton" name="windowBasedRadioButton">
-           <property name="text">
-            <string>Window-based (accumulate samples)</string>
-           </property>
            <property name="toolTip">
-            <string>Accumulate samples into windows of specified length (for batch processing)</string>
+            <string
+                                                >Accumulate samples into windows of specified length (for batch processing)</string>
+           </property>
+           <property name="text">
+            <string>Window-based (accumulate)</string>
            </property>
           </widget>
          </item>
@@ -63,35 +65,35 @@
       </item>
       <item>
        <widget class="QGroupBox" name="windowGroupBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="title">
-         <string>Window settings (for window-based mode)</string>
+         <string>Window settings</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignmentFlag::AlignCenter</set>
-        </property>
-        <property name="enabled">
-         <bool>false</bool>
         </property>
         <layout class="QFormLayout" name="formLayout1">
          <item row="0" column="0">
           <widget class="QLabel" name="label1">
            <property name="text">
-            <string>Window length (in ms):</string>
+            <string>Window length (ms):</string>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="winLenTextField"/>
+          <widget class="QLineEdit" name="winLenTextField" />
          </item>
          <item row="1" column="0">
           <widget class="QLabel" name="label2">
            <property name="text">
-            <string>Window stride (in ms):</string>
+            <string>Window stride (ms):</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="winStrideTextField"/>
+          <widget class="QLineEdit" name="winStrideTextField" />
          </item>
         </layout>
        </widget>
@@ -149,12 +151,13 @@
             <string>Socket port:</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            <set
+                                                >Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QLineEdit" name="socketPortTextField"/>
+          <widget class="QLineEdit" name="socketPortTextField" />
          </item>
          <item row="3" column="0">
           <widget class="QLabel" name="label6">
@@ -162,12 +165,13 @@
             <string>Socket path:</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            <set
+                                                >Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QLineEdit" name="socketPathTextField"/>
+          <widget class="QLineEdit" name="socketPathTextField" />
          </item>
         </layout>
        </widget>
@@ -177,13 +181,23 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources />
  <connections>
   <connection>
    <sender>windowBasedRadioButton</sender>
    <signal>toggled(bool)</signal>
    <receiver>windowGroupBox</receiver>
    <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
   </connection>
  </connections>
 </ui>
