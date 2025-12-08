@@ -99,10 +99,18 @@ def print_file_info(signals: dict, trigger: np.ndarray):
             f"fs={sig_data['fs']:.2f} Hz, dtype={sig_data['data'].dtype}"
         )
 
-    # Check for acquisition_number signal (new format)
+    # Check for acquisition_number and tx_rx_id signals (format detection)
     has_acquisition_number = "acquisition_number" in signals
-    if has_acquisition_number:
-        print("\n   This file includes ACQUISITION_NUMBER data (new format)")
+    has_tx_rx_id = "tx_rx_id" in signals
+
+    if has_acquisition_number and has_tx_rx_id:
+        print(
+            "\n   This file includes ACQUISITION_NUMBER and TX_RX_ID data (newest format)"
+        )
+    elif has_acquisition_number:
+        print(
+            "\n   This file includes ACQUISITION_NUMBER data (new format, no tx_rx_id)"
+        )
     else:
         print("\n⚠ This file does NOT include acquisition_number data (old format)")
 
