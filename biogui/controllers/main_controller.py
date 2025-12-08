@@ -826,25 +826,10 @@ class MainController(QObject):
                     },
                 }
 
-            new_sigInfo["imu"] = {
-                "fs": 1.0 / meas_period_s,
-                "nCh": 3,
-                "signal_type": {"type": "time-series"},
-            }
-
-            new_sigInfo["acquisition_number"] = {
-                "fs": 1.0 / meas_period_s,
-                "nCh": 1,
-                "hidden": True,
-                "signal_type": {"type": "time-series"},
-            }
-
-            new_sigInfo["tx_rx_id"] = {
-                "fs": 1.0 / meas_period_s,
-                "nCh": 1,
-                "hidden": True,
-                "signal_type": {"type": "time-series"},
-            }
+            # Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
+            new_sigInfo.update(
+                interface_wulpus.get_standard_signal_definitions(meas_period_s)
+            )
 
             interface_wulpus.sigInfo = new_sigInfo
             interface_wulpus.config_to_signal_name = new_config_to_signal_name
