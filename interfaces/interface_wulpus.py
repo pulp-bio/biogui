@@ -672,11 +672,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
     rf_arr = np.frombuffer(data[7:], dtype="<i2")
 
-    if tx_rx_id != acq_nr % wulpus_config.num_txrx_configs:
-        raise ValueError(
-            f"tx_rx_id={tx_rx_id} does not match acq_nr % num_txrx_configs: {acq_nr} % {wulpus_config.num_txrx_configs} = {acq_nr % wulpus_config.num_txrx_configs}"
-        )
-
     # logger.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     # logger.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
