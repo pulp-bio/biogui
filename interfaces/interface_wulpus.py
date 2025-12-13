@@ -495,7 +495,7 @@ rx_tx_config.add_config(
 
 wulpus_config = WulpusUssConfig(
     dcdc_turnon=19530,
-    meas_period=25000,
+    meas_period=33333,
     trans_freq=2250000,
     pulse_freq=2250000,
     num_pulses=2,
