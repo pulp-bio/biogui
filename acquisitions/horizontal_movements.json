@@ -1,13 +1,12 @@
 {
   "triggers": {
     "front": "hand_front.png",
-    "side": "hand_side.png", 
-    "forward": "hand_forward.png"
+    "side": "hand_side.png"
   },
   "nReps": 2,
-  "durationTrigger": 1000,
+  "durationTrigger": 5000,
   "durationStart": 2000,
-  "durationRest": 500,
+  "durationRest": 2000,
   "alternating": true,
   "imageFolder": "acquisitions/gestures_images"
 }
