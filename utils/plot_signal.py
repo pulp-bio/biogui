@@ -51,6 +51,7 @@ def read_bio_file(file_path: str) -> dict:
             }
 
         is_trigger = struct.unpack("<?", f.read(1))[0]
+        is_trigger_str = struct.unpack("<?", f.read(1))[0]
 
         # 1. Timestamp
         ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
@@ -74,8 +75,28 @@ def read_bio_file(file_path: str) -> dict:
 
         # 3. Trigger
         if is_trigger:
+            itemsize = 4    # saving as uint32_t
+            trigger = np.frombuffer(f.read(itemsize * n_samp_base), dtype=np.uint32).reshape(n_samp_base, 1)
             trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
+        # 4. Trigger string (len-prefixed UTF-8 per sample)
+
+            if is_trigger_str:
+                trigger_str = []
+                for _ in range(n_samp_base):
+                    (L,) = struct.unpack("<I", f.read(4))
+                    if L == 0:
+                        trigger_str.append("")
+                    else:
+                        b = f.read(L)
+                        trigger_str.append(b.decode("utf-8", errors="replace"))
+
+            # store as (n_samp_base, 1) like other signals
+            signals["trigger_str"] = {
+                "data": np.array(trigger_str, dtype=object).reshape(n_samp_base, 1),
+                "fs": fs_base,
+            }
+
 
     return signals
 
