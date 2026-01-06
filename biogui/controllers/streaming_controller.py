@@ -24,6 +24,7 @@ import struct
 import tempfile
 import time
 from types import MappingProxyType
+import logging 
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -80,6 +81,7 @@ class _FileWriterWorker(QObject):
         }
         self._tempData: dict = {}
         self._trigger = None
+        self._trigger_str = None
 
     @property
     def filePath(self) -> str:
@@ -95,9 +97,18 @@ class _FileWriterWorker(QObject):
         """int or None: Property representing the (optional) trigger, namely the gesture label."""
         return self._trigger
 
+    @property
+    def trigger_str(self) -> str | None:
+        """str or None: Property representing the (optional) trigger, namely the gesture label, saved as string"""
+        return self._trigger_str
+    
     @trigger.setter
     def trigger(self, trigger: int | None) -> None:
         self._trigger = trigger
+    @trigger_str.setter
+    def trigger_str(self, trigger_str: str | None) -> None:
+        self._trigger_str = trigger_str
+
 
     def openFile(self) -> None:
         """Open the file."""
@@ -112,6 +123,11 @@ class _FileWriterWorker(QObject):
                 }
             if self._trigger is not None:
                 self._tempData["trigger"] = {
+                    "file": tempfile.TemporaryFile(),
+                    "nSamp": 0,
+                }
+            if self._trigger_str is not None:
+                self._tempData["trigger_str"] = {
                     "file": tempfile.TemporaryFile(),
                     "nSamp": 0,
                 }
@@ -160,7 +176,21 @@ class _FileWriterWorker(QObject):
                 self._tempData["trigger"]["file"].write(
                     struct.pack("<I", self._trigger if self._trigger is not None else 0)
                 )
+
                 self._tempData["trigger"]["nSamp"] += 1
+            # Trigger string (optional) - full string per sample
+            if "trigger_str" in self._tempData:
+                s = self._trigger_str if self._trigger_str is not None else ""
+                b = s.encode("utf-8")  # or "ascii" if you want strict 1-byte chars
+
+                f = self._tempData["trigger_str"]["file"]
+                f.write(struct.pack("<I", len(b)))  # uint32 length
+                if b:
+                    f.write(b)
+
+                self._tempData["trigger_str"]["nSamp"] += 1
+                logging.info("String trigger")
+
         except OSError:
             self.errorOccurred.emit("Could not open temporary files.")
 
@@ -215,6 +245,8 @@ class _FileWriterWorker(QObject):
 
                 # 1.3. Trigger (optional)
                 f.write(struct.pack("<?", "trigger" in self._tempData))
+                # 1.4. Trigger str (optional)
+                f.write(struct.pack("<?", "trigger_str" in self._tempData))
 
                 # 2. Actual signals
                 # 2.1. Timestamp
@@ -226,10 +258,15 @@ class _FileWriterWorker(QObject):
                     self._tempData[sigName]["file"].seek(0)
                     f.write(self._tempData[sigName]["file"].read())
 
-                # 3. Trigger (optional)
+                # 3
+                # 3.1 Trigger (optional, int)
                 if "trigger" in self._tempData:
                     self._tempData["trigger"]["file"].seek(0)
                     f.write(self._tempData["trigger"]["file"].read())
+                # 3.2 Trigger_str (optional, str)
+                if "trigger_str" in self._tempData:
+                    self._tempData["trigger_str"]["file"].seek(0)
+                    f.write(self._tempData["trigger_str"]["file"].read())
         except FileNotFoundError:
             self.errorOccurred.emit(f'File "{self._filePath}" not found.')
         except PermissionError:
@@ -261,6 +298,10 @@ class _FileWriterWorker(QObject):
         if self._trigger is not None:
             self._tempData["trigger"]["file"].close()
             self._tempData["trigger"]["nSamp"] = 0
+        # 4. Trigger str (optional)
+        if self._trigger_str is not None:
+            self._tempData["trigger_str"]["file"].close()
+            self._tempData["trigger_str"]["nSamp"] = 0
 
 
 class _Preprocessor(QObject):
@@ -597,6 +638,18 @@ class StreamingController(QObject):
         if self._fileWriterWorker is not None:
             self._fileWriterWorker.trigger = trigger
 
+    def setTriggerStr(self, trigger_str: str | None) -> None:
+        """
+        Set the trigger for each file writer worker as a string
+
+        Parameters
+        ----------
+        trigger_str : str or None
+            Trigger value.
+        """
+        if self._fileWriterWorker is not None:
+            self._fileWriterWorker.trigger_str = trigger_str
+
     def startStreaming(self) -> None:
         """Start streaming."""
         # Connect Qt Signals
@@ -628,6 +681,7 @@ class StreamingController(QObject):
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
             self._fileWriterWorker.trigger = None
+            self._fileWriterWorker.trigger_str = None
             self._preprocessor.rawSignalsReady.disconnect(self._fileWriterWorker.write)
 
         # Disconnect Qt Signals
