@@ -87,6 +87,7 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         if not isinstance(config["alternating"], bool):
             return None, "alternating must be true or false."
 
+
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
         return config, "The specified path does not exist."
@@ -383,6 +384,7 @@ class TriggerController(QObject):
                 # Force triggers to zero during rest
                 for streamingController in self._streamingControllers.values():
                     streamingController.setTrigger(0)
+                    streamingController.setTriggerStr("rest")
                 logging.info(
                     f"Rest started: upcoming='{self._upcomingLabel}' \
                     countdown={self._restCounter}s (durationRest={restMs}ms)."
@@ -407,6 +409,7 @@ class TriggerController(QObject):
             self._triggerWidget.renderImage(triggerLabel, imagePath)
             for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(newTrigger)
+                streamingController.setTriggerStr(triggerLabel)
             logging.info(f"Trigger updated: {newTrigger} (label: {triggerLabel}).")
 
             self._triggerCounter += 1
@@ -420,6 +423,7 @@ class TriggerController(QObject):
             # Determine if we should enter rest phase after this trigger
             alternating = self._confWidget.config.get("alternating", False)
             numTriggerTypes = len(self._confWidget.config["triggers"])
+            print("")
 
             if alternating:
                 # In alternating mode, rest after every complete set of trigger types
@@ -480,6 +484,7 @@ class TriggerController(QObject):
         # Initialize the trigger to zero for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
+            streamingController.setTriggerStr("init")
 
         # Build trigger IDs
         trigger_names = list(self._confWidget.config["triggers"].keys())
@@ -537,3 +542,4 @@ class TriggerController(QObject):
         # Reset triggers for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(None)
+            streamingController.setTriggerStr(None)
