@@ -310,6 +310,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         logger.info("Cleared all TX/RX configs")
 
     def _update_tx_rx_table(self) -> None:
+        # Clear existing content and widgets before rebuilding
+        self.txRxTableWidget.clearContents()
         self.txRxTableWidget.setRowCount(len(self._tx_rx_configs))
 
         for i, config in enumerate(self._tx_rx_configs):
