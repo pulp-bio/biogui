@@ -3,12 +3,13 @@
     "start": "start.png", 
     "front_rotopen": "front_rotopen_pour.png",
     "front_rotclosed": "front_rotclose_pour.png",
-    "pour": "pour.png"
+    "pour": "pour.png", 
+    "front_rotopen2": "front_rotopen_pour.png"
   },
   "nReps": 5,
-  "durationTrigger": 5000,
+  "durationTrigger": 6000,
   "durationStart": 2000,
-  "durationRest": 5000,
+  "durationRest": 1000,
   "alternating": true,
   "imageFolder": "acquisitions/embc_2026_sets/imgs"
 }

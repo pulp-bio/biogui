@@ -7,9 +7,9 @@
     "side_open": "side_open.png"
   },
   "nReps": 5,
-  "durationTrigger": 500,
+  "durationTrigger": 6000,
   "durationStart": 2000,
-  "durationRest": 500,
+  "durationRest": 1000,
   "alternating": true,
   "imageFolder": "acquisitions/embc_2026_sets/imgs"
 }
