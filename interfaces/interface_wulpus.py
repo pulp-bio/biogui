@@ -486,12 +486,11 @@ class WulpusUssConfig:
 
 # Create biceps exercise wulpus configuration
 rx_tx_config = WulpusRxTxConfigGen()
-for i in range(4):
-    rx_tx_config.add_config(
-        tx_channels=[i],
-        rx_channels=[i],
-        optimized_switching=False,
-    )
+rx_tx_config.add_config(
+    tx_channels=[3],
+    rx_channels=[3],
+    optimized_switching=False,
+)
 
 
 wulpus_config = WulpusUssConfig(
