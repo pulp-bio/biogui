@@ -166,3 +166,4 @@ cython_debug/
 .vscode
 .idea
 *.bio
+.DS_Store

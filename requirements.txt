@@ -5,3 +5,5 @@ PySide6_Addons
 PySide6_Essentials
 scipy
 shiboken6
+mkdocs-material
+mkdocs-glightbox
