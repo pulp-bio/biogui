@@ -139,6 +139,8 @@ class TCPDataSourceWorker(DataSourceWorker):
         Client socket.
     _buffer : QByteArray
         Input buffer.
+    _guard : bool
+        Guard flag to control data emission.
 
     Class attributes
     ----------------
@@ -166,6 +168,7 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._tcpServer.newConnection.connect(self._handleConnection)
         self._clientSock: QTcpSocket | None = None
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"
@@ -185,6 +188,9 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        # Un-set guard flag
+        self._guard = False
+
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
@@ -207,6 +213,18 @@ class TCPDataSourceWorker(DataSourceWorker):
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
+        # If already connected, drop old client
+        if self._clientSock is not None:
+            try:
+                self._clientSock.readyRead.disconnect(self._collectData)
+            except Exception:
+                pass
+
+            # Abort and delete old client socket
+            self._clientSock.abort()
+            self._clientSock.deleteLater()
+
+        # Get new client socket
         self._clientSock = self._tcpServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
 
@@ -222,6 +240,9 @@ class TCPDataSourceWorker(DataSourceWorker):
 
         logging.info("DataWorker: TCP communication started.")
 
+        # Set guard flag
+        self._guard = True
+
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
         if self._clientSock is None:
@@ -229,6 +250,11 @@ class TCPDataSourceWorker(DataSourceWorker):
 
         # Accumulate new data
         self._buffer.append(self._clientSock.readAll())
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
 
         # Emit all data packets in the buffer
         while self._buffer.size() >= self._packetSize:

@@ -131,6 +131,8 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
         Client socket.
     _buffer : QByteArray
         Input buffer.
+    _guard : bool
+        Guard flag to control data emission.
 
     Class attributes
     ----------------
@@ -159,6 +161,7 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
         self._unixSocketServer.newConnection.connect(self._handleConnection)
         self._clientSock: QLocalSocket | None = None
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"Unix socket - {self._socketPath}"
@@ -181,6 +184,9 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        # Un-set guard flag
+        self._guard = False
+
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
@@ -203,6 +209,18 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
+        # If already connected, drop old client
+        if self._clientSock is not None:
+            try:
+                self._clientSock.readyRead.disconnect(self._collectData)
+            except Exception:
+                pass
+
+            # Abort and delete old client socket
+            self._clientSock.abort()
+            self._clientSock.deleteLater()
+
+        # Get new client socket
         self._clientSock = self._unixSocketServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
 
@@ -218,14 +236,21 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
 
         logging.info("DataWorker: Unix socket communication started.")
 
+        # Set guard flag
+        self._guard = True
+
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
-        # Guard
         if self._clientSock is None:
             return
 
         # Accumulate new data
         self._buffer.append(self._clientSock.readAll())
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
 
         # Emit all data packets in the buffer
         while self._buffer.size() >= self._packetSize:
