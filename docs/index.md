@@ -10,4 +10,6 @@ BioGUI is designed to be a flexible and extensible platform for real-time monito
 - **Built-in Utilities**: Tools for signal post-processing and offline analysis.
 - **Cross-Platform**: Built with Python and PySide6, running on Windows, macOS, and Linux.
 
-For more details, see the [Getting Started](getting_started.md) guide.
+To understand the structure of the repository, please refer to the [Repository Structure](structure.md) guide.
+
+To get started, see the [Getting Started](getting_started.md) guide. 

@@ -49,15 +49,13 @@ plugins:
   
 nav:
   - Overview: index.md
+  - Structure: structure.md
   - Getting Started: getting_started.md
   - Graphical User Interface: graphical_user_interface.md
   - Modules:
     - Trigger: modules/trigger.md
     - Forwarding: modules/forwarding.md
     - Teleprompter: modules/teleprompter.md
-  - Usage: usage.md
   - Development:
     - Custom Interfaces: interfaces.md
-    - Project Structure: structure.md
-  - Utilities: utils.md
 
