@@ -21,19 +21,24 @@ limitations under the License.
 import argparse
 import socket
 import struct
-import threading
 import time
 from asyncio import IncompleteReadError
 
 import numpy as np
 
 N_CH = 64
-WIN_SIZE = 100
+WIN_SIZE = 200
 
 
 def _parse_input() -> tuple:
     """Parse the input arguments."""
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--rest_level",
+        type=float,
+        required=True,
+        help="Rest level to be subtracted from the RMS value",
+    )
     parser.add_argument(
         "--mvc",
         type=float,
@@ -54,6 +59,13 @@ def _parse_input() -> tuple:
         help="Slope of the ramps (in MVC percentage over seconds)",
     )
     parser.add_argument(
+        "--plateau_duration_s",
+        type=int,
+        required=False,
+        default=30,
+        help="Duration of the plateau period (in seconds)",
+    )
+    parser.add_argument(
         "--gap_width",
         type=int,
         required=True,
@@ -61,12 +73,14 @@ def _parse_input() -> tuple:
     )
     args = vars(parser.parse_args())
 
+    rest_level = args["rest_level"]
     mvc = args["mvc"]
     p_mvc = args["p_mvc"]
     slope = args["slope"]
+    plateau_duration_s = args["plateau_duration_s"]
     gap_width = args["gap_width"]
 
-    return mvc, p_mvc, slope, gap_width
+    return rest_level, mvc, p_mvc, slope, plateau_duration_s, gap_width
 
 
 def _gen_trajectories(
@@ -112,26 +126,19 @@ def _read_tcp(conn: socket.socket, packet_size: int) -> bytearray | None:
         return
 
 
-def _listen_for_stop(client_socket, stop_event):
-    """Listen for a "stop" command from the server."""
-    try:
-        while not stop_event.is_set():
-            cmd = client_socket.recv(2)
-            print(f'Received "{cmd}" command from server. Stopping transmission.')
-            stop_event.set()
-            break
-    except Exception as e:
-        print(f"Error while listening for stop command: {e}")
-
-
 def main():
     # Input arguments
-    mvc, p_mvc, slope, gap_width = _parse_input()
+    rest_level, mvc, p_mvc, slope, plateau_duration_s, gap_width = _parse_input()
 
     # Trapezoidal trajectories
     trap_fs = 1000 // WIN_SIZE  # Hz
     traj_low, traj_high = _gen_trajectories(
-        p_mvc, slope, trap_fs, gap_width, rest_duration_s=5, plateau_duration_s=20
+        p_mvc,
+        slope,
+        trap_fs,
+        gap_width,
+        rest_duration_s=5,
+        plateau_duration_s=plateau_duration_s,
     )
     traj_low = traj_low * mvc / 100
     traj_high = traj_high * mvc / 100
@@ -146,6 +153,7 @@ def main():
         print("Waiting for TCP connection on port 3333...")
 
         conn, (addr, _) = server_socket.accept()
+        print(f"Accepted connection from {addr}")
 
         # Create TCP client socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -158,36 +166,21 @@ def main():
                 time.sleep(1)
         print("Connected to server at 127.0.0.1:3334")
 
-        # Wait for start command
-        # cmd = client_socket.recv(2)
-        # print(f'Received "{cmd}" command from server. Starting transmission.')
-        # conn.sendall(cmd)
-
-        # Start a thread to listen for the stop command
-        # stop_event = threading.Event()  # Event to stop the transmission
-        # listener_thread = threading.Thread(
-        #     target=_listen_for_stop, args=(client_socket, stop_event)
-        # )
-        # listener_thread.start()
-
         i = 0
         while True:
-            # if stop_event.is_set():
-            #     break  # Stop sending if stop event is triggered
-
             # Read data from server socket
             data = _read_tcp(conn, N_CH * WIN_SIZE * 4)
             if data is None:
                 break
 
             # Get EMG data
-            emg = np.asarray(
+            emg_win = np.asarray(
                 struct.unpack(f"<{N_CH * WIN_SIZE}f", data), dtype=np.float32
             ).reshape(WIN_SIZE, N_CH)
-            print(f"EMG data shape: {emg.shape}")
 
             # Compute RMS
-            emg_rms = np.sqrt(np.mean(emg**2, axis=0)).sum() - 2
+            emg_rms = np.sqrt(np.mean(emg_win**2, axis=0)).sum() - rest_level
+            emg_rms = np.clip(emg_rms, 0, None).astype(np.float32)
 
             # Send data to TCP server
             client_socket.sendall(emg_rms.tobytes())
@@ -199,8 +192,6 @@ def main():
             if i >= traj_low.size:
                 i = 0
 
-        # Wait for the listener thread to finish
-        # listener_thread.join()
         print("Stopped by server.")
     except KeyboardInterrupt:
         print("\nExiting program...")

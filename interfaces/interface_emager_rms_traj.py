@@ -35,7 +35,7 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {"traj": {"fs": 10, "nCh": 3}}
+sigInfo: dict = {"traj": {"fs": 20, "nCh": 3}}
 """Dictionary containing the signals information."""
 
 

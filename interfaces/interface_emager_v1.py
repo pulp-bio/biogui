@@ -132,7 +132,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray | None]:
 
         # Store partial data for next call
         decodeFn.partial_data = data[-(len(data) % 128) :]
-        print(decodeFn.partial_data)
     else:
         # Prepend partial data from previous call
         if len(decodeFn.partial_data) > 0:
