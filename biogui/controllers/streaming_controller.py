@@ -414,6 +414,8 @@ class _Preprocessor(QObject):
         rawSignals = []
         signals = []
         for sigName, sigData in dataDec.items():
+            if sigData is None:
+                continue
             rawSignals.append(SigData(sigName, sigData, acq_ts))
             dtype = sigData.dtype
 

@@ -168,6 +168,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         Serial port object.
     _buffer : QByteArray
         Input buffer.
+    _guard : bool
+        Guard flag to control data emission.
 
     Class attributes
     ----------------
@@ -198,6 +200,7 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort.setBaudRate(baudRate)
         self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
@@ -211,6 +214,9 @@ class SerialDataSourceWorker(DataSourceWorker):
             logging.error("DataWorker: {errMsg}")
             return
 
+        # Reset serial port input buffer
+        self._serialPort.clear(QSerialPort.Input)  # type: ignore
+
         # Start command
         for c in self._startSeq:
             if isinstance(c, (bytes, bytearray)):
@@ -219,10 +225,15 @@ class SerialDataSourceWorker(DataSourceWorker):
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
+        # Set guard flag
+        self._guard = True
+
         logging.info("DataWorker: serial communication started.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        # Un-set guard flag
+        self._guard = False
 
         logging.info("DataWorker: serial communication stopped.")
 
@@ -234,16 +245,22 @@ class SerialDataSourceWorker(DataSourceWorker):
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
-        # Reset input buffer and close port
-        while self._serialPort.waitForReadyRead(100):
-            self._serialPort.clear()
+        # Reset accumulation buffer and serial port input buffer
+        self._buffer.clear()
+        self._serialPort.clear(QSerialPort.Input)  # type: ignore
+
+        # Close port
         self._serialPort.close()
-        self._buffer = QByteArray()
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
         # Accumulate new data
         self._buffer.append(self._serialPort.readAll())
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
 
         # Emit all data packets in the buffer
         while self._buffer.size() >= self._packetSize:
