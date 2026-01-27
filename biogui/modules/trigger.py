@@ -33,6 +33,7 @@ from biogui.controllers import MainController
 from biogui.ui.trigger_config_widget_ui import Ui_TriggerConfigWidget
 from biogui.utils import detectTheme
 from biogui.views import MainWindow
+import random
 
 
 def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
@@ -66,6 +67,7 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         "durationStart",
         "durationRest",
         "imageFolder",
+        "shuffle"
     }
     if providedKeys != validKeys:
         return None, "The provided keys are not valid."
@@ -336,8 +338,11 @@ class TriggerController(QObject):
             else:
                 self._upcomingLabel = ""
             # Draw countdown with upcoming label
+            # self._triggerWidget.renderImage(
+            #     self._upcomingLabel, "", str(self._restCounter)
+            # )
             self._triggerWidget.renderImage(
-                self._upcomingLabel, "", str(self._restCounter)
+                f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
             )
             # Force triggers to zero during rest
             for streamingController in self._streamingControllers.values():
@@ -379,8 +384,11 @@ class TriggerController(QObject):
         """
         self._restCounter -= 1
         if self._restCounter > 0:
+            # self._triggerWidget.renderImage(
+            #     self._upcomingLabel, "", str(self._restCounter)
+            # )
             self._triggerWidget.renderImage(
-                self._upcomingLabel, "", str(self._restCounter)
+                f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
             )
             logging.info(
                 f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
@@ -396,28 +404,71 @@ class TriggerController(QObject):
         logging.info("Rest ended, proceeding to next trigger.")
         self._updateTriggerAndImage()
 
+    # def _startTriggerGen(self) -> None:
+    #     """Begin the whole trigger sequence (called once when streaming starts)."""
+    #     if not self._confWidget.config:
+    #         return
+
+    #     # Initialize the trigger to zero for all streaming controllers
+    #     for streamingController in self._streamingControllers.values():
+    #         streamingController.setTrigger(0)
+
+    #     # Build trigger IDs and replicate each label nReps times
+    #     for i, k in enumerate(self._confWidget.config["triggers"].keys()):
+    #         self._triggerIds[k] = i + 1
+    #         self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
+        
+    #     # Verifiy if Shuffling is Enable or not
+    #     shuffle_enabled = self._confWidget.get("shuffle", False)
+    #     if shuffle_enabled:
+    #         print("Triggers will be shuffled")
+    #         random.shuffle(self._triggerLabels)
+    #     self._triggerLabels.append("last_stop")
+
+    #     self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+    #     # Show an initial “start” label
+    #     self._restFlag = True
+    #     self._triggerWidget.renderImage("start", "")
+    #     self._triggerWidget.show()
+
+    #     # Wait for durationStart before firing the very first stimulus
+    #     self._timer.start(self._confWidget.config["durationStart"])
     def _startTriggerGen(self) -> None:
-        """Begin the whole trigger sequence (called once when streaming starts)."""
         if not self._confWidget.config:
             return
 
-        # Initialize the trigger to zero for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
 
-        # Build trigger IDs and replicate each label nReps times
-        for i, k in enumerate(self._confWidget.config["triggers"].keys()):
+        self._triggerIds = {}
+        self._triggerLabels = []
+        self._triggerCounter = 0
+
+        trigger_keys = list(self._confWidget.config["triggers"].keys())
+
+        # IDs stay deterministic (based on JSON order)
+        for i, k in enumerate(trigger_keys):
             self._triggerIds[k] = i + 1
-            self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
-        self._triggerLabels.append("last_stop")
+
+        # Build repeated labels
+        n_reps = self._confWidget.config["nReps"]
+        labels = []
+        for k in trigger_keys:
+            labels.extend([k] * n_reps)
+
+        # Shuffle if enabled
+        if self._confWidget.config.get("shuffle", False):
+            random.shuffle(labels)
+
+        # Append stop marker at the end
+        labels.append("last_stop")
+        self._triggerLabels = labels
 
         self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
-        # Show an initial “start” label
         self._restFlag = True
         self._triggerWidget.renderImage("start", "")
         self._triggerWidget.show()
 
-        # Wait for durationStart before firing the very first stimulus
         self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
