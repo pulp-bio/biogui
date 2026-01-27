@@ -213,20 +213,25 @@ class SerialDataSourceWorker(DataSourceWorker):
             self.errorOccurred.emit(errMsg)
             logging.error("DataWorker: {errMsg}")
             return
-
+        print("Serial will start collecting!")
         # Reset serial port input buffer
         self._serialPort.clear(QSerialPort.Input)  # type: ignore
 
+        # IMPORTANT: NEED TO HAVE THESE LINES FOR WINDOWS
+        self._serialPort.setDataTerminalReady(True)
+        self._serialPort.setRequestToSend(True)
         # Start command
         for c in self._startSeq:
             if isinstance(c, (bytes, bytearray)):
                 self._serialPort.write(c)
                 self._serialPort.waitForBytesWritten(1000)
+                print("Start command sent")
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
         # Set guard flag
         self._guard = True
+
 
         logging.info("DataWorker: serial communication started.")
 
@@ -255,6 +260,7 @@ class SerialDataSourceWorker(DataSourceWorker):
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
         # Accumulate new data
+
         self._buffer.append(self._serialPort.readAll())
 
         # Guard check
