@@ -1,8 +1,0 @@
-File 11-06_10-20-11 --> Manus Core GUI closed, BIOGUI minimized, WULPUS GUI minimized, print enabled
-			Observed delay of approx. 500 ms towards the end of the acquisitions
-
-File 11-06_11-23-26 --> Manus Core GUI closed, BIOGUI minimized, WULPUS GUI minimized, print enabled
-			Observed delay of approx. 500 ms towards the end of the acquisitions
-
-File 11-06_11-28-21 --> Manus Core GUI closed, BIOGUI minimized, WULPUS GUI minimized, print biogui disablee
-			Observed delay of approx. 500 ms towards the end of the acquisitions

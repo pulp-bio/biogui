@@ -1,0 +1,15 @@
+{
+    "gestures": {
+        "open_hand" : "open_hand.png", 
+        "fist" : "fist.png", 
+        "index_pinch" : "index_pinch.png", 
+        "middle_pinch" : "middle_pinch.png", 
+        "thumb_up" : "thumb_up.png", 
+        "thumb_down" : "thumb_down.png"
+    },
+    "nReps": 6,
+    "durationGesture": 4000,
+    "durationStart": 8000,
+    "durationRest": 2000,
+    "imageFolder": "acquisitions/gesture_images"
+}

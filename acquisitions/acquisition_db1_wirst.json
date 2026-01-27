@@ -1,0 +1,14 @@
+{
+    "gestures": { 
+        "wrist_flexion" : "wrist_flex.png", 
+        "wrist_extension": "wrist_exten.png", 
+        "wrist_rad_dev" : "wrist_rad_dev.png", 
+        "wrist_uln_dev" : "wrist_uln_dev.png", 
+        "wrist_pronation" : "wrist_pro.png"
+    },
+    "nReps": 20,
+    "durationGesture": 4000,
+    "durationStart": 8000,
+    "durationRest": 1000,
+    "imageFolder": "acquisitions/gesture_images"
+}
