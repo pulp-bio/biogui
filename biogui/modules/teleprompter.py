@@ -337,16 +337,36 @@ class TeleprompterController(QObject):
         QTimer.singleShot(self._durationStart, self._beginSentences)
 
     def _beginSentences(self) -> None:
-        # After start duration, show first sentence (voiced)
-        self._currentVoiced = 1
-        self._currentSilent = 0
-        self._isVoiced = True
-        # Encode trigger: (sentence_index+1)*1000 + repetition*10 + (1 if voiced else 0)
-        trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
-        for ctrl in self._streamingControllers.values():
-            ctrl.setTrigger(trigger_value)
-        self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
-        self._timer.start(self._duration)
+        if self._voicedRepeats > 0:
+            # Show first sentence as voiced
+            self._currentVoiced = 1
+            self._currentSilent = 0
+            self._isVoiced = True
+            trigger_value = (self._index + 1) * 1000 + self._currentVoiced * 10 + 1
+            for ctrl in self._streamingControllers.values():
+                ctrl.setTrigger(trigger_value)
+            self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=True)
+            self._timer.start(self._duration)
+        else:
+            # Skip voiced phase entirely
+            if self._silentRepeats > 0:
+                # Start with silent phase
+                self._currentVoiced = 0
+                self._currentSilent = 1
+                self._isVoiced = False
+                trigger_value = (self._index + 1) * 1000 + self._currentSilent * 10 + 0
+                for ctrl in self._streamingControllers.values():
+                    ctrl.setTrigger(trigger_value)
+                self._teleWidget.displaySentence(self._sentences[self._index], self._duration, is_voiced=False)
+                self._timer.start(self._duration)
+            else:
+                # Both voiced and silent are 0 - move to next sentence or stop
+                self._index += 1
+                if self._index >= len(self._sentences):
+                    self._stopTeleprompter()
+                else:
+                    # Recursively call _beginSentences() for next sentence
+                    self._beginSentences()
 
     def _showNextSentence(self) -> None:
         # Handle voiced and silent repeats for each sentence, with rest in between
@@ -377,14 +397,29 @@ class TeleprompterController(QObject):
                 self._teleWidget.displayRest(self._durationRest)
                 return
             else:
-                self._isVoiced = False
-                self._currentSilent = 1
-                # Insert rest before first silent repetition
-                self._pendingRest = True
-                for ctrl in self._streamingControllers.values():
-                    ctrl.setTrigger(-999)
-                self._teleWidget.displayRest(self._durationRest)
-                return
+                if self._silentRepeats == 0:
+                    # Skip silent phase entirely, move to next sentence
+                    self._isVoiced = True
+                    self._currentVoiced = 1
+                    self._index += 1
+                    if self._index >= len(self._sentences):
+                        self._stopTeleprompter()
+                        return
+                    # Insert rest before first voiced repetition of next sentence
+                    self._pendingRest = True
+                    for ctrl in self._streamingControllers.values():
+                        ctrl.setTrigger(-999)
+                    self._teleWidget.displayRest(self._durationRest)
+                    return
+                else:
+                    self._isVoiced = False
+                    self._currentSilent = 1
+                    # Insert rest before first silent repetition
+                    self._pendingRest = True
+                    for ctrl in self._streamingControllers.values():
+                        ctrl.setTrigger(-999)
+                    self._teleWidget.displayRest(self._durationRest)
+                    return
         else:
             if self._currentSilent < self._silentRepeats:
                 # Insert rest before next silent repetition
