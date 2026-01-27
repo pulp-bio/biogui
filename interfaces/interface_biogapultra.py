@@ -29,7 +29,7 @@ packetSize: int = 234
 startSeq: list[bytes] = [
     #bytes([20, 1, 50]),
     (18).to_bytes(),                                # send byte 18 to start 
-    0.2,
+    0.2, 
     #bytes([6, 0, 1, 4, 0, 13, 10]),                # sample_rate, ADS_MODE (0), [2], [4], PGA_GAIN
     bytes([6, 0, 2, 4, 0])
 ]
