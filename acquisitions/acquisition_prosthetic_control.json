@@ -1,0 +1,13 @@
+{
+    "gestures": {
+        "middle_pinch" : "fist.png", 
+        "wrist_flexion" : "wrist_flex.png", 
+        "wrist_extension": "wrist_exten.png",  
+        "wrist_pronation" : "wrist_pro.png"
+    },
+    "nReps": 10,
+    "durationGesture": 4000,
+    "durationStart": 8000,
+    "durationRest": 1000,
+    "imageFolder": "acquisitions/gesture_images"
+}

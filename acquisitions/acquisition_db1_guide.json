@@ -12,7 +12,7 @@
         "wrist_uln_dev" : "wrist_uln_dev.png", 
         "wrist_pronation" : "wrist_pro.png"
     },
-    "nReps": 6,
+    "nReps": 2,
     "durationGesture": 4000,
     "durationStart": 8000,
     "durationRest": 1000,

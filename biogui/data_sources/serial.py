@@ -173,15 +173,16 @@ class SerialDataSourceWorker(DataSourceWorker):
         ser = serial.Serial(self._serialPortName, self._baudRate, timeout=5)
 
         logging.info("DataWorker: serial communication started.")
-
+        print("DataWorker: Serial Communication Started, sending start commands ..")
         # Start command
         for c in self._startSeq:
             ser.write(c)
             time.sleep(0.2)
-
+        print('Start command sent')
+        print(self._startSeq)
         while not self._stopReadingFlag:
             data = ser.read(self._packetSize)
-
+            print(f'Received data with len:{len(data)}')
             # Check number of bytes read
             if len(data) != self._packetSize:
                 self.errorSig.emit("Serial communication failed.")

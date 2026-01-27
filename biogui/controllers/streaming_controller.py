@@ -52,7 +52,7 @@ class DataPacket:
     id : str
         String identifier.
     data : ndarray
-        Data packet with shape (nSamp, nCh).
+        Data packet with shape (nSamp, nCh, timestamp).
     """
 
     id: str
@@ -131,12 +131,17 @@ class _FileWriterWorker(QObject):
             return
         data = dataPacket.data
 
+
         if self._isFirstWrite:  # write number of channels
             nCh = data.shape[1] + 2 if self._trigger is not None else data.shape[1] + 1
             self._f.write(struct.pack("<I", nCh))  # type: ignore
             self._isFirstWrite = False
-            self._baseTs = time.time()
-
+            #self._baseTs = time.time()
+            now = datetime.datetime.now()
+            self._baseTs = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=now.hour)
+        ts = datetime.datetime.now() - self._baseTs
+        
+        
         # Add trigger (optionally)
         if self._trigger is not None:
             data = np.concatenate(
@@ -147,15 +152,15 @@ class _FileWriterWorker(QObject):
                 axis=1,
             ).astype(np.float32)
 
-        # Add timestamp
-        ts = time.time() - self._baseTs
+
+        ts = ts.total_seconds()
         data = np.concatenate(
             [
                 data,
                 np.repeat(ts, data.shape[0]).reshape(-1, 1),
             ],
             axis=1,
-        ).astype(np.float32)
+        ).astype(np.float32) 
 
         self._f.write(data.tobytes())  # type: ignore
 

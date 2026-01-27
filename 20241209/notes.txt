@@ -1,0 +1,2 @@
+09.42.01 -> Running from VS Code
+11-19-12 -> Running from Shell, VS Code Minimized
