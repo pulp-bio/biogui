@@ -20,8 +20,10 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import socket
 from collections import deque
 from itertools import islice
+from sys import platform
 from types import MappingProxyType
 
 import numpy as np
@@ -32,7 +34,6 @@ from PySide6.QtGui import (
     QStandardItem,
     QStandardItemModel,
 )
-from PySide6.QtNetwork import QLocalSocket, QTcpSocket
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
@@ -75,87 +76,6 @@ def getCheckedSignals(dataSourceModel: QStandardItemModel) -> dict[str, list[str
     return checkedSigs
 
 
-class _Socket(QObject):
-    """
-    Abstraction for Qt-based sockets.
-
-    Parameters
-    ----------
-    socketConfig : dict
-        Dictionary containing the configuration of the socket:
-        - for TCP sockets, the server address and port;
-        - for local sockets, the server path.
-    parent : QObject or None, default=None
-        Parent QObject.
-
-    Attributes
-    ----------
-    _socketConfig : dict
-        Dictionary containing the configuration of the socket.
-    _socket : QTcpSocket or QLocalSocket
-        Actual socket instance.
-
-    Class attributes
-    ----------------
-    errorOccurred : Signal
-        Qt Signal emitted when an error occurs.
-    """
-
-    errorOccurred = Signal(int)
-
-    def __init__(self, socketConfig: dict, parent: QObject | None = None) -> None:
-        super().__init__(parent)
-
-        if "socketAddress" in socketConfig:
-            self._socketConfig = {
-                "socketAddress": socketConfig["socketAddress"],
-                "socketPort": socketConfig["socketPort"],
-            }
-
-            self._socket = QTcpSocket(self)
-        else:
-            self._socketConfig = {"socketPath": socketConfig["socketPath"]}
-
-            self._socket = QLocalSocket(self)
-
-        self._socket.errorOccurred.connect(self.errorOccurred.emit)
-
-    def connectToServer(self) -> None:
-        """Connect the socket to the given server."""
-        if isinstance(self._socket, QTcpSocket):
-            self._socket.connectToHost(
-                self._socketConfig["socketAddress"], self._socketConfig["socketPort"]
-            )
-        elif isinstance(self._socket, QLocalSocket):
-            self._socket.connectToServer(self._socketConfig["socketPath"])
-
-    def isConnected(self) -> bool:
-        if isinstance(self._socket, QTcpSocket):
-            return self._socket.state() == QTcpSocket.ConnectedState  # type: ignore
-        elif isinstance(self._socket, QLocalSocket):
-            return self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
-
-        return False  # should never happen
-
-    def write(self, data: bytes) -> None:
-        """Write bytes to the socket and then flush."""
-        self._socket.write(data)
-        self._socket.flush()
-
-    def close(self) -> None:
-        """Close the socket."""
-        if (
-            isinstance(self._socket, QTcpSocket)
-            and self._socket.state() == QTcpSocket.ConnectedState  # type: ignore
-        ):
-            self._socket.disconnectFromHost()
-        elif (
-            isinstance(self._socket, QLocalSocket)
-            and self._socket.state() == QLocalSocket.ConnectedState  # type: ignore
-        ):
-            self._socket.disconnectFromServer()
-
-
 class _ForwardingWorker(QObject):
     """
     Worker that forwards the acquired data.
@@ -166,9 +86,8 @@ class _ForwardingWorker(QObject):
         Instance of _Socket.
     _buffers : dict
         Dictionary containing one buffer per signal.
-    _frameBasedMode : bool
-        If True, forward immediately when frame is complete (ignores window settings).
-        If False, use traditional window-based accumulation.
+    _connected : bool
+        Whether the worker is connected to the server.
 
     Class attributes
     ----------------
@@ -181,10 +100,10 @@ class _ForwardingWorker(QObject):
     def __init__(self) -> None:
         super().__init__()
 
-        self._socketConfig: dict = {}
-        self._socket: _Socket | None = None
+        self._socketConfig = {}
+        self._socket: socket.socket | None = None
+        self._connected = False
         self._buffers = {}
-        self._frameBasedMode: bool = True  # Default to frame-based
 
     @property
     def socketConfig(self) -> dict:
@@ -194,8 +113,6 @@ class _ForwardingWorker(QObject):
     @socketConfig.setter
     def socketConfig(self, socketConfig: dict) -> None:
         self._socketConfig = socketConfig
-        # Extract frame-based mode setting
-        self._frameBasedMode = socketConfig.get("frameBasedMode", True)
 
     def initBuffers(self, buffersConfig: dict) -> None:
         """
@@ -217,13 +134,26 @@ class _ForwardingWorker(QObject):
 
     def connectToServer(self) -> None:
         """Create the socket and connect to the specified server."""
-        self._socket = _Socket(self._socketConfig, parent=self)
-        self._socket.errorOccurred.connect(
-            lambda: self.errorOccurred.emit(
-                "ForwardingWorker: cannot connect to server."
-            )
-        )
-        self._socket.connectToServer()
+        if not self._socketConfig:  # empty configuration (should never happen)
+            return
+
+        try:
+            if "socketAddress" in self._socketConfig:  # TCP socket
+                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._socket.connect(
+                    (
+                        self._socketConfig["socketAddress"],
+                        self._socketConfig["socketPort"],
+                    )
+                )
+            else:  # Unix
+                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self._socket.connect(self._socketConfig["socketPath"])
+        except Exception as e:
+            self.errorOccurred.emit(f"ForwardingWorker: cannot connect to server: {e}.")
+            return
+
+        self._connected = True
 
     @Slot(list)
     def forward(self, dataPacket: list[SigData]) -> None:
@@ -236,93 +166,58 @@ class _ForwardingWorker(QObject):
             Data to process.
         """
         # If connection is not established, do nothing
-        if self._socket is None or not self._socket.isConnected():
+        if self._socket is None or not self._connected:
             return
 
         # Get data source ID
-        dataSourceId = str(self.sender())
+        curDataSourceId = str(self.sender())
 
         # Fill buffer
         for sigData in dataPacket:
-            if sigData.sigName not in self._buffers[dataSourceId]:
+            if sigData.sigName not in self._buffers[curDataSourceId]:
                 continue
-            self._buffers[dataSourceId][sigData.sigName]["queue"].extend(sigData.data)
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
+                sigData.data
+            )
 
-        # Forward logic depends on mode
-        if self._frameBasedMode:
-            self._forwardFrameBased(dataSourceId)
-        else:
-            self._forwardWindowBased(dataSourceId)
-
-    def _forwardFrameBased(self, dataSourceId: str) -> None:
-        """
-        Frame-based forwarding: Forward all non-empty signals immediately.
-
-        For WULPUS multi-config: Only one ultrasound config is active per frame,
-        so this automatically forwards cfg0+imu, then cfg1+imu, etc. sequentially.
-
-        Signals are forwarded in ALPHABETICAL ORDER for consistent packet structure.
-        """
-        # Check which signals have data (sorted alphabetically for consistency)
-        signals_with_data = sorted(
-            [
-                sigName
-                for sigName, sigBuffers in self._buffers[dataSourceId].items()
-                if len(sigBuffers["queue"]) > 0
-            ]
-        )
-
-        if not signals_with_data:
-            return
-
-        # Forward all available data
-        data = bytearray()
-        for sigName in signals_with_data:
-            sigBuffers = self._buffers[dataSourceId][sigName]
-            queue = sigBuffers["queue"]
-
-            # Take all available data
-            data.extend(np.asarray(queue).tobytes())
-
-            # Clear the queue (frame-based = no windowing)
-            sigBuffers["queue"].clear()
-
-        logger.info(f"Forwarding packet: {len(data)} bytes")
-        self._socket.write(data)
-
-    def _forwardWindowBased(self, dataSourceId: str) -> None:
-        """
-        Traditional window-based forwarding: Wait until all buffers are full.
-
-        Signals are forwarded in ALPHABETICAL ORDER for consistent packet structure.
-        """
-        # Check if all buffers are full
+        # Exhaustively send data until some buffers are empty
         while True:
+            # Check if all buffers are full
             bufferFilled = all(
                 len(sigBuffers["queue"]) >= sigBuffers["winLen"]
-                for sigBuffers in self._buffers[dataSourceId].values()
+                for dataSourceBuffers in self._buffers.values()
+                for sigBuffers in dataSourceBuffers.values()
             )
             if not bufferFilled:
                 break
 
             data = bytearray()
-            for sigBuffers in sorted(self._buffers[dataSourceId].values()):
-                queue = sigBuffers["queue"]
-                winLen = sigBuffers["winLen"]
-                stepLen = sigBuffers["stepLen"]
-                # Convert to bytes
-                data.extend(np.asarray(queue)[:winLen].tobytes())
-                # Shift by step length
-                sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
-            self._socket.write(data)
+            for dataSourceId in sorted(
+                self._buffers
+            ):  # iterate over data sources in alphabetical order
+                dataSourceBuffers = self._buffers[dataSourceId]
+                for sigName in sorted(
+                    dataSourceBuffers
+                ):  # iterate over signals in alphabetical order
+                    sigBuffers = dataSourceBuffers[sigName]
+                    queue = sigBuffers["queue"]
+                    winLen = sigBuffers["winLen"]
+                    stepLen = sigBuffers["stepLen"]
+                    # Convert to bytes
+                    data.extend(np.asarray(queue)[:winLen].tobytes())
+                    # Shift by step length
+                    sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
+            self._socket.sendall(data)
 
     def reset(self) -> None:
         """Reset the worker."""
         self._buffers = {}
+        self._connected = False
 
         # Disconnect socket
         if self._socket is not None:
             self._socket.close()
+            self._socket = None
 
 
 class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
@@ -345,11 +240,16 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         portValidator = QIntValidator(bottom=minPort, top=maxPort)
         self.socketPortTextField.setValidator(portValidator)
 
-        # By default, TCP is selected -> hide local socket option
+        # By default, TCP is selected -> hide Unix socket option
         self.label6.hide()
         self.socketPathTextField.hide()
 
         self.socketTypeComboBox.currentTextChanged.connect(self._onComboBoxChange)
+
+        # Disable Unix socket option on Windows
+        if platform == "win32":
+            index = self.socketTypeComboBox.findText("Unix")
+            self.socketTypeComboBox.model().item(index).setEnabled(False)  # type: ignore
 
     def validateConfig(self) -> tuple[dict | None, str]:
         """
@@ -367,23 +267,19 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         # Read and validate configuration
         config = {}
 
-        # 1. Forwarding mode
-        config["frameBasedMode"] = self.frameBasedRadioButton.isChecked()
-
-        # 2. Window settings (only for window-based mode)
-        if not config["frameBasedMode"]:
+        # 1. Forwarding mode and window settings
+        if self.eagerModeRadioButton.isChecked():  # eager mode
+            config["winLenS"] = -1
+            config["winStrideS"] = -1
+        else:  # window mode
             if not self.winLenTextField.hasAcceptableInput():
                 return None, 'The "Window length" field is invalid.'
             config["winLenS"] = lo.toFloat(self.winLenTextField.text())[0] / 1000
             if not self.winStrideTextField.hasAcceptableInput():
                 return None, 'The "Window stride" field is invalid.'
             config["winStrideS"] = lo.toFloat(self.winStrideTextField.text())[0] / 1000
-        else:
-            # Frame-based: use minimal window settings (1 sample)
-            config["winLenS"] = 0.001
-            config["winStrideS"] = 0.001
 
-        # 3. Socket settings
+        # 2. Socket settings
         if self.socketTypeComboBox.currentText() == "TCP":
             if not self.socketPortTextField.hasAcceptableInput():
                 return None, "The provided socket port is not valid."
@@ -392,7 +288,7 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
 
             return config, ""
 
-        if self.socketTypeComboBox.currentText() == "Local":
+        if self.socketTypeComboBox.currentText() == "Unix":
             config["socketPath"] = self.socketPathTextField.text()
 
             return config, ""
@@ -406,16 +302,16 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
             self.socketAddressTextField.show()
             self.label5.show()
             self.socketPortTextField.show()
-            # Hide local options
+            # Hide Unix options
             self.label6.hide()
             self.socketPathTextField.hide()
-        elif socketType == "Local":
+        elif socketType == "Unix":
             # Hide TCP options
             self.label4.hide()
             self.socketAddressTextField.hide()
             self.label5.hide()
             self.socketPortTextField.hide()
-            # Show local options
+            # Show Unix options
             self.label6.show()
             self.socketPathTextField.show()
 
@@ -557,12 +453,9 @@ class ForwardingController(QObject):
             self._handleErrors(errMsg)
             return
 
-        # Extract mode and window settings
-        frameBasedMode = config.pop("frameBasedMode", True)
+        # Compute buffer sizes for the signals of interest
         winLenS = config.pop("winLenS")
         winStrideS = config.pop("winStrideS")
-
-        # Compute buffer sizes for the signals of interest
         buffersConfig = {}
         for dataSourceId, sigNames in sigsToForward.items():
             buffersConfig[dataSourceId] = {}
@@ -570,29 +463,18 @@ class ForwardingController(QObject):
             streamingController = self._streamingControllers[dataSourceId]
             for sigName in sigNames:
                 fs = streamingController.sigInfo[sigName]["fs"]
-
-                if frameBasedMode:
-                    # Frame-based: minimal buffering (just enough for 1 sample)
-                    winLen = 1
-                    stepLen = 1
-                else:
-                    # Window-based: traditional behavior
-                    winLen = int(round(winLenS * fs))
-                    stepLen = int(round(winStrideS * fs))
-
+                winLen = int(round(winLenS * fs)) if winLenS > 0 else 1
+                stepLen = int(round(winStrideS * fs)) if winStrideS > 0 else 1
                 buffersConfig[dataSourceId][sigName] = {
                     "winLen": winLen,
                     "stepLen": stepLen,
                 }
 
             # Connect the forwarding worker to the streaming controller
-            streamingController.signalsReady.connect(
-                self._forwardingWorker.forward, Qt.QueuedConnection
-            )
+            streamingController.signalsReady.connect(self._forwardingWorker.forward)
         self._forwardingWorker.initBuffers(buffersConfig)
 
-        # Set socket configuration (including mode)
-        config["frameBasedMode"] = frameBasedMode
+        # Set socket configuration
         self._forwardingWorker.socketConfig = config
 
         # Start thread

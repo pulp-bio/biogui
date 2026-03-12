@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'forwarding_config_widget.ui'
+## Form generated from reading UI file 'forwarding_config_widgetOLutuE.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.2
+## Created by: Qt User Interface Compiler version 6.10.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -23,7 +23,7 @@ class Ui_ForwardingConfigWidget(object):
     def setupUi(self, ForwardingConfigWidget):
         if not ForwardingConfigWidget.objectName():
             ForwardingConfigWidget.setObjectName(u"ForwardingConfigWidget")
-        ForwardingConfigWidget.resize(400, 550)
+        ForwardingConfigWidget.resize(400, 551)
         self.verticalLayout1 = QVBoxLayout(ForwardingConfigWidget)
         self.verticalLayout1.setObjectName(u"verticalLayout1")
         self.forwardGroupBox = QGroupBox(ForwardingConfigWidget)
@@ -41,21 +41,18 @@ class Ui_ForwardingConfigWidget(object):
         self.modeGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.verticalLayout3 = QVBoxLayout(self.modeGroupBox)
         self.verticalLayout3.setObjectName(u"verticalLayout3")
-        self.frameBasedRadioButton = QRadioButton(self.modeGroupBox)
-        self.frameBasedRadioButton.setObjectName(u"frameBasedRadioButton")
-        self.frameBasedRadioButton.setChecked(True)
+        self.eagerModeRadioButton = QRadioButton(self.modeGroupBox)
+        self.eagerModeRadioButton.setObjectName(u"eagerModeRadioButton")
+        self.eagerModeRadioButton.setChecked(True)
 
-        self.verticalLayout3.addWidget(self.frameBasedRadioButton)
+        self.verticalLayout3.addWidget(self.eagerModeRadioButton)
 
-        self.windowBasedRadioButton = QRadioButton(self.modeGroupBox)
-        self.windowBasedRadioButton.setObjectName(u"windowBasedRadioButton")
+        self.windowModeRadioButton = QRadioButton(self.modeGroupBox)
+        self.windowModeRadioButton.setObjectName(u"windowModeRadioButton")
 
-        self.verticalLayout3.addWidget(self.windowBasedRadioButton)
+        self.verticalLayout3.addWidget(self.windowModeRadioButton)
 
-
-        self.verticalLayout2.addWidget(self.modeGroupBox)
-
-        self.windowGroupBox = QGroupBox(self.forwardGroupBox)
+        self.windowGroupBox = QGroupBox(self.modeGroupBox)
         self.windowGroupBox.setObjectName(u"windowGroupBox")
         self.windowGroupBox.setEnabled(False)
         self.windowGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -82,7 +79,10 @@ class Ui_ForwardingConfigWidget(object):
         self.formLayout1.setWidget(1, QFormLayout.ItemRole.FieldRole, self.winStrideTextField)
 
 
-        self.verticalLayout2.addWidget(self.windowGroupBox)
+        self.verticalLayout3.addWidget(self.windowGroupBox)
+
+
+        self.verticalLayout2.addWidget(self.modeGroupBox)
 
         self.socketGroupBox = QGroupBox(self.forwardGroupBox)
         self.socketGroupBox.setObjectName(u"socketGroupBox")
@@ -141,7 +141,7 @@ class Ui_ForwardingConfigWidget(object):
 
 
         self.retranslateUi(ForwardingConfigWidget)
-        self.windowBasedRadioButton.toggled.connect(self.windowGroupBox.setEnabled)
+        self.windowModeRadioButton.toggled.connect(self.windowGroupBox.setEnabled)
 
         QMetaObject.connectSlotsByName(ForwardingConfigWidget)
     # setupUi
@@ -151,20 +151,20 @@ class Ui_ForwardingConfigWidget(object):
         self.forwardGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Forwarding configuration", None))
         self.modeGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Forwarding mode", None))
 #if QT_CONFIG(tooltip)
-        self.frameBasedRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Forward data as soon as a complete frame arrives (recommended for real-time streaming)", None))
+        self.eagerModeRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Forward samples as soon as they are acquired", None))
 #endif // QT_CONFIG(tooltip)
-        self.frameBasedRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Frame-based (immediate)", None))
+        self.eagerModeRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Eager mode", None))
 #if QT_CONFIG(tooltip)
-        self.windowBasedRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Accumulate samples into windows of specified length (for batch processing)", None))
+        self.windowModeRadioButton.setToolTip(QCoreApplication.translate("ForwardingConfigWidget", u"Accumulate samples into windows of specified length ", None))
 #endif // QT_CONFIG(tooltip)
-        self.windowBasedRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window-based (accumulate)", None))
+        self.windowModeRadioButton.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window mode", None))
         self.windowGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Window settings", None))
         self.label1.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window length (ms):", None))
         self.label2.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Window stride (ms):", None))
         self.socketGroupBox.setTitle(QCoreApplication.translate("ForwardingConfigWidget", u"Socket settings", None))
         self.label3.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Socket type:", None))
         self.socketTypeComboBox.setItemText(0, QCoreApplication.translate("ForwardingConfigWidget", u"TCP", None))
-        self.socketTypeComboBox.setItemText(1, QCoreApplication.translate("ForwardingConfigWidget", u"Local", None))
+        self.socketTypeComboBox.setItemText(1, QCoreApplication.translate("ForwardingConfigWidget", u"Unix", None))
 
         self.label4.setText(QCoreApplication.translate("ForwardingConfigWidget", u"Socket address:", None))
         self.socketAddressTextField.setText(QCoreApplication.translate("ForwardingConfigWidget", u"127.0.0.1", None))
