@@ -32,7 +32,7 @@ class DataSourceType(Enum):
 
     TCP = "TCP socket"
     SERIAL = "Serial port"
-    LOCAL_SOCK = "Local socket"
+    UNIX_SOCK = "Unix socket"
     MIC = "Microphone"
 
 
