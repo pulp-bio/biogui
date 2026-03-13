@@ -1,4 +1,4 @@
-# biogui
+# BioGUI
 
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
 

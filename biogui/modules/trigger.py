@@ -3,6 +3,7 @@ This module contains controller and widgets for trigger configuration.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -86,7 +87,6 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
     if "alternating" in config:
         if not isinstance(config["alternating"], bool):
             return None, "alternating must be true or false."
-
 
     # Check paths
     if not os.path.isdir(config["imageFolder"]):

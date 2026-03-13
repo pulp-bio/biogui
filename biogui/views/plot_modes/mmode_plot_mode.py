@@ -1,3 +1,22 @@
+"""
+Class for M-mode ultrasound visualization.
+
+
+Copyright 2025 Enzo Baraldi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 from collections import deque
@@ -11,7 +30,7 @@ from .ultrasound_filters import UltrasoundFilter
 
 class MModePlotMode(BasePlotMode):
     """
-    Plot mode for M-Mode ultrasound visualization.
+    Plot mode for M-mode ultrasound visualization.
 
     Displays depth vs. time as a 2D image, where each column represents
     one A-line scan over time.
@@ -21,15 +40,15 @@ class MModePlotMode(BasePlotMode):
     fs : float
         Sampling frequency.
     nCh : int
-        Number of channels (must be 1 for M-Mode).
+        Number of channels (must be 1 for M-mode).
     chSpacing : float
-        Spacing between each channel (not used in M-Mode).
+        Spacing between each channel (not used in M-mode).
     renderLenMs : int
-        Not used in M-Mode (uses MMODE_TIME_WINDOW instead).
+        Not used in M-mode (uses MMODE_TIME_WINDOW instead).
     **config : dict
         Additional configuration options, including:
         - signal_type: Dict with ultrasound configuration
-        - showRaw: Show raw RF data (only one can be True for M-Mode)
+        - showRaw: Show raw RF data (only one can be True for M-mode)
         - showFiltered: Show filtered data
         - showEnvelope: Show envelope
         - enableBandpass: Enable bandpass filter
@@ -41,13 +60,13 @@ class MModePlotMode(BasePlotMode):
     _incoming_buffer : deque
         Buffer for accumulating incoming samples.
     _mmode_buffer : ndarray
-        2D array for M-Mode display [depth x time].
+        2D array for M-mode display [depth x time].
     _pending_scans : int
         Number of complete scans waiting to be plotted.
     _current_scan_position : int
         Position within the current scan being accumulated.
     _image_item : ImageItem
-        PyQtGraph ImageItem for displaying the M-Mode image.
+        PyQtGraph ImageItem for displaying the M-mode image.
     _num_samples : int
         Number of samples per scan.
     _adc_start_delay : float
@@ -104,7 +123,7 @@ class MModePlotMode(BasePlotMode):
         self._show_filtered = config.get("showFiltered", False)
         self._show_envelope = config.get("showEnvelope", False)
 
-        # Determine which mode to display (only one should be True for M-Mode)
+        # Determine which mode to display (only one should be True for M-mode)
         if self._show_envelope:
             self._display_mode = "envelope"
         elif self._show_filtered:
@@ -148,7 +167,7 @@ class MModePlotMode(BasePlotMode):
         return self._pending_scans > 0
 
     def setup_plot(self, graph_widget) -> None:
-        """Setup M-Mode 2D image plot."""
+        """Setup M-mode 2D image plot."""
         self._graph_widget = graph_widget
         graph_widget.clear()
 
@@ -183,7 +202,7 @@ class MModePlotMode(BasePlotMode):
 
     def render(self) -> None:
         """
-        Render all pending scans to the M-Mode buffer.
+        Render all pending scans to the M-mode buffer.
 
         This ensures we stay up-to-date even when data arrives faster
         than the display refresh rate.
@@ -216,7 +235,7 @@ class MModePlotMode(BasePlotMode):
             processed_scans
         ).T  # Shape: (num_samples, scans_to_process)
 
-        # Scroll the M-Mode buffer to the left by scans_to_process columns
+        # Scroll the M-mode buffer to the left by scans_to_process columns
         self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
 
         # Add all new processed scans at the right side of the buffer
@@ -317,11 +336,11 @@ class MModePlotMode(BasePlotMode):
 
     def reinitialize(self, render_len_ms: int) -> None:
         """
-        Re-initialize (not applicable for M-Mode).
+        Re-initialize (not applicable for M-mode).
 
-        M-Mode uses a fixed time window (MMODE_TIME_WINDOW).
+        M-mode uses a fixed time window (MMODE_TIME_WINDOW).
         """
-        # M-Mode doesn't use render_len_ms, it has a fixed time window
+        # M-mode doesn't use render_len_ms, it has a fixed time window
         # We can reset the buffer if needed
         self._mmode_buffer = np.zeros((self._num_samples, self.MMODE_TIME_WINDOW))
         self._needs_rect_setup = True
@@ -333,7 +352,7 @@ class MModePlotMode(BasePlotMode):
         """
         Get a data queue representation for mode switching.
 
-        For M-Mode, we return the incoming buffer as a queue.
+        For M-mode, we return the incoming buffer as a queue.
 
         Returns
         -------

@@ -1,3 +1,22 @@
+"""
+Class for A-mode ultrasound visualization.
+
+
+Copyright 2025 Enzo Baraldi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 from collections import deque
@@ -11,7 +30,7 @@ from .ultrasound_filters import UltrasoundFilter
 
 class AModePlotMode(BasePlotMode):
     """
-    Plot mode for A-Mode ultrasound visualization.
+    Plot mode for A-mode ultrasound visualization.
 
     Displays the latest complete scan as amplitude vs. depth.
 
@@ -24,7 +43,7 @@ class AModePlotMode(BasePlotMode):
     chSpacing : float
         Spacing between each channel in the plot.
     renderLenMs : int
-        Length of the window in the plot (in ms) - not used for A-Mode.
+        Length of the window in the plot (in ms) - not used for A-mode.
     **config : dict
         Additional configuration options, including:
         - signal_type: Dict with ultrasound configuration
@@ -137,7 +156,7 @@ class AModePlotMode(BasePlotMode):
         return len(self._data_queue) >= self._num_samples
 
     def setup_plot(self, graph_widget) -> None:
-        """Setup A-Mode plot with depth axis and multiple display options."""
+        """Setup A-mode plot with depth axis and multiple display options."""
         self._graph_widget = graph_widget
         graph_widget.clear()
 
@@ -237,7 +256,7 @@ class AModePlotMode(BasePlotMode):
             plot_item.addLegend()
 
     def render(self) -> None:
-        """Update the A-Mode plots with all display modes."""
+        """Update the A-mode plots with all display modes."""
         if not self.has_new_data():
             return
 

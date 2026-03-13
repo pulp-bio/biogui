@@ -3,6 +3,7 @@ This module contains controller and widgets to configure forwarding.
 
 
 Copyright 2025 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

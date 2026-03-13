@@ -3,6 +3,7 @@ Widget for configuring signals.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,7 +64,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.setupUi(self)
 
-        # Track if M-Mode display handlers are connected (to avoid disconnect warnings)
+        # Track if M-mode display handlers are connected (to avoid disconnect warnings)
         self._mmode_handlers_connected = False
 
         self.sigNameLabel.setText(sigName)
@@ -345,7 +346,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                     "At least one display option must be selected for ultrasound data.",
                 )
 
-            # For M-Mode, validate that exactly one option is selected
+            # For M-mode, validate that exactly one option is selected
             if self.ultrasoundModeComboBox.currentText() == "M-Mode":
                 checked_count = sum(
                     [
@@ -437,9 +438,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self._configureDisplayOptionsForMode(mode)
 
     def _configureDisplayOptionsForMode(self, mode: str) -> None:
-        """Configure display options based on ultrasound mode (A-Mode vs M-Mode)."""
+        """Configure display options based on ultrasound mode (A-mode vs M-mode)."""
         if mode == "M-Mode":
-            # For M-Mode: Only allow one option at a time
+            # For M-mode: Only allow one option at a time
             # Disconnect first if already connected to avoid RuntimeWarning
             if self._mmode_handlers_connected:
                 self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
@@ -463,7 +464,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.showRawCheckBox.setChecked(True)
         else:
             # For A-Mode: Allow multiple selections
-            # Disconnect M-Mode handlers if they are connected
+            # Disconnect M-mode handlers if they are connected
             if self._mmode_handlers_connected:
                 self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
                 self.showFilteredCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
@@ -471,7 +472,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self._mmode_handlers_connected = False
 
     def _onMModeDisplayToggle(self, checked: bool) -> None:
-        """Handle M-Mode display toggle - ensure only one option is selected."""
+        """Handle M-mode display toggle - ensure only one option is selected."""
         if not checked:
             # Don't allow unchecking if it's the only one checked
             if not any(

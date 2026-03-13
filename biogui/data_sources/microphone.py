@@ -24,9 +24,9 @@ from PySide6.QtCore import QByteArray, QIODevice
 from PySide6.QtGui import QIntValidator
 from PySide6.QtMultimedia import (
     QAudio,
+    QAudioDevice,
     QAudioFormat,
     QAudioSource,
-    QAudioDevice,
     QMediaDevices,
 )
 from PySide6.QtWidgets import QWidget
