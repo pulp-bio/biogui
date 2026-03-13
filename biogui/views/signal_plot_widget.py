@@ -3,6 +3,7 @@ Class implementing the real-time plot.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -54,7 +55,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     **kwargs : dict
         Optional keyword arguments, including:
         - signal_type: Dict with signal configuration
-        - ultrasoundMode: "A-Mode" or "M-Mode" for ultrasound signals
+        - ultrasoundMode: "A-mode" or "M-mode" for ultrasound signals
         - dataQueue: Optional pre-existing data queue
         - minRange: Optional minimum Y range
         - maxRange: Optional maximum Y range
@@ -210,8 +211,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     @property
     def bufferState(self) -> dict | None:
         """
-        Property representing the buffer state for M-Mode plots.
-        This allows preserving M-Mode buffer data when reconfiguring the plot.
+        Property representing the buffer state for M-mode plots.
+        This allows preserving M-mode buffer data when reconfiguring the plot.
         """
         if hasattr(self._plot_mode, "get_buffer_state"):
             return self._plot_mode.get_buffer_state()

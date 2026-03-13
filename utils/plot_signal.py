@@ -2,6 +2,8 @@
 This script reads the .bio file and plots the acquired signal.
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
+
 Licensed under the Apache License, Version 2.0
 """
 
@@ -75,11 +77,13 @@ def read_bio_file(file_path: str) -> dict:
 
         # 3. Trigger
         if is_trigger:
-            itemsize = 4    # saving as uint32_t
-            trigger = np.frombuffer(f.read(itemsize * n_samp_base), dtype=np.uint32).reshape(n_samp_base, 1)
+            itemsize = 4  # saving as uint32_t
+            trigger = np.frombuffer(
+                f.read(itemsize * n_samp_base), dtype=np.uint32
+            ).reshape(n_samp_base, 1)
             trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
-        # 4. Trigger string (len-prefixed UTF-8 per sample)
+            # 4. Trigger string (len-prefixed UTF-8 per sample)
 
             if is_trigger_str:
                 trigger_str = []
@@ -96,7 +100,6 @@ def read_bio_file(file_path: str) -> dict:
                 "data": np.array(trigger_str, dtype=object).reshape(n_samp_base, 1),
                 "fs": fs_base,
             }
-
 
     return signals
 

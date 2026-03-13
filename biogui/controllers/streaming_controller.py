@@ -3,6 +3,7 @@ Controller for streaming from data sources, preprocessing and saving to file.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,11 +21,11 @@ limitations under the License.
 from __future__ import annotations
 
 import datetime
+import logging
 import struct
 import tempfile
 import time
 from types import MappingProxyType
-import logging 
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -101,14 +102,14 @@ class _FileWriterWorker(QObject):
     def trigger_str(self) -> str | None:
         """str or None: Property representing the (optional) trigger, namely the gesture label, saved as string"""
         return self._trigger_str
-    
+
     @trigger.setter
     def trigger(self, trigger: int | None) -> None:
         self._trigger = trigger
+
     @trigger_str.setter
     def trigger_str(self, trigger_str: str | None) -> None:
         self._trigger_str = trigger_str
-
 
     def openFile(self) -> None:
         """Open the file."""
