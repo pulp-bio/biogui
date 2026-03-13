@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains the BioGAP interface for sEMG.
 
@@ -124,9 +129,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    emgAdc = np.asarray(
-        struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, nCh)
+    emgAdc = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32).reshape(
+        nSamp, nCh
+    )
 
     # ADC readings to mV
     emg = (emgAdc * vRef / (GAIN * (2 ** (nBit - 1) - 1))).astype(np.float32)  # V

@@ -1,8 +1,14 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains controller and widgets for trigger configuration.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -87,18 +93,14 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         if not isinstance(config["alternating"], bool):
             return None, "alternating must be true or false."
 
-
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
         return config, "The specified path does not exist."
     msg = ""
     for triggerLabel in config["triggers"]:
-        imagePath = os.path.join(
-            config["imageFolder"], config["triggers"][triggerLabel]
-        )
+        imagePath = os.path.join(config["imageFolder"], config["triggers"][triggerLabel])
         if not (
-            os.path.isfile(imagePath)
-            and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
+            os.path.isfile(imagePath) and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
         ):
             config["triggers"][triggerLabel] = ""
             msg = "Some images do not exist; the name of the trigger will be displayed."
@@ -378,9 +380,7 @@ class TriggerController(QObject):
                 else:
                     self._upcomingLabel = ""
                 # Draw countdown with upcoming label
-                self._triggerWidget.renderImage(
-                    self._upcomingLabel, "", str(self._restCounter)
-                )
+                self._triggerWidget.renderImage(self._upcomingLabel, "", str(self._restCounter))
                 # Force triggers to zero during rest
                 for streamingController in self._streamingControllers.values():
                     streamingController.setTrigger(0)
@@ -459,9 +459,7 @@ class TriggerController(QObject):
         """
         self._restCounter -= 1
         if self._restCounter > 0:
-            self._triggerWidget.renderImage(
-                self._upcomingLabel, "", str(self._restCounter)
-            )
+            self._triggerWidget.renderImage(self._upcomingLabel, "", str(self._restCounter))
             logging.info(
                 f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
             )
@@ -503,9 +501,7 @@ class TriggerController(QObject):
         else:
             # Blocked mode (default, original behavior): [T1, T1, ..., T2, T2, ...]
             for trigger_name in trigger_names:
-                self._triggerLabels.extend(
-                    [trigger_name] * self._confWidget.config["nReps"]
-                )
+                self._triggerLabels.extend([trigger_name] * self._confWidget.config["nReps"])
 
         self._triggerLabels.append("stop")
 

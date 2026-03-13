@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Utility functions.
 
@@ -28,9 +33,7 @@ from PySide6.QtWidgets import QApplication
 DecodeFn: TypeAlias = Callable[[bytes], dict[str, np.ndarray]]
 """Type representing the decode function that translates the binary data received from the device into signals."""
 
-InterfaceModule = namedtuple(
-    "InterfaceModule", "packetSize, startSeq, stopSeq, sigInfo, decodeFn"
-)
+InterfaceModule = namedtuple("InterfaceModule", "packetSize, startSeq, stopSeq, sigInfo, decodeFn")
 """Type representing the interface module to communicate with the data source."""
 
 

@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the local socket data source.
 
@@ -36,9 +41,7 @@ from .base import (
 )
 
 
-class UnixSocketConfigWidget(
-    DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget
-):
+class UnixSocketConfigWidget(DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget):
     """
     Widget to configure the local socket source.
 

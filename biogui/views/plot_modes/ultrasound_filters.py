@@ -1,3 +1,27 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Class for filtering ultrasound.
+
+
+Copyright 2025 Enzo Baraldi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -69,9 +93,7 @@ class UltrasoundFilter:
 
         # Check if bands are valid
         if low_stop < 0:
-            print(
-                f"Warning: Lower transition band is negative ({low_stop / 1e6:.3f} MHz)."
-            )
+            print(f"Warning: Lower transition band is negative ({low_stop / 1e6:.3f} MHz).")
             print(
                 f"  Low cutoff: {self._low_cutoff / 1e6:.3f} MHz, Transition width: {self._trans_width / 1e6:.3f} MHz"
             )
@@ -101,9 +123,7 @@ class UltrasoundFilter:
             self._filt_b = ss.remez(
                 self._n_taps, temp, [0, 1, 0], fs=self._sampling_freq, maxiter=2500
             )
-            print(
-                f"Filter designed successfully. Gain at passband: {np.sum(self._filt_b):.3f}"
-            )
+            print(f"Filter designed successfully. Gain at passband: {np.sum(self._filt_b):.3f}")
         except Exception as e:
             print(f"Error: Filter design failed: {e}")
             self._enabled = False

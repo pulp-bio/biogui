@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This package contains the code for handling data sources.
 
@@ -31,9 +36,7 @@ from .unix_socket import (
 )
 
 
-def getConfigWidget(
-    dataSourceType: DataSourceType, parent: QWidget
-) -> DataSourceConfigWidget:
+def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> DataSourceConfigWidget:
     """
     Factory function for producing DataSourceConfigWidget objects.
 

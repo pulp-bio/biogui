@@ -1,20 +1,25 @@
-# biogui
+# BioGUI
 
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
+This repository is a monorepo containing three components:
 
-## Usage
+- `./` — BioGUI: acquisition and visualization GUI
+- [`bio-bridge/`](bio-bridge/README.md) — BioBridge: real-time ML inference middleware
+- [`motion-lab/`](motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
-### Environment setup
+## BioGUI Requirements
 
-The code is compatible with Python 3.10+. First, make sure you have uv installed (see [installation guide](https://docs.astral.sh/uv/getting-started/installation/)). The simplest way is probably `pip install uv` in your current Python installation.
+- uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)) with Python 3.10+
 
-To install dependencies and create a virtual environment with Python 3.10, run:
+## BioGUI Setup
+
+To install dependencies, run:
 
 ```
 uv sync
 ```
 
-### Execution
+### Run
 
 Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py), which launches the main window.
 
@@ -33,7 +38,7 @@ source .venv/bin/activate
 python main.py
 ```
 
-### Interface with board
+#### Interface with board
 
 To enable the communication between the GUI and a board, one must provide a Python file with the following specifications:
 
@@ -53,13 +58,30 @@ Some examples of interface files are provided in the [`interfaces`](https://gith
 
 In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
 
+## Full pipeline
+
+To run the full gesture-control pipeline, additional setup is required for BioBridge and MotionLab.
+See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](motion-lab/README.md).
+
+**Preparation** (order does not matter):
+
+- Open BioGUI and configure the interface and forwarding settings.
+- Open MotionLab in Unity and load a scene (do not press Play yet).
+
+**Start** (in this order):
+
+1. Run BioBridge — waits for an incoming BioGUI connection.
+2. Start acquisition in BioGUI with forwarding enabled — data is displayed and forwarded to BioBridge.
+3. Press Play in Unity — receives hand pose data from BioBridge and starts rendering.
+
 ## Authors
 
 This work was realized mainly at the [Energy-Efficient Embedded Systems Laboratory (EEES Lab)](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/eees)
-of University of Bologna (Italy) by:
+of University of Bologna (Italy), and at the [Digital Circuits and Systems (IIS)](https://iis.ee.ethz.ch/research/research-groups/Digital%20Circuits%20and%20Systems.html) of ETH Zurich by:
 
-- [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en)
-- [Pierangelo Maria Rapa](https://www.unibo.it/sitoweb/pierangelomaria.rapa/en)
+- [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en) (University of Bologna)
+- [Pierangelo Maria Rapa](https://www.unibo.it/sitoweb/pierangelomaria.rapa/en) (University of Bologna)
+- Enzo Baraldi (ETH Zurich)
 
 ## Citation
 

@@ -1,8 +1,14 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Widget for configuring signals.
 
 
 Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,7 +69,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.setupUi(self)
 
-        # Track if M-Mode display handlers are connected (to avoid disconnect warnings)
+        # Track if M-mode display handlers are connected (to avoid disconnect warnings)
         self._mmode_handlers_connected = False
 
         self.sigNameLabel.setText(sigName)
@@ -72,9 +78,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if signal_type["type"] == "ultrasound":
             self.label3.setText("Pulse Repetition Frequency (PRF):")
 
-            num_samples = signal_type.get(
-                "num_samples", 397
-            )  # default value for wulpus
+            num_samples = signal_type.get("num_samples", 397)  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
             self.freqLabel.setText(f"{prf:.2f} Hz")
         else:
@@ -170,15 +174,11 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.showEnvelopeCheckBox.toggled.connect(self._onUsProcessingModeChange)
 
             # Connect ultrasound mode change
-            self.ultrasoundModeComboBox.currentTextChanged.connect(
-                self._onUltrasoundModeChange
-            )
+            self.ultrasoundModeComboBox.currentTextChanged.connect(self._onUltrasoundModeChange)
 
             # Initialize state
             self._onUsProcessingModeChange()
-            self._configureDisplayOptionsForMode(
-                self.ultrasoundModeComboBox.currentText()
-            )
+            self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
 
         else:
             # Time-series signal - disable ultrasound controls
@@ -195,8 +195,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """Enable/disable frequency controls based on ultrasound processing mode."""
         # Enable frequency controls only if filtered or envelope is selected
         needs_filter = (
-            self.showFilteredCheckBox.isChecked()
-            or self.showEnvelopeCheckBox.isChecked()
+            self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
         )
 
         self.lowFreqSpinBox.setEnabled(needs_filter)
@@ -226,8 +225,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Bandpass is enabled if filtered or envelope is shown
             config["enableBandpass"] = (
-                self.showFilteredCheckBox.isChecked()
-                or self.showEnvelopeCheckBox.isChecked()
+                self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
             )
 
             # Bandpass settings for plot mode
@@ -302,9 +300,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if self.notchFilterGroupBox.isChecked():
             if not self.qFactorTextField.hasAcceptableInput():
                 return False, 'The "Quality factor" field is invalid.'
-            self._sigConfig["notchFreq"] = lo.toFloat(
-                self.notchFreqComboBox.currentText()
-            )[0]
+            self._sigConfig["notchFreq"] = lo.toFloat(self.notchFreqComboBox.currentText())[0]
             self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
 
         # 2. Plot settings
@@ -345,7 +341,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                     "At least one display option must be selected for ultrasound data.",
                 )
 
-            # For M-Mode, validate that exactly one option is selected
+            # For M-mode, validate that exactly one option is selected
             if self.ultrasoundModeComboBox.currentText() == "M-Mode":
                 checked_count = sum(
                     [
@@ -424,9 +420,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Restore bandpass filter settings
             if "bandpassLow" in kwargs and "bandpassHigh" in kwargs:
-                self.lowFreqSpinBox.setValue(
-                    kwargs["bandpassLow"] / 1e6
-                )  # Convert from Hz to MHz
+                self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
             # Re-apply mode configuration after prefilling
@@ -437,9 +431,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self._configureDisplayOptionsForMode(mode)
 
     def _configureDisplayOptionsForMode(self, mode: str) -> None:
-        """Configure display options based on ultrasound mode (A-Mode vs M-Mode)."""
+        """Configure display options based on ultrasound mode (A-mode vs M-mode)."""
         if mode == "M-Mode":
-            # For M-Mode: Only allow one option at a time
+            # For M-mode: Only allow one option at a time
             # Disconnect first if already connected to avoid RuntimeWarning
             if self._mmode_handlers_connected:
                 self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
@@ -463,7 +457,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.showRawCheckBox.setChecked(True)
         else:
             # For A-Mode: Allow multiple selections
-            # Disconnect M-Mode handlers if they are connected
+            # Disconnect M-mode handlers if they are connected
             if self._mmode_handlers_connected:
                 self.showRawCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
                 self.showFilteredCheckBox.toggled.disconnect(self._onMModeDisplayToggle)
@@ -471,7 +465,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self._mmode_handlers_connected = False
 
     def _onMModeDisplayToggle(self, checked: bool) -> None:
-        """Handle M-Mode display toggle - ensure only one option is selected."""
+        """Handle M-mode display toggle - ensure only one option is selected."""
         if not checked:
             # Don't allow unchecking if it's the only one checked
             if not any(

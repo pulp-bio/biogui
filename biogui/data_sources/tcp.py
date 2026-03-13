@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the TCP socket data source.
 
@@ -180,18 +185,16 @@ class TCPDataSourceWorker(DataSourceWorker):
             logging.error(f"DataWorker: {errMsg}")
             return
 
-        logging.info(
-            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
-        )
+        logging.info(f"DataWorker: waiting for TCP connection on port {self._socketPort}.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
-                if type(c) is bytes:
+                if isinstance(c, bytes):
                     self._clientSock.write(c)
-                elif type(c) is float:
+                elif isinstance(c, float):
                     time.sleep(c)
             self._clientSock.flush()
 
@@ -215,9 +218,9 @@ class TCPDataSourceWorker(DataSourceWorker):
 
         # Start command
         for c in self._startSeq:
-            if type(c) is bytes:
+            if isinstance(c, bytes):
                 self._clientSock.write(c)
-            elif type(c) is float:
+            elif isinstance(c, float):
                 time.sleep(c)
 
         logging.info("DataWorker: TCP communication started.")

@@ -1,9 +1,9 @@
 {
   "triggers": {
-    "start": "start.png", 
+    "start": "start.png",
     "front_rotopen": "front_rotopen.png",
-    "front_rotclosed": "front_rotclose.png", 
-    "side_rotclosed": "side_rotclose.png", 
+    "front_rotclosed": "front_rotclose.png",
+    "side_rotclosed": "side_rotclose.png",
     "side_rotopen": "side_rotopen.png"
   },
   "nReps": 5,

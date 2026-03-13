@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Main class for BioGUI application.
 
@@ -43,7 +48,5 @@ class BioGUI(QApplication):
         self.mainWin = MainWindow()
         self.mainController = MainController(self.mainWin, parent=self)
         self.aboutToQuit.connect(self.mainController.stopStreaming)
-        self.moduleController = ModuleController(
-            self.mainController, self.mainWin, parent=self
-        )
+        self.moduleController = ModuleController(self.mainController, self.mainWin, parent=self)
         self.mainWin.showMaximized()
