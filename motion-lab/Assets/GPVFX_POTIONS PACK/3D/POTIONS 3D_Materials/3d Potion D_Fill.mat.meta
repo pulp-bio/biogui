@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: edf176e77514c40e683150a038a10cc7
+timeCreated: 1514394163
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/3D/POTIONS 3D_Materials/3d Potion D_Fill.mat
+  uploadId: 238639

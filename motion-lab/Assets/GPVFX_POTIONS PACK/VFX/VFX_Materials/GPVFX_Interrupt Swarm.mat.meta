@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: d36d0ae7ed8a946d58078d151e5ea4bf
+timeCreated: 1521967858
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/VFX/VFX_Materials/GPVFX_Interrupt Swarm.mat
+  uploadId: 238639

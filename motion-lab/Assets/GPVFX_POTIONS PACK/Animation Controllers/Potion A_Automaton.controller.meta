@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 756d08752e41147d49b9d1fe223ae48a
+timeCreated: 1522525688
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/Animation Controllers/Potion A_Automaton.controller
+  uploadId: 238639

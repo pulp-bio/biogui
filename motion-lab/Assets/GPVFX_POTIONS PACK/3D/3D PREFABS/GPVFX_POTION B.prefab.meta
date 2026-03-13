@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: e53cd9b7f6ac44f3ebe9af3f0f302b4f
+timeCreated: 1522533941
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/3D/3D PREFABS/GPVFX_POTION B.prefab
+  uploadId: 238639

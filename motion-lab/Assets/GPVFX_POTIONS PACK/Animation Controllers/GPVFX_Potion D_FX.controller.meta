@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 8b61efefcd8ae4afda74fc585c6197aa
+timeCreated: 1522478909
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/Animation Controllers/GPVFX_Potion D_FX.controller
+  uploadId: 238639

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: cef3495f4905344b4bdb029eadeed327
+timeCreated: 1522485157
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/Animation Controllers/Potion E_Explode.controller
+  uploadId: 238639

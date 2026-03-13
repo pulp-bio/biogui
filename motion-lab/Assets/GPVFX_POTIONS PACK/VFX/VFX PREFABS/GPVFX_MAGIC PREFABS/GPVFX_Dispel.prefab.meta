@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c833dcb153baf4725a34c8a07efc9631
+timeCreated: 1522485347
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115115
+  packageName: Potions Pack
+  packageVersion: 1.0
+  assetPath: Assets/GPVFX_POTIONS PACK/VFX/VFX PREFABS/GPVFX_MAGIC PREFABS/GPVFX_Dispel.prefab
+  uploadId: 238639
