@@ -1,0 +1,50 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args:
+          - --fix
+          - --line-length=100
+          - --ignore=E402,F401,F841,E712,F403,F405
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        args: ["--line-length=100"]
+
+  - repo: https://github.com/jvllmr/pre-commit-prettier
+    rev: v3.8.1
+    hooks:
+      - id: prettier
+        files: "\\.(md|yaml|yml|json)$"
+        stages: [pre-commit]
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.4
+    hooks:
+      - id: insert-license
+        name: Insert Apache-2.0 License Header
+        files: "\\.py$"
+        args:
+          - "--license-file"
+          - "LICENSE_HEADER.txt"
+
+exclude: |
+  (?x)^(
+    biogui/ui/.*|
+    biogui/resources/.*\.py|
+    .*/__pycache__/.*|
+    uv\.lock|
+    bio-bridge/uv\.lock
+  )$

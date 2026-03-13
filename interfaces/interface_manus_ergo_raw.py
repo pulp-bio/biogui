@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains the Manus interface to retrieve
 both ergonomics and raw data from MANUS gloves.
@@ -81,13 +86,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     manusData[0, :20] = np.asarray(struct.unpack("<20f", data[:80]), dtype=np.float32)
 
     # Read the quaternions [96:112]
-    manusData[0, 20:24] = np.asarray(
-        struct.unpack("<4f", data[96:112]), dtype=np.float32
-    )
+    manusData[0, 20:24] = np.asarray(struct.unpack("<4f", data[96:112]), dtype=np.float32)
 
     # Read timestamp [124:128]
-    manusTs = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(
-        1, 1
-    )
+    manusTs = np.asarray(struct.unpack("<f", data[124:]), dtype=np.float32).reshape(1, 1)
 
     return {"manusData": manusData, "manusTs": manusTs}

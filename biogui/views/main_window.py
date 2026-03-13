@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 View for the main window.
 
@@ -57,9 +62,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
-        self.editButton.setIcon(
-            QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
-        )
+        self.editButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
 
         # Replace the plotsLayout with a ScrollArea containing a GridLayout
         # Remove any existing widgets from plotsLayout

@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains the WULPUS interface for ultrasound.
 
@@ -52,9 +57,9 @@ NUM_US_SAMPLES = 397
 NUM_IMU_SAMPLES = 3
 
 # Sanity check
-assert ACQ_LENGTH_SAMPLES == NUM_US_SAMPLES + NUM_IMU_SAMPLES, (
-    "Frame structure constants are inconsistent"
-)
+assert (
+    ACQ_LENGTH_SAMPLES == NUM_US_SAMPLES + NUM_IMU_SAMPLES
+), "Frame structure constants are inconsistent"
 
 
 # Protocol related
@@ -156,9 +161,7 @@ class _ConfigBytes:
         format (str):           Format of the configuration parameter. (e.g. '<u2')
     """
 
-    def __init__(
-        self, config_name, friendly_name, limit_type, min_val, max_val, format
-    ):
+    def __init__(self, config_name, friendly_name, limit_type, min_val, max_val, format):
         self.config_name = config_name
         self.friendly_name = friendly_name
         self.limit_type = limit_type
@@ -204,15 +207,9 @@ class _ConfigBytes:
 #   config_name, friendly_name, limit_type, min_val, max_val, format
 configuration_package = [
     [
-        _ConfigBytes(
-            "dcdc_turnon", "DC-DC turn on time [us]", "limit", 0, 65535, "<u2"
-        ),
-        _ConfigBytes(
-            "meas_period", "Acquisition Period [us]", "limit", 655, 65535, "<u2"
-        ),
-        _ConfigBytes(
-            "trans_freq", "Transmitter frequency [Hz]", "limit", 0, 5000000, "<u4"
-        ),
+        _ConfigBytes("dcdc_turnon", "DC-DC turn on time [us]", "limit", 0, 65535, "<u2"),
+        _ConfigBytes("meas_period", "Acquisition Period [us]", "limit", 655, 65535, "<u2"),
+        _ConfigBytes("trans_freq", "Transmitter frequency [Hz]", "limit", 0, 5000000, "<u4"),
         _ConfigBytes("pulse_freq", "Pulse frequency [Hz]", "limit", 0, 5000000, "<u4"),
         _ConfigBytes("num_pulses", "Number of pulses", "limit", 0, 30, "<u1"),
         _ConfigBytes(
@@ -224,31 +221,17 @@ configuration_package = [
             "<u2",
         ),
         _ConfigBytes("num_samples", "Number of samples", "limit", 0, 800, "<u2"),
-        _ConfigBytes(
-            "rx_gain", "Receive (RX) gain [dB]", "list", PGA_GAIN_REG, PGA_GAIN, "<u1"
-        ),
-        _ConfigBytes(
-            "num_txrx_configs", "Number of TX/RX configs", "limit", 0, 16, "<u1"
-        ),
+        _ConfigBytes("rx_gain", "Receive (RX) gain [dB]", "list", PGA_GAIN_REG, PGA_GAIN, "<u1"),
+        _ConfigBytes("num_txrx_configs", "Number of TX/RX configs", "limit", 0, 16, "<u1"),
     ],
     [
-        _ConfigBytes(
-            "start_hvmuxrx", "HV-MUX RX start time [us]", "limit", 0, 65535, "<u2"
-        ),
+        _ConfigBytes("start_hvmuxrx", "HV-MUX RX start time [us]", "limit", 0, 65535, "<u2"),
         _ConfigBytes("start_ppg", "PPG start time [us]", "limit", 0, 65535, "<u2"),
         _ConfigBytes("turnon_adc", "ADC turn on time [us]", "limit", 0, 65535, "<u2"),
-        _ConfigBytes(
-            "start_pgainbias", "PGA in bias start time [us]", "limit", 0, 65535, "<u2"
-        ),
-        _ConfigBytes(
-            "start_adcsampl", "ADC sampling start time [us]", "limit", 0, 65535, "<u2"
-        ),
-        _ConfigBytes(
-            "restart_capt", "Capture restart time [us]", "limit", 0, 65535, "<u2"
-        ),
-        _ConfigBytes(
-            "capt_timeout", "Capture timeout time [us]", "limit", 0, 65535, "<u2"
-        ),
+        _ConfigBytes("start_pgainbias", "PGA in bias start time [us]", "limit", 0, 65535, "<u2"),
+        _ConfigBytes("start_adcsampl", "ADC sampling start time [us]", "limit", 0, 65535, "<u2"),
+        _ConfigBytes("restart_capt", "Capture restart time [us]", "limit", 0, 65535, "<u2"),
+        _ConfigBytes("capt_timeout", "Capture timeout time [us]", "limit", 0, 65535, "<u2"),
     ],
 ]
 
@@ -330,9 +313,7 @@ class WulpusRxTxConfigGen:
                 )
             elif len(rx_only_ch) > 0:
                 # Create a group of receive only channels and enable them for RX already before the TX event
-                temp_switch_config = np.bitwise_or.reduce(
-                    np.left_shift(1, RX_MAP[rx_only_ch])
-                )
+                temp_switch_config = np.bitwise_or.reduce(np.left_shift(1, RX_MAP[rx_only_ch]))
                 self.tx_configs[self.tx_rx_len] = np.bitwise_or(
                     self.tx_configs[self.tx_rx_len], temp_switch_config
                 )
@@ -374,9 +355,7 @@ class WulpusUssConfig:
     ):
         # check if sampling freq is valid
         if sampling_freq not in USS_CAPTURE_ACQ_RATES:
-            raise ValueError(
-                f"Invalid sampling frequency. Must be one of {USS_CAPTURE_ACQ_RATES}"
-            )
+            raise ValueError(f"Invalid sampling frequency. Must be one of {USS_CAPTURE_ACQ_RATES}")
 
         # check if rx gain is valid
         if rx_gain not in PGA_GAIN:
@@ -417,9 +396,7 @@ class WulpusUssConfig:
         self.pulse_freq_reg = int(self.pulse_freq)
         self.num_pulses_reg = int(self.num_pulses)
         self.sampling_freq_reg = int(
-            USS_CAPT_OVER_SAMPLE_RATES_REG[
-                USS_CAPTURE_ACQ_RATES.index(self.sampling_freq)
-            ]
+            USS_CAPT_OVER_SAMPLE_RATES_REG[USS_CAPTURE_ACQ_RATES.index(self.sampling_freq)]
         )  # converted to oversampling rate, thus name is misleading
         self.num_samples_reg = int(self.num_samples * 2)
         self.rx_gain_reg = int(PGA_GAIN_REG[PGA_GAIN.index(self.rx_gain)])
@@ -427,12 +404,8 @@ class WulpusUssConfig:
         self.start_hvmuxrx_reg = int(self.start_hvmuxrx * us_to_ticks["start_hvmuxrx"])
         self.start_ppg_reg = int(self.start_ppg * us_to_ticks["start_ppg"])
         self.turnon_adc_reg = int(self.turnon_adc * us_to_ticks["turnon_adc"])
-        self.start_pgainbias_reg = int(
-            self.start_pgainbias * us_to_ticks["start_pgainbias"]
-        )
-        self.start_adcsampl_reg = int(
-            self.start_adcsampl * us_to_ticks["start_adcsampl"]
-        )
+        self.start_pgainbias_reg = int(self.start_pgainbias * us_to_ticks["start_pgainbias"])
+        self.start_adcsampl_reg = int(self.start_adcsampl * us_to_ticks["start_adcsampl"])
         self.restart_capt_reg = int(self.restart_capt * us_to_ticks["restart_capt"])
         self.capt_timeout_reg = int(self.capt_timeout * us_to_ticks["capt_timeout"])
 

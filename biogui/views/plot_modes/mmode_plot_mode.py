@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Class for M-mode ultrasound visualization.
 
@@ -231,9 +236,7 @@ class MModePlotMode(BasePlotMode):
             processed = self._process_scan_data(scan)
             processed_scans.append(processed[:, 0])  # Remove channel dimension
 
-        processed_scans = np.array(
-            processed_scans
-        ).T  # Shape: (num_samples, scans_to_process)
+        processed_scans = np.array(processed_scans).T  # Shape: (num_samples, scans_to_process)
 
         # Scroll the M-mode buffer to the left by scans_to_process columns
         self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
@@ -284,9 +287,7 @@ class MModePlotMode(BasePlotMode):
         time_s = self.MMODE_TIME_WINDOW * (self._num_samples / self._adc_sampling_freq)
 
         # Set rect: (x, y, width, height) = (0, min_depth, time, depth_range)
-        self._image_item.setRect(
-            pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm)
-        )
+        self._image_item.setRect(pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm))
 
     def _calculate_distance_axis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display in millimeters."""

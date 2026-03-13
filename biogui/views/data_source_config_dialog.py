@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Dialog to add a new data source.
 
@@ -40,9 +45,7 @@ def _loadInterfacesFromDirectory() -> dict[str, str]:
     dict[str, str]
         Dictionary mapping display names to full file paths.
     """
-    interfaces_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "..", "interfaces"
-    )
+    interfaces_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "interfaces")
     interfaces_dir = os.path.abspath(interfaces_dir)
 
     interface_files = {}
@@ -202,9 +205,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.interfaceModuleComboBox.setCurrentIndex(0)
 
         # Create data source configuration widget
-        dataSources = list(
-            map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
-        )
+        dataSources = list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
         if dataSourceType is None:
             dataSourceType = data_sources.DataSourceType(dataSources[0])
         self.dataSourceComboBox.addItems(dataSources)
@@ -215,9 +216,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
-        self.interfaceModuleComboBox.currentTextChanged.connect(
-            self._onInterfaceModuleChange
-        )
+        self.interfaceModuleComboBox.currentTextChanged.connect(self._onInterfaceModuleChange)
         self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
@@ -373,9 +372,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
                 return
-            self._dataSourceConfig["filePath"] = os.path.join(
-                self._outDirPath, outFileName
-            )
+            self._dataSourceConfig["filePath"] = os.path.join(self._outDirPath, outFileName)
 
         self.accept()
 
@@ -404,9 +401,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self._outDirPath = outDirPath
             # Adjust display text
             displayText = (
-                outDirPath
-                if len(outDirPath) <= 40
-                else outDirPath[:17] + "..." + outDirPath[-20:]
+                outDirPath if len(outDirPath) <= 40 else outDirPath[:17] + "..." + outDirPath[-20:]
             )
             self.outDirPathLabel.setText(displayText)
             self.outDirPathLabel.setToolTip(outDirPath)

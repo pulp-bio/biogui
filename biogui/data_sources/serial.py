@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the serial data source.
 
@@ -205,12 +210,12 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     def _sendStartSequence(self):
         for c in self._startSeq:
-            if type(c) is bytes:
+            if isinstance(c, bytes):
                 self._serialPort.write(c)
                 # make sure the full command is sent
                 while self._serialPort.bytesToWrite() > 0:
                     self._serialPort.waitForBytesWritten(100)
-            elif type(c) is float:
+            elif isinstance(c, float):
                 time.sleep(c)
 
     def startCollecting(self) -> None:
@@ -240,12 +245,12 @@ class SerialDataSourceWorker(DataSourceWorker):
     def _sendStopSequence(self) -> None:
         """Send the stop sequence to the serial port."""
         for c in self._stopSeq:
-            if type(c) is bytes:
+            if isinstance(c, bytes):
                 self._serialPort.write(c)
                 # make sure the full command is sent
                 while self._serialPort.bytesToWrite() > 0:
                     self._serialPort.waitForBytesWritten(100)
-            elif type(c) is float:
+            elif isinstance(c, float):
                 time.sleep(c)
 
     def stopCollecting(self) -> None:
@@ -271,15 +276,11 @@ class SerialDataSourceWorker(DataSourceWorker):
 
             # Resend stop command every 3 attempts
             if attempts % 3 == 0:
-                logging.warning(
-                    "DataWorker: Device still sending data, resending stop command."
-                )
+                logging.warning("DataWorker: Device still sending data, resending stop command.")
                 self._sendStopSequence()
 
             if attempts >= max_attempts:
-                logging.error(
-                    "DataWorker: Device failed to stop streaming. Forcing port close."
-                )
+                logging.error("DataWorker: Device failed to stop streaming. Forcing port close.")
                 break
 
         self._serialPort.close()

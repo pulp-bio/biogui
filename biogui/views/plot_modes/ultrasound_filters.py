@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Class for filtering ultrasound.
 
@@ -88,9 +93,7 @@ class UltrasoundFilter:
 
         # Check if bands are valid
         if low_stop < 0:
-            print(
-                f"Warning: Lower transition band is negative ({low_stop / 1e6:.3f} MHz)."
-            )
+            print(f"Warning: Lower transition band is negative ({low_stop / 1e6:.3f} MHz).")
             print(
                 f"  Low cutoff: {self._low_cutoff / 1e6:.3f} MHz, Transition width: {self._trans_width / 1e6:.3f} MHz"
             )
@@ -120,9 +123,7 @@ class UltrasoundFilter:
             self._filt_b = ss.remez(
                 self._n_taps, temp, [0, 1, 0], fs=self._sampling_freq, maxiter=2500
             )
-            print(
-                f"Filter designed successfully. Gain at passband: {np.sum(self._filt_b):.3f}"
-            )
+            print(f"Filter designed successfully. Gain at passband: {np.sum(self._filt_b):.3f}")
         except Exception as e:
             print(f"Error: Filter design failed: {e}")
             self._enabled = False

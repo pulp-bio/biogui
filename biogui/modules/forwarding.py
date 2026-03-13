@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains controller and widgets to configure forwarding.
 
@@ -220,9 +225,7 @@ class _ForwardingWorker(QObject):
         """Create the socket and connect to the specified server."""
         self._socket = _Socket(self._socketConfig, parent=self)
         self._socket.errorOccurred.connect(
-            lambda: self.errorOccurred.emit(
-                "ForwardingWorker: cannot connect to server."
-            )
+            lambda: self.errorOccurred.emit("ForwardingWorker: cannot connect to server.")
         )
         self._socket.connectToServer()
 
