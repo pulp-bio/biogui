@@ -1,9 +1,9 @@
 {
   "triggers": {
-    "start": "start.png", 
+    "start": "start.png",
     "front_open": "front_open.png",
     "front_close": "front_close.png",
-    "side_close": "side_close.png", 
+    "side_close": "side_close.png",
     "side_open": "side_open.png"
   },
   "nReps": 5,

@@ -16,57 +16,33 @@
   "capt_timeout": 3000,
   "tx_rx_configs": [
     {
-      "tx_channels": [
-        0
-      ],
-      "rx_channels": [
-        0
-      ],
+      "tx_channels": [0],
+      "rx_channels": [0],
       "optimized_switching": false
     },
     {
-      "tx_channels": [
-        1
-      ],
-      "rx_channels": [
-        1
-      ],
+      "tx_channels": [1],
+      "rx_channels": [1],
       "optimized_switching": false
     },
     {
-      "tx_channels": [
-        2
-      ],
-      "rx_channels": [
-        2
-      ],
+      "tx_channels": [2],
+      "rx_channels": [2],
       "optimized_switching": false
     },
     {
-      "tx_channels": [
-        3
-      ],
-      "rx_channels": [
-        3
-      ],
+      "tx_channels": [3],
+      "rx_channels": [3],
       "optimized_switching": false
     },
     {
-      "tx_channels": [
-        4
-      ],
-      "rx_channels": [
-        4
-      ],
+      "tx_channels": [4],
+      "rx_channels": [4],
       "optimized_switching": false
     },
     {
-      "tx_channels": [
-        5
-      ],
-      "rx_channels": [
-        5
-      ],
+      "tx_channels": [5],
+      "rx_channels": [5],
       "optimized_switching": false
     }
   ]
