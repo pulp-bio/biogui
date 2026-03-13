@@ -34,11 +34,19 @@ repos:
     rev: v1.5.4
     hooks:
       - id: insert-license
-        name: Insert Apache-2.0 License Header
+        name: Insert Apache-2.0 License Header (Python)
         files: "\\.py$"
         args:
           - "--license-file"
           - "LICENSE_HEADER.txt"
+      - id: insert-license
+        name: Insert Apache-2.0 License Header (C#)
+        files: "\\.cs$"
+        args:
+          - "--license-file"
+          - "LICENSE_HEADER.txt"
+          - "--comment-style"
+          - "//"
 
 exclude: |
   (?x)^(
