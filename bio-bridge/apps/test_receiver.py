@@ -103,7 +103,6 @@ def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
             if loss_str.strip():
                 print(loss_str)
 
-            # Print packet info, TODO: make cli argument
             if packet_count % 8 == 0:
                 prefix = f"Packet #{packet_count:5d}:  "
                 print(

@@ -83,7 +83,7 @@ def main(stdscr):
         last_send = now
         acc += dt
 
-        # Process keyboard input - nur Events sammeln
+        # Process keyboard input
         while True:
             ch = stdscr.getch()
             if ch == -1:
@@ -175,9 +175,8 @@ def main(stdscr):
         )
         stdscr.refresh()
 
-        # Send at fixed rate - NUR HIER wird gesendet
+        # Send at fixed rate
         if acc >= send_interval:
-            # Berechne Delta basierend auf gedrückten Tasten
             delta_x = 0.0
             delta_y = 0.0
             delta_z = 0.0
@@ -198,7 +197,7 @@ def main(stdscr):
             unity.set_position_delta(delta_x, delta_y, delta_z)
             unity.send()
 
-            # Clear keys after sending - nur EIN Delta pro Tastendruck
+            # Clear keys after sending
             keys_pressed.clear()
 
             acc -= send_interval
