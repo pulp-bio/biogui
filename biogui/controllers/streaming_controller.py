@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Controller for streaming from data sources, preprocessing and saving to file.
 
@@ -147,16 +152,12 @@ class _FileWriterWorker(QObject):
         """
         try:
             # 1. Timestamp
-            self._tempData["acq_ts"]["file"].write(
-                struct.pack("<d", rawSignals[0].acq_ts)
-            )
+            self._tempData["acq_ts"]["file"].write(struct.pack("<d", rawSignals[0].acq_ts))
             self._tempData["acq_ts"]["nSamp"] += 1
 
             # 2. Signals data
             for rawSignal in rawSignals:
-                self._tempData[rawSignal.sigName]["file"].write(
-                    rawSignal.data.tobytes()
-                )
+                self._tempData[rawSignal.sigName]["file"].write(rawSignal.data.tobytes())
                 self._tempData[rawSignal.sigName]["nSamp"] += rawSignal.data.shape[0]
 
                 # Save data type
@@ -167,9 +168,7 @@ class _FileWriterWorker(QObject):
                         rawSignal.data.dtype
                     ]
                 except KeyError:
-                    self.errorOccurred.emit(
-                        f'Type "{rawSignal.data.dtype}" not supported.'
-                    )
+                    self.errorOccurred.emit(f'Type "{rawSignal.data.dtype}" not supported.')
                     return
 
             # 3. Trigger (optional)
@@ -205,9 +204,9 @@ class _FileWriterWorker(QObject):
         # Add timestamp and extension to filename
         filePath = (
             self._filePath
-            + f"_{datetime.datetime.now().replace(microsecond=0)}.bio".replace(
-                " ", "_"
-            ).replace(":", "-")
+            + f"_{datetime.datetime.now().replace(microsecond=0)}.bio".replace(" ", "_").replace(
+                ":", "-"
+            )
         )
 
         # Dump data to the real file
@@ -271,9 +270,7 @@ class _FileWriterWorker(QObject):
         except FileNotFoundError:
             self.errorOccurred.emit(f'File "{self._filePath}" not found.')
         except PermissionError:
-            self.errorOccurred.emit(
-                f'Permission denied: unable to create file "{self._filePath}".'
-            )
+            self.errorOccurred.emit(f'Permission denied: unable to create file "{self._filePath}".')
         except IsADirectoryError:
             self.errorOccurred.emit(f'File "{self._filePath}" is a directory.')
         except Exception as e:
@@ -353,9 +350,7 @@ class _Preprocessor(QObject):
             signal_type_info = sigConfig.get("signal_type", {})
 
             # Create appropriate filter
-            signal_filter = create_filter(
-                signal_type_info, sigConfig["fs"], sigConfig["nCh"]
-            )
+            signal_filter = create_filter(signal_type_info, sigConfig["fs"], sigConfig["nCh"])
 
             # Configure the filter
             signal_filter.configure(sigConfig)
@@ -377,9 +372,7 @@ class _Preprocessor(QObject):
             try:
                 self._filters[sigName].configure(sigConfig)
             except Exception as e:
-                self.errorOccurred.emit(
-                    f"Failed to configure filter for {sigName}: {e}"
-                )
+                self.errorOccurred.emit(f"Failed to configure filter for {sigName}: {e}")
 
     @Slot(bytes)
     def preprocess(self, data: bytes) -> None:
@@ -424,9 +417,7 @@ class _Preprocessor(QObject):
                 if signal_filter.is_enabled():
                     sigData = signal_filter.process(sigData)
             except Exception as e:
-                self.errorOccurred.emit(
-                    f"An error occurred during processing of {sigName}: {e}"
-                )
+                self.errorOccurred.emit(f"An error occurred during processing of {sigName}: {e}")
                 return
 
             # Store processed data (for visualization and forwarding)
@@ -501,9 +492,7 @@ class StreamingController(QObject):
         super().__init__(parent)
 
         # Create data source worker and thread
-        self._dataSourceWorker = data_sources.getDataSourceWorker(
-            **dataSourceWorkerArgs
-        )
+        self._dataSourceWorker = data_sources.getDataSourceWorker(**dataSourceWorkerArgs)
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
@@ -515,9 +504,7 @@ class StreamingController(QObject):
 
         # Store signal specifications
         self._sigInfo = {
-            iSigName: {
-                k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")
-            }
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
             for iSigName, iSigInfo in sigsConfigs.items()
         }
 
@@ -578,9 +565,7 @@ class StreamingController(QObject):
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
 
         # 1. Data source settings
-        self._dataSourceWorker = data_sources.getDataSourceWorker(
-            **dataSourceWorkerArgs
-        )
+        self._dataSourceWorker = data_sources.getDataSourceWorker(**dataSourceWorkerArgs)
         self._dataSourceThread = QThread(self)
         self._dataSourceWorker.moveToThread(self._dataSourceThread)
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)

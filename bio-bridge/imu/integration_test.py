@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 IMU Integration Test for Single Movement Data
 
@@ -62,16 +67,12 @@ def apply_sos_causal(data: np.ndarray, sos: np.ndarray) -> np.ndarray:
     return filtered
 
 
-def integrate_trapezoidal(
-    t: np.ndarray, data: np.ndarray, decay: float = 0.0
-) -> np.ndarray:
+def integrate_trapezoidal(t: np.ndarray, data: np.ndarray, decay: float = 0.0) -> np.ndarray:
     """Integrate using trapezoidal rule with optional velocity decay."""
     result = np.zeros_like(data)
     for i in range(1, len(t)):
         dt = t[i] - t[i - 1]
-        result[i] = (
-            result[i - 1] * (1.0 - decay * dt) + 0.5 * (data[i] + data[i - 1]) * dt
-        )
+        result[i] = result[i - 1] * (1.0 - decay * dt) + 0.5 * (data[i] + data[i - 1]) * dt
     return result
 
 
@@ -137,9 +138,7 @@ def find_max_displacement(pos: np.ndarray, axis: int = 0) -> tuple[float, float,
     return max_disp, final_disp, peak_to_peak
 
 
-def plot_results(
-    results: list[dict], cutoff: float | None, decay: float, target_mm: float = 500.0
-):
+def plot_results(results: list[dict], cutoff: float | None, decay: float, target_mm: float = 500.0):
     """
     Plot acceleration and position for all files.
     """
@@ -176,15 +175,11 @@ def plot_results(
         # Raw position
         max_raw, final_raw, p2p_raw = find_max_displacement(res["pos_raw"], axis=0)
         error_raw = abs(p2p_raw - target_mm)
-        ax_pos.plot(
-            t, res["pos_raw"][:, 0], "C0", alpha=0.6, label=f"Raw ({p2p_raw:.0f} mm)"
-        )
+        ax_pos.plot(t, res["pos_raw"][:, 0], "C0", alpha=0.6, label=f"Raw ({p2p_raw:.0f} mm)")
 
         # Filtered position
         if res["pos_filt"] is not None:
-            max_filt, final_filt, p2p_filt = find_max_displacement(
-                res["pos_filt"], axis=0
-            )
+            max_filt, final_filt, p2p_filt = find_max_displacement(res["pos_filt"], axis=0)
             error_filt = abs(p2p_filt - target_mm)
             ax_pos.plot(
                 t,

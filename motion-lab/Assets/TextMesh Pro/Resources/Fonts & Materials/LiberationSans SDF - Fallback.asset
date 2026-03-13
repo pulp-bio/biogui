@@ -19,7 +19,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -166,7 +166,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}
   m_Name: LiberationSans SDF - Fallback
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   m_Version: 1.1.0
   m_FaceInfo:
     m_FaceIndex: 0
@@ -193,7 +193,7 @@ MonoBehaviour:
   m_Material: {fileID: 2180264}
   m_SourceFontFileGUID: e3265ab4bf004d28a9537516768c1c75
   m_CreationSettings:
-    sourceFontFileName: 
+    sourceFontFileName:
     sourceFontFileGUID: e3265ab4bf004d28a9537516768c1c75
     faceIndex: 0
     pointSizeSamplingMode: 0
@@ -206,13 +206,13 @@ MonoBehaviour:
     characterSetSelectionMode: 1
     characterSequence: 32 - 126, 160 - 255, 8192 - 8303, 8364, 8482, 9633
     referencedFontAssetGUID: 8f586378b4e144a9851e7b34d9b748ee
-    referencedTextAssetGUID: 
+    referencedTextAssetGUID:
     fontStyle: 0
     fontStyleModifier: 0
     renderMode: 4169
     includeFontFeatures: 1
   m_SourceFontFile: {fileID: 12800000, guid: e3265ab4bf004d28a9537516768c1c75, type: 3}
-  m_SourceFontFilePath: 
+  m_SourceFontFilePath:
   m_AtlasPopulationMode: 1
   InternalDynamicOS: 0
   m_GlyphTable: []
@@ -337,7 +337,7 @@ Texture2D:
   m_IsReadable: 1
   m_IsPreProcessed: 0
   m_IgnoreMipmapLimit: 0
-  m_MipmapLimitGroupName: 
+  m_MipmapLimitGroupName:
   m_StreamingMipmaps: 0
   m_StreamingMipmapsPriority: 0
   m_VTOnly: 0
@@ -354,11 +354,11 @@ Texture2D:
     m_WrapW: 0
   m_LightmapFormat: 0
   m_ColorSpace: 0
-  m_PlatformBlob: 
+  m_PlatformBlob:
   image data: 1
   _typelessdata: 00
   m_StreamData:
     serializedVersion: 2
     offset: 0
     size: 0
-    path: 
+    path:

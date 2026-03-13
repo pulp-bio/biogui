@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Multi-Model Control for Unity
 =============================
@@ -36,7 +41,7 @@ from core import (
 )
 from gesture import GesturePredictor, USDataBuffer, IMUDataBuffer
 from imu.gravity_rotation import GravityRotationTracker
-from nn.nn_utils import * 
+from nn.nn_utils import *
 from unity import UnityController
 
 # =============================================================================
@@ -50,7 +55,7 @@ NUM_IMU_CHANNELS = 3
 
 MODELS = {
     "6class": {
-        "pose_path": MODEL_DIR / "ft_1" /  "pose_model_final_ft_1_1rep.pth",
+        "pose_path": MODEL_DIR / "ft_1" / "pose_model_final_ft_1_1rep.pth",
         "pose_meta_path": MODEL_DIR / "ft_1" / "additional_info_pose_ft.json",
         "pose_num_classes": 6,
         "pose_classes": {
@@ -61,12 +66,12 @@ MODELS = {
             4: "rotclosed",
             5: "rotopen",
         },
-        "position_path": MODEL_DIR  / "ft_1" /  "position_model_final_ft_1_1rep.pth",
+        "position_path": MODEL_DIR / "ft_1" / "position_model_final_ft_1_1rep.pth",
         "position_meta_path": MODEL_DIR / "ft_1" / "additional_info_position_ft.json",
         "position_classes": {0: "start", 1: "forward", 2: "right"},
     },
-        "6class_zero_shot": {
-        "pose_path": MODEL_DIR / "zero_shot" /  "pose_model_final.pth",
+    "6class_zero_shot": {
+        "pose_path": MODEL_DIR / "zero_shot" / "pose_model_final.pth",
         "pose_meta_path": MODEL_DIR / "zero_shot" / "additional_info_pose.json",
         "pose_num_classes": 6,
         "pose_classes": {
@@ -77,12 +82,12 @@ MODELS = {
             4: "rotclosed",
             5: "rotopen",
         },
-        "position_path": MODEL_DIR  / "zero_shot" /  "position_model_final.pth",
+        "position_path": MODEL_DIR / "zero_shot" / "position_model_final.pth",
         "position_meta_path": MODEL_DIR / "zero_shot" / "additional_info_position.json",
         "position_classes": {0: "start", 1: "forward", 2: "right"},
     },
     "7class": {
-        "pose_path": MODEL_DIR / "ft_3_4tasks" /  "pose_model_final_ft_2_3rep.pth",
+        "pose_path": MODEL_DIR / "ft_3_4tasks" / "pose_model_final_ft_2_3rep.pth",
         "pose_meta_path": MODEL_DIR / "ft_3_4tasks" / "additional_info_pose_ft.json",
         "pose_num_classes": 7,
         "pose_classes": {
@@ -94,7 +99,7 @@ MODELS = {
             5: "pinch",
             6: "pour",
         },
-        "position_path": MODEL_DIR  / "ft_3_4tasks" /  "position_model_final_ft_2_3rep.pth",
+        "position_path": MODEL_DIR / "ft_3_4tasks" / "position_model_final_ft_2_3rep.pth",
         "position_meta_path": MODEL_DIR / "ft_3_4tasks" / "additional_info_position_ft.json",
         "position_classes": {0: "start", 1: "forward", 2: "right"},
     },
@@ -153,19 +158,16 @@ class State:
 
 
 def receiver_thread(
-    state, 
-    us_buffer, 
-    imu_buffer, 
-
-    pose_model, 
-    use_imu_pose_model, 
-
-    position_model, 
-    use_imu_position_model, 
-
-    imu_tracker, 
-    running, 
-    debug
+    state,
+    us_buffer,
+    imu_buffer,
+    pose_model,
+    use_imu_pose_model,
+    position_model,
+    use_imu_position_model,
+    imu_tracker,
+    running,
+    debug,
 ):
     print("Receiver thread started")  # Log when the thread starts
 
@@ -189,7 +191,7 @@ def receiver_thread(
                         try:
                             while running["active"]:
                                 data = recv_exact(conn, packet_size)
-                                #print(f"Data received: {data}")  # Log received data
+                                # print(f"Data received: {data}")  # Log received data
                                 if not data:
                                     break
 
@@ -197,9 +199,6 @@ def receiver_thread(
                                 config_id = int(packet["tx_rx_id"])
                                 us_data = packet["ultrasound"]
                                 imu_data = packet["imu"]
-                                
-                                
-
 
                                 with state.lock:
                                     state.packets += 1
@@ -209,15 +208,13 @@ def receiver_thread(
                                 if imu_data is not None:
                                     if state.calibrating:
                                         imu_tracker.add_calibration_sample(imu_data)
-                                        state.cal_progress = len(
-                                            imu_tracker.cal_samples
-                                        )
+                                        state.cal_progress = len(imu_tracker.cal_samples)
                                         if state.cal_progress >= CALIBRATION_SAMPLES:
                                             imu_tracker.finish_calibration()
                                             state.calibrating = False
                                     else:
-                                        # Update rotation estimate. 
-                                        # Note: this takes into account the calibration 
+                                        # Update rotation estimate.
+                                        # Note: this takes into account the calibration
                                         imu_tracker.update(imu_data)
 
                                     imu_array = np.asarray(imu_data, dtype=np.float32)
@@ -227,7 +224,7 @@ def receiver_thread(
                                     # Append new US sample to the channel
                                     us_buffer.add_sample_to_channel(us_data, config_id)
                                     # Append newly received IMU sample to the buffer
-                                    if imu_array is not None: 
+                                    if imu_array is not None:
                                         imu_buffer.push_imu_sample(imu_array)
 
                                 # Inference
@@ -235,37 +232,44 @@ def receiver_thread(
                                     us_array = us_buffer.get_data()
                                     # Get Current IMU data.
                                     # TO-DO: Implement Circular Buffer, as for US data. Smooth every NUM_TRANSDUCERS frames
-                                    
 
                                     if use_imu_pose_model:
                                         imu_smooth = imu_buffer.get_imu_samples().mean(axis=1)
-                                        pose_idx, _, pose_probs = pose_model.predict(us_array, pose_model.us_idx_to_consider, imu_smooth)
-                                    else: 
-                                        pose_idx, _, pose_probs = pose_model.predict(us_array, pose_model.us_idx_to_consider, None)
+                                        pose_idx, _, pose_probs = pose_model.predict(
+                                            us_array, pose_model.us_idx_to_consider, imu_smooth
+                                        )
+                                    else:
+                                        pose_idx, _, pose_probs = pose_model.predict(
+                                            us_array, pose_model.us_idx_to_consider, None
+                                        )
                                     if use_imu_position_model:
                                         imu_smooth = imu_buffer.get_imu_samples().mean(axis=1)
-                                        pos_idx, _, pos_probs = position_model.predict(us_array, position_model.us_idx_to_consider, imu_smooth)
+                                        pos_idx, _, pos_probs = position_model.predict(
+                                            us_array, position_model.us_idx_to_consider, imu_smooth
+                                        )
                                     else:
-                                        pos_idx, _, pos_probs = position_model.predict(us_array, position_model.us_idx_to_consider, None)
+                                        pos_idx, _, pos_probs = position_model.predict(
+                                            us_array, position_model.us_idx_to_consider, None
+                                        )
 
-                                    print(f"US buffer ready: {us_buffer.is_ready()}")  # Log if US buffer is ready
-                                    print(f"US data shape: {us_array.shape}")  # Log shape of US data
+                                    print(
+                                        f"US buffer ready: {us_buffer.is_ready()}"
+                                    )  # Log if US buffer is ready
+                                    print(
+                                        f"US data shape: {us_array.shape}"
+                                    )  # Log shape of US data
                                     if use_imu_position_model or use_imu_pose_model:
-                                        print(f"IMU data:", imu_smooth)
-                                    print(f"Pose index: {pose_idx}, Position index: {pos_idx}")  # Log pose and position indices
+                                        print("IMU data:", imu_smooth)
+                                    print(
+                                        f"Pose index: {pose_idx}, Position index: {pos_idx}"
+                                    )  # Log pose and position indices
 
                                     with state.lock:
                                         state.gesture_history.append(pose_idx)
                                         state.position_history.append(pos_idx)
-                                        if (
-                                            len(state.gesture_history)
-                                            >= state.smoothing
-                                        ):
+                                        if len(state.gesture_history) >= state.smoothing:
                                             state.gesture_history.pop(0)
-                                        if (
-                                            len(state.position_history)
-                                            >= state.smoothing
-                                        ):
+                                        if len(state.position_history) >= state.smoothing:
                                             state.position_history.pop(0)
                                         state.gesture_idx = Counter(
                                             state.gesture_history
@@ -273,12 +277,12 @@ def receiver_thread(
                                         state.position_idx = Counter(
                                             state.position_history
                                         ).most_common(1)[0][0]
-                                        state.gesture = state.config[
-                                            "pose_classes"
-                                        ].get(state.gesture_idx, "rest")
-                                        state.position = state.config[
-                                            "position_classes"
-                                        ].get(state.position_idx, "start")
+                                        state.gesture = state.config["pose_classes"].get(
+                                            state.gesture_idx, "rest"
+                                        )
+                                        state.position = state.config["position_classes"].get(
+                                            state.position_idx, "start"
+                                        )
                                         state.gesture_conf = pose_probs[pose_idx] * 100
                                         state.position_conf = pos_probs[pos_idx] * 100
 
@@ -321,10 +325,7 @@ def main_curses(stdscr, args, config):
         )
         use_imu_pose = config["pose_model_metadata"].get("use_imu", False)
         print("POSE MODEL LOADED SUCCESSFULLY")
-        
 
-        
-        
         position_model = GesturePredictor(
             config["position_path"],
             config["position_model_metadata"],
@@ -337,6 +338,7 @@ def main_curses(stdscr, args, config):
     except Exception as e:
         print(f"Failed to load models: {e}")  # Log to console
         import traceback
+
         traceback.print_exc()
         stdscr.addstr(0, 0, f"Failed to load models: {e}")
         stdscr.addstr(2, 0, "Press any key to exit.")
@@ -348,12 +350,12 @@ def main_curses(stdscr, args, config):
     print("Initializing state and buffers")  # Log initialization
     state = State(smoothing=args.smoothing, config=config)
     us_buffer = USDataBuffer(num_channels=NUM_TRANSDUCERS)
-    imu_buffer = IMUDataBuffer(num_imu_channels=NUM_IMU_CHANNELS, imu_samples_to_buffer=NUM_TRANSDUCERS)
+    imu_buffer = IMUDataBuffer(
+        num_imu_channels=NUM_IMU_CHANNELS, imu_samples_to_buffer=NUM_TRANSDUCERS
+    )
     flip_imu = args.flip_imu
 
-    imu_tracker = GravityRotationTracker(
-        smoothing=args.imu_smoothing, 
-        flip_imu=flip_imu)
+    imu_tracker = GravityRotationTracker(smoothing=args.imu_smoothing, flip_imu=flip_imu)
     unity = UnityController(thread_safe=True)
 
     running = {"active": True}
@@ -362,17 +364,13 @@ def main_curses(stdscr, args, config):
         args=(
             state,
             us_buffer,
-            imu_buffer, 
-
+            imu_buffer,
             pose_model,
-            use_imu_pose, 
-
+            use_imu_pose,
             position_model,
-            use_imu_position, 
-
+            use_imu_position,
             imu_tracker,
             running,
-
             args.debug,
         ),
         daemon=True,
@@ -396,6 +394,7 @@ def main_curses(stdscr, args, config):
             except Exception as e:
                 print(f"Error in main loop: {e}")
                 import traceback
+
                 traceback.print_exc()
                 break
 
@@ -464,9 +463,7 @@ def main():
         default=PREDICTION_SMOOTHING,
         help="Majority vote window size",
     )
-    parser.add_argument(
-        "--imu-smoothing", type=float, default=0.0, help="IMU smoothing (0.0-1.0)"
-    )
+    parser.add_argument("--imu-smoothing", type=float, default=0.0, help="IMU smoothing (0.0-1.0)")
     parser.add_argument("--debug", action="store_true", help="Debug output")
     parser.add_argument(
         "--flip-imu",
@@ -490,7 +487,6 @@ def main():
     config["transducers_position"] = position_model_metadata.get("transducers_used")
     print("Retrieved position transducerd", config["transducers_position"])
 
-
     print(f"Model:     {args.model}")
     print(
         f"Pose:      {config['pose_path'].name} ({config['pose_num_classes']} classes) - IMU input: {config['use_imu_pose_nn']}"
@@ -509,6 +505,7 @@ def main():
     except Exception as e:
         print(f"ERROR in main_curses: {e}")
         import traceback
+
         traceback.print_exc()
     print("Stopped.")
 

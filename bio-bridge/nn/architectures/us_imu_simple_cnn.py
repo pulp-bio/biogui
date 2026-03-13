@@ -1,7 +1,12 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Parameterizable CNN encoder + classifier for Ultrasound (US) data.
-This model performs late feature fusion with IMU data. 
-IMU values are added after the CNN that processes US data 
+This model performs late feature fusion with IMU data.
+IMU values are added after the CNN that processes US data
 
 Input convention
 ---------------
@@ -18,7 +23,6 @@ Typical pooling is (4,1) so pooling happens along time only.
 import torch
 import torch.nn as nn
 from typing import Sequence, Tuple, List
-
 
 
 class US_CNN_BLOCK(nn.Module):
@@ -55,14 +59,16 @@ def build_us_encoder(
     kernels: Sequence[Tuple[int, int]],
     max_pools: Sequence[Tuple[int, int]],
     dropout_rate: float,
-    ) -> nn.Sequential:
+) -> nn.Sequential:
     """
     Create an encoder with one US_CNN_BLOCK per entry in filters/kernels/max_pools.
     Length of all lists must match.
     """
     n = len(filters)
     assert n > 0, "filters must contain at least one block."
-    assert len(kernels) == n and len(max_pools) == n, "filters/kernels/max_pools must have same length"
+    assert (
+        len(kernels) == n and len(max_pools) == n
+    ), "filters/kernels/max_pools must have same length"
 
     blocks: List[nn.Module] = []
     c_in = int(in_channels)
@@ -87,7 +93,7 @@ def pooled_hw(
     us_window_size: int,
     num_transducers: int,
     max_pools: Sequence[Tuple[int, int]],
-    ) -> Tuple[int, int]:
+) -> Tuple[int, int]:
     """
     Compute (T_out, W_out) after applying MaxPool2d with kernel sizes max_pools.
 
@@ -97,7 +103,7 @@ def pooled_hw(
     """
     t = int(us_window_size)
     w = int(num_transducers)
-    for (p_h, p_w) in max_pools:
+    for p_h, p_w in max_pools:
         t //= int(p_h)
         w //= int(p_w)
     return t, w
@@ -116,23 +122,22 @@ class US_IMU_Simple_Class(nn.Module):
         *,
         num_transducers: int,
         us_window_size: int = 397,
-        num_imu_channels : int, 
+        num_imu_channels: int,
         num_classes: int,
-
         filters: Sequence[int] = (1, 1),
         kernels: Sequence[Tuple[int, int]] = ((3, 1), (3, 1)),
         max_pools: Sequence[Tuple[int, int]] = ((4, 1), (4, 1)),
         dropout_rate: float = 0.05,
         head_hidden_mult: float = 0.5,  # hidden_dim = head_hidden_mult * feat_dim
     ):
-        
+
         super().__init__()
         self.num_transducers = int(num_transducers)
         self.num_imu_channels = int(num_imu_channels)
         self.num_classes = int(num_classes)
         self.us_window_size = int(us_window_size)
 
-        #print("Building US+IMU Simple Class with filters:", filters, "kernels:", kernels, "max_pools:", max_pools)
+        # print("Building US+IMU Simple Class with filters:", filters, "kernels:", kernels, "max_pools:", max_pools)
         assert len(filters) > 0, "filters must contain at least one block."
 
         # ---- US Feature Extractor ----
@@ -150,7 +155,7 @@ class US_IMU_Simple_Class(nn.Module):
 
         C_out = int(filters[-1])  # output channels of last conv block
         feat_dim_us = T_out * W_out * C_out
-        
+
         feat_dim = feat_dim_us + self.num_imu_channels
         hidden_dim = max(1, int(feat_dim * float(head_hidden_mult)))
         mid_dim = max(1, hidden_dim // 2)
@@ -169,9 +174,9 @@ class US_IMU_Simple_Class(nn.Module):
         x_us = x_us[:, None].swapaxes(-1, -2)
         x_us = self.encoder(x_us)
         x_us = x_us.flatten(start_dim=1)
-        #print("After flatten, us shape is", x_us.shape)
-        # Concatenate 
-        #print("IMU shape is:", x_imu.shape)
+        # print("After flatten, us shape is", x_us.shape)
+        # Concatenate
+        # print("IMU shape is:", x_imu.shape)
         x_cat = torch.cat((x_us, x_imu), dim=1)
         return self.head(x_cat)
 
@@ -185,10 +190,10 @@ class US_IMU_Simple_Class(nn.Module):
 #     num_imu_channels = 3
 
 #     ctx = dict(
-#         num_transducers = num_transducers, 
-#         num_classes = num_classes, 
+#         num_transducers = num_transducers,
+#         num_classes = num_classes,
 #         us_window_size=us_window_size,
-#         num_imu_channels = num_imu_channels, 
+#         num_imu_channels = num_imu_channels,
 #     )
 #     model_kwargs = dict(
 #         filters=(1,1),
@@ -206,7 +211,7 @@ class US_IMU_Simple_Class(nn.Module):
 #     dummy_us_input = torch.rand(32, num_transducers, us_window_size)
 #     dummy_imu_input = torch.rand(32, num_imu_channels)
 
-    
+
 #     # ---- Move to CPU (torchsummary requires explicit device) ----
 #     device = torch.device("cpu")
 #     model.to(device)
@@ -214,6 +219,6 @@ class US_IMU_Simple_Class(nn.Module):
 #     # ---- Print model summary ----
 #     summary(
 #         model,
-#         input_data = (dummy_us_input, dummy_imu_input), 
+#         input_data = (dummy_us_input, dummy_imu_input),
 #         device="cpu",
 #     )

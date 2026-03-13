@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Ultrasound data buffering for gesture recognition.
 
@@ -25,32 +30,32 @@ class IMUDataBuffer:
         num_imu_channels: int,
         imu_samples_to_buffer: int,
         thread_safe: bool = False,
-        ):
+    ):
         self.num_imu_channels = num_imu_channels
         self.imu_samples_to_buffer = imu_samples_to_buffer
 
         # one buffer per IMU channel (e.g., 6 channels: ax,ay,az,gx,gy,gz)
         self.imu_buffer = [
-            deque(maxlen=imu_samples_to_buffer)
-            for _ in range(self.num_imu_channels)
+            deque(maxlen=imu_samples_to_buffer) for _ in range(self.num_imu_channels)
         ]
 
         self._lock = threading.Lock() if thread_safe else None
 
-
     def _acquire_lock(self):
         if self._lock is not None:
-            return self._lock      # real threading.Lock()
-        return _DummyLock()        # fake lock that does nothing
+            return self._lock  # real threading.Lock()
+        return _DummyLock()  # fake lock that does nothing
 
     def push_imu_sample(self, imu_sample):
         # imu_sample shape: (3,)
         for ch in range(self.num_imu_channels):
             self.imu_buffer[ch].append(float(imu_sample[ch]))
-    
+
     def get_imu_samples(self):
         with self._acquire_lock():
-            return np.array([list(buf) for buf in self.imu_buffer], dtype=np.float32)               # shape: num_imu_channels, imu_samples_to_buffer
+            return np.array(
+                [list(buf) for buf in self.imu_buffer], dtype=np.float32
+            )  # shape: num_imu_channels, imu_samples_to_buffer
 
 
 class USDataBuffer:
@@ -126,9 +131,7 @@ class USDataBuffer:
             If channel_id is out of range
         """
         if not 0 <= channel_id < self.num_channels:
-            raise ValueError(
-                f"channel_id must be 0-{self.num_channels - 1}, got {channel_id}"
-            )
+            raise ValueError(f"channel_id must be 0-{self.num_channels - 1}, got {channel_id}")
 
         with self._acquire_lock():
             # Add all samples to the channel's circular buffer

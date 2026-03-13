@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Definitions of seeds for Data Preparation Loaders and Training script
 # Following the guidelines at: https://docs.pytorch.org/docs/2.5/notes/randomness.html
 import random

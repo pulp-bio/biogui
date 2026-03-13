@@ -1,5 +1,5 @@
 float2 UnpackUV(float uv)
-{ 
+{
 	float2 output;
 	output.x = floor(uv / 4096);
 	output.y = uv - 4096 * output.x;
@@ -81,4 +81,3 @@ float4 BlendARGB(float4 overlying, float4 underlying)
 	float alpha = underlying.a + (1-underlying.a)*overlying.a;
 	return float4(blended, alpha);
 }
-

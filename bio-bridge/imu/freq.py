@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 IMU Frequency Analysis
 
@@ -252,9 +257,7 @@ def main():
     print("-" * 50)
     avg_movement_power = np.mean(psd_m_total)
     avg_rest_power = np.mean(psd_r_total)
-    snr_linear = (
-        avg_movement_power / avg_rest_power if avg_rest_power > 0 else float("inf")
-    )
+    snr_linear = avg_movement_power / avg_rest_power if avg_rest_power > 0 else float("inf")
     snr_db = 10 * np.log10(snr_linear) if snr_linear > 0 else float("inf")
     print(f"  Average movement power: {avg_movement_power:.2e} (m/s²)²/Hz")
     print(f"  Average rest power:     {avg_rest_power:.2e} (m/s²)²/Hz")

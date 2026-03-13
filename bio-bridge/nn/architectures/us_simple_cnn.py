@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import torch
 import torch.nn as nn
 
@@ -39,14 +44,16 @@ def build_us_encoder(
     kernels: Sequence[Tuple[int, int]],
     max_pools: Sequence[Tuple[int, int]],
     dropout_rate: float,
-    ) -> nn.Sequential:
+) -> nn.Sequential:
     """
     Create an encoder with one US_CNN_BLOCK per entry in filters/kernels/max_pools.
     Length of all lists must match.
     """
     n = len(filters)
     assert n > 0, "filters must contain at least one block."
-    assert len(kernels) == n and len(max_pools) == n, "filters/kernels/max_pools must have same length"
+    assert (
+        len(kernels) == n and len(max_pools) == n
+    ), "filters/kernels/max_pools must have same length"
 
     blocks: List[nn.Module] = []
     c_in = int(in_channels)
@@ -71,7 +78,7 @@ def pooled_hw(
     us_window_size: int,
     num_transducers: int,
     max_pools: Sequence[Tuple[int, int]],
-    ) -> Tuple[int, int]:
+) -> Tuple[int, int]:
     """
     Compute (T_out, W_out) after applying MaxPool2d with kernel sizes max_pools.
 
@@ -81,11 +88,10 @@ def pooled_hw(
     """
     t = int(us_window_size)
     w = int(num_transducers)
-    for (p_h, p_w) in max_pools:
+    for p_h, p_w in max_pools:
         t //= int(p_h)
         w //= int(p_w)
     return t, w
-
 
 
 class US_Simple_Class(nn.Module):
@@ -108,12 +114,12 @@ class US_Simple_Class(nn.Module):
         dropout_rate: float = 0.05,
         head_hidden_mult: float = 0.5,  # hidden_dim = head_hidden_mult * feat_dim
     ):
-        
+
         super().__init__()
         self.num_transducers = int(num_transducers)
         self.num_classes = int(num_classes)
         self.us_window_size = int(us_window_size)
-        #print("Building US Simple Class with filters:", filters, "kernels:", kernels, "max_pools:", max_pools)
+        # print("Building US Simple Class with filters:", filters, "kernels:", kernels, "max_pools:", max_pools)
         assert len(filters) > 0, "filters must contain at least one block."
 
         # ---- Encoder ----
@@ -152,10 +158,9 @@ class US_Simple_Class(nn.Module):
         return self.head(x)
 
 
-
 # if __name__ == "__main__":
 #     from torchsummary import summary
-    
+
 #     # ---- Old behavior settings ----
 #     num_transducers = 6      # e.g. tx_forearm + tx_bicep
 #     num_classes = 7
@@ -187,7 +192,6 @@ class US_Simple_Class(nn.Module):
 #         input_size=(num_transducers, us_window_size),
 #         device="cpu",
 #     )
-#     model_parameters = filter(lambda p: p.requires_grad, model.parameters())    
+#     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
 #     params = sum([np.prod(p.size()) for p in model_parameters])
 #     print("Model Number of Parameters:", params)
-

@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Continuous Tasks Simulator for Unity
 =====================================
@@ -174,8 +179,7 @@ def main(stdscr):
             stdscr.addstr(
                 status_row,
                 0,
-                f"  Position: {state['position_state']:8s}  "
-                f"Gesture: {state['gesture']:6s}",
+                f"  Position: {state['position_state']:8s}  " f"Gesture: {state['gesture']:6s}",
             )
             stdscr.addstr(
                 status_row + 1,

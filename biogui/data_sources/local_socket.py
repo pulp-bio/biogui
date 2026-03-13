@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the local socket data source.
 
@@ -37,9 +42,7 @@ from .base import (
 )
 
 
-class LocalSocketConfigWidget(
-    DataSourceConfigWidget, Ui_LocalSocketDataSourceConfigWidget
-):
+class LocalSocketConfigWidget(DataSourceConfigWidget, Ui_LocalSocketDataSourceConfigWidget):
     """
     Widget to configure the local socket source.
 
@@ -179,9 +182,9 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
-                if type(c) is bytes:
+                if isinstance(c, bytes):
                     self._clientSock.write(c)
-                elif type(c) is float:
+                elif isinstance(c, float):
                     time.sleep(c)
             self._clientSock.flush()
 
@@ -205,9 +208,9 @@ class LocalSocketDataSourceWorker(DataSourceWorker):
 
         # Start command
         for c in self._startSeq:
-            if type(c) is bytes:
+            if isinstance(c, bytes):
                 self._clientSock.write(c)
-            elif type(c) is float:
+            elif isinstance(c, float):
                 time.sleep(c)
 
         logging.info("DataWorker: TCP communication started.")

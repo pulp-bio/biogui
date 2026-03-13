@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Unity controller for hand visualization.
 
@@ -137,8 +142,7 @@ class UnityController:
         state = state.lower()
         if state not in self.POSITION_STATES:
             raise ValueError(
-                f"Invalid position state: {state}. "
-                f"Must be one of: {self.POSITION_STATES}"
+                f"Invalid position state: {state}. " f"Must be one of: {self.POSITION_STATES}"
             )
         with self._lock:
             self.position_state = state
@@ -170,9 +174,7 @@ class UnityController:
         """
         gesture = gesture.lower()
         if gesture not in self.GESTURES:
-            raise ValueError(
-                f"Invalid gesture: {gesture}. Must be one of: {self.GESTURES}"
-            )
+            raise ValueError(f"Invalid gesture: {gesture}. Must be one of: {self.GESTURES}")
         with self._lock:
             self.gesture = gesture
 

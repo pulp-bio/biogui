@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Gesture prediction from ultrasound data.
 """
@@ -12,10 +17,10 @@ from core import (
     US_WINDOW_SIZE,
     softmax,
 )
-from nn.architectures.models_factory import * 
-#from nn.architectures.us_simple_cnn import US_Simple_Class
-from nn.nn_utils import get_model_name_and_kwargs
+from nn.architectures.models_factory import *
 
+# from nn.architectures.us_simple_cnn import US_Simple_Class
+from nn.nn_utils import get_model_name_and_kwargs
 
 
 class GesturePredictor:
@@ -27,7 +32,7 @@ class GesturePredictor:
     model_path : Path
         Path to the trained model checkpoint (.pth file)
     pre_meta:
-        Metadata for the pre-trained Model 
+        Metadata for the pre-trained Model
 
     num_transducers : int
         Number of ultrasound transducers/channels this model expects
@@ -52,28 +57,29 @@ class GesturePredictor:
     def __init__(
         self,
         model_path: Path,
-        pre_meta : Dict, 
+        pre_meta: Dict,
         num_transducers: int,
         num_classes: int,
         class_map: dict[int, str],
         device: str = "cpu",
-        ):
+    ):
 
         model_name, model_kwargs = get_model_name_and_kwargs(pre_meta)
         # Register the MODEL
         model_name = pre_meta.get("model_name", None)
         print("Asked model name", model_name)
         self.model_factory = MODEL_REGISTRY[model_name]
-        #print("Model factory is:", self.model_factory)
-        # Extract Architecutre settings 
+        # print("Model factory is:", self.model_factory)
+        # Extract Architecutre settings
         self.model_kwargs = model_kwargs
         print("Retrieved model args")
         print(self.model_kwargs)
-        # Extract additional info needed 
-        ctx = dict(num_classes=num_classes,
+        # Extract additional info needed
+        ctx = dict(
+            num_classes=num_classes,
             num_transducers=num_transducers,
-            us_window_size=397,           
-            )
+            us_window_size=397,
+        )
         if pre_meta.get("use_imu", False) is True:
             ctx["num_imu_columns"] = 3
         self.ctx = ctx
@@ -84,21 +90,20 @@ class GesturePredictor:
         for tx in tx_used:
             tx_id_str = tx.replace("tx_", "")
             idx_to_consider = int(tx_id_str)
-            #print(idx_to_consider)
+            # print(idx_to_consider)
             tx_to_int.append(idx_to_consider)
         self.us_idx_to_consider = tx_to_int
 
-
-
         self.model_path = Path(model_path)
         self.num_transducers = num_transducers
-        print(f"Allocating model for #:{self.num_transducers} Transducers, Inferece will run on US idx:{self.us_idx_to_consider}")
+        print(
+            f"Allocating model for #:{self.num_transducers} Transducers, Inferece will run on US idx:{self.us_idx_to_consider}"
+        )
         self.num_classes = num_classes
-        
+
         self.device = torch.device(device)
         self.class_map = class_map or {i: f"class_{i}" for i in range(num_classes)}
 
-        
         # Load model
         self._load_model()
 
@@ -123,30 +128,30 @@ class GesturePredictor:
         )
 
         self.model = build_model(
-            model_factory=self.model_factory,
-            model_kwargs=self.model_kwargs,
-            ctx = self.ctx)
+            model_factory=self.model_factory, model_kwargs=self.model_kwargs, ctx=self.ctx
+        )
 
         # Build the model depending on the Factory
-        #self.model = US_Simple_Class(**self.ctx, **self.model_kwargs)
+        # self.model = US_Simple_Class(**self.ctx, **self.model_kwargs)
 
         # Initialize model architecture
-        #self.model = US_Simple_Class(
+        # self.model = US_Simple_Class(
         #    encoder_blocks_us=encoder_blocks_us,
         #    num_transducers=self.num_transducers,
         #    num_classes=self.num_classes,
-        #)
+        # )
 
         # Load weights
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.to(self.device)
         self.model.eval()
 
-    def predict(self, 
-                us_data: np.ndarray, 
-                us_idx_to_consider : Optional[np.ndarray] = None, 
-                imu_data: Optional[np.ndarray] = None
-                ) -> tuple[int, str, np.ndarray]:
+    def predict(
+        self,
+        us_data: np.ndarray,
+        us_idx_to_consider: Optional[np.ndarray] = None,
+        imu_data: Optional[np.ndarray] = None,
+    ) -> tuple[int, str, np.ndarray]:
         """
         Predict class from ultrasound data and (Optionally) IMU data
 
@@ -172,9 +177,7 @@ class GesturePredictor:
         # Validate input shape
         expected_shape = (self.num_transducers, US_WINDOW_SIZE)
         if us_data.shape != expected_shape:
-            raise ValueError(
-                f"Expected us_data shape {expected_shape}, got {us_data.shape}"
-            )
+            raise ValueError(f"Expected us_data shape {expected_shape}, got {us_data.shape}")
 
         # Copy data into pre-allocated tensor
         if us_idx_to_consider is not None:
@@ -185,12 +188,12 @@ class GesturePredictor:
 
         # Run inference
         with torch.no_grad():
-            if imu_data is None: 
+            if imu_data is None:
                 logits = self.model(self.X_tensor)
             else:
                 imu_tensor = torch.from_numpy(imu_data.astype(np.float32)).unsqueeze(0)
                 logits = self.model(self.X_tensor, imu_tensor)
-            
+
             prediction = logits.argmax(dim=1).item()
             # Compute softmax probabilities
             probs = softmax(logits.cpu().numpy()[0])

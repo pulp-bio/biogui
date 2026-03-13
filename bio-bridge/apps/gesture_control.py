@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Gesture Control for Unity (2-Class)
 ===========================================
@@ -209,9 +214,7 @@ def main_curses(stdscr):
             stdscr.addstr(2, 0, "=" * 70)
 
             biogui_status = "Connected" if running["biogui_connected"] else "Waiting..."
-            stdscr.addstr(
-                3, 0, f"BioGUI: {biogui_status:<20} Unity: {UNITY_HOST}:{UNITY_PORT}"
-            )
+            stdscr.addstr(3, 0, f"BioGUI: {biogui_status:<20} Unity: {UNITY_HOST}:{UNITY_PORT}")
 
             if buffer.is_ready():
                 stdscr.addstr(4, 0, f"Buffer:  {buffer.get_fill_status()}")

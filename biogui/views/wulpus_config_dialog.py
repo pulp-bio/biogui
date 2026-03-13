@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Dialog for configuring WULPUS hardware parameters.
 
@@ -55,9 +60,7 @@ class WulpusConfigDialog(QDialog):
             super().accept()
         except Exception as e:
             self.configWidget.statusLabel.setText(f"Status: Error - {str(e)}")
-            QMessageBox.critical(
-                self, "Configuration Error", f"Invalid configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Configuration Error", f"Invalid configuration: {str(e)}")
 
     def get_config(self) -> WulpusUssConfig | None:
         return self._config

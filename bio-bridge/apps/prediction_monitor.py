@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Prediction Monitor - Prints predictions from BioGUI data to terminal.
 
@@ -31,7 +36,6 @@ MODELS = {
     "7class": {
         "pose_path": MODEL_DIR / "fold_1_pose_model_ft_1_3rep.pth",
         "pose_meta_path": MODEL_DIR / "additional_info_pose.json",
-        
         "pose_classes": 7,
         "pose_map": {
             0: "rest",
@@ -109,13 +113,9 @@ def receive_packets(conn, us_buffer, pose_model, position_model, smoothing, conf
             pos_idx, pos_name, pos_probs = position_model.predict(us_array)
             pos_conf = pos_probs[pos_idx] * 100
             smoothed_pos = config["position_map"].get(pos_smoother.add(pos_idx), "?")
-            pos_str = (
-                f"  |  Pos: {smoothed_pos:<12} (raw: {pos_name:<10} {pos_conf:5.1f}%)"
-            )
+            pos_str = f"  |  Pos: {smoothed_pos:<12} (raw: {pos_name:<10} {pos_conf:5.1f}%)"
 
-        print(
-            f"Pose: {smoothed_pose:<12} (raw: {pose_name:<10} {pose_conf:5.1f}%){pos_str}"
-        )
+        print(f"Pose: {smoothed_pose:<12} (raw: {pose_name:<10} {pose_conf:5.1f}%){pos_str}")
 
 
 def main():
@@ -135,11 +135,10 @@ def main():
     try:
         pose_model = GesturePredictor(
             config["pose_path"],
-            json_meta_path=config["pose_meta_path"], 
-
+            json_meta_path=config["pose_meta_path"],
             num_transducers=NUM_TRANSDUCERS,
             num_classes=config["pose_classes"],
-            class_map=config["pose_map"]
+            class_map=config["pose_map"],
         )
         position_model = None
         if args.position:
@@ -147,7 +146,7 @@ def main():
                 config["position_path"],
                 json_meta_path=config["position_meta_path"],
                 num_transducers=NUM_TRANSDUCERS,
-                num_classes = config["position_classes"],
+                num_classes=config["position_classes"],
                 class_map=config["position_map"],
             )
         print("Models loaded.\n")

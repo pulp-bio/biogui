@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 IMU Position Control for Unity
 ===============================
@@ -186,9 +191,7 @@ def main_curses(stdscr, args):
 
             # Start threshold adjustment
             elif ch == ord("3"):
-                state.tracker.start_threshold = max(
-                    0.1, state.tracker.start_threshold - 0.05
-                )
+                state.tracker.start_threshold = max(0.1, state.tracker.start_threshold - 0.05)
                 status = f"Start threshold: {state.tracker.start_threshold:.2f} m/s²"
                 status_time = time.time()
 
@@ -199,9 +202,7 @@ def main_curses(stdscr, args):
 
             # Stop threshold adjustment
             elif ch == ord("5"):
-                state.tracker.stop_threshold = max(
-                    0.05, state.tracker.stop_threshold - 0.05
-                )
+                state.tracker.stop_threshold = max(0.05, state.tracker.stop_threshold - 0.05)
                 status = f"Stop threshold: {state.tracker.stop_threshold:.2f} m/s²"
                 status_time = time.time()
 
@@ -215,16 +216,12 @@ def main_curses(stdscr, args):
 
             # Velocity decay adjustment
             elif ch == ord("7"):
-                state.tracker.velocity_decay = max(
-                    0.8, state.tracker.velocity_decay - 0.01
-                )
+                state.tracker.velocity_decay = max(0.8, state.tracker.velocity_decay - 0.01)
                 status = f"Velocity decay: {state.tracker.velocity_decay:.2f}"
                 status_time = time.time()
 
             elif ch == ord("8"):
-                state.tracker.velocity_decay = min(
-                    0.99, state.tracker.velocity_decay + 0.01
-                )
+                state.tracker.velocity_decay = min(0.99, state.tracker.velocity_decay + 0.01)
                 status = f"Velocity decay: {state.tracker.velocity_decay:.2f}"
                 status_time = time.time()
 
@@ -286,18 +283,14 @@ def main_curses(stdscr, args):
         # Debug: show gravity after calibration
         if t.calibrated:
             g = t.gravity
-            stdscr.addstr(
-                8, 0, f"Gravity: [{g[0]:+.1f}, {g[1]:+.1f}, {g[2]:+.1f}] (raw units)"
-            )
+            stdscr.addstr(8, 0, f"Gravity: [{g[0]:+.1f}, {g[1]:+.1f}, {g[2]:+.1f}] (raw units)")
         else:
             stdscr.addstr(8, 0, "Gravity: not calibrated")
 
         # Direction (if moving)
         if t.state == MovementState.MOVING:
             md = t.movement_direction
-            stdscr.addstr(
-                9, 0, f"Direction: [{md[0]:+.2f}, {md[1]:+.2f}, {md[2]:+.2f}]"
-            )
+            stdscr.addstr(9, 0, f"Direction: [{md[0]:+.2f}, {md[1]:+.2f}, {md[2]:+.2f}]")
         else:
             stdscr.addstr(9, 0, "Direction: ---")
 

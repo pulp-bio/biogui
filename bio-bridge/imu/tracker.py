@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 IMU Position Tracker for velocity-based position tracking.
 
@@ -228,10 +233,7 @@ class PositionTracker:
             self.stationary_count += 1
 
             velocity_mag = np.linalg.norm(self.velocity)
-            if (
-                self.stationary_count > self.stationary_samples_needed
-                and velocity_mag < 0.05
-            ):
+            if self.stationary_count > self.stationary_samples_needed and velocity_mag < 0.05:
                 # Confirmed stopped - apply ZUPT
                 self.state = MovementState.STATIONARY
                 self.velocity = np.zeros(3)
@@ -250,9 +252,7 @@ class PositionTracker:
                 accel_avg = (prev_accel + self.accel) / 2.0
                 self.velocity += accel_avg * self.dt
                 # Update movement direction (smooth)
-                self.movement_direction = (
-                    0.9 * self.movement_direction + 0.1 * accel_unit
-                )
+                self.movement_direction = 0.9 * self.movement_direction + 0.1 * accel_unit
                 md_mag = np.linalg.norm(self.movement_direction)
                 if md_mag > 0:
                     self.movement_direction /= md_mag
@@ -290,10 +290,7 @@ class PositionTracker:
             self.stationary_count += 1
 
             velocity_mag = np.linalg.norm(self.velocity)
-            if (
-                self.stationary_count > self.stationary_samples_needed
-                and velocity_mag < 0.05
-            ):
+            if self.stationary_count > self.stationary_samples_needed and velocity_mag < 0.05:
                 # Confirmed stopped - apply ZUPT
                 self.state = MovementState.STATIONARY
                 self.velocity = np.zeros(3)
@@ -311,9 +308,7 @@ class PositionTracker:
                 # Accelerating in movement direction - add to velocity
                 self.velocity += self.accel * self.dt
                 # Update movement direction (smooth)
-                self.movement_direction = (
-                    0.9 * self.movement_direction + 0.1 * accel_unit
-                )
+                self.movement_direction = 0.9 * self.movement_direction + 0.1 * accel_unit
                 md_mag = np.linalg.norm(self.movement_direction)
                 if md_mag > 0:
                     self.movement_direction /= md_mag

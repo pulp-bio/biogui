@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 IMU Data Plotter
 
@@ -108,16 +113,12 @@ def apply_ba_causal(data: np.ndarray, b: np.ndarray, a: np.ndarray) -> np.ndarra
 # =============================================================================
 
 
-def integrate_trapezoidal(
-    t: np.ndarray, data: np.ndarray, decay: float = 0.0
-) -> np.ndarray:
+def integrate_trapezoidal(t: np.ndarray, data: np.ndarray, decay: float = 0.0) -> np.ndarray:
     """Integrate using trapezoidal rule with optional velocity decay."""
     result = np.zeros_like(data)
     for i in range(1, len(t)):
         dt = t[i] - t[i - 1]
-        result[i] = (
-            result[i - 1] * (1.0 - decay * dt) + 0.5 * (data[i] + data[i - 1]) * dt
-        )
+        result[i] = result[i - 1] * (1.0 - decay * dt) + 0.5 * (data[i] + data[i - 1]) * dt
     return result
 
 
@@ -141,16 +142,12 @@ class FilterConfig:
 
     def add_lowpass(self, order: int, cutoff: float, fs: float):
         sos = design_butter_lowpass(order, cutoff, fs)
-        self.steps.append(
-            (lambda d, s=sos: apply_sos_causal(d, s), f"LP({order},{cutoff}Hz)")
-        )
+        self.steps.append((lambda d, s=sos: apply_sos_causal(d, s), f"LP({order},{cutoff}Hz)"))
         return self
 
     def add_bandpass(self, order: int, low: float, high: float, fs: float):
         sos = design_butter_bandpass(order, low, high, fs)
-        self.steps.append(
-            (lambda d, s=sos: apply_sos_causal(d, s), f"BP({order},{low}-{high}Hz)")
-        )
+        self.steps.append((lambda d, s=sos: apply_sos_causal(d, s), f"BP({order},{low}-{high}Hz)"))
         return self
 
     def apply(self, data: np.ndarray) -> np.ndarray:
@@ -212,9 +209,7 @@ Examples:
         action="store_true",
         help="Do not plot raw data",
     )
-    parser.add_argument(
-        "--decay", type=float, default=0.95, help="Velocity decay (default: 0.95)"
-    )
+    parser.add_argument("--decay", type=float, default=0.95, help="Velocity decay (default: 0.95)")
     args = parser.parse_args()
 
     # Load data

@@ -1,6 +1,8 @@
 # BioGUI
+
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
 This repository is a monorepo containing three components:
+
 - `./` — BioGUI: acquisition and visualization GUI
 - [`bio-bridge/`](bio-bridge/README.md) — BioBridge: real-time ML inference middleware
 - [`motion-lab/`](motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
@@ -8,7 +10,6 @@ This repository is a monorepo containing three components:
 ## BioGUI Requirements
 
 - uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)) with Python 3.10+
-
 
 ## BioGUI Setup
 
@@ -53,11 +54,9 @@ To enable the communication between the GUI and a board, one must provide a Pyth
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
 
-
 ### Utilities
 
 In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
-
 
 ## Full pipeline
 
@@ -65,10 +64,12 @@ To run the full gesture-control pipeline, additional setup is required for BioBr
 See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](motion-lab/README.md).
 
 **Preparation** (order does not matter):
+
 - Open BioGUI and configure the interface and forwarding settings.
 - Open MotionLab in Unity and load a scene (do not press Play yet).
 
 **Start** (in this order):
+
 1. Run BioBridge — waits for an incoming BioGUI connection.
 2. Start acquisition in BioGUI with forwarding enabled — data is displayed and forwarded to BioBridge.
 3. Press Play in Unity — receives hand pose data from BioBridge and starts rendering.
@@ -78,7 +79,7 @@ See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](
 This work was realized mainly at the [Energy-Efficient Embedded Systems Laboratory (EEES Lab)](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/eees)
 of University of Bologna (Italy), and at the [Digital Circuits and Systems (IIS)](https://iis.ee.ethz.ch/research/research-groups/Digital%20Circuits%20and%20Systems.html) of ETH Zurich by:
 
-- [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en) (University of Bologna) 
+- [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en) (University of Bologna)
 - [Pierangelo Maria Rapa](https://www.unibo.it/sitoweb/pierangelomaria.rapa/en) (University of Bologna)
 - Enzo Baraldi (ETH Zurich)
 

@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Signal configuration and packet format definitions.
 
@@ -99,8 +104,7 @@ class PacketFormat:
         """
         if len(packet) != self.packet_size:
             raise ValueError(
-                f"Invalid packet size: expected {self.packet_size} bytes, "
-                f"got {len(packet)}"
+                f"Invalid packet size: expected {self.packet_size} bytes, " f"got {len(packet)}"
             )
 
         result = {}

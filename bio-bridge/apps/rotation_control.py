@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Rotation Control for Unity (Legacy 2-Class)
 ============================================
@@ -119,15 +124,13 @@ def receiver_thread(state: State):
                                 # Run gesture prediction when buffer ready
                                 if state.us_buffer.is_ready() and config_id == 0:
                                     us_data = state.us_buffer.get_data()
-                                    class_idx, gesture_name, probs = (
-                                        state.predictor.predict(us_data)
+                                    class_idx, gesture_name, probs = state.predictor.predict(
+                                        us_data
                                     )
 
                                     state.current_gesture = gesture_name
                                     state.current_class_idx = class_idx
-                                    confidence = state.predictor.get_confidence(
-                                        probs, class_idx
-                                    )
+                                    confidence = state.predictor.get_confidence(probs, class_idx)
                                     state.gesture_confidence = confidence / 100.0
 
                                 state.packets += 1
@@ -194,9 +197,7 @@ def main_curses(stdscr, args):
 
             # Rotation smoothing
             elif ch == ord("1"):
-                state.rotation_tracker.smoothing = max(
-                    0.0, state.rotation_tracker.smoothing - 0.05
-                )
+                state.rotation_tracker.smoothing = max(0.0, state.rotation_tracker.smoothing - 0.05)
                 status = f"Rotation smoothing: {state.rotation_tracker.smoothing:.2f}"
                 status_time = time.time()
 
@@ -220,9 +221,7 @@ def main_curses(stdscr, args):
 
         # Check calibration completion
         with state.lock:
-            cal_progress, cal_required = (
-                state.rotation_tracker.get_calibration_progress()
-            )
+            cal_progress, cal_required = state.rotation_tracker.get_calibration_progress()
             if state.calibrating:
                 if cal_progress >= cal_required:
                     if state.rotation_tracker.finish_calibration():
@@ -257,9 +256,7 @@ def main_curses(stdscr, args):
         rt = state.rotation_tracker
 
         stdscr.addstr(0, 0, "=== ROTATION UNITY CONTROL ===")
-        stdscr.addstr(
-            1, 0, "C:calibrate  R:reset  1/2:rot smooth  3/4:gest smooth  Q:quit"
-        )
+        stdscr.addstr(1, 0, "C:calibrate  R:reset  1/2:rot smooth  3/4:gest smooth  Q:quit")
 
         # Connection
         conn_str = "CONNECTED" if state.connected else "waiting..."

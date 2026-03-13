@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,7 +23,7 @@ def create_dataloader(
     shuffle=False,
     return_df=False,
     drop_last=True,
-    ):
+):
     """
     Function to return Dataloader for Ultrasound data
 
@@ -72,9 +77,7 @@ def create_dataloader(
     if return_df and not drop_last:
         return dataloader_us, df
 
-    if (
-        return_df and drop_last and not shuffle
-    ):  # we match these conditions only in yest set
+    if return_df and drop_last and not shuffle:  # we match these conditions only in yest set
         # make sure that df has the same len of the dataloader (drop_last = true will remove )
         print(f"df has shape:{df.shape}")
         # print(f'dataloader us has shape: {len(dataloader_us.dataset)}')

@@ -1,9 +1,9 @@
 # MotionLab
 
-
 Unity 6.3 LTS environment for hand visualization and gesture-controlled task evaluation. Receives hand pose commands from BioBridge over UDP.
 
 ## Requirements
+
 - Unity Hub
 - Unity Editor **6000.3.11f1** (installed via Unity Hub)
 
@@ -18,18 +18,16 @@ Unity 6.3 LTS environment for hand visualization and gesture-controlled task eva
 1. Select the `motion-lab/` folder.
 
 1. Unity will prompt you to install editor version **6000.3.11f1** if not present.
-	
-    - Note: The installation may take several minutes depending on your internet connection.
+   - Note: The installation may take several minutes depending on your internet connection.
 
 1. Once installed, open the project.
-	
-    - Note: The initial import will take some time, as Unity needs to download and configure the necessary packages and assets. Subsequent launches will be quicker.
+   - Note: The initial import will take some time, as Unity needs to download and configure the necessary packages and assets. Subsequent launches will be quicker.
 
 1. Open a Unity scene from the:
 
-| Scene | Description |
-|-------|-------------|
-| `Assets/_Project/Scenes/MainScene.unity` | Main hand control scene |
+| Scene                                               | Description                                    |
+| --------------------------------------------------- | ---------------------------------------------- |
+| `Assets/_Project/Scenes/MainScene.unity`            | Main hand control scene                        |
 | `Assets/_Project/Scenes/ContinuousTasksScene.unity` | Continuous task evaluation (used in the paper) |
 
 Open a scene from the Project panel at the bottom and press **Play** at the top to run it.
@@ -40,12 +38,12 @@ All settings are exposed in the Unity Inspector. Select the `ContinuousTaskManag
 
 **Active tasks** — enable or disable individual tasks:
 
-| Task | Description |
-|------|-------------|
-| Box Delivery | Pick up and deliver a box (used in the paper) |
-| Cylinder Delivery | Pick up and deliver a cylinder |
-| Bottle Pouring | Pour a bottle into a container |
-| Marble Delivery | Deliver a marble |
+| Task              | Description                                   |
+| ----------------- | --------------------------------------------- |
+| Box Delivery      | Pick up and deliver a box (used in the paper) |
+| Cylinder Delivery | Pick up and deliver a cylinder                |
+| Bottle Pouring    | Pour a bottle into a container                |
+| Marble Delivery   | Deliver a marble                              |
 
 **Task Selection** — sequential or random order.
 

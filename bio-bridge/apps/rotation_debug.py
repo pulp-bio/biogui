@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Rotation Debug Tool
 ====================
@@ -144,9 +149,7 @@ def main_curses(stdscr, args):
 
             # Smoothing adjustment
             elif ch == ord("1"):
-                state.rotation_tracker.smoothing = max(
-                    0.0, state.rotation_tracker.smoothing - 0.05
-                )
+                state.rotation_tracker.smoothing = max(0.0, state.rotation_tracker.smoothing - 0.05)
                 status = f"Smoothing: {state.rotation_tracker.smoothing:.2f}"
                 status_time = time.time()
 
@@ -159,9 +162,7 @@ def main_curses(stdscr, args):
 
         # Check calibration completion
         with state.lock:
-            cal_progress, cal_required = (
-                state.rotation_tracker.get_calibration_progress()
-            )
+            cal_progress, cal_required = state.rotation_tracker.get_calibration_progress()
             if state.calibrating:
                 if cal_progress >= cal_required:
                     if state.rotation_tracker.finish_calibration():

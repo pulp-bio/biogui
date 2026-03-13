@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 models_factory.py
 
@@ -15,9 +20,11 @@ The goal is to decouple *model construction* from *training logic*, enabling:
 - easy architecture swaps
 - reproducible experiments
 """
+
 from pathlib import Path
 import sys
-PROJECT_ROOT = Path(__file__).resolve().parents[2]   
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from typing import Callable, Dict, Any, Optional
@@ -26,10 +33,10 @@ import torch.nn as nn
 
 ################# POSSIBLE NETWORK ARCHITECTURES ######################
 from nn.architectures.us_simple_cnn import *
-from nn.architectures.us_imu_simple_cnn import * 
+from nn.architectures.us_imu_simple_cnn import *
 
 ################# POSSIBLE NETWORK ARCHITECTURES ######################
-# from training.config import * 
+# from training.config import *
 # from training.config.defines import IMU_COLUMNS
 
 
@@ -54,11 +61,13 @@ def register_model(name: str):
     Then:
         factory = MODEL_REGISTRY["simple_cnn"]
     """
+
     def deco(fn: Callable[..., nn.Module]):
         if name in MODEL_REGISTRY:
             raise ValueError(f"Model '{name}' already registered.")
         MODEL_REGISTRY[name] = fn
         return fn
+
     return deco
 
 
@@ -66,11 +75,12 @@ def register_model(name: str):
 # Model builder (used by training code)
 # -------------------------------------------------------------------------------------------------
 
+
 def build_model(
     model_factory: Optional[Callable[..., nn.Module]],
     model_kwargs: Optional[Dict[str, Any]],
     ctx: Dict[str, Any],
-    ) -> nn.Module:
+) -> nn.Module:
     """
     Build and return a model instance.
 
@@ -102,11 +112,13 @@ def build_model(
     # ---- Default factory fallback ---------------------------------------------------------------
     if model_factory is None:
         print("Back to default model")
+
         def default_factory(**ctx):
             return US_Simple_Class(
                 num_transducers=ctx["num_transducers"],
                 num_classes=ctx["num_classes"],
             )
+
         factory = default_factory
     else:
         factory = model_factory
@@ -121,11 +133,9 @@ def build_model(
     model = factory(**ctx, **model_kwargs)
 
     if not isinstance(model, nn.Module):
-        raise TypeError(
-            f"Model factory '{factory.__name__}' did not return an nn.Module."
-        )
-    #print("Built model:", type(model).__name__)
-    #print("Model kwargs:", model_kwargs)
+        raise TypeError(f"Model factory '{factory.__name__}' did not return an nn.Module.")
+    # print("Built model:", type(model).__name__)
+    # print("Model kwargs:", model_kwargs)
 
     return model
 
@@ -133,6 +143,7 @@ def build_model(
 # -------------------------------------------------------------------------------------------------
 # Registered model factories
 # -------------------------------------------------------------------------------------------------
+
 
 @register_model("simple_us_cnn")
 def simple_factory(
@@ -145,7 +156,7 @@ def simple_factory(
     dropout_rate: float = 0.05,
     head_hidden_mult: float = 0.5,
     **_,  # swallow tx_columns/use_imu_data/imu_dim safely
-    ) -> nn.Module:
+) -> nn.Module:
     return US_Simple_Class(
         num_transducers=num_transducers,
         num_classes=num_classes,
@@ -157,25 +168,26 @@ def simple_factory(
         head_hidden_mult=head_hidden_mult,
     )
 
+
 @register_model("simple_us_imu_cnn")
 def simple_fusion_factory(
     num_classes: int,
     num_transducers: int,
     us_window_size: int,
-    num_imu_columns : int,                  # This is 3 by default 
+    num_imu_columns: int,  # This is 3 by default
     filters=(1, 1),
     kernels=((3, 1), (3, 1)),
     max_pools=((4, 1), (4, 1)),
     dropout_rate: float = 0.05,
     head_hidden_mult: float = 0.5,
-    **_,  
-    ) -> nn.Module:
+    **_,
+) -> nn.Module:
 
     return US_IMU_Simple_Class(
         num_transducers=num_transducers,
         num_classes=num_classes,
         us_window_size=us_window_size,
-        num_imu_channels = num_imu_columns, 
+        num_imu_channels=num_imu_columns,
         filters=filters,
         kernels=kernels,
         max_pools=max_pools,
