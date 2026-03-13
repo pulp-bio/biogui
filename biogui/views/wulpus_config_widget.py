@@ -1,4 +1,26 @@
-"""WULPUS hardware configuration widget with preset management."""
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+WULPUS hardware configuration widget with preset management.
+
+
+Copyright 2025 Enzo Baraldi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 
 from __future__ import annotations
 
@@ -261,9 +283,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _remove_tx_rx_config(self) -> None:
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to remove."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
             return
         for index in sorted(selected_rows, reverse=True):
             row = index.row()
@@ -277,9 +297,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Edit the selected TX/RX configuration."""
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to edit."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
             return
 
         row = selected_rows[0].row()
@@ -290,12 +308,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         dialog = TxRxConfigDialog(self)
 
         # Pre-fill with current values
-        dialog.tx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["tx_channels"])
-        )
-        dialog.rx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["rx_channels"])
-        )
+        dialog.tx_channels_edit.setText(",".join(str(ch) for ch in current_config["tx_channels"]))
+        dialog.rx_channels_edit.setText(",".join(str(ch) for ch in current_config["rx_channels"]))
         dialog.optimized_checkbox.setChecked(current_config["optimized_switching"])
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -378,9 +392,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                         self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
-            QMessageBox.critical(
-                self, "Save Error", f"Failed to save configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
             logger.error(f"Failed to save config to {file_path}: {e}")
 
     def get_current_config(self) -> WulpusUssConfig:

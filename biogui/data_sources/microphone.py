@@ -1,3 +1,8 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the microphone data source.
 
@@ -24,9 +29,9 @@ from PySide6.QtCore import QByteArray, QIODevice
 from PySide6.QtGui import QIntValidator
 from PySide6.QtMultimedia import (
     QAudio,
+    QAudioDevice,
     QAudioFormat,
     QAudioSource,
-    QAudioDevice,
     QMediaDevices,
 )
 from PySide6.QtWidgets import QWidget
@@ -42,9 +47,7 @@ from .base import (
 )
 
 
-class MicrophoneConfigWidget(
-    DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget
-):
+class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget):
     """
     Widget to configure the system microphone audio source.
 
@@ -192,9 +195,9 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logging.warning(
-                "DataWorker: setBufferSize not available on this Qt version."
-            )(self._device, self.fmt, self)
+            logging.warning("DataWorker: setBufferSize not available on this Qt version.")(
+                self._device, self.fmt, self
+            )
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:

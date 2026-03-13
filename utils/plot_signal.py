@@ -1,7 +1,14 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This script reads the .bio file and plots the acquired signal.
 
 Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
+
 Licensed under the Apache License, Version 2.0
 """
 
@@ -38,9 +45,7 @@ def read_bio_file(file_path: str) -> dict:
         signals = {}
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", f.read(4))[0]
-            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[
-                0
-            ].decode()
+            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[0].decode()
             fs, n_samp, n_ch, dtype = struct.unpack("<f2Ic", f.read(13))
 
             signals[sig_name] = {
@@ -54,9 +59,7 @@ def read_bio_file(file_path: str) -> dict:
         is_trigger_str = struct.unpack("<?", f.read(1))[0]
 
         # 1. Timestamp
-        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
-            n_samp_base, 1
-        )
+        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(n_samp_base, 1)
         signals["timestamp"] = {"data": ts, "fs": fs_base}
 
         # 2. Signals data
@@ -68,18 +71,20 @@ def read_bio_file(file_path: str) -> dict:
             n_ch = sig_data.pop("n_ch")
             dtype = sig_data.pop("dtype")
 
-            data = np.frombuffer(
-                f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
-            ).reshape(n_samp, n_ch)
+            data = np.frombuffer(f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype).reshape(
+                n_samp, n_ch
+            )
             sig_data["data"] = data
 
         # 3. Trigger
         if is_trigger:
-            itemsize = 4    # saving as uint32_t
-            trigger = np.frombuffer(f.read(itemsize * n_samp_base), dtype=np.uint32).reshape(n_samp_base, 1)
+            itemsize = 4  # saving as uint32_t
+            trigger = np.frombuffer(f.read(itemsize * n_samp_base), dtype=np.uint32).reshape(
+                n_samp_base, 1
+            )
             trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
-        # 4. Trigger string (len-prefixed UTF-8 per sample)
+            # 4. Trigger string (len-prefixed UTF-8 per sample)
 
             if is_trigger_str:
                 trigger_str = []
@@ -97,13 +102,10 @@ def read_bio_file(file_path: str) -> dict:
                 "fs": fs_base,
             }
 
-
     return signals
 
 
-def plot_signal_mmode(
-    sig_name: str, sig_data: dict, samples_per_acquisition: int = 397
-):
+def plot_signal_mmode(sig_name: str, sig_data: dict, samples_per_acquisition: int = 397):
     """
     Plot a single signal in M-mode (time vs depth).
     Removed colorbar/intensity scale.
@@ -129,9 +131,7 @@ def plot_signal_mmode(
     time_axis = np.arange(n_acquisitions) * acquisition_duration
     depth_axis = np.arange(samples_per_acquisition)
 
-    fig, axes = plt.subplots(
-        nrows=n_ch, sharex=True, figsize=(16, n_ch * 4), layout="constrained"
-    )
+    fig, axes = plt.subplots(nrows=n_ch, sharex=True, figsize=(16, n_ch * 4), layout="constrained")
     if n_ch == 1:
         axes = [axes]
 

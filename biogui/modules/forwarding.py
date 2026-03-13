@@ -1,8 +1,14 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains controller and widgets to configure forwarding.
 
 
 Copyright 2025 Mattia Orlandi, Pierangelo Maria Rapa
+Copyright 2025 Enzo Baraldi (modifications)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -176,9 +182,7 @@ class _ForwardingWorker(QObject):
         for sigData in dataPacket:
             if sigData.sigName not in self._buffers[curDataSourceId]:
                 continue
-            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
-                sigData.data
-            )
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(sigData.data)
 
         # Exhaustively send data until some buffers are empty
         while True:

@@ -1,3 +1,27 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Class for A-mode ultrasound visualization.
+
+
+Copyright 2025 Enzo Baraldi
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 from collections import deque
@@ -11,7 +35,7 @@ from .ultrasound_filters import UltrasoundFilter
 
 class AModePlotMode(BasePlotMode):
     """
-    Plot mode for A-Mode ultrasound visualization.
+    Plot mode for A-mode ultrasound visualization.
 
     Displays the latest complete scan as amplitude vs. depth.
 
@@ -24,7 +48,7 @@ class AModePlotMode(BasePlotMode):
     chSpacing : float
         Spacing between each channel in the plot.
     renderLenMs : int
-        Length of the window in the plot (in ms) - not used for A-Mode.
+        Length of the window in the plot (in ms) - not used for A-mode.
     **config : dict
         Additional configuration options, including:
         - signal_type: Dict with ultrasound configuration
@@ -137,7 +161,7 @@ class AModePlotMode(BasePlotMode):
         return len(self._data_queue) >= self._num_samples
 
     def setup_plot(self, graph_widget) -> None:
-        """Setup A-Mode plot with depth axis and multiple display options."""
+        """Setup A-mode plot with depth axis and multiple display options."""
         self._graph_widget = graph_widget
         graph_widget.clear()
 
@@ -178,9 +202,7 @@ class AModePlotMode(BasePlotMode):
             if self._show_filtered or self._show_envelope
             else None
         )
-        envelope_data = (
-            self._get_envelope(filtered_data) if self._show_envelope else None
-        )
+        envelope_data = self._get_envelope(filtered_data) if self._show_envelope else None
 
         for i in range(self.n_ch):
             color = lut[i]
@@ -188,9 +210,7 @@ class AModePlotMode(BasePlotMode):
 
             # Raw data plot (blue)
             if self._show_raw:
-                pen = pg.mkPen(
-                    color=color, width=1, style=pg.QtCore.Qt.PenStyle.SolidLine
-                )
+                pen = pg.mkPen(color=color, width=1, style=pg.QtCore.Qt.PenStyle.SolidLine)
                 raw_plot = graph_widget.plot(
                     depth_axis,
                     latest_samples[:, i] + vertical_offset,
@@ -218,9 +238,7 @@ class AModePlotMode(BasePlotMode):
 
             # Envelope plot (red)
             if self._show_envelope:
-                pen = pg.mkPen(
-                    color="r", width=2, style=pg.QtCore.Qt.PenStyle.SolidLine
-                )
+                pen = pg.mkPen(color="r", width=2, style=pg.QtCore.Qt.PenStyle.SolidLine)
                 env_plot = graph_widget.plot(
                     depth_axis,
                     envelope_data[:, i] + vertical_offset,
@@ -237,7 +255,7 @@ class AModePlotMode(BasePlotMode):
             plot_item.addLegend()
 
     def render(self) -> None:
-        """Update the A-Mode plots with all display modes."""
+        """Update the A-mode plots with all display modes."""
         if not self.has_new_data():
             return
 
