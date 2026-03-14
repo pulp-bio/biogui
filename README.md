@@ -19,6 +19,14 @@ To install dependencies, run:
 uv sync
 ```
 
+### Development
+
+To install the pre-commit hooks (ruff, black, prettier, license headers), run:
+
+```
+uv run pre-commit install
+```
+
 ### Run
 
 Run the script [`main.py`](https://github.com/pulp-bio/biogui/blob/main/main.py), which launches the main window.
