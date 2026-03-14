@@ -5,11 +5,6 @@
 
 """
 This script reads the .bio file and plots the acquired signal.
-
-Copyright 2023 Mattia Orlandi, Pierangelo Maria Rapa
-Copyright 2025 Enzo Baraldi (modifications)
-
-Licensed under the Apache License, Version 2.0
 """
 
 import argparse
