@@ -4,7 +4,7 @@ Middleware connecting BioGUI to MotionLab (Unity). Receives ultrasound and IMU d
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python 3.11)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Pre-trained PyTorch model file placed in `nn/models/`
 
 ## Setup
