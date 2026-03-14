@@ -9,7 +9,7 @@ This repository is a monorepo containing three components:
 
 ## BioGUI Requirements
 
-- uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)) with Python 3.10+
+- uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/))
 
 ## BioGUI Setup
 
