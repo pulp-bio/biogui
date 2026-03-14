@@ -23,7 +23,9 @@ BUFFER_SIZE = 32
 
 def _parse_input() -> tuple:
     """Parse the input arguments."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Generate force trajectories from OTBioelettronica Sessantaquattro+ data."
+    )
     parser.add_argument(
         "--mvc",
         type=float,

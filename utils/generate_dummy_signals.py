@@ -5,6 +5,8 @@
 
 """
 This script generates dummy signals to test the GUI.
+
+Usage: python generate_dummy_signals.py
 """
 
 import socket
