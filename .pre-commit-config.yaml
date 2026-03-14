@@ -47,6 +47,14 @@ repos:
           - "LICENSE_HEADER.txt"
           - "--comment-style"
           - "//"
+      - id: insert-license
+        name: Insert Apache-2.0 License Header (MATLAB)
+        files: "\\.m$"
+        args:
+          - "--license-file"
+          - "LICENSE_HEADER.txt"
+          - "--comment-style"
+          - "%"
 
 exclude: |
   (?x)^(
