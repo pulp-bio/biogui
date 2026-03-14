@@ -19,3 +19,6 @@ dependencies = [
     # windows only
     "windows-curses; platform_system == 'Windows'",
 ]
+
+[dependency-groups]
+dev = ["matplotlib>=3.10.7", "ruff>=0.14.6"]
