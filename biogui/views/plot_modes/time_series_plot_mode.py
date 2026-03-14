@@ -5,8 +5,6 @@
 
 """
 Class for time-series visualization.
-
-
 """
 
 from __future__ import annotations

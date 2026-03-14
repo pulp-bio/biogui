@@ -5,8 +5,6 @@
 
 """
 This module contains controller and widgets for trigger configuration.
-
-
 """
 
 from __future__ import annotations

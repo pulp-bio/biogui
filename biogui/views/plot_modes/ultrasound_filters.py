@@ -5,7 +5,6 @@
 
 """
 Class for filtering ultrasound.
-
 """
 
 from __future__ import annotations

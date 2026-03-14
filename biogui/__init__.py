@@ -5,8 +5,6 @@
 
 """
 Package containing all BioGUI code.
-
-
 """
 
 from .biogui import BioGUI

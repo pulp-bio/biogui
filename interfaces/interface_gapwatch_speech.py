@@ -5,7 +5,6 @@
 
 """
 This module contains the GAPWatch interface for sEMG neckband.
-
 """
 
 import struct

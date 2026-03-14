@@ -5,7 +5,6 @@
 
 """
 Utility functions.
-
 """
 
 from collections import namedtuple

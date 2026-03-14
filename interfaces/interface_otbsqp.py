@@ -6,7 +6,6 @@
 """
 This module contains the OTBioelettronica Sessantaquattro+
 interface for HD-sEMG.
-
 """
 
 import struct

@@ -5,7 +5,6 @@
 
 """
 This script generates dummy signals to test the GUI.
-
 """
 
 import socket

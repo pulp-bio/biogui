@@ -5,8 +5,6 @@
 
 """
 Class implementing the real-time plot.
-
-
 """
 
 from __future__ import annotations

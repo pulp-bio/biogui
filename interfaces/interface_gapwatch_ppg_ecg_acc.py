@@ -5,7 +5,6 @@
 
 """
 This module contains the GAPWatch interface for PPG, ECG and accelerometer.
-
 """
 
 import struct

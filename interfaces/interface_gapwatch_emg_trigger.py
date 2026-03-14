@@ -3,7 +3,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""This module contains the GAPWatch interface for sEMG."""
+"""
+This module contains the GAPWatch interface for sEMG.
+"""
 
 import struct
 

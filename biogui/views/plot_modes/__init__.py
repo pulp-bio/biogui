@@ -5,7 +5,6 @@
 
 """
 Plot mode implementations for different visualization types.
-
 """
 
 from .amode_plot_mode import AModePlotMode

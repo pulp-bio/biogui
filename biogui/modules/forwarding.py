@@ -5,8 +5,6 @@
 
 """
 This module contains controller and widgets to configure forwarding.
-
-
 """
 
 from __future__ import annotations

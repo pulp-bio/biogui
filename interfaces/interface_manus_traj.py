@@ -6,7 +6,6 @@
 """
 This module contains the MANUS interface for joint data,
 together with synthetic angle trajectories.
-
 """
 
 import struct

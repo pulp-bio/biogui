@@ -5,7 +5,6 @@
 
 """
 Class for A-mode ultrasound visualization.
-
 """
 
 from __future__ import annotations

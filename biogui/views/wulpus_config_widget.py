@@ -5,7 +5,6 @@
 
 """
 WULPUS hardware configuration widget with preset management.
-
 """
 
 from __future__ import annotations

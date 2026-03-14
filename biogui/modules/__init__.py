@@ -3,7 +3,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""This package contains the pluggable modules."""
+"""
+This package contains the pluggable modules.
+"""
 
 from .forwarding import ForwardingController
 from .teleprompter import TeleprompterController

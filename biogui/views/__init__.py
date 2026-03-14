@@ -5,7 +5,6 @@
 
 """
 Sub-package containing the views.
-
 """
 
 from .data_source_config_dialog import DataSourceConfigDialog

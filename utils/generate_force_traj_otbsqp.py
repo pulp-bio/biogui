@@ -6,7 +6,6 @@
 """
 This module reads data from the OTBioelettronica Sessantaquattro+, generates
 the force trajectories and append them to the EMG, IMU and AUX data.
-
 """
 
 import argparse
