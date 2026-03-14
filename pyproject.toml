@@ -3,7 +3,7 @@ name = "biogui"
 version = "0.1.0"
 description = "Modular PySide6 GUI for acquiring and visualizing bio-signals"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.2.6",
   "pyqtgraph>=0.13.7",
