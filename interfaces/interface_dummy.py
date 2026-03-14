@@ -5,8 +5,6 @@
 
 """
 This module contains an example interface for dummy signals.
-
-
 """
 
 import numpy as np

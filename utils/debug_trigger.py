@@ -5,7 +5,6 @@
 
 """
 Debug triggers from .bio files.
-
 """
 
 import argparse

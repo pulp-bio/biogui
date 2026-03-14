@@ -5,7 +5,6 @@
 
 """
 This module contains the BioWolf interface for sEMG.
-
 """
 
 import struct

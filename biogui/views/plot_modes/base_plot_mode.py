@@ -5,7 +5,6 @@
 
 """
 Abstract base class for different plot modes.
-
 """
 
 from __future__ import annotations

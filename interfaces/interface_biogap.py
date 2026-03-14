@@ -5,7 +5,6 @@
 
 """
 This module contains the BioGAP interface for sEMG.
-
 """
 
 import struct

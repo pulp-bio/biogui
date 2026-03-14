@@ -5,8 +5,6 @@
 
 """
 Dialog for configuring signals.
-
-
 """
 
 from __future__ import annotations

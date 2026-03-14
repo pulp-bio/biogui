@@ -5,8 +5,6 @@
 
 """
 Dialog to add a new data source.
-
-
 """
 
 from __future__ import annotations

@@ -6,7 +6,6 @@
 """
 This module contains the Manus interface to retrieve
 both ergonomics and raw data from MANUS gloves.
-
 """
 
 import struct

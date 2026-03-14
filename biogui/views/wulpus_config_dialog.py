@@ -5,7 +5,6 @@
 
 """
 Dialog for configuring WULPUS hardware parameters.
-
 """
 
 import sys

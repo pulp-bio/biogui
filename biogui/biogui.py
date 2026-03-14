@@ -5,7 +5,6 @@
 
 """
 Main class for BioGUI application.
-
 """
 
 from PySide6.QtWidgets import QApplication

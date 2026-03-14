@@ -5,7 +5,6 @@
 
 """
 This module contains the ANGELS interface for PPG.
-
 """
 
 import struct

@@ -5,8 +5,6 @@
 
 """
 View for the main window.
-
-
 """
 
 from PySide6.QtCore import Signal, Slot

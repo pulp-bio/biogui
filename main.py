@@ -5,8 +5,6 @@
 
 """
 BioGUI entry point.
-
-
 """
 
 import argparse

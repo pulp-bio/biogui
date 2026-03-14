@@ -6,7 +6,6 @@
 """
 This module contains the OTBIO Sessantaquattro+ interface for HD-sEMG
 with trajectories based on the envelope.
-
 """
 
 import struct
