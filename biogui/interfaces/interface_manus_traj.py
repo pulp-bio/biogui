@@ -27,13 +27,7 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {
-    "angle": {
-        "fs": 120,
-        "nCh": 3,
-        "signal_type": {"type": "time-series"},
-    }
-}
+sigInfo: dict = {"angle": {"fs": 120, "nCh": 3}}
 """Dictionary containing the signals information."""
 
 

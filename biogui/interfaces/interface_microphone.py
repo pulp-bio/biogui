@@ -24,16 +24,8 @@ stopSeq: list[bytes] = []
 
 # Signal information: audio stream with a default sample rate and channel count
 sigInfo: dict = {
-    "audio": {
-        "fs": 48000,
-        "nCh": 1,
-        "signal_type": {"type": "time-series"},
-    },
-    "ts": {
-        "fs": 25,
-        "nCh": 1,
-        "signal_type": {"type": "time-series"},
-    },
+    "audio": {"fs": 48000, "nCh": 1},
+    "ts": {"fs": 25, "nCh": 1},
 }
 """Dictionary containing the signals information."""
 
