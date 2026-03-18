@@ -100,27 +100,25 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
         if sigName in ("acq_ts", "trigger"):
             return None, '"acq_ts" and "trigger" are reserved signal names.'
 
-        # Validate signal_type
-        if "signal_type" not in sigData:
+        # Validate extra arguments
+        if "extras" not in sigData:  # default to time series
+            sigData["extras"] = {"type": "time-series"}
+            continue
+
+        if not isinstance(sigData["extras"], dict):
+            return None, f'Signal "{sigName}": "extras" must be a dictionary.'
+
+        if "type" not in sigData["extras"]:
             return (
                 None,
-                f'Signal "{sigName}" is missing the required "signal_type" field.',
-            )
-
-        if not isinstance(sigData["signal_type"], dict):
-            return None, f'Signal "{sigName}": "signal_type" must be a dictionary.'
-
-        if "type" not in sigData["signal_type"]:
-            return (
-                None,
-                f'Signal "{sigName}": "signal_type" dictionary must contain a "type" key.',
+                f'Signal "{sigName}": "extras" dictionary must contain a "type" key.',
             )
 
         validTypes = ("ultrasound", "time-series")
-        if sigData["signal_type"]["type"] not in validTypes:
+        if sigData["extras"]["type"] not in validTypes:
             return (
                 None,
-                f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["signal_type"]["type"]}".',
+                f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["extras"]["type"]}".',
             )
 
     return (

@@ -28,8 +28,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         Sampling frequency.
     nCh : int
         Number of channels.
-    signal_type : dict
-        Type of the signal.
+    extras : dict
+        Dictionary with extra configuration.
     parent : QWidget or None, default=None
         Parent widget.
     edit : bool, default=False
@@ -44,7 +44,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         sigName: str,
         fs: float,
         nCh: int,
-        signal_type: dict,
+        extras: dict,
         parent: QWidget | None = None,
         edit: bool = False,
         **kwargs,
@@ -59,12 +59,10 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.sigNameLabel.setText(sigName)
         self.nChLabel.setText(str(nCh))
 
-        if signal_type["type"] == "ultrasound":
+        if extras["type"] == "ultrasound":
             self.label3.setText("Pulse Repetition Frequency (PRF):")
 
-            num_samples = signal_type.get(
-                "num_samples", 397
-            )  # default value for wulpus
+            num_samples = extras.get("num_samples", 397)  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
             self.freqLabel.setText(f"{prf:.2f} Hz")
         else:
@@ -113,7 +111,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.maxRangeTextField.setValidator(rangeValidator)
 
         self._sigName = sigName
-        self._sigConfig: dict = {"fs": fs, "nCh": nCh, "signal_type": signal_type}
+        self._sigConfig: dict = {"fs": fs, "nCh": nCh, "extras": extras}
 
         # Pre-fill with provided configuration
         if edit:
@@ -123,7 +121,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         self.rangeModeComboBox.currentTextChanged.connect(self._onRangeModeChange)
 
         # Activate ultrasound dropdown only for ultrasound signals
-        if signal_type.get("type") == "ultrasound":
+        if extras.get("type") == "ultrasound":
             # Hide traditional filtering for ultrasound
             self.filterGroupBox.setVisible(False)
             self.notchFilterGroupBox.setVisible(False)
@@ -141,7 +139,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.showEnvelopeCheckBox.setEnabled(True)
 
             # Get ADC sampling frequency
-            adc_fs = signal_type.get("adc_sampling_freq", fs)
+            adc_fs = extras.get("adc_sampling_freq", fs)
             nyquist_mhz = adc_fs / 2 / 1e6
 
             # Configure frequency spinboxes ranges
@@ -204,8 +202,8 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         """
         config = self._sigConfig.copy()
 
-        signal_type = config.get("signal_type", {})
-        if signal_type.get("type") == "ultrasound":
+        extras = config.get("extras", {})
+        if extras.get("type") == "ultrasound":
             # Ultrasound visualization mode
             config["ultrasoundMode"] = self.ultrasoundModeComboBox.currentText()
 
@@ -474,7 +472,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 # Re-check the sender
                 sender = self.sender()
                 if sender:
-                    sender.setChecked(True)
+                    sender.setChecked(True)  # type: ignore
             return
 
         # If checked, uncheck the others

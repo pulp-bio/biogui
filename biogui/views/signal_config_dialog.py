@@ -52,8 +52,8 @@ class SignalConfigDialog(QDialog):
             sigName, fs, nCh, parent=parent, edit=True, **kwargs
         )
         self.buttonBox = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
-            parent=self,  # type: ignore
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,  # type: ignore
+            parent=self,
         )
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)

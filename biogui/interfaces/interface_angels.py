@@ -92,15 +92,7 @@ Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-sigInfo: dict = {
-    "ppg": {
-        "fs": 4096,
-        "nCh": 2,
-        "signal_type": {
-            "type": "time-series",
-        },
-    }
-}
+sigInfo: dict = {"ppg": {"fs": 4096, "nCh": 2}}
 """Dictionary containing the signals information."""
 
 
@@ -120,9 +112,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         the keys must match with those of the "sigInfo" dictionary.
     """
     nSamp, nCh = 256, 15
-    dataTmp = np.asarray(struct.unpack(f"<{nSamp * nCh}i", data[:-4]), dtype=np.float32).reshape(
-        nSamp, nCh
-    )
+    dataTmp = np.asarray(
+        struct.unpack(f"<{nSamp * nCh}i", data[:-4]), dtype=np.float32
+    ).reshape(nSamp, nCh)
     dataTmp *= 4.5 / 2**23
 
     ppg = dataTmp[:, 1:3]
