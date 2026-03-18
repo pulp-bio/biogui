@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -22,9 +22,10 @@ from PySide6.QtMultimedia import (
 )
 from PySide6.QtWidgets import QWidget
 
-from ..ui.microphone_data_source_config_widget_ui import (
+from biogui.ui.ui_microphone_data_source_config_widget import (
     Ui_MicrophoneDataSourceConfigWidget,
 )
+
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
@@ -33,7 +34,9 @@ from .base import (
 )
 
 
-class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget):
+class MicrophoneConfigWidget(
+    DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget
+):
     """
     Widget to configure the system microphone audio source.
 
@@ -181,9 +184,9 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logging.warning("DataWorker: setBufferSize not available on this Qt version.")(
-                self._device, self.fmt, self
-            )
+            logging.warning(
+                "DataWorker: setBufferSize not available on this Qt version."
+            )(self._device, self.fmt, self)
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:

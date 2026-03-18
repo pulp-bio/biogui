@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -24,8 +24,8 @@ from biogui.views import (
     SignalPlotWidget,
 )
 from biogui.views.wulpus_config_dialog import WulpusConfigDialog
-from interfaces import interface_wulpus
 
+from ..interfaces import interface_wulpus
 from ..utils import SigData
 from .streaming_controller import StreamingController
 
@@ -150,7 +150,9 @@ class MainController(QObject):
         """Connect Qt signals and slots."""
         # Data source and signal management
         self._mainWin.addDataSourceButton.clicked.connect(self._addDataSourceHandler)
-        self._mainWin.deleteDataSourceButton.clicked.connect(self._deleteDataSourceHandler)
+        self._mainWin.deleteDataSourceButton.clicked.connect(
+            self._deleteDataSourceHandler
+        )
         self._mainWin.editButton.clicked.connect(self._editDataSourceHandler)
         self._mainWin.dataSourceTree.clicked.connect(self._selectionHandler)
 
@@ -381,8 +383,8 @@ class MainController(QObject):
         self.dataSourceModel.itemChanged.connect(self._signalCheckedHandler)
 
         # If this is a Wulpus data source, add a config button
-        interface_path = dataSourceConfig.get("interfacePath", "")
-        if "wulpus" in interface_path.lower():
+        interfacePath = str(dataSourceConfig.get("interfacePath", ""))
+        if "wulpus" in interfacePath.lower():
             from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
 
             # Create container widget with horizontal layout
@@ -512,7 +514,9 @@ class MainController(QObject):
             # Request signal configuration
             dataSourceConfig = dataSourceConfigDialog.dataSourceConfig
             interfaceModule = dataSourceConfig["interfaceModule"]
-            signalConfigWizard = SignalConfigWizard(interfaceModule.sigInfo, parent=self._mainWin)
+            signalConfigWizard = SignalConfigWizard(
+                interfaceModule.sigInfo, parent=self._mainWin
+            )
             outcome = signalConfigWizard.exec()
 
             if outcome:
@@ -577,7 +581,9 @@ class MainController(QObject):
 
             # Request new signal configuration
             interfaceModule = newDataSourceConfig["interfaceModule"]
-            signalConfigWizard = SignalConfigWizard(interfaceModule.sigInfo, parent=self._mainWin)
+            signalConfigWizard = SignalConfigWizard(
+                interfaceModule.sigInfo, parent=self._mainWin
+            )
             outcome = signalConfigWizard.exec()
 
             if outcome:
@@ -610,7 +616,9 @@ class MainController(QObject):
         oldDataSourceId = str(self._streamingControllers[dataSourceToEdit])
         # Add sigsConfigs to newDataSourceConfig before calling editDataSourceConfig
         newDataSourceConfig["sigsConfigs"] = sigsConfigs
-        self._streamingControllers[dataSourceToEdit].editDataSourceConfig(newDataSourceConfig)
+        self._streamingControllers[dataSourceToEdit].editDataSourceConfig(
+            newDataSourceConfig
+        )
         newDataSourceId = str(self._streamingControllers[dataSourceToEdit])
 
         # Update configuration
@@ -661,7 +669,9 @@ class MainController(QObject):
 
         # Open the dialog
         sigConfig = self._config[dataSource]["sigsConfigs"][sigName]
-        signalConfigDialog = SignalConfigDialog(sigName, **sigConfig, parent=self._mainWin)
+        signalConfigDialog = SignalConfigDialog(
+            sigName, **sigConfig, parent=self._mainWin
+        )
         outcome = signalConfigDialog.exec()
 
         if not outcome:
@@ -753,10 +763,10 @@ class MainController(QObject):
                     self._mainWin,
                     "Streaming Active",
                     "Streaming will be stopped to apply the configuration.\n\nContinue?",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.Yes,
+                    QMessageBox.Yes | QMessageBox.No,  # type: ignore
+                    QMessageBox.Yes,  # type: ignore
                 )
-                if reply == QMessageBox.No:
+                if reply == QMessageBox.No:  # type: ignore
                     return
                 self.stopStreaming()
 
@@ -778,7 +788,9 @@ class MainController(QObject):
             new_sigInfo = {}
             new_config_to_signal_name = {}
             for config_id in range(new_config.num_txrx_configs):
-                rx_channel = interface_wulpus.get_rx_channel_for_config(new_config, config_id)
+                rx_channel = interface_wulpus.get_rx_channel_for_config(
+                    new_config, config_id
+                )
                 if rx_channel is None:
                     continue
 
@@ -805,7 +817,9 @@ class MainController(QObject):
                 }
 
             # Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
-            new_sigInfo.update(interface_wulpus.get_standard_signal_definitions(meas_period_s))
+            new_sigInfo.update(
+                interface_wulpus.get_standard_signal_definitions(meas_period_s)
+            )
 
             interface_wulpus.sigInfo = new_sigInfo
             interface_wulpus.config_to_signal_name = new_config_to_signal_name
@@ -816,8 +830,8 @@ class MainController(QObject):
             sources_to_update = []
 
             for ds_name, ds_config in self._config.items():
-                interface_path = ds_config.get("interfacePath", "")
-                if "wulpus" not in interface_path.lower():
+                interfacePath = str(ds_config.get("interfacePath", ""))
+                if "wulpus" not in interfacePath.lower():
                     continue
 
                 old_sig_names = set(ds_config["interfaceModule"].sigInfo.keys())
@@ -855,7 +869,9 @@ class MainController(QObject):
                         for sig_name, sig_info in new_sigInfo.items():
                             if sig_name in old_sigsConfigs:
                                 # Keep old config but update metadata from new sigInfo
-                                new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
+                                new_sigsConfigs[sig_name] = old_sigsConfigs[
+                                    sig_name
+                                ].copy()
                                 new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
                                 new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
                                 new_sigsConfigs[sig_name]["signal_type"] = sig_info.get(

@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -15,9 +15,10 @@ from PySide6.QtCore import QByteArray, QThread
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QWidget
 
-from ..ui.unix_socket_data_source_config_widget_ui import (
+from biogui.ui.ui_unix_socket_data_source_config_widget import (
     Ui_UnixSocketDataSourceConfigWidget,
 )
+
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
@@ -26,7 +27,9 @@ from .base import (
 )
 
 
-class UnixSocketConfigWidget(DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget):
+class UnixSocketConfigWidget(
+    DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget
+):
     """
     Widget to configure the local socket source.
 

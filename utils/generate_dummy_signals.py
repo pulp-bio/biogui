@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -67,7 +67,9 @@ def main():
         # Start a thread to listen for the stop command
         sock.settimeout(0.5)
         stop_event = threading.Event()  # Event to stop the transmission
-        listener_thread = threading.Thread(target=_listen_for_stop, args=(sock, stop_event))
+        listener_thread = threading.Thread(
+            target=_listen_for_stop, args=(sock, stop_event)
+        )
         listener_thread.start()
 
         # Start generating signals

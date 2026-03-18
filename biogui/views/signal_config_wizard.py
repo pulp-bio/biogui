@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -47,7 +47,9 @@ class SignalConfigWizardPage(QWizardPage):
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = SignalConfigWidget(sigName, fs, nCh, signal_type, parent=parent)
+        self._configWidget = SignalConfigWidget(
+            sigName, fs, nCh, signal_type, parent=parent
+        )
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)
         self.setLayout(layout)
@@ -125,7 +127,9 @@ class SignalConfigWizard(QWizard):
                     "nCh": sigInfo[sigName]["nCh"],
                 }
                 continue
-            self.addPage(SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self))
+            self.addPage(
+                SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self)
+            )
 
         finishButton = self.button(QWizard.FinishButton)  # type: ignore
         finishButton.clicked.connect(self.onFinishedClicked)

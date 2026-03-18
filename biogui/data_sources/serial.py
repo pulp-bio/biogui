@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -10,22 +10,26 @@ Classes for the serial data source.
 from __future__ import annotations
 
 import logging
-import time
+from sys import platform
 
 from PySide6.QtCore import QByteArray, QIODevice, QLocale, QThread
 from PySide6.QtGui import QIcon, QIntValidator
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
+from biogui.ui.ui_serial_data_source_config_widget import (
+    Ui_SerialDataSourceConfigWidget,
+)
 from biogui.utils import detectTheme
 
-from ..ui.serial_data_source_config_widget_ui import Ui_SerialDataSourceConfigWidget
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
     DataSourceType,
     DataSourceWorker,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget):
@@ -159,6 +163,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         Serial port object.
     _buffer : QByteArray
         Input buffer.
+    _guard : bool
+        Guard flag to control data emission.
 
     Class attributes
     ----------------
@@ -187,20 +193,12 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
+        self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
-
-    def _sendStartSequence(self):
-        for c in self._startSeq:
-            if isinstance(c, bytes):
-                self._serialPort.write(c)
-                # make sure the full command is sent
-                while self._serialPort.bytesToWrite() > 0:
-                    self._serialPort.waitForBytesWritten(100)
-            elif isinstance(c, float):
-                time.sleep(c)
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
@@ -208,72 +206,68 @@ class SerialDataSourceWorker(DataSourceWorker):
         if not self._serialPort.open(QIODevice.ReadWrite):  # type: ignore
             errMsg = f"Cannot open serial port due to the following error:\n{self._serialPort.errorString()}."
             self.errorOccurred.emit(errMsg)
-            logging.error(f"DataWorker: {errMsg}")
+            logger.error(errMsg)
             return
 
-        # Set DTR and RTS signals to enable data transmission (required on Windows)
-        self._serialPort.setDataTerminalReady(True)
-        self._serialPort.setRequestToSend(True)
+        # Set DTR and RTS on Windows
+        if platform == "win32":
+            self._serialPort.setDataTerminalReady(True)
+            self._serialPort.setRequestToSend(True)
 
-        # Clear the serial port buffer
-        self._serialPort.clear()
-        self._buffer = QByteArray()
+        # Reset serial port input buffer
+        self._serialPort.clear(QSerialPort.Input)  # type: ignore
 
         # Start command
-        self._sendStartSequence()
-
-        self._serialPort.readyRead.connect(self._collectData)
-
-        logging.info("DataWorker: serial communication started.")
-
-    def _sendStopSequence(self) -> None:
-        """Send the stop sequence to the serial port."""
-        for c in self._stopSeq:
-            if isinstance(c, bytes):
+        for c in self._startSeq:
+            if isinstance(c, (bytes, bytearray)):
                 self._serialPort.write(c)
-                # make sure the full command is sent
+                # Make sure the full command is sent
                 while self._serialPort.bytesToWrite() > 0:
                     self._serialPort.waitForBytesWritten(100)
             elif isinstance(c, float):
-                time.sleep(c)
+                QThread.msleep(int(c * 1000))
+
+        # Set guard flag
+        self._guard = True
+
+        logger.info("Serial communication started.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
-        logging.info("DataWorker: serial communication stopped.")
+        # Un-set guard flag
+        self._guard = False
 
-        # Disconnect readyRead to stop processing incoming data
-        try:
-            self._serialPort.readyRead.disconnect(self._collectData)
-        except RuntimeError:
-            pass
+        logger.info("Serial communication stopped.")
 
-        # Send stop command
-        self._sendStopSequence()
+        # Stop command
+        for c in self._stopSeq:
+            if isinstance(c, (bytes, bytearray)):
+                self._serialPort.write(c)
+                # Make sure the full command is sent
+                while self._serialPort.bytesToWrite() > 0:
+                    self._serialPort.waitForBytesWritten(100)
+            elif isinstance(c, float):
+                QThread.msleep(int(c * 1000))
 
-        attempts = 0
-        max_attempts = 30  # safety break to prevent infinite loop
+        # Reset accumulation buffer and serial port input buffer
+        self._buffer.clear()
+        self._serialPort.clear(QSerialPort.Input)  # type: ignore
 
-        while self._serialPort.waitForReadyRead(300):
-            self._serialPort.clear()
-            attempts += 1
-            QThread.msleep(100)
-
-            # Resend stop command every 3 attempts
-            if attempts % 3 == 0:
-                logging.warning("DataWorker: Device still sending data, resending stop command.")
-                self._sendStopSequence()
-
-            if attempts >= max_attempts:
-                logging.error("DataWorker: Device failed to stop streaming. Forcing port close.")
-                break
-
+        # Close port
         self._serialPort.close()
-        self._buffer = QByteArray()
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
+        # Accumulate new data
         self._buffer.append(self._serialPort.readAll())
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
+            data = self._buffer.left(self._packetSize).data()
             self.dataPacketReady.emit(data)
             self._buffer.remove(0, self._packetSize)
