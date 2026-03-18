@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -44,7 +44,9 @@ def read_bio_file(file_path: str) -> dict:
         # Read signal metadata
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", f.read(4))[0]
-            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[0].decode()
+            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[
+                0
+            ].decode()
             fs, n_samp, n_ch, dtype = struct.unpack("<f2Ic", f.read(13))
             dtype = dtypeMap[dtype.decode("ascii")]
 
@@ -60,7 +62,9 @@ def read_bio_file(file_path: str) -> dict:
 
         # Read actual signals:
         # 1. Timestamp
-        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(n_samp_base, 1)
+        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
+            n_samp_base, 1
+        )
         signals["timestamp"] = {"data": ts, "fs": fs_base}
 
         # 2. Signals data
@@ -71,9 +75,9 @@ def read_bio_file(file_path: str) -> dict:
             n_samp = sig_data.pop("n_samp")
             n_ch = sig_data.pop("n_ch")
             dtype = sig_data.pop("dtype")
-            data = np.frombuffer(f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype).reshape(
-                n_samp, n_ch
-            )
+            data = np.frombuffer(
+                f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
+            ).reshape(n_samp, n_ch)
             sig_data["data"] = data
 
         # 3. Trigger (optional)
@@ -109,9 +113,13 @@ def print_file_info(signals: dict, trigger: np.ndarray):
     has_tx_rx_id = "tx_rx_id" in signals
 
     if has_acquisition_number and has_tx_rx_id:
-        print("\n   This file includes ACQUISITION_NUMBER and TX_RX_ID data (newest format)")
+        print(
+            "\n   This file includes ACQUISITION_NUMBER and TX_RX_ID data (newest format)"
+        )
     elif has_acquisition_number:
-        print("\n   This file includes ACQUISITION_NUMBER data (new format, no tx_rx_id)")
+        print(
+            "\n   This file includes ACQUISITION_NUMBER data (new format, no tx_rx_id)"
+        )
     else:
         print("\n⚠ This file does NOT include acquisition_number data (old format)")
 

@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -11,7 +11,7 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QGridLayout, QMainWindow, QScrollArea, QWidget
 
-from biogui.ui.main_window_ui import Ui_MainWindow
+from biogui.ui.ui_main_window import Ui_MainWindow
 from biogui.utils import detectTheme
 
 
@@ -46,7 +46,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
-        self.editButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
+        self.editButton.setIcon(
+            QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
+        )
 
         # Replace the plotsLayout with a ScrollArea containing a GridLayout
         # Remove any existing widgets from plotsLayout

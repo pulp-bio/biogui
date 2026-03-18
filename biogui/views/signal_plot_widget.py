@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -15,7 +15,7 @@ import numpy as np
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
-from ..ui.signal_plot_widget_ui import Ui_SignalPlotWidget
+from ..ui.ui_signal_plot_widget import Ui_SignalPlotWidget
 from .plot_modes import AModePlotMode, BasePlotMode, MModePlotMode, TimeSeriesPlotMode
 
 
@@ -101,7 +101,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             self.label1.setText("Sampling rate:")
 
         # Determine plot mode and create appropriate instance
-        self._plot_mode = self._create_plot_mode(fs, nCh, chSpacing, renderLenMs, **kwargs)
+        self._plot_mode = self._create_plot_mode(
+            fs, nCh, chSpacing, renderLenMs, **kwargs
+        )
 
         # Setup UI
         self._setup_graph_widget(sigName)
@@ -261,7 +263,9 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         sample_count = self._plot_mode.sample_count
 
         if self._is_ultrasound():
-            num_samples = self._signal_type.get("num_samples", 397)  # Default for wulpus
+            num_samples = self._signal_type.get(
+                "num_samples", 397
+            )  # Default for wulpus
 
             if num_samples > 0:
                 prf = sample_count / num_samples

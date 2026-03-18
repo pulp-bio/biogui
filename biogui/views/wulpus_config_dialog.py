@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -7,18 +7,11 @@
 Dialog for configuring WULPUS hardware parameters.
 """
 
-import sys
-from pathlib import Path
-
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QVBoxLayout
 
-interfaces_path = Path(__file__).parent.parent.parent / "interfaces"
-if str(interfaces_path) not in sys.path:
-    sys.path.insert(0, str(interfaces_path))
-
-from interface_wulpus import WulpusUssConfig
-
 from biogui.views.wulpus_config_widget import WulpusConfigWidget
+
+from ..interfaces import interface_wulpus
 
 
 class WulpusConfigDialog(QDialog):
@@ -31,7 +24,7 @@ class WulpusConfigDialog(QDialog):
         self.configWidget = WulpusConfigWidget(self)
         layout.addWidget(self.configWidget)
 
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         layout.addWidget(self.buttonBox)
@@ -45,7 +38,9 @@ class WulpusConfigDialog(QDialog):
             super().accept()
         except Exception as e:
             self.configWidget.statusLabel.setText(f"Status: Error - {str(e)}")
-            QMessageBox.critical(self, "Configuration Error", f"Invalid configuration: {str(e)}")
+            QMessageBox.critical(
+                self, "Configuration Error", f"Invalid configuration: {str(e)}"
+            )
 
-    def get_config(self) -> WulpusUssConfig | None:
+    def get_config(self) -> interface_wulpus.WulpusUssConfig | None:
         return self._config

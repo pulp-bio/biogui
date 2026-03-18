@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -29,15 +29,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from biogui.ui.wulpus_config_widget_ui import Ui_WulpusConfigWidget
-from interfaces.interface_wulpus import (
-    PGA_GAIN,
-    RX_MAP,
-    TX_MAP,
-    USS_CAPTURE_ACQ_RATES,
-    WulpusRxTxConfigGen,
-    WulpusUssConfig,
-)
+from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
+
+from ..interfaces import interface_wulpus
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +39,13 @@ logger = logging.getLogger(__name__)
 class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     """Configuration widget for WULPUS ultrasound hardware parameters."""
 
-    configChanged = Signal(WulpusUssConfig)
+    configChanged = Signal(interface_wulpus.WulpusUssConfig)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setupUi(self)
 
-        self._current_config: WulpusUssConfig | None = None
+        self._current_config: interface_wulpus.WulpusUssConfig | None = None
         self._tx_rx_configs: list[dict[str, Any]] = []
         self._presets_dir = self._get_presets_directory()
         self._loading_preset = False  # Flag to prevent marking as custom while loading
@@ -115,10 +109,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _populate_combo_boxes(self) -> None:
         self.samplingFreqComboBox.clear()
-        for freq in USS_CAPTURE_ACQ_RATES:
+        for freq in interface_wulpus.USS_CAPTURE_ACQ_RATES:
             self.samplingFreqComboBox.addItem(f"{freq:,.0f} Hz", freq)
         self.rxGainComboBox.clear()
-        for gain in PGA_GAIN:
+        for gain in interface_wulpus.PGA_GAIN:
             self.rxGainComboBox.addItem(f"{gain:.1f} dB", gain)
 
     def _connect_signals(self) -> None:
@@ -195,7 +189,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             # Reset flag after loading
             self._loading_preset = False
 
-    def load_config(self, config: WulpusUssConfig) -> None:
+    def load_config(self, config: interface_wulpus.WulpusUssConfig) -> None:
         """Load an existing configuration into the widget."""
         # Set flag to prevent marking as custom during load
         self._loading_preset = True
@@ -229,14 +223,22 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 tx_bits = int(config.tx_configs[i])
                 rx_bits = int(config.rx_configs[i])
 
-                tx_channels = [ch for ch in range(8) if (tx_bits >> TX_MAP[ch]) & 1]
-                rx_channels = [ch for ch in range(8) if (rx_bits >> RX_MAP[ch]) & 1]
+                tx_channels = [
+                    ch
+                    for ch in range(8)
+                    if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
+                ]
+                rx_channels = [
+                    ch
+                    for ch in range(8)
+                    if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
+                ]
 
                 # Try to detect optimized switching by checking if RX bits appear in TX config
                 # This happens when optimized switching pre-activates RX channels during TX
                 optimized = False
                 for ch in rx_channels:
-                    if (tx_bits >> RX_MAP[ch]) & 1:
+                    if (tx_bits >> interface_wulpus.RX_MAP[ch]) & 1:
                         optimized = True
                         break
 
@@ -268,7 +270,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _remove_tx_rx_config(self) -> None:
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
+            QMessageBox.warning(
+                self, "No Selection", "Please select a configuration to remove."
+            )
             return
         for index in sorted(selected_rows, reverse=True):
             row = index.row()
@@ -282,7 +286,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Edit the selected TX/RX configuration."""
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
+            QMessageBox.warning(
+                self, "No Selection", "Please select a configuration to edit."
+            )
             return
 
         row = selected_rows[0].row()
@@ -293,8 +299,12 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         dialog = TxRxConfigDialog(self)
 
         # Pre-fill with current values
-        dialog.tx_channels_edit.setText(",".join(str(ch) for ch in current_config["tx_channels"]))
-        dialog.rx_channels_edit.setText(",".join(str(ch) for ch in current_config["rx_channels"]))
+        dialog.tx_channels_edit.setText(
+            ",".join(str(ch) for ch in current_config["tx_channels"])
+        )
+        dialog.rx_channels_edit.setText(
+            ",".join(str(ch) for ch in current_config["rx_channels"])
+        )
         dialog.optimized_checkbox.setChecked(current_config["optimized_switching"])
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -329,7 +339,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             )
             layout = QHBoxLayout(checkbox_widget)
             layout.addWidget(checkbox)
-            layout.setAlignment(Qt.AlignCenter)
+            layout.setAlignment(Qt.AlignCenter)  # type: ignore
             layout.setContentsMargins(0, 0, 0, 0)
             self.txRxTableWidget.setIndexWidget(
                 self.txRxTableWidget.model().index(i, 3), checkbox_widget
@@ -377,19 +387,21 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                         self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
-            QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
+            QMessageBox.critical(
+                self, "Save Error", f"Failed to save configuration: {str(e)}"
+            )
             logger.error(f"Failed to save config to {file_path}: {e}")
 
-    def get_current_config(self) -> WulpusUssConfig:
+    def get_current_config(self) -> interface_wulpus.WulpusUssConfig:
         """Create and validate WulpusUssConfig from current widget values."""
-        rx_tx_config = WulpusRxTxConfigGen()
+        rx_tx_config = interface_wulpus.WulpusRxTxConfigGen()
         for config in self._tx_rx_configs:
             rx_tx_config.add_config(
                 tx_channels=config["tx_channels"],
                 rx_channels=config["rx_channels"],
                 optimized_switching=config["optimized_switching"],
             )
-        return WulpusUssConfig(
+        return interface_wulpus.WulpusUssConfig(
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
             trans_freq=int(self.transFreqLineEdit.text()),
@@ -473,7 +485,7 @@ class TxRxConfigDialog(QDialog):
         layout.addRow("RX Channels (0-7):", self.rx_channels_edit)
         self.optimized_checkbox = QCheckBox()
         layout.addRow("Optimized Switching:", self.optimized_checkbox)
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)

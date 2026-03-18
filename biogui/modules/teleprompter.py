@@ -30,7 +30,7 @@ from PySide6.QtGui import QCloseEvent, QColor, QFont
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QVBoxLayout, QWidget
 
 from biogui.controllers import MainController
-from biogui.ui.teleprompter_config_widget_ui import Ui_TeleprompterConfigWidget
+from biogui.ui.ui_teleprompter_config_widget import Ui_TeleprompterConfigWidget
 from biogui.utils import detectTheme
 from biogui.views import MainWindow
 
@@ -75,11 +75,20 @@ def _loadTeleprompterConfig(filePath: str) -> tuple[dict | None, str]:
 
     if not isinstance(config["durationStart"], int) or config["durationStart"] < 0:
         return None, "'durationStart' must be a non-negative integer (milliseconds)."
-    if not isinstance(config["durationPerSentence"], int) or config["durationPerSentence"] <= 0:
+    if (
+        not isinstance(config["durationPerSentence"], int)
+        or config["durationPerSentence"] <= 0
+    ):
         return None, "'durationPerSentence' must be a positive integer (milliseconds)."
-    if not isinstance(config["numberofRepeatsVoiced"], int) or config["numberofRepeatsVoiced"] < 0:
+    if (
+        not isinstance(config["numberofRepeatsVoiced"], int)
+        or config["numberofRepeatsVoiced"] < 0
+    ):
         return None, "'numberofRepeatsVoiced' must be a non-negative integer."
-    if not isinstance(config["numberofRepeatsSilent"], int) or config["numberofRepeatsSilent"] < 0:
+    if (
+        not isinstance(config["numberofRepeatsSilent"], int)
+        or config["numberofRepeatsSilent"] < 0
+    ):
         return None, "'numberofRepeatsSilent' must be a non-negative integer."
     if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
         return None, "'durationRest' must be a non-negative integer (milliseconds)."
@@ -93,7 +102,9 @@ class _TeleprompterWidget(QWidget):
     def displayRest(self, duration_ms: int) -> None:
         """Display a rest period message."""
         self._modeLabel.setText("<span style='font-size:20px;'>REST</span>")
-        self._label.setText("<span style='font-size: 32px; font-weight: bold;'>REST</span>")
+        self._label.setText(
+            "<span style='font-size: 32px; font-weight: bold;'>REST</span>"
+        )
         try:
             self._wordTimer.stop()
         except AttributeError:
@@ -143,7 +154,9 @@ class _TeleprompterWidget(QWidget):
 
         self.destroyed.connect(self.deleteLater)
 
-    def displaySentence(self, sentence: str, duration_ms: int, is_voiced: bool = True) -> None:
+    def displaySentence(
+        self, sentence: str, duration_ms: int, is_voiced: bool = True
+    ) -> None:
         """Highlight words with timing based on word length relative to total characters. Show mode label."""
         mode_text = "VOICED" if is_voiced else "SILENT"
         self._modeLabel.setText(f"<span style='font-size:20px;'>{mode_text}</span>")
@@ -200,7 +213,9 @@ class _TeleprompterWidget(QWidget):
 
     def displayStart(self, text: str) -> None:
         """Display a plain start text centered."""
-        self._label.setText(f"<span style='font-size: 32px; font-weight: bold;'>{text}</span>")
+        self._label.setText(
+            f"<span style='font-size: 32px; font-weight: bold;'>{text}</span>"
+        )
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.widgetClosed.emit()
@@ -315,7 +330,10 @@ class TeleprompterController(QObject):
         mainController.streamingStarted.disconnect(self._startTeleprompter)
 
     def _startTeleprompter(self) -> None:
-        if not self._confWidget.teleprompterGroupBox.isChecked() or not self._confWidget.config:
+        if (
+            not self._confWidget.teleprompterGroupBox.isChecked()
+            or not self._confWidget.config
+        ):
             return
         config = self._confWidget.config
         self._sentences = config["sentences"]

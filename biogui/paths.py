@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Package containing all BioGUI code.
+Define paths used by BioGUI.
 """
 
-from .biogui import BioGUI
+from pathlib import Path
 
-__all__ = ["BioGUI"]
+APP_DIR = Path(__file__).parent.resolve()
+INTERFACES_DIR = APP_DIR / "interfaces"

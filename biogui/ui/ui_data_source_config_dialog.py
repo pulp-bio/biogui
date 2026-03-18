@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'data_source_config_dialog.ui'
+## Form generated from reading UI file 'data_source_config_dialogznyraz.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.2
+## Created by: Qt User Interface Compiler version 6.10.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,34 +16,29 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QFormLayout, QGroupBox, QLabel,
-    QLayout, QLineEdit, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget)
+    QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QLabel, QLayout, QLineEdit, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_DataSourceConfigDialog(object):
     def setupUi(self, DataSourceConfigDialog):
         if not DataSourceConfigDialog.objectName():
             DataSourceConfigDialog.setObjectName(u"DataSourceConfigDialog")
-        DataSourceConfigDialog.resize(400, 300)
+        DataSourceConfigDialog.resize(371, 300)
         self.verticalLayout = QVBoxLayout(DataSourceConfigDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.formLayout.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.interfaceLabel = QLabel(DataSourceConfigDialog)
         self.interfaceLabel.setObjectName(u"interfaceLabel")
-        self.interfaceLabel.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.interfaceLabel.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.interfaceLabel)
 
-        self.interfaceModuleComboBox = QComboBox(DataSourceConfigDialog)
-        self.interfaceModuleComboBox.setObjectName(u"interfaceModuleComboBox")
-
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.interfaceModuleComboBox)
-
         self.label1 = QLabel(DataSourceConfigDialog)
         self.label1.setObjectName(u"label1")
-        self.label1.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label1.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label1)
 
@@ -51,6 +46,22 @@ class Ui_DataSourceConfigDialog(object):
         self.dataSourceComboBox.setObjectName(u"dataSourceComboBox")
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.dataSourceComboBox)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.interfaceModuleComboBox = QComboBox(DataSourceConfigDialog)
+        self.interfaceModuleComboBox.setObjectName(u"interfaceModuleComboBox")
+
+        self.horizontalLayout_3.addWidget(self.interfaceModuleComboBox)
+
+        self.interfaceModulePathLabel = QLabel(DataSourceConfigDialog)
+        self.interfaceModulePathLabel.setObjectName(u"interfaceModulePathLabel")
+        self.interfaceModulePathLabel.setWordWrap(True)
+
+        self.horizontalLayout_3.addWidget(self.interfaceModulePathLabel)
+
+
+        self.formLayout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.horizontalLayout_3)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -62,7 +73,7 @@ class Ui_DataSourceConfigDialog(object):
 
         self.fileSavingGroupBox = QGroupBox(DataSourceConfigDialog)
         self.fileSavingGroupBox.setObjectName(u"fileSavingGroupBox")
-        self.fileSavingGroupBox.setAlignment(Qt.AlignCenter)
+        self.fileSavingGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.fileSavingGroupBox.setCheckable(True)
         self.fileSavingGroupBox.setChecked(False)
         self.formLayout_2 = QFormLayout(self.fileSavingGroupBox)
@@ -80,7 +91,7 @@ class Ui_DataSourceConfigDialog(object):
 
         self.label2 = QLabel(self.fileSavingGroupBox)
         self.label2.setObjectName(u"label2")
-        self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label2.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.formLayout_2.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label2)
 
@@ -94,8 +105,8 @@ class Ui_DataSourceConfigDialog(object):
 
         self.buttonBox = QDialogButtonBox(DataSourceConfigDialog)
         self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
 
         self.verticalLayout.addWidget(self.buttonBox)
 
@@ -108,13 +119,14 @@ class Ui_DataSourceConfigDialog(object):
     def retranslateUi(self, DataSourceConfigDialog):
         DataSourceConfigDialog.setWindowTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Data Source Configuration", None))
         self.interfaceLabel.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Interface:", None))
-#if QT_CONFIG(tooltip)
-        self.interfaceModuleComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"Select an interface module", None))
-#endif // QT_CONFIG(tooltip)
         self.label1.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Data source:", None))
 #if QT_CONFIG(tooltip)
         self.dataSourceComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"List of available data sources", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.interfaceModuleComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"Select an interface module", None))
+#endif // QT_CONFIG(tooltip)
+        self.interfaceModulePathLabel.setText("")
         self.fileSavingGroupBox.setTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Configure file saving", None))
         self.browseOutDirButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse output directory", None))
         self.outDirPathLabel.setText("")

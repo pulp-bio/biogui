@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -27,7 +27,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
-from biogui.ui.forwarding_config_widget_ui import Ui_ForwardingConfigWidget
+from biogui.ui.ui_forwarding_config_widget import Ui_ForwardingConfigWidget
 from biogui.utils import SigData
 from biogui.views import MainWindow
 
@@ -166,7 +166,9 @@ class _ForwardingWorker(QObject):
         for sigData in dataPacket:
             if sigData.sigName not in self._buffers[curDataSourceId]:
                 continue
-            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(sigData.data)
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
+                sigData.data
+            )
 
         # Exhaustively send data until some buffers are empty
         while True:

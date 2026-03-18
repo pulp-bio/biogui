@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -17,7 +17,8 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide6.QtWidgets import QWidget
 
-from ..ui.tcp_data_source_config_widget_ui import Ui_TCPDataSourceConfigWidget
+from biogui.ui.ui_tcp_data_source_config_widget import Ui_TCPDataSourceConfigWidget
+
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
@@ -170,7 +171,9 @@ class TCPDataSourceWorker(DataSourceWorker):
             logging.error(f"DataWorker: {errMsg}")
             return
 
-        logging.info(f"DataWorker: waiting for TCP connection on port {self._socketPort}.")
+        logging.info(
+            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
+        )
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
