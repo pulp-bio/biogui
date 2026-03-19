@@ -1,11 +1,6 @@
 # BioGUI
 
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
-This repository is a monorepo containing three components:
-
-- `./` — BioGUI: acquisition and visualization GUI
-- [`bio-bridge/`](bio-bridge/README.md) — BioBridge: real-time ML inference middleware
-- [`motion-lab/`](motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
 ## BioGUI Requirements
 
@@ -48,7 +43,7 @@ python main.py
 
 #### Interface with board
 
-To enable the communication between the GUI and a board, one must provide a Python file with the following specifications:
+To enable communication between the GUI and a board, one must provide a Python file with the following specifications:
 
 - `packetSize`: integer representing the number of bytes to be read;
 - `startSeq`: sequence of commands to start the board, expressed as a list of bytes;
@@ -58,15 +53,19 @@ To enable the communication between the GUI and a board, one must provide a Pyth
   - `nCh`: number of channels (int)
   - `signal_type`: dictionary with signal type information (required), must contain at least:
     - `type`: signal type, either `"ultrasound"` or `"time-series"` (string)
-- `decodeFn`: function that decodes each packet of byte read from the board into the specified signals.
+- `decodeFn`: function that decodes each packet of bytes read from the board into the specified signals.
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
 
 ### Utilities
 
-In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
+In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
 
-## Full pipeline
+## Applications
+
+This repository contains additional components in the [`applications/`](applications) folder:
+- [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
+- [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
 To run the full gesture-control pipeline, additional setup is required for BioBridge and MotionLab.
 See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](motion-lab/README.md).
