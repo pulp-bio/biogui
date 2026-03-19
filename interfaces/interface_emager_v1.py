@@ -17,11 +17,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import time
-
 import numpy as np
 
-BUFF_SIZE = 50
+BUFF_SIZE = 100
 
 
 packetSize: int = 128 * BUFF_SIZE
@@ -62,35 +60,25 @@ def _get_channel_map(version: str = "1.0"):
     return channel_map
 
 
-def get_offset(data, mask, match_result):
+def reorder(data, mask, match_result):
     """
-    Looks for mask/template matching in data array and returns offset
-
-    Parameters
-    ----------
-    data : numpy array
-        1D data input.
-    mask : numpy array
-        1D mask to be matched.
-    match_result : int
-        Expected result of mask-data convolution matching.
-
-    Returns
-    -------
-    int or None
-        Offset if found, None otherwise.
+    Looks for mask/template matching in data array and reorders
+    :param data: (numpy array) - 1D data input
+    :param mask: (numpy array) - 1D mask to be matched
+    :param match_result: (int) - Expected result of mask-data convolution matching
+    :return: (numpy array) - Reordered data array
     """
     number_of_packet = int(len(data) / 128)
-
+    roll_data = []
     for i in range(number_of_packet):
         data_lsb = data[i * 128 : (i + 1) * 128] & np.ones(128, dtype=np.int8)
         mask_match = np.convolve(mask, np.append(data_lsb, data_lsb), "valid")
         try:
             offset = np.where(mask_match == match_result)[0][0] - 3
-            return offset
         except IndexError:
-            continue
-    return None
+            return None
+        roll_data.append(np.roll(data[i * 128 : (i + 1) * 128], -offset))
+    return roll_data
 
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray | None]:
@@ -113,41 +101,14 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray | None]:
 
     emg = []
 
-    # Check call timing
-    call_time = time.perf_counter()
-    if hasattr(decodeFn, "time"):
-        if hasattr(decodeFn, "partial_data") and call_time - decodeFn.time > 0.1:
-            del decodeFn.partial_data
-    decodeFn.time = time.perf_counter()
+    data_packet = reorder(list(data), mask, 63)
+    if data_packet is None or len(data_packet) == 0:
+        return {"emg": None}
 
-    # Handle state between calls
-    if not hasattr(decodeFn, "partial_data"):  # first call
-        # Compute offset
-        offset = get_offset(list(data), mask, 63)
-        if offset is None or offset < 0:
-            return {"emg": None}
-
-        # Discard first incomplete packet
-        data = data[offset:]
-
-        # Store partial data for next call
-        decodeFn.partial_data = data[-(len(data) % 128) :]
-    else:
-        # Prepend partial data from previous call
-        if len(decodeFn.partial_data) > 0:
-            data = decodeFn.partial_data + data
-
-        # Store new partial data for next call and remove it from current data
-        decodeFn.partial_data = data[-(len(data) % 128) :]
-        data = data[: -(len(data) % 128)]
-
-    # Divide data into packets
-    number_of_packet = int(len(data) / 128)
-    for p in range(number_of_packet):
-        data_packet = data[p * 128 : (p + 1) * 128]
+    for p in range(len(data_packet)):
         samples = [
             int.from_bytes(
-                bytes([data_packet[s * 2], data_packet[s * 2 + 1]]),
+                bytes([data_packet[p][s * 2], data_packet[p][s * 2 + 1]]),
                 "big",
                 signed=True,
             )
@@ -160,6 +121,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray | None]:
         emg.append(samples[np.newaxis])
 
     emg = np.concatenate(emg)
-    emg = emg.astype(np.float32) * 0.000195  # mV
+    emg = emg.astype(np.float32)
 
     return {"emg": emg}
