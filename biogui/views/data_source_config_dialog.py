@@ -198,9 +198,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
-        self.interfaceModuleComboBox.currentTextChanged.connect(
-            self._onInterfaceModuleChange
-        )
+        self.interfaceModuleComboBox.activated.connect(self._onInterfaceModuleSelected)
         self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
@@ -240,14 +238,17 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
         self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
-    def _onInterfaceModuleChange(self, displayName: str) -> None:
+    def _onInterfaceModuleSelected(self, index: int) -> None:
         """Handle interface module selection from ComboBox."""
-        if displayName == self._BROWSE_INTERFACE:
+        itemSelected = self.interfaceModuleComboBox.itemText(index)
+        if itemSelected == self._BROWSE_INTERFACE:
             # Browse interface module in external folder
             interfacePath = self._browseInterfaceModule()
+            fromBrowsing = True
         else:
             # Get interface from combo box
-            interfacePath = self._interfaceModules.get(displayName)
+            interfacePath = self._interfaceModules.get(itemSelected)
+            fromBrowsing = False
 
         if interfacePath is None:
             return
@@ -269,7 +270,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = interfaceModule
-        self.interfaceModulePathLabel.setText(str(interfacePath))
+        if fromBrowsing:
+            self.interfaceModulePathLabel.setText(str(interfacePath))
 
     def _browseInterfaceModule(self) -> Path | None:
         """Browse files to select the module containing the decode function."""
@@ -278,7 +280,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             "Load Python module containing the decode function",
             filter="*.py",
         )
-        return Path(interfacePath) if interfacePath is not None else None
+        return Path(interfacePath) if interfacePath else None
 
     def _browseOutDir(self) -> None:
         """Browse directory where the data will be saved."""
@@ -376,13 +378,20 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
-        # Find and select the interface in the ComboBox
-        filename = interfacePath.name
-        if filename.startswith("interface_") and filename.endswith(".py"):
-            displayName = filename[10:-3]
+        if interfacePath.parent == paths.INTERFACES_DIR:
+            # Find and select the interface in the ComboBox
+            interfaceName = interfacePath.name
+            if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):
+                displayName = interfaceName[10:-3]
+                index = self.interfaceModuleComboBox.findText(displayName)
+                if index >= 0:
+                    self.interfaceModuleComboBox.setCurrentIndex(index)
+        else:
+            displayName = self._BROWSE_INTERFACE
             index = self.interfaceModuleComboBox.findText(displayName)
             if index >= 0:
                 self.interfaceModuleComboBox.setCurrentIndex(index)
+            self.interfaceModulePathLabel.setText(str(interfacePath))
 
         # 2. Data source-specific config
         self._configWidget.prefill(dataSourceConfig)
