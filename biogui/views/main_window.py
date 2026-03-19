@@ -9,7 +9,7 @@ View for the main window.
 
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QGridLayout, QMainWindow, QScrollArea, QWidget
+from PySide6.QtWidgets import QMainWindow
 
 from biogui.ui.ui_main_window import Ui_MainWindow
 from biogui.utils import detectTheme
@@ -22,12 +22,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ----------
     renderLenMs : int
         Length of the window in the plot (in ms).
-    plotsScrollArea : QScrollArea
-        Scroll area containing the plots grid.
-    plotsGridLayout : QGridLayout
-        Grid layout for organizing plots.
-    plotsContainer : QWidget
-        Container widget for the plots grid.
 
     Class attributes
     ----------------
@@ -49,28 +43,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editButton.setIcon(
             QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
         )
-
-        # Replace the plotsLayout with a ScrollArea containing a GridLayout
-        # Remove any existing widgets from plotsLayout
-        while self.plotsLayout.count():
-            child = self.plotsLayout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-
-        # Create scroll area for plots
-        self.plotsScrollArea = QScrollArea()
-        self.plotsScrollArea.setWidgetResizable(True)
-
-        # Create container widget with grid layout
-        self.plotsContainer = QWidget()
-        self.plotsGridLayout = QGridLayout(self.plotsContainer)
-        self.plotsGridLayout.setSpacing(10)
-
-        # Set the container as the scroll area's widget
-        self.plotsScrollArea.setWidget(self.plotsContainer)
-
-        # Add the scroll area to the main plotsLayout
-        self.plotsLayout.addWidget(self.plotsScrollArea)
 
         # Set default render length to 5 s
         self.renderLenComboBox.setCurrentText("5 s")
