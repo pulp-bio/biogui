@@ -10,9 +10,8 @@ Classes for the TCP socket data source.
 from __future__ import annotations
 
 import logging
-import time
 
-from PySide6.QtCore import QByteArray, QLocale
+from PySide6.QtCore import QByteArray, QLocale, QThread
 from PySide6.QtGui import QIntValidator
 from PySide6.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide6.QtWidgets import QWidget
@@ -25,6 +24,8 @@ from .base import (
     DataSourceType,
     DataSourceWorker,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
@@ -131,6 +132,8 @@ class TCPDataSourceWorker(DataSourceWorker):
         Client socket.
     _buffer : QByteArray
         Input buffer.
+    _guard : bool
+        Guard flag to control data emission.
 
     Class attributes
     ----------------
@@ -158,6 +161,7 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._tcpServer.newConnection.connect(self._handleConnection)
         self._clientSock: QTcpSocket | None = None
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"TCP socket - port {self._socketPort}"
@@ -168,23 +172,26 @@ class TCPDataSourceWorker(DataSourceWorker):
         if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):  # type: ignore
             errMsg = f"Cannot start TCP server due to the following error:\n{self._tcpServer.errorString()}."
             self.errorOccurred.emit(errMsg)
-            logging.error(f"DataWorker: {errMsg}")
+            logger.error(errMsg)
             return
 
-        logging.info(
-            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
-        )
+        logger.info("Waiting for TCP connection on port %d", self._socketPort)
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        # Un-set guard flag
+        self._guard = False
+
         if self._clientSock is not None:
             # Stop command
             for c in self._stopSeq:
-                if isinstance(c, bytes):
+                if isinstance(c, (bytes, bytearray)):
                     self._clientSock.write(c)
+                    # Make sure the full command is sent
+                    while self._clientSock.bytesToWrite() > 0:
+                        self._clientSock.waitForBytesWritten(100)
                 elif isinstance(c, float):
-                    time.sleep(c)
-            self._clientSock.flush()
+                    QThread.msleep(int(c * 1000))
 
             # Close socket
             self._clientSock.close()
@@ -195,28 +202,57 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._tcpServer.close()
         self._buffer = QByteArray()
 
-        logging.info("DataWorker: TCP communication stopped.")
+        logger.info("TCP communication stopped.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
+        # If already connected, drop old client
+        if self._clientSock is not None:
+            try:
+                self._clientSock.readyRead.disconnect(self._collectData)
+            except Exception:
+                pass
+
+            # Abort and delete old client socket
+            self._clientSock.abort()
+            self._clientSock.deleteLater()
+
+        # Get new client socket
         self._clientSock = self._tcpServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
 
-        logging.info("DataWorker: new TCP connection.")
+        logger.info("New TCP connection.")
 
         # Start command
         for c in self._startSeq:
-            if isinstance(c, bytes):
+            if isinstance(c, (bytes, bytearray)):
                 self._clientSock.write(c)
+                # Make sure the full command is sent
+                while self._clientSock.bytesToWrite() > 0:
+                    self._clientSock.waitForBytesWritten(100)
             elif isinstance(c, float):
-                time.sleep(c)
+                QThread.msleep(int(c * 1000))
 
-        logging.info("DataWorker: TCP communication started.")
+        logger.info("TCP communication started.")
+
+        # Set guard flag
+        self._guard = True
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
-        self._buffer.append(self._clientSock.readAll())  # type: ignore
-        if self._buffer.size() >= self._packetSize:
-            data = self._buffer.mid(0, self._packetSize).data()
+        if self._clientSock is None:
+            return
+
+        # Accumulate new data
+        self._buffer.append(self._clientSock.readAll())
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
+            data = self._buffer.left(self._packetSize).data()
             self.dataPacketReady.emit(data)
             self._buffer.remove(0, self._packetSize)

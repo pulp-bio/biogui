@@ -52,7 +52,7 @@ class SignalFilter(ABC):
         pass
 
     @abstractmethod
-    def is_enabled(self) -> bool:
+    def isEnabled(self) -> bool:
         """Check if any processing is enabled."""
         pass
 
@@ -65,32 +65,32 @@ class TimeSeriesFilter(SignalFilter):
     ----------
     fs : float
         Sampling frequency.
-    n_ch : int
+    nCh : int
         Number of channels.
 
     Attributes
     ----------
     _fs : float
         Sampling frequency.
-    _n_ch : int
+    _nCh : int
         Number of channels.
-    _sos_butter : ndarray or None
+    _sosButter : ndarray or None
         Butterworth filter SOS (second-order sections).
-    _zi_butter : ndarray or None
+    _ziButter : ndarray or None
         Butterworth filter initial conditions.
-    _ba_notch : tuple or None
+    _baNotch : tuple or None
         Notch filter coefficients (b, a).
-    _zi_notch : ndarray or None
+    _ziNotch : ndarray or None
         Notch filter initial conditions.
     """
 
-    def __init__(self, fs: float, n_ch: int) -> None:
+    def __init__(self, fs: float, nCh: int) -> None:
         self._fs = fs
-        self._n_ch = n_ch
-        self._sos_butter = None
-        self._zi_butter = None
-        self._ba_notch = None
-        self._zi_notch = None
+        self._nCh = nCh
+        self._sosButter = None
+        self._ziButter = None
+        self._baNotch = None
+        self._ziNotch = None
 
     def configure(self, sigConfig: dict) -> None:
         """
@@ -108,35 +108,35 @@ class TimeSeriesFilter(SignalFilter):
         """
         # 1. Butterworth filter
         if "filtType" not in sigConfig:
-            self._sos_butter = None
-            self._zi_butter = None
+            self._sosButter = None
+            self._ziButter = None
         else:
             freqs = sigConfig["freqs"]
-            self._sos_butter = scipy.signal.butter(
+            self._sosButter = scipy.signal.butter(
                 N=sigConfig["filtOrder"],
                 Wn=freqs if len(freqs) > 1 else freqs[0],
                 fs=self._fs,
                 btype=sigConfig["filtType"],
                 output="sos",
             )
-            self._zi_butter = np.stack(
-                [scipy.signal.sosfilt_zi(self._sos_butter) for _ in range(self._n_ch)],
+            self._ziButter = np.stack(
+                [scipy.signal.sosfilt_zi(self._sosButter) for _ in range(self._nCh)],
                 axis=-1,
             )
 
         # 2. Notch filter
         if "notchFreq" not in sigConfig:
-            self._ba_notch = None
-            self._zi_notch = None
+            self._baNotch = None
+            self._ziNotch = None
         else:
             b, a = scipy.signal.iirnotch(
                 w0=sigConfig["notchFreq"],
                 Q=sigConfig["qFactor"],
                 fs=self._fs,
             )
-            self._ba_notch = (b, a)
-            self._zi_notch = np.stack(
-                [scipy.signal.lfilter_zi(b, a) for _ in range(self._n_ch)],
+            self._baNotch = (b, a)
+            self._ziNotch = np.stack(
+                [scipy.signal.lfilter_zi(b, a) for _ in range(self._nCh)],
                 axis=-1,
             )
 
@@ -154,31 +154,31 @@ class TimeSeriesFilter(SignalFilter):
         ndarray
             Filtered data with same shape.
         """
-        processed_data = data.copy()
+        dataFilt = data.copy()
 
         # Apply Butterworth filter
-        if self._sos_butter is not None and self._zi_butter is not None:
-            processed_data, self._zi_butter = scipy.signal.sosfilt(
-                self._sos_butter,
-                processed_data,
+        if self._sosButter is not None and self._ziButter is not None:
+            dataFilt, self._ziButter = scipy.signal.sosfilt(
+                self._sosButter,
+                dataFilt,
                 axis=0,
-                zi=self._zi_butter,
+                zi=self._ziButter,
             )
 
         # Apply Notch filter
-        if self._ba_notch is not None and self._zi_notch is not None:
-            processed_data, self._zi_notch = scipy.signal.lfilter(
-                *self._ba_notch,
-                processed_data,
+        if self._baNotch is not None and self._ziNotch is not None:
+            dataFilt, self._ziNotch = scipy.signal.lfilter(
+                *self._baNotch,
+                dataFilt,
                 axis=0,
-                zi=self._zi_notch,
+                zi=self._ziNotch,
             )
 
-        return processed_data
+        return dataFilt
 
-    def is_enabled(self) -> bool:
+    def isEnabled(self) -> bool:
         """Check if any filter is active."""
-        return (self._sos_butter is not None) or (self._ba_notch is not None)
+        return self._sosButter is not None or self._baNotch is not None
 
 
 class PassthroughFilter(SignalFilter):
@@ -198,23 +198,22 @@ class PassthroughFilter(SignalFilter):
         """Return data unchanged."""
         return data
 
-    def is_enabled(self) -> bool:
+    def isEnabled(self) -> bool:
         """Passthrough filter is never enabled."""
         return False
 
 
-def create_filter(signal_type_info: dict, fs: float, n_ch: int) -> SignalFilter:
+def createFilter(extras: dict, fs: float, nCh: int) -> SignalFilter:
     """
     Factory function to create appropriate filter based on signal type.
 
     Parameters
     ----------
-    signal_type_info : dict
-        Signal type information with:
-        - "type": "time-series" or "ultrasound"
+    extras : dict
+        Dictionary containing a "type" key (either "time-series" or "ultrasound")
     fs : float
         Sampling frequency (measurement rate for ultrasound, actual fs for time-series).
-    n_ch : int
+    nCh : int
         Number of channels.
 
     Returns
@@ -222,12 +221,12 @@ def create_filter(signal_type_info: dict, fs: float, n_ch: int) -> SignalFilter:
     SignalFilter
         Appropriate filter instance.
     """
-    signal_type = signal_type_info.get("type", "time-series")
+    signalType = extras.get("type", "time-series")
 
-    if signal_type == "ultrasound":
+    if signalType == "ultrasound":
         # Ultrasound signals: no preprocessing filtering
         # Filtering happens in plot modes (A-mode, M-mode)
         return PassthroughFilter()
     else:
         # Time-series signals: apply Butterworth/Notch filters
-        return TimeSeriesFilter(fs, n_ch)
+        return TimeSeriesFilter(fs, nCh)

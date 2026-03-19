@@ -26,6 +26,8 @@ from .base import (
     DataSourceWorker,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class UnixSocketConfigWidget(
     DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget
@@ -166,11 +168,12 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
                 f"{self._unixSocketServer.errorString()}."
             )
             self.errorOccurred.emit(errMsg)
-            logging.error(f"DataWorker: {errMsg}")
+            logger.error(errMsg)
             return
 
-        logging.info(
-            f"DataWorker: waiting for Unix socket connection on {self._unixSocketServer.fullServerName()}."
+        logger.info(
+            "Waiting for Unix socket connection on %s",
+            self._unixSocketServer.fullServerName(),
         )
 
     def stopCollecting(self) -> None:
@@ -183,7 +186,9 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
             for c in self._stopSeq:
                 if isinstance(c, (bytes, bytearray)):
                     self._clientSock.write(c)
-                    self._clientSock.waitForBytesWritten(1000)
+                    # Make sure the full command is sent
+                    while self._clientSock.bytesToWrite() > 0:
+                        self._clientSock.waitForBytesWritten(100)
                 elif isinstance(c, float):
                     QThread.msleep(int(c * 1000))
 
@@ -196,7 +201,7 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
         self._unixSocketServer.close()
         self._buffer = QByteArray()
 
-        logging.info("DataWorker: Unix socket communication stopped.")
+        logger.info("Unix socket communication stopped.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
@@ -215,17 +220,19 @@ class UnixSocketDataSourceWorker(DataSourceWorker):
         self._clientSock = self._unixSocketServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
 
-        logging.info("DataWorker: new connection.")
+        logger.info("New connection.")
 
         # Start command
         for c in self._startSeq:
             if isinstance(c, (bytes, bytearray)):
                 self._clientSock.write(c)
-                self._clientSock.waitForBytesWritten(1000)
+                # Make sure the full command is sent
+                while self._clientSock.bytesToWrite() > 0:
+                    self._clientSock.waitForBytesWritten(100)
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
-        logging.info("DataWorker: Unix socket communication started.")
+        logger.info("Unix socket communication started.")
 
         # Set guard flag
         self._guard = True

@@ -10,10 +10,10 @@ Controller for streaming from data sources, preprocessing and saving to file.
 from __future__ import annotations
 
 import datetime
-import logging
 import struct
 import tempfile
 import time
+from pathlib import Path
 from types import MappingProxyType
 
 import numpy as np
@@ -21,7 +21,7 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from .. import data_sources
 from ..utils import DecodeFn, InterfaceModule, SigData
-from .signal_filters import SignalFilter, create_filter
+from .signal_filters import SignalFilter, createFilter
 
 
 class _FileWriterWorker(QObject):
@@ -30,7 +30,7 @@ class _FileWriterWorker(QObject):
 
     Parameters
     ----------
-    filePath : str
+    filePath : Path
         File path.
     sigInfo : dict
         Dictionary containing the signals' information.
@@ -50,7 +50,7 @@ class _FileWriterWorker(QObject):
 
     errorOccurred = Signal(str)
 
-    def __init__(self, filePath: str, sigInfo: dict) -> None:
+    def __init__(self, filePath: Path, sigInfo: dict) -> None:
         super().__init__()
 
         self._filePath = filePath
@@ -71,15 +71,15 @@ class _FileWriterWorker(QObject):
         }
         self._tempData: dict = {}
         self._trigger = None
-        self._trigger_str = None
+        self._triggerStr = None
 
     @property
-    def filePath(self) -> str:
+    def filePath(self) -> Path:
         """str: Property representing the file path."""
         return self._filePath
 
     @filePath.setter
-    def filePath(self, filePath: str) -> None:
+    def filePath(self, filePath: Path) -> None:
         self._filePath = filePath
 
     @property
@@ -88,17 +88,17 @@ class _FileWriterWorker(QObject):
         return self._trigger
 
     @property
-    def trigger_str(self) -> str | None:
+    def triggerStr(self) -> str | None:
         """str or None: Property representing the (optional) trigger, namely the gesture label, saved as string"""
-        return self._trigger_str
+        return self._triggerStr
 
     @trigger.setter
     def trigger(self, trigger: int | None) -> None:
         self._trigger = trigger
 
-    @trigger_str.setter
-    def trigger_str(self, trigger_str: str | None) -> None:
-        self._trigger_str = trigger_str
+    @triggerStr.setter
+    def triggerStr(self, triggerStr: str | None) -> None:
+        self._triggerStr = triggerStr
 
     def openFile(self) -> None:
         """Open the file."""
@@ -116,7 +116,7 @@ class _FileWriterWorker(QObject):
                     "file": tempfile.TemporaryFile(),
                     "nSamp": 0,
                 }
-            if self._trigger_str is not None:
+            if self._triggerStr is not None:
                 self._tempData["trigger_str"] = {
                     "file": tempfile.TemporaryFile(),
                     "nSamp": 0,
@@ -170,7 +170,7 @@ class _FileWriterWorker(QObject):
                 self._tempData["trigger"]["nSamp"] += 1
             # Trigger string (optional) - full string per sample
             if "trigger_str" in self._tempData:
-                s = self._trigger_str if self._trigger_str is not None else ""
+                s = self._triggerStr if self._triggerStr is not None else ""
                 b = s.encode("utf-8")  # or "ascii" if you want strict 1-byte chars
 
                 f = self._tempData["trigger_str"]["file"]
@@ -179,7 +179,6 @@ class _FileWriterWorker(QObject):
                     f.write(b)
 
                 self._tempData["trigger_str"]["nSamp"] += 1
-                logging.info("String trigger")
 
         except OSError:
             self.errorOccurred.emit("Could not open temporary files.")
@@ -192,12 +191,13 @@ class _FileWriterWorker(QObject):
             return
 
         # Add timestamp and extension to filename
-        filePath = (
-            self._filePath
-            + f"_{datetime.datetime.now().replace(microsecond=0)}.bio".replace(
+        fileName = self._filePath.name
+        fileName = (
+            f"{fileName}_{datetime.datetime.now().replace(microsecond=0)}.bio".replace(
                 " ", "_"
             ).replace(":", "-")
         )
+        filePath = self._filePath.parent / fileName
 
         # Dump data to the real file
         try:
@@ -289,7 +289,7 @@ class _FileWriterWorker(QObject):
             self._tempData["trigger"]["file"].close()
             self._tempData["trigger"]["nSamp"] = 0
         # 4. Trigger str (optional)
-        if self._trigger_str is not None:
+        if self._triggerStr is not None:
             self._tempData["trigger_str"]["file"].close()
             self._tempData["trigger_str"]["nSamp"] = 0
 
@@ -338,18 +338,15 @@ class _Preprocessor(QObject):
 
         # Initialize filters for each signal
         for sigName, sigConfig in sigsConfigs.items():
-            # Get signal type information
-            signal_type_info = sigConfig.get("signal_type", {})
-
             # Create appropriate filter
-            signal_filter = create_filter(
-                signal_type_info, sigConfig["fs"], sigConfig["nCh"]
+            signalFilter = createFilter(
+                sigConfig.get("extras", {}), sigConfig["fs"], sigConfig["nCh"]
             )
 
             # Configure the filter
-            signal_filter.configure(sigConfig)
+            signalFilter.configure(sigConfig)
 
-            self._filters[sigName] = signal_filter
+            self._filters[sigName] = signalFilter
 
     def configFilter(self, sigName: str, sigConfig: dict) -> None:
         """
@@ -380,7 +377,7 @@ class _Preprocessor(QObject):
         data : bytes
             New data packet.
         """
-        acq_ts = time.time()
+        acqTs = time.time()
 
         # Decode data
         try:
@@ -400,18 +397,21 @@ class _Preprocessor(QObject):
 
         rawSignals = []
         signals = []
-
         # Process each signal
         for sigName, sigData in dataDec.items():
+            # If current signal has no data, skip
+            if sigData is None:
+                continue
+
             # Store raw data (always unprocessed for file saving)
-            rawSignals.append(SigData(sigName, sigData, acq_ts))
+            rawSignals.append(SigData(sigName, sigData, acqTs))
             dtype = sigData.dtype
 
             # Apply filtering/processing
             try:
-                signal_filter = self._filters[sigName]
-                if signal_filter.is_enabled():
-                    sigData = signal_filter.process(sigData)
+                signalFilter = self._filters[sigName]
+                if signalFilter.isEnabled():
+                    sigData = signalFilter.process(sigData)
             except Exception as e:
                 self.errorOccurred.emit(
                     f"An error occurred during processing of {sigName}: {e}"
@@ -419,7 +419,7 @@ class _Preprocessor(QObject):
                 return
 
             # Store processed data (for visualization and forwarding)
-            signals.append(SigData(sigName, sigData.astype(dtype), acq_ts))
+            signals.append(SigData(sigName, sigData.astype(dtype), acqTs))
 
         # Emit both raw and processed signals
         self.rawSignalsReady.emit(rawSignals)  # → File Writer (raw RF data)
@@ -483,7 +483,7 @@ class StreamingController(QObject):
         self,
         dataSourceWorkerArgs: dict,
         decodeFn: DecodeFn,
-        filePath: str | None,
+        filePath: Path | None,
         sigsConfigs: dict,
         parent: QObject | None = None,
     ) -> None:
@@ -561,7 +561,7 @@ class StreamingController(QObject):
             if k not in ("interfacePath", "interfaceModule", "filePath", "sigsConfigs")
         }
         interfaceModule: InterfaceModule = dataSourceConfig["interfaceModule"]
-        filePath: str | None = dataSourceConfig.get("filePath", None)
+        filePath: Path | None = dataSourceConfig.get("filePath", None)
         dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
@@ -628,17 +628,17 @@ class StreamingController(QObject):
         if self._fileWriterWorker is not None:
             self._fileWriterWorker.trigger = trigger
 
-    def setTriggerStr(self, trigger_str: str | None) -> None:
+    def setTriggerStr(self, triggerStr: str | None) -> None:
         """
         Set the trigger for each file writer worker as a string
 
         Parameters
         ----------
-        trigger_str : str or None
+        triggerStr : str or None
             Trigger value.
         """
         if self._fileWriterWorker is not None:
-            self._fileWriterWorker.trigger_str = trigger_str
+            self._fileWriterWorker.triggerStr = triggerStr
 
     def startStreaming(self) -> None:
         """Start streaming."""
@@ -671,7 +671,7 @@ class StreamingController(QObject):
             self._fileWriterThread.quit()
             self._fileWriterThread.wait()
             self._fileWriterWorker.trigger = None
-            self._fileWriterWorker.trigger_str = None
+            self._fileWriterWorker.triggerStr = None
             self._preprocessor.rawSignalsReady.disconnect(self._fileWriterWorker.write)
 
         # Disconnect Qt Signals
