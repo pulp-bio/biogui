@@ -33,6 +33,8 @@ from .base import (
     DataSourceWorker,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class MicrophoneConfigWidget(
     DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget
@@ -184,9 +186,9 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logging.warning(
-                "DataWorker: setBufferSize not available on this Qt version."
-            )(self._device, self.fmt, self)
+            logger.warning(
+                'The "setBufferSize" method is not available on this Qt version.'
+            )
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:
@@ -203,7 +205,7 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         # Start and hook up the new I/O device
         self._ioDevice = self._audioSource.start()
         self._ioDevice.readyRead.connect(self._collectData)  # type: ignore
-        logging.info("DataWorker: microphone audio collection started.")
+        logger.info("Microphone audio collection started.")
 
     def stopCollecting(self) -> None:
         """Halt audio streaming."""
@@ -222,15 +224,18 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
 
         # Clear any buffered data
         self._buffer.clear()
-        logging.info("DataWorker: microphone audio collection stopped.")
+        logger.info("Microphone audio collection stopped.")
 
     def _collectData(self) -> None:
         """Emit fixed-size packets from the audio buffer."""
         if not self._ioDevice:
             return
-        data = self._ioDevice.readAll()
-        self._buffer.append(data)
-        if self._buffer.size() >= self._packetSize:
+
+        # Accumulate new data
+        self._buffer.append(self._ioDevice.readAll())
+
+        # Emit all data packets in the buffer
+        while self._buffer.size() >= self._packetSize:
             packet = self._buffer.left(self._packetSize)
             self.dataPacketReady.emit(packet.data())
             self._buffer.remove(0, self._packetSize)

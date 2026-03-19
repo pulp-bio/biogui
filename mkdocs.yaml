@@ -1,0 +1,61 @@
+site_name: BioGUI
+repo_url: https://github.com/pulp-bio/biogui
+repo_name: pulp-bio/biogui
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    admonition:
+      note: octicons/tag-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/squirrel-16
+      success: octicons/check-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-circle-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+  icon:
+    repo: fontawesome/brands/github
+  palette: 
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - glightbox
+  
+nav:
+  - Overview: index.md
+  - Structure: structure.md
+  - Getting Started: getting_started.md
+  - Graphical User Interface: graphical_user_interface.md
+  - Modules:
+    - Trigger: modules/trigger.md
+    - Forwarding: modules/forwarding.md
+    - Teleprompter: modules/teleprompter.md
+  - Development:
+    - Custom Interfaces: interfaces.md
+

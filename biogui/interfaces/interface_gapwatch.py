@@ -1,4 +1,4 @@
-# Copyright ETH Zurich - University of Bologna 2026
+# Copyright University of Bologna - ETH Zurich 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -11,9 +11,10 @@ import struct
 
 import numpy as np
 
-BUFF_SIZE = 40
-FS = 2000
-GAIN = 1
+FS = 1000
+GAIN = 6
+TEST_ADC = False
+BUFF_SIZE = FS // 50
 
 FS_MAP = {
     500: 0x06,
@@ -32,11 +33,13 @@ GAIN_MAP = {
     12: 0x60,
 }
 
+CH_ORDER = np.asarray([0, 1, 12, 13, 2, 3, 4, 5, 10, 11, 8, 9, 14, 15, 6, 7])
+
 packetSize: int = 252 * BUFF_SIZE
 """Number of bytes in each package."""
 
 startSeq: list[bytes | float] = [
-    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN], 1]),
+    bytes([0xAA, 3, FS_MAP[FS], GAIN_MAP[GAIN] | (0x05 if TEST_ADC else 0x00), 1]),
     1.0,
     b"=",
 ]
@@ -106,6 +109,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
+
+    # Reorder channels
+    emg = emg[:, CH_ORDER]
 
     # Read battery and packet counter
     battery = np.asarray(

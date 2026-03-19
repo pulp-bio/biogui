@@ -42,7 +42,10 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         Error message.
     """
     with open(filePath) as f:
-        config = json.load(f)
+        try:
+            config = json.load(f)
+        except json.JSONDecodeError as e:
+            return None, f"JSON decode error: {e}"
 
     # Check keys
     providedKeys = set(config.keys())
