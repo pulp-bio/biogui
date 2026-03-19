@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WulpusConfigWidget</class>
+ <widget class="QWidget" name="WulpusConfigWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>601</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Wulpus Configuration</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainVerticalLayout" stretch="0">
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>WULPUS Configuration</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QGroupBox" name="presetGroupBox">
+        <property name="title">
+         <string>Presets</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <layout class="QHBoxLayout" name="presetHorizontalLayout">
+         <item>
+          <widget class="QLabel" name="presetLabel">
+           <property name="text">
+            <string>Configuration Preset:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="presetComboBox">
+           <property name="toolTip">
+            <string>Select a predefined configuration or create a custom one</string>
+           </property>
+           <item>
+            <property name="text">
+             <string>Biceps Exercise</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Waterbath</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Custom</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="saveConfigButton">
+           <property name="toolTip">
+            <string>Save current configuration to a JSON file</string>
+           </property>
+           <property name="text">
+            <string>Save to JSON</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTabWidget" name="configTabWidget">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <widget class="QWidget" name="basicTab">
+         <attribute name="title">
+          <string>Basic Settings</string>
+         </attribute>
+         <layout class="QFormLayout" name="basicFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="dcdcTurnonLabel">
+            <property name="toolTip">
+             <string>Time for DC-DC converter to turn on (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>DC-DC Turn On Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="dcdcTurnonLineEdit">
+            <property name="text">
+             <string>19530</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="measPeriodLabel">
+            <property name="toolTip">
+             <string>Time between acquisitions (655-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>Measurement Period (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="measPeriodLineEdit">
+            <property name="text">
+             <string>25000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="transFreqLabel">
+            <property name="toolTip">
+             <string>Frequency of the transmitter (0-5000000 Hz)</string>
+            </property>
+            <property name="text">
+             <string>Transmitter Frequency (Hz):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="transFreqLineEdit">
+            <property name="text">
+             <string>2250000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="pulseFreqLabel">
+            <property name="toolTip">
+             <string>Frequency of pulses (0-5000000 Hz)</string>
+            </property>
+            <property name="text">
+             <string>Pulse Frequency (Hz):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="pulseFreqLineEdit">
+            <property name="text">
+             <string>2250000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="numPulsesLabel">
+            <property name="toolTip">
+             <string>Number of pulses per acquisition (0-30)</string>
+            </property>
+            <property name="text">
+             <string>Number of Pulses:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="numPulsesLineEdit">
+            <property name="text">
+             <string>2</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="samplingFreqLabel">
+            <property name="toolTip">
+             <string>ADC sampling frequency</string>
+            </property>
+            <property name="text">
+             <string>Sampling Frequency (Hz):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="samplingFreqComboBox">
+            <property name="toolTip">
+             <string>Available sampling frequencies</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="numSamplesLabel">
+            <property name="toolTip">
+             <string>Number of samples per acquisition (0-800)</string>
+            </property>
+            <property name="text">
+             <string>Number of Samples:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLineEdit" name="numSamplesLineEdit">
+            <property name="text">
+             <string>400</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="rxGainLabel">
+            <property name="toolTip">
+             <string>Receiver gain in decibels</string>
+            </property>
+            <property name="text">
+             <string>RX Gain (dB):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="rxGainComboBox">
+            <property name="toolTip">
+             <string>Available RX gain values</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="advancedTab">
+         <attribute name="title">
+          <string>Advanced Timing</string>
+         </attribute>
+         <layout class="QFormLayout" name="advancedFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="startHvmuxrxLabel">
+            <property name="toolTip">
+             <string>Start time for HV multiplexer RX (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>HV-MUX RX Start Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="startHvmuxrxLineEdit">
+            <property name="text">
+             <string>498</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="startPpgLabel">
+            <property name="toolTip">
+             <string>Programmable pulse generator start time (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>PPG Start Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="startPpgLineEdit">
+            <property name="text">
+             <string>500</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="turnonAdcLabel">
+            <property name="toolTip">
+             <string>ADC turn on time (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>ADC Turn On Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="turnonAdcLineEdit">
+            <property name="text">
+             <string>5</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="startPgainbiasLabel">
+            <property name="toolTip">
+             <string>Programmable gain amplifier input bias start time (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>PGA In Bias Start Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="startPgainbiasLineEdit">
+            <property name="text">
+             <string>5</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="startAdcsampleLabel">
+            <property name="toolTip">
+             <string>ADC sampling start time (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>ADC Sampling Start Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="startAdcsampleLineEdit">
+            <property name="text">
+             <string>509</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="restartCaptLabel">
+            <property name="toolTip">
+             <string>Time to restart capture (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>Capture Restart Time (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLineEdit" name="restartCaptLineEdit">
+            <property name="text">
+             <string>3000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="captTimeoutLabel">
+            <property name="toolTip">
+             <string>Timeout for capture (0-65535 µs)</string>
+            </property>
+            <property name="text">
+             <string>Capture Timeout (µs):</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLineEdit" name="captTimeoutLineEdit">
+            <property name="text">
+             <string>3000</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="txRxTab">
+         <attribute name="title">
+          <string>TX/RX Configuration</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="txRxVerticalLayout">
+          <item>
+           <widget class="QLabel" name="txRxInfoLabel">
+            <property name="text">
+             <string>Configure transmitter and receiver channels. Each configuration specifies which channels are active.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="txRxButtonLayout">
+            <item>
+             <widget class="QPushButton" name="addTxRxConfigButton">
+              <property name="text">
+               <string>Add Config</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="removeTxRxConfigButton">
+              <property name="text">
+               <string>Remove Selected</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="clearTxRxConfigButton">
+              <property name="text">
+               <string>Clear All</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="txRxTableWidget">
+            <property name="toolTip">
+             <string>List of TX/RX channel configurations</string>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+            </property>
+            <column>
+             <property name="text">
+              <string>#</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TX Channels</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>RX Channels</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Optimized Switching</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="statusLabel">
+          <property name="text">
+           <string>Status: Ready</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="applyConfigButton">
+          <property name="text">
+           <string>Apply</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

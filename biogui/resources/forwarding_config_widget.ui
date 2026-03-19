@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>453</height>
+    <height>551</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,33 +27,71 @@
        <widget class="QTreeView" name="dataSourceTree"/>
       </item>
       <item>
-       <widget class="QGroupBox" name="windowGroupBox">
+       <widget class="QGroupBox" name="modeGroupBox">
         <property name="title">
-         <string>Window settings</string>
+         <string>Forwarding mode</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignmentFlag::AlignCenter</set>
         </property>
-        <layout class="QFormLayout" name="formLayout1">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label1">
+        <layout class="QVBoxLayout" name="verticalLayout3">
+         <item>
+          <widget class="QRadioButton" name="eagerModeRadioButton">
+           <property name="toolTip">
+            <string>Forward samples as soon as they are acquired</string>
+           </property>
            <property name="text">
-            <string>Window length (in ms):</string>
+            <string>Eager mode</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="winLenTextField"/>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label2">
+         <item>
+          <widget class="QRadioButton" name="windowModeRadioButton">
+           <property name="toolTip">
+            <string>Accumulate samples into windows of specified length </string>
+           </property>
            <property name="text">
-            <string>Window stride (in ms):</string>
+            <string>Window mode</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="winStrideTextField"/>
+         <item>
+          <widget class="QGroupBox" name="windowGroupBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="title">
+            <string>Window settings</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignCenter</set>
+           </property>
+           <layout class="QFormLayout" name="formLayout1">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label1">
+              <property name="text">
+               <string>Window length (ms):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="winLenTextField"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label2">
+              <property name="text">
+               <string>Window stride (ms):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="winStrideTextField"/>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -140,5 +178,22 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>windowModeRadioButton</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>windowGroupBox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

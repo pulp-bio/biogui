@@ -1,20 +1,10 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Controller of pluggable modules.
-
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
@@ -84,6 +74,12 @@ class ModuleController(QObject):
         teleprompterAction.triggered.connect(self._teleprompterActionHandler)
         moduleMenu.addAction(teleprompterAction)
 
+        # 4. Wulpus Config
+        wulpusConfigAction = QAction("Configure Wulpus", self)
+        wulpusConfigAction.setCheckable(True)
+        wulpusConfigAction.triggered.connect(self._wulpusConfigActionHandler)
+        moduleMenu.addAction(wulpusConfigAction)
+
     def _triggerActionHandler(self, checked: bool) -> None:
         """Handler for the "configure triggers" action."""
         if checked:
@@ -113,10 +109,25 @@ class ModuleController(QObject):
     def _teleprompterActionHandler(self, checked: bool) -> None:
         """Handler for the "configure teleprompter" action."""
         if checked:
-            teleprompterModule = modules.TeleprompterController(self._mainController.streamingControllers, parent=self)
+            teleprompterModule = modules.TeleprompterController(
+                self._mainController.streamingControllers, parent=self
+            )
             teleprompterModule.subscribe(self._mainController, self._mainWin)
             self._modules["teleprompter"] = teleprompterModule
         else:
             teleprompterModule = self._modules.pop("teleprompter")
             teleprompterModule.unsubscribe(self._mainController, self._mainWin)
             del teleprompterModule
+
+    def _wulpusConfigActionHandler(self, checked: bool) -> None:
+        """Handler for the "configure Wulpus" action."""
+        if checked:
+            wulpusConfigModule = modules.WulpusConfigController(
+                self._mainController.streamingControllers, parent=self
+            )
+            wulpusConfigModule.subscribe(self._mainController, self._mainWin)
+            self._modules["wulpusConfig"] = wulpusConfigModule
+        else:
+            wulpusConfigModule = self._modules.pop("wulpusConfig")
+            wulpusConfigModule.unsubscribe(self._mainController, self._mainWin)
+            del wulpusConfigModule

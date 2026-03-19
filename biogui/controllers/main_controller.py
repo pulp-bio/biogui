@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from PySide6.QtCore import Qt, QModelIndex, QObject, Signal, Slot
+from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QMessageBox
 

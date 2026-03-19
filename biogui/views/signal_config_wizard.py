@@ -1,20 +1,10 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Wizard for configuring signals.
-
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
@@ -36,6 +26,8 @@ class SignalConfigWizardPage(QWizardPage):
         Sampling frequency.
     nCh : int
         Number of channels.
+    extras : dict
+        Dictionary with extra configuration.
     parent : QWidget or None, default=None
         Parent widget.
 
@@ -50,11 +42,12 @@ class SignalConfigWizardPage(QWizardPage):
         sigName: str,
         fs: float,
         nCh: int,
+        extras: dict,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
-        self._configWidget = SignalConfigWidget(sigName, fs, nCh, parent=parent)
+        self._configWidget = SignalConfigWidget(sigName, fs, nCh, extras, parent=parent)
         layout = QVBoxLayout()
         layout.addWidget(self._configWidget)
         self.setLayout(layout)
@@ -119,16 +112,25 @@ class SignalConfigWizard(QWizard):
         super().__init__(parent)
         self.setWizardStyle(QWizard.ClassicStyle)  # type: ignore
 
+        self.setWindowTitle("Signal Configuration")
+
         # Populate wizard
+        self._sigsConfigs = {}
         for sigName in sigInfo:
+            # Skip hidden signals (e.g., acquisition_number, tx_rx_id) in wizard
+            if sigInfo[sigName].get("hidden", False):
+                # Add default config for hidden signals
+                self._sigsConfigs[sigName] = {
+                    "fs": sigInfo[sigName]["fs"],
+                    "nCh": sigInfo[sigName]["nCh"],
+                }
+                continue
             self.addPage(
                 SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self)
             )
 
         finishButton = self.button(QWizard.FinishButton)  # type: ignore
         finishButton.clicked.connect(self.onFinishedClicked)
-
-        self._sigsConfigs = {}
 
     @property
     def sigsConfigs(self) -> dict:
