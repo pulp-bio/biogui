@@ -10,5 +10,11 @@ This package contains the pluggable modules.
 from .forwarding import ForwardingController
 from .teleprompter import TeleprompterController
 from .trigger import TriggerController
+from .wulpus_config import WulpusConfigController
 
-__all__ = ["ForwardingController", "TriggerController", "TeleprompterController"]
+__all__ = [
+    "ForwardingController",
+    "TriggerController",
+    "TeleprompterController",
+    "WulpusConfigController",
+]

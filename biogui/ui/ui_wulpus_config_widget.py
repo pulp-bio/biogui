@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'wulpus_config_widget.ui'
+## Form generated from reading UI file 'wulpus_config_widgeturMkGh.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.2
+## Created by: Qt User Interface Compiler version 6.10.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,7 +27,12 @@ class Ui_WulpusConfigWidget(object):
         WulpusConfigWidget.resize(601, 700)
         self.mainVerticalLayout = QVBoxLayout(WulpusConfigWidget)
         self.mainVerticalLayout.setObjectName(u"mainVerticalLayout")
-        self.presetGroupBox = QGroupBox(WulpusConfigWidget)
+        self.groupBox = QGroupBox(WulpusConfigWidget)
+        self.groupBox.setObjectName(u"groupBox")
+        self.groupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.presetGroupBox = QGroupBox(self.groupBox)
         self.presetGroupBox.setObjectName(u"presetGroupBox")
         self.presetGroupBox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.presetHorizontalLayout = QHBoxLayout(self.presetGroupBox)
@@ -51,9 +56,9 @@ class Ui_WulpusConfigWidget(object):
         self.presetHorizontalLayout.addWidget(self.saveConfigButton)
 
 
-        self.mainVerticalLayout.addWidget(self.presetGroupBox)
+        self.verticalLayout.addWidget(self.presetGroupBox)
 
-        self.configTabWidget = QTabWidget(WulpusConfigWidget)
+        self.configTabWidget = QTabWidget(self.groupBox)
         self.configTabWidget.setObjectName(u"configTabWidget")
         self.basicTab = QWidget()
         self.basicTab.setObjectName(u"basicTab")
@@ -263,17 +268,30 @@ class Ui_WulpusConfigWidget(object):
 
         self.configTabWidget.addTab(self.txRxTab, "")
 
-        self.mainVerticalLayout.addWidget(self.configTabWidget)
+        self.verticalLayout.addWidget(self.configTabWidget)
 
-        self.statusLabel = QLabel(WulpusConfigWidget)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.statusLabel = QLabel(self.groupBox)
         self.statusLabel.setObjectName(u"statusLabel")
 
-        self.mainVerticalLayout.addWidget(self.statusLabel)
+        self.horizontalLayout.addWidget(self.statusLabel)
+
+        self.applyConfigButton = QPushButton(self.groupBox)
+        self.applyConfigButton.setObjectName(u"applyConfigButton")
+
+        self.horizontalLayout.addWidget(self.applyConfigButton)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout)
+
+
+        self.mainVerticalLayout.addWidget(self.groupBox)
 
 
         self.retranslateUi(WulpusConfigWidget)
 
-        self.configTabWidget.setCurrentIndex(0)
+        self.configTabWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(WulpusConfigWidget)
@@ -281,6 +299,7 @@ class Ui_WulpusConfigWidget(object):
 
     def retranslateUi(self, WulpusConfigWidget):
         WulpusConfigWidget.setWindowTitle(QCoreApplication.translate("WulpusConfigWidget", u"Wulpus Configuration", None))
+        self.groupBox.setTitle(QCoreApplication.translate("WulpusConfigWidget", u"WULPUS Configuration", None))
         self.presetGroupBox.setTitle(QCoreApplication.translate("WulpusConfigWidget", u"Presets", None))
         self.presetLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Configuration Preset:", None))
         self.presetComboBox.setItemText(0, QCoreApplication.translate("WulpusConfigWidget", u"Biceps Exercise", None))
@@ -392,5 +411,6 @@ class Ui_WulpusConfigWidget(object):
 #endif // QT_CONFIG(tooltip)
         self.configTabWidget.setTabText(self.configTabWidget.indexOf(self.txRxTab), QCoreApplication.translate("WulpusConfigWidget", u"TX/RX Configuration", None))
         self.statusLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Status: Ready", None))
+        self.applyConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Apply", None))
     # retranslateUi
 
