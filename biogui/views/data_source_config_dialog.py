@@ -1,42 +1,49 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Dialog to add a new data source.
-
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import os
+from pathlib import Path
 from sys import platform
 
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
-from biogui import data_sources
-from biogui.ui.data_source_config_dialog_ui import Ui_DataSourceConfigDialog
+from biogui import data_sources, paths
+from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule
 
 
-def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
+def _loadInterfacesFromDirectory() -> dict[str, Path]:
+    """
+    Load all interface modules from the interfaces directory.
+
+    Returns
+    -------
+    dict of {str: Path}
+        Dictionary mapping display names to full file paths.
+    """
+    interfaceFiles = {}
+    for filePath in sorted(paths.INTERFACES_DIR.glob("interface_*.py")):
+        displayName = filePath.stem[10:]  # remove 'interface_'
+        interfaceFiles[displayName] = filePath
+
+    return interfaceFiles
+
+
+def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]:
     """
     Load an interface from a Python file.
 
     Parameters
     ----------
-    filePath : str
+    filePath : Path
         Path to Python file.
 
     Returns
@@ -47,7 +54,7 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
         Error message.
     """
     # Remove ".py" extension and get file name
-    moduleName = filePath[:-3].split("/")[-1]
+    moduleName = filePath.stem
 
     # Load module
     spec = importlib.util.spec_from_file_location(moduleName, filePath)
@@ -89,9 +96,30 @@ def _loadInterfaceFromFile(filePath: str) -> tuple[InterfaceModule | None, str]:
     if not isinstance(module.packetSize, int) or module.packetSize <= 0:
         return None, "The packet size must be a positive integer."
 
-    for sigName in module.sigInfo.keys():
+    for sigName, sigData in module.sigInfo.items():
         if sigName in ("acq_ts", "trigger"):
             return None, '"acq_ts" and "trigger" are reserved signal names.'
+
+        # Validate extra arguments
+        if "extras" not in sigData:  # default to time series
+            sigData["extras"] = {"type": "time-series"}
+            continue
+
+        if not isinstance(sigData["extras"], dict):
+            return None, f'Signal "{sigName}": "extras" must be a dictionary.'
+
+        if "type" not in sigData["extras"]:
+            return (
+                None,
+                f'Signal "{sigName}": "extras" dictionary must contain a "type" key.',
+            )
+
+        validTypes = ("ultrasound", "time-series")
+        if sigData["extras"]["type"] not in validTypes:
+            return (
+                None,
+                f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["extras"]["type"]}".',
+            )
 
     return (
         InterfaceModule(
@@ -127,9 +155,12 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
     ----------
     _configWidget : DataSourceConfigWidget
         Widget for data source configuration.
-    _outDirPath : str or None
+    _outDirPath : Path or None
         Path to the output directory.
     """
+
+    # Placeholder text for browsing interfaces
+    _BROWSE_INTERFACE = "Browse..."
 
     def __init__(
         self,
@@ -141,7 +172,14 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.setupUi(self)
 
-        # Create data source configuration widget
+        # Populate combo box with interface modules
+        self._interfaceModules = _loadInterfacesFromDirectory()
+        # Add browse option as last item
+        self.interfaceModuleComboBox.addItems(list(self._interfaceModules.keys()))
+        self.interfaceModuleComboBox.setCurrentIndex(0)
+        self.interfaceModuleComboBox.addItem(self._BROWSE_INTERFACE)
+
+        # Populate combo box with data sources and create configuration widget
         dataSources = list(
             map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
         )
@@ -160,12 +198,15 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
-        self.browseInterfaceModuleButton.clicked.connect(self._browseInterfaceModule)
+        self.interfaceModuleComboBox.activated.connect(self._onInterfaceModuleSelected)
         self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
         self._dataSourceConfig = {}
-        self._outDirPath = None
+        # Set default output directory to ./data/
+        self._outDirPath = Path.cwd() / "data"
+        self._outDirPath.mkdir(exist_ok=True)  # create it if it doesn't exist
+        self.outDirPathLabel.setText(str(self._outDirPath))
 
         # Pre-fill with provided configuration
         if kwargs:
@@ -185,7 +226,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
     def _updateTabOrder(self) -> None:
         """Update the tab order when the data source widget changes."""
-        self.setTabOrder(self.browseInterfaceModuleButton, self.dataSourceComboBox)
+        self.setTabOrder(self.interfaceModuleComboBox, self.dataSourceComboBox)
 
         tabOrderedFields = self._configWidget.getFieldsInTabOrder()
         if not tabOrderedFields:
@@ -197,40 +238,60 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
         self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
-    def _browseInterfaceModule(self) -> None:
+    def _onInterfaceModuleSelected(self, index: int) -> None:
+        """Handle interface module selection from ComboBox."""
+        itemSelected = self.interfaceModuleComboBox.itemText(index)
+        if itemSelected == self._BROWSE_INTERFACE:
+            # Browse interface module in external folder
+            interfacePath = self._browseInterfaceModule()
+            fromBrowsing = True
+        else:
+            # Get interface from combo box
+            interfacePath = self._interfaceModules.get(itemSelected)
+            fromBrowsing = False
+
+        if interfacePath is None:
+            return
+
+        # Load interface module
+        interfaceModule, errMessage = _loadInterfaceFromFile(interfacePath)
+        if interfaceModule is None:
+            QMessageBox.critical(
+                self,
+                "Invalid Python file",
+                errMessage,
+                buttons=QMessageBox.Retry,  # type: ignore
+                defaultButton=QMessageBox.Retry,  # type: ignore
+            )
+            # Reset to placeholder on error
+            self.interfaceModuleComboBox.setCurrentIndex(0)
+            self.interfaceModulePathLabel.setText("")
+            return
+
+        self._dataSourceConfig["interfacePath"] = interfacePath
+        self._dataSourceConfig["interfaceModule"] = interfaceModule
+        if fromBrowsing:
+            self.interfaceModulePathLabel.setText(str(interfacePath))
+
+    def _browseInterfaceModule(self) -> Path | None:
         """Browse files to select the module containing the decode function."""
         interfacePath, _ = QFileDialog.getOpenFileName(
             self,
             "Load Python module containing the decode function",
             filter="*.py",
         )
-        if interfacePath != "":
-            # Load interface module
-            interfaceModule, errMessage = _loadInterfaceFromFile(interfacePath)
-            if interfaceModule is None:
-                QMessageBox.critical(
-                    self,
-                    "Invalid Python file",
-                    errMessage,
-                    buttons=QMessageBox.Retry,  # type: ignore
-                    defaultButton=QMessageBox.Retry,  # type: ignore
-                )
-                return
-            self._dataSourceConfig["interfacePath"] = interfacePath
-            self._dataSourceConfig["interfaceModule"] = interfaceModule
-
-            self.interfaceModulePathLabel.setText(interfacePath)
+        return Path(interfacePath) if interfacePath else None
 
     def _browseOutDir(self) -> None:
         """Browse directory where the data will be saved."""
         outDirPath = QFileDialog.getExistingDirectory(
             self,
             "Select destination directory",
-            os.getcwd(),
+            str(Path.cwd()),
             QFileDialog.ShowDirsOnly,  # type: ignore
         )
         if outDirPath != "":
-            self._outDirPath = outDirPath
+            self._outDirPath = Path(outDirPath)
 
             self.outDirPathLabel.setText(outDirPath)
 
@@ -306,9 +367,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                     defaultButton=QMessageBox.Retry,  # type: ignore
                 )
                 return
-            self._dataSourceConfig["filePath"] = os.path.join(
-                self._outDirPath, outFileName
-            )
+            self._dataSourceConfig["filePath"] = self._outDirPath / outFileName
 
         self.accept()
 
@@ -318,13 +377,21 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         interfacePath = dataSourceConfig["interfacePath"]
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
-        displayText = (
-            interfacePath
-            if len(interfacePath) <= 40
-            else interfacePath[:17] + "..." + interfacePath[-20:]
-        )
-        self.interfaceModulePathLabel.setText(displayText)
-        self.interfaceModulePathLabel.setToolTip(interfacePath)
+
+        if interfacePath.parent == paths.INTERFACES_DIR:
+            # Find and select the interface in the ComboBox
+            interfaceName = interfacePath.name
+            if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):
+                displayName = interfaceName[10:-3]
+                index = self.interfaceModuleComboBox.findText(displayName)
+                if index >= 0:
+                    self.interfaceModuleComboBox.setCurrentIndex(index)
+        else:
+            displayName = self._BROWSE_INTERFACE
+            index = self.interfaceModuleComboBox.findText(displayName)
+            if index >= 0:
+                self.interfaceModuleComboBox.setCurrentIndex(index)
+            self.interfaceModulePathLabel.setText(str(interfacePath))
 
         # 2. Data source-specific config
         self._configWidget.prefill(dataSourceConfig)
@@ -332,15 +399,11 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         # 3. File saving
         if "filePath" in dataSourceConfig:
             self.fileSavingGroupBox.setChecked(True)
-            outDirPath, fileName = os.path.split(dataSourceConfig["filePath"])
-            self._outDirPath = outDirPath
-            # Adjust display text
-            displayText = (
-                outDirPath
-                if len(outDirPath) <= 40
-                else outDirPath[:17] + "..." + outDirPath[-20:]
-            )
-            self.outDirPathLabel.setText(displayText)
+            self._outDirPath = dataSourceConfig["filePath"].parent
+            outDirPath = str(self._outDirPath)
+            fileName = dataSourceConfig["filePath"].name
+
+            self.outDirPathLabel.setText(outDirPath)
             self.outDirPathLabel.setToolTip(outDirPath)
             self.fileNameTextField.setText(fileName)
         else:

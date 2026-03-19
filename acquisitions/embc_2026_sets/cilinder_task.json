@@ -1,0 +1,15 @@
+{
+  "triggers": {
+    "start": "start.png",
+    "front_rotopen": "front_rotopen.png",
+    "front_rotclosed": "front_rotclose.png",
+    "side_rotclosed": "side_rotclose.png",
+    "side_rotopen": "side_rotopen.png"
+  },
+  "nReps": 5,
+  "durationTrigger": 6000,
+  "durationStart": 2000,
+  "durationRest": 1000,
+  "alternating": true,
+  "imageFolder": "acquisitions/embc_2026_sets/imgs"
+}

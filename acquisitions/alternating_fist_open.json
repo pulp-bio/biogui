@@ -1,0 +1,12 @@
+{
+  "triggers": {
+    "fist (power grip)": "fist.png",
+    "open hand": "open_hand.png"
+  },
+  "nReps": 10,
+  "durationTrigger": 5000,
+  "durationStart": 2000,
+  "durationRest": 3000,
+  "alternating": true,
+  "imageFolder": "acquisitions/gestures_images"
+}

@@ -1,0 +1,15 @@
+{
+  "triggers": {
+    "start": "start.png",
+    "front_open": "front_open.png",
+    "front_close": "front_close.png",
+    "side_close": "side_close.png",
+    "side_open": "side_open.png"
+  },
+  "nReps": 5,
+  "durationTrigger": 6000,
+  "durationStart": 2000,
+  "durationRest": 1000,
+  "alternating": true,
+  "imageFolder": "acquisitions/embc_2026_sets/imgs"
+}
