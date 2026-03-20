@@ -43,7 +43,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         Parent widget.
     **kwargs : dict
         Optional keyword arguments, including:
-        - signal_type: Dict with signal configuration
+        - extras: Dict with extra signal configuration
         - ultrasoundMode: "A-mode" or "M-mode" for ultrasound signals
         - dataQueue: Optional pre-existing data queue
         - minRange: Optional minimum Y range
@@ -92,7 +92,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # Store parameters
         self._sig_name = sigName
         self._render_len_ms = renderLenMs
-        self._signal_type = kwargs.get("signal_type", {})
+        self._extras = kwargs.get("extras", {})
 
         # Set appropriate label for sampling rate display
         if self._is_ultrasound():
@@ -143,10 +143,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         BasePlotMode
             The appropriate plot mode instance.
         """
-        signal_type = kwargs.get("signal_type", {})
+        extras = kwargs.get("extras", {})
 
         # Check if this is an ultrasound signal
-        if signal_type.get("type") == "ultrasound":
+        if extras.get("type") == "ultrasound":
             ultrasound_mode = kwargs.get("ultrasoundMode", "A-Mode")
 
             if ultrasound_mode == "M-Mode":
@@ -181,7 +181,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         bool
             True if ultrasound, False otherwise.
         """
-        return self._signal_type.get("type") == "ultrasound"
+        return self._extras.get("type") == "ultrasound"
 
     @property
     def dataQueue(self) -> deque:
@@ -263,9 +263,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         sample_count = self._plot_mode.sample_count
 
         if self._is_ultrasound():
-            num_samples = self._signal_type.get(
-                "num_samples", 397
-            )  # Default for wulpus
+            num_samples = self._extras.get("num_samples", 397)  # Default for wulpus
 
             if num_samples > 0:
                 prf = sample_count / num_samples
