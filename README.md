@@ -62,7 +62,7 @@ Some examples of interface files are provided in the [`interfaces`](https://gith
 The BioGUI provides additional functionalities via the [`modules`](biogui/modules) sub-folder. The main modules are:
 - [trigger](biogui/modules/trigger.py) -- Given a gesture configuration (in JSON), it shows gesture cues to the user and generates a corresponding trigger signal that is appended to the incoming data; useful for screen-guided training
 - [forwarding](biogui/modules/forwarding.py) -- It forwards the incoming data from selected signals to other processes via TCP or Unix sockets; useful to integrate the BioGUI within control applications
-- [wulpus](biogui/modules/wulpus.py)  -- It allows to configure the WULPUS ultrasound probe and to load/store presets (in JSON)
+- [wulpus_config](biogui/modules/wulpus_config.py)  -- It allows to configure the WULPUS ultrasound probe and to load/store presets (in JSON)
 
 ### Utilities
 
@@ -70,7 +70,7 @@ In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, the
 
 ## Applications
 
-As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications/`](applications) folder:
+As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications`](applications) folder:
 - [`bio-bridge`](applications/bio-bridge/README.md) -- BioBridge: real-time ML inference middleware
 - [`motion-lab`](applications/motion-lab/README.md) -- MotionLab: Unity environment for hand control and task evaluation
 
