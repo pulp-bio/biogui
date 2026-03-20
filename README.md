@@ -57,15 +57,22 @@ To enable communication between the GUI and a board, one must provide a Python f
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
 
+### Additional modules
+
+The BioGUI provides additional functionalities via the [`modules`](biogui/modules) sub-folder. The main modules are:
+- [trigger](biogui/modules/trigger.py) -- Given a gesture configuration (in JSON), it shows gesture cues to the user and generates a corresponding trigger signal that is appended to the incoming data; useful for screen-guided training
+- [forwarding](biogui/modules/forwarding.py) -- It forwards the incoming data from selected signals to other processes via TCP or Unix sockets; useful to integrate the BioGUI within control applications
+- [wulpus](biogui/modules/wulpus.py)  -- It allows to configure the WULPUS ultrasound probe and to load/store presets (in JSON)
+
 ### Utilities
 
 In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, there are some utility scripts: the most useful one is [`plot_signal.py`](https://github.com/pulp-bio/biogui/blob/main/utils/plot_signal.py), which shows how to open the `.bio` binary file containing the acquired signals.
 
 ## Applications
 
-This repository contains additional components in the [`applications/`](applications) folder:
-- [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
-- [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
+As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications/`](applications) folder:
+- [`bio-bridge`](applications/bio-bridge/README.md) -- BioBridge: real-time ML inference middleware
+- [`motion-lab`](applications/motion-lab/README.md) -- MotionLab: Unity environment for hand control and task evaluation
 
 To run the full gesture-control pipeline, additional setup is required for BioBridge and MotionLab.
 See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](motion-lab/README.md).
