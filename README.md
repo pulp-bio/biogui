@@ -4,13 +4,13 @@ Modular PySide6 GUI for acquiring and visualizing bio-signals from different sou
 
 ## BioGUI Requirements
 
-- uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/))
+- `uv`: The project uses uv as its package manager. uv will automatically download and manage the required Python version for you (the project is pinned to Python 3.11). To install uv: `pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## BioGUI Setup
 
 To install dependencies, run:
 
-```
+```bash
 uv sync
 ```
 
@@ -18,7 +18,7 @@ uv sync
 
 To install the pre-commit hooks (ruff, black, prettier, license headers), run:
 
-```
+```bash
 uv run pre-commit install
 ```
 
@@ -30,13 +30,13 @@ You can run the application in two ways:
 
 **Option 1:** Run with uv:
 
-```
+```bash
 uv run main.py
 ```
 
 **Option 2:** Activate the virtual environment and run directly:
 
-```
+```bash
 source .venv/bin/activate
 python main.py
 ```
@@ -64,6 +64,7 @@ In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, the
 ## Applications
 
 This repository contains additional components in the [`applications/`](applications) folder:
+
 - [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
 - [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
