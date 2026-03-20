@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 
-type Endpoint = str | tuple[str, int]
+Endpoint = str | tuple[str, int]
 
 
 def parse_endpoint(endpoint: str) -> Endpoint:
@@ -101,9 +101,7 @@ def _sine_chunk(n_samp: int, fs: float, gain: int, phase: float):
 def main():
     # Parse inputs
     if len(sys.argv) != 2:
-        sys.exit(
-            "Usage: python3 generate_dummy_signals.py ADDRESS:PORT | UNIX_SOCKET_PATH"
-        )
+        sys.exit("Usage: python3 generate_dummy_signals.py ADDRESS:PORT | UNIX_SOCKET_PATH")
     endpoint = parse_endpoint(sys.argv[1])
 
     stop_event = None
@@ -147,9 +145,7 @@ def main():
         # Start a thread to listen for the stop command
         sock.settimeout(0.5)
         stop_event = threading.Event()  # Event to stop the transmission
-        listener_thread = threading.Thread(
-            target=_listen_for_stop, args=(sock, stop_event)
-        )
+        listener_thread = threading.Thread(target=_listen_for_stop, args=(sock, stop_event))
         listener_thread.start()
 
         # Start generating signals
