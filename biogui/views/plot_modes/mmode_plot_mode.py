@@ -37,7 +37,7 @@ class MModePlotMode(BasePlotMode):
         Not used in M-mode (uses MMODE_TIME_WINDOW instead).
     **config : dict
         Additional configuration options, including:
-        - signal_type: Dict with ultrasound configuration
+        - extras: Dict with extra signal configuration
         - showRaw: Show raw RF data (only one can be True for M-mode)
         - showFiltered: Show filtered data
         - showEnvelope: Show envelope
@@ -90,11 +90,11 @@ class MModePlotMode(BasePlotMode):
             raise ValueError("M-Mode only supports single channel data")
 
         # Extract ultrasound configuration
-        signal_type = config.get("signal_type", {})
-        self._num_samples = signal_type["num_samples"]
-        self._adc_start_delay = signal_type["adc_start_delay"]
-        self._adc_sampling_freq = signal_type["adc_sampling_freq"]
-        self._meas_period_us = signal_type.get("meas_period")
+        extras = config.get("extras", {})
+        self._num_samples = extras["num_samples"]
+        self._adc_start_delay = extras["adc_start_delay"]
+        self._adc_sampling_freq = extras["adc_sampling_freq"]
+        self._meas_period_us = extras.get("meas_period")
 
         # Initialize data structures
         self._incoming_buffer = deque()
@@ -221,7 +221,9 @@ class MModePlotMode(BasePlotMode):
             processed = self._process_scan_data(scan)
             processed_scans.append(processed[:, 0])  # Remove channel dimension
 
-        processed_scans = np.array(processed_scans).T  # Shape: (num_samples, scans_to_process)
+        processed_scans = np.array(
+            processed_scans
+        ).T  # Shape: (num_samples, scans_to_process)
 
         # Scroll the M-mode buffer to the left by scans_to_process columns
         self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
@@ -272,7 +274,9 @@ class MModePlotMode(BasePlotMode):
         time_s = self.MMODE_TIME_WINDOW * (self._num_samples / self._adc_sampling_freq)
 
         # Set rect: (x, y, width, height) = (0, min_depth, time, depth_range)
-        self._image_item.setRect(pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm))
+        self._image_item.setRect(
+            pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm)
+        )
 
     def _calculate_distance_axis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display in millimeters."""

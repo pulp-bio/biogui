@@ -658,7 +658,7 @@ class WulpusConfigController(QObject):
             new_sigInfo[signal_name] = {
                 "fs": samples_per_second,
                 "nCh": 1,
-                "signal_type": {
+                "extras": {
                     "type": "ultrasound",
                     "config_id": config_id,
                     "rx_channel": rx_channel,
@@ -727,15 +727,15 @@ class WulpusConfigController(QObject):
                             new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
                             new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
                             new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
-                            new_sigsConfigs[sig_name]["signal_type"] = sig_info.get(
-                                "signal_type", {}
+                            new_sigsConfigs[sig_name]["extras"] = sig_info.get(
+                                "extras", {}
                             )
                         else:
                             # Create new default config for new signal
                             new_sigsConfigs[sig_name] = {
                                 "fs": sig_info["fs"],
                                 "nCh": sig_info["nCh"],
-                                "signal_type": sig_info.get("signal_type", {}),
+                                "extras": sig_info.get("extras", {}),
                                 "chSpacing": 1.0,
                             }
 

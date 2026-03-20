@@ -36,7 +36,7 @@ class AModePlotMode(BasePlotMode):
         Length of the window in the plot (in ms) - not used for A-mode.
     **config : dict
         Additional configuration options, including:
-        - signal_type: Dict with ultrasound configuration
+        - extras: Dict with extra signal configuration
         - dataQueue: Optional pre-existing data queue
         - minRange: Optional minimum Y range
         - maxRange: Optional maximum Y range
@@ -92,11 +92,11 @@ class AModePlotMode(BasePlotMode):
         super().__init__(fs, nCh, chSpacing, **config)
 
         # Extract ultrasound configuration
-        signal_type = config.get("signal_type", {})
-        self._num_samples = signal_type["num_samples"]
-        self._adc_start_delay = signal_type["adc_start_delay"]
-        self._adc_sampling_freq = signal_type["adc_sampling_freq"]
-        self._meas_period_us = signal_type.get("meas_period")
+        extras = config.get("extras", {})
+        self._num_samples = extras["num_samples"]
+        self._adc_start_delay = extras["adc_start_delay"]
+        self._adc_sampling_freq = extras["adc_sampling_freq"]
+        self._meas_period_us = extras.get("meas_period")
 
         # Ultrasound display configuration
         self._show_raw = config.get("showRaw", True)
@@ -187,7 +187,9 @@ class AModePlotMode(BasePlotMode):
             if self._show_filtered or self._show_envelope
             else None
         )
-        envelope_data = self._get_envelope(filtered_data) if self._show_envelope else None
+        envelope_data = (
+            self._get_envelope(filtered_data) if self._show_envelope else None
+        )
 
         for i in range(self.n_ch):
             color = lut[i]
@@ -195,7 +197,9 @@ class AModePlotMode(BasePlotMode):
 
             # Raw data plot (blue)
             if self._show_raw:
-                pen = pg.mkPen(color=color, width=1, style=pg.QtCore.Qt.PenStyle.SolidLine)
+                pen = pg.mkPen(
+                    color=color, width=1, style=pg.QtCore.Qt.PenStyle.SolidLine
+                )
                 raw_plot = graph_widget.plot(
                     depth_axis,
                     latest_samples[:, i] + vertical_offset,
@@ -223,7 +227,9 @@ class AModePlotMode(BasePlotMode):
 
             # Envelope plot (red)
             if self._show_envelope:
-                pen = pg.mkPen(color="r", width=2, style=pg.QtCore.Qt.PenStyle.SolidLine)
+                pen = pg.mkPen(
+                    color="r", width=2, style=pg.QtCore.Qt.PenStyle.SolidLine
+                )
                 env_plot = graph_widget.plot(
                     depth_axis,
                     envelope_data[:, i] + vertical_offset,
