@@ -51,7 +51,7 @@ To enable communication between the GUI and a board, one must provide a Python f
 - `sigInfo`: dictionary containing, for each signal, a sub-dictionary with:
   - `fs`: sampling rate (float)
   - `nCh`: number of channels (int)
-  - `signal_type`: dictionary with signal type information (required), must contain at least:
+  - `extras`: dictionary with signal metadata (required), must contain at least:
     - `type`: signal type, either `"ultrasound"` or `"time-series"` (string)
 - `decodeFn`: function that decodes each packet of bytes read from the board into the specified signals.
 
@@ -95,7 +95,7 @@ of University of Bologna (Italy), and at the [Digital Circuits and Systems (IIS)
 
 If you would like to reference the project, please cite the following paper:
 
-```
+```bibtex
 @ARTICLE{10552147,
   author={Orlandi, Mattia and Rapa, Pierangelo Maria and Zanghieri, Marcello and Frey, Sebastian and Kartsch, Victor and Benini, Luca and Benatti, Simone},
   journal={IEEE Transactions on Biomedical Circuits and Systems},
