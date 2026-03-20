@@ -81,6 +81,10 @@ See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](
 2. Start acquisition in BioGUI with forwarding enabled — data is displayed and forwarded to BioBridge.
 3. Press Play in Unity — receives hand pose data from BioBridge and starts rendering.
 
+**Live Demonstration**
+
+https://github.com/user-attachments/assets/95f8e462-f49c-4d70-b516-1d78edc6c5a5
+
 ## Authors
 
 This work was realized mainly at the [Energy-Efficient Embedded Systems Laboratory (EEES Lab)](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/eees)
