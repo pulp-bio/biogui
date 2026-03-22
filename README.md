@@ -51,11 +51,18 @@ To enable communication between the GUI and a board, one must provide a Python f
 - `sigInfo`: dictionary containing, for each signal, a sub-dictionary with:
   - `fs`: sampling rate (float)
   - `nCh`: number of channels (int)
-  - `extras`: dictionary with signal metadata (required), must contain at least:
+  - `extras`: dictionary containing additional configurations, must contain at least:
     - `type`: signal type, either `"ultrasound"` or `"time-series"` (string)
 - `decodeFn`: function that decodes each packet of bytes read from the board into the specified signals.
 
 Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
+
+### Additional modules
+
+The BioGUI provides additional functionalities via the [`modules`](biogui/modules) sub-folder. The main modules are:
+- [trigger](biogui/modules/trigger.py) — Given a gesture configuration (in JSON), it shows gesture cues to the user and generates a corresponding trigger signal that is appended to the incoming data; useful for screen-guided training
+- [forwarding](biogui/modules/forwarding.py) — It forwards the incoming data from selected signals to other processes via TCP or Unix sockets; useful to integrate the BioGUI within control applications
+- [wulpus_config](biogui/modules/wulpus_config.py) — It allows to configure the WULPUS ultrasound probe and to load/store presets (in JSON)
 
 ### Utilities
 
@@ -63,8 +70,7 @@ In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, the
 
 ## Applications
 
-This repository contains additional components in the [`applications/`](applications) folder:
-
+As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications`](applications) folder:
 - [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
 - [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
@@ -81,6 +87,10 @@ See [`bio-bridge/README.md`](bio-bridge/README.md) and [`motion-lab/README.md`](
 1. Run BioBridge — waits for an incoming BioGUI connection.
 2. Start acquisition in BioGUI with forwarding enabled — data is displayed and forwarded to BioBridge.
 3. Press Play in Unity — receives hand pose data from BioBridge and starts rendering.
+
+**Live Demonstration**
+
+https://github.com/user-attachments/assets/95f8e462-f49c-4d70-b516-1d78edc6c5a5
 
 ## Authors
 
