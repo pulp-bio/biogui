@@ -4,13 +4,13 @@ Modular PySide6 GUI for acquiring and visualizing bio-signals from different sou
 
 ## BioGUI Requirements
 
-- uv (`pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/))
+- `uv`: The project uses uv as its package manager. uv will automatically download and manage the required Python version for you (the project is pinned to Python 3.11). To install uv: `pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## BioGUI Setup
 
 To install dependencies, run:
 
-```
+```bash
 uv sync
 ```
 
@@ -18,7 +18,7 @@ uv sync
 
 To install the pre-commit hooks (ruff, black, prettier, license headers), run:
 
-```
+```bash
 uv run pre-commit install
 ```
 
@@ -30,13 +30,13 @@ You can run the application in two ways:
 
 **Option 1:** Run with uv:
 
-```
+```bash
 uv run main.py
 ```
 
 **Option 2:** Activate the virtual environment and run directly:
 
-```
+```bash
 source .venv/bin/activate
 python main.py
 ```
@@ -105,7 +105,7 @@ of University of Bologna (Italy), and at the [Digital Circuits and Systems (IIS)
 
 If you would like to reference the project, please cite the following paper:
 
-```
+```bibtex
 @ARTICLE{10552147,
   author={Orlandi, Mattia and Rapa, Pierangelo Maria and Zanghieri, Marcello and Frey, Sebastian and Kartsch, Victor and Benini, Luca and Benatti, Simone},
   journal={IEEE Transactions on Biomedical Circuits and Systems},
