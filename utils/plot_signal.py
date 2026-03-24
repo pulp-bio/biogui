@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 
 def read_bio_file(file_path: str) -> dict:
     """
-    Read a .bio file and extract all signals, timestamps, and triggers.
+    Read a .bio file and extract all signals, acq_tss, and triggers.
     """
     dtypeMap = {
         "?": np.dtype("bool"),
@@ -55,15 +55,15 @@ def read_bio_file(file_path: str) -> dict:
         is_trigger = struct.unpack("<?", f.read(1))[0]
         is_trigger_str = struct.unpack("<?", f.read(1))[0]
 
-        # 1. Timestamp
+        # 1. Acquisition timestamp
         ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(
             n_samp_base, 1
         )
-        signals["timestamp"] = {"data": ts, "fs": fs_base}
+        signals["acq_ts"] = {"data": ts, "fs": fs_base}
 
         # 2. Signals data
         for sig_name, sig_data in signals.items():
-            if sig_name == "timestamp":
+            if sig_name == "acq_ts":
                 continue
 
             n_samp = sig_data.pop("n_samp")
@@ -81,10 +81,8 @@ def read_bio_file(file_path: str) -> dict:
             trigger = np.frombuffer(
                 f.read(itemsize * n_samp_base), dtype=np.uint32
             ).reshape(n_samp_base, 1)
-            trigger = np.frombuffer(f.read(), dtype=np.uint32).reshape(n_samp_base, 1)
             signals["trigger"] = {"data": trigger, "fs": fs_base}
             # 4. Trigger string (len-prefixed UTF-8 per sample)
-
             if is_trigger_str:
                 trigger_str = []
                 for _ in range(n_samp_base):
@@ -186,7 +184,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
         if sig_name not in [
-            "timestamp",
+            "acq_ts",
             "trigger",
             "imu",
             "acquisition_number",
@@ -200,7 +198,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
 
     for sig_name, sig_data in signals.items():
         if sig_name in [
-            "timestamp",
+            "acq_ts",
             "trigger",
             "imu",
             "acquisition_number",

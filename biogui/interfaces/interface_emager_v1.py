@@ -52,11 +52,21 @@ def _get_channel_map(version: str = "1.0"):
 
 def reorder(data, mask, match_result):
     """
-    Looks for mask/template matching in data array and reorders
-    :param data: (numpy array) - 1D data input
-    :param mask: (numpy array) - 1D mask to be matched
-    :param match_result: (int) - Expected result of mask-data convolution matching
-    :return: (numpy array) - Reordered data array
+    Looks for mask/template matching in data array and returns offset
+
+    Parameters
+    ----------
+    data : numpy array
+        1D data input.
+    mask : numpy array
+        1D mask to be matched.
+    match_result : int
+        Expected result of mask-data convolution matching.
+
+    Returns
+    -------
+    int or None
+        Offset if found, None otherwise.
     """
     number_of_packet = int(len(data) / 128)
     roll_data = []
@@ -111,6 +121,6 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray | None]:
         emg.append(samples[np.newaxis])
 
     emg = np.concatenate(emg)
-    emg = emg.astype(np.float32)
+    emg = emg.astype(np.float32) * 0.000195  # mV
 
     return {"emg": emg}
