@@ -162,17 +162,17 @@ class _FileWriterWorker(QObject):
                     return
 
             # 3. Trigger (optional)
+            # 3.1. Trigger integer id
             if "trigger" in self._tempData:
                 self._tempData["trigger"]["file"].write(
                     struct.pack("<I", self._trigger if self._trigger is not None else 0)
                 )
 
                 self._tempData["trigger"]["nSamp"] += 1
-            # Trigger string (optional) - full string per sample
+            # 3.2. Trigger string label
             if "trigger_str" in self._tempData:
                 s = self._triggerStr if self._triggerStr is not None else ""
                 b = s.encode("utf-8")  # or "ascii" if you want strict 1-byte chars
-
                 f = self._tempData["trigger_str"]["file"]
                 f.write(struct.pack("<I", len(b)))  # uint32 length
                 if b:
@@ -248,12 +248,12 @@ class _FileWriterWorker(QObject):
                     self._tempData[sigName]["file"].seek(0)
                     f.write(self._tempData[sigName]["file"].read())
 
-                # 3
-                # 3.1 Trigger (optional, int)
+                # 3. Trigger (optional)
+                # 3.1 Trigger integer id
                 if "trigger" in self._tempData:
                     self._tempData["trigger"]["file"].seek(0)
                     f.write(self._tempData["trigger"]["file"].read())
-                # 3.2 Trigger_str (optional, str)
+                # 3.2 Trigger string label
                 if "trigger_str" in self._tempData:
                     self._tempData["trigger_str"]["file"].seek(0)
                     f.write(self._tempData["trigger_str"]["file"].read())
