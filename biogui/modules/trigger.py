@@ -13,6 +13,7 @@ import json
 import logging
 import math
 import os
+import random
 from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
@@ -56,9 +57,10 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         "durationStart",
         "durationRest",
         "imageFolder",
-        "alternating",  # Optional
+        "alternating",  # optional
+        "shuffle",  # optional
     }
-    requiredKeys = validKeys - {"alternating"}
+    requiredKeys = validKeys - {"alternating", "shuffle"}
 
     if not requiredKeys.issubset(providedKeys):
         return None, "Required keys are missing."
@@ -171,8 +173,8 @@ class _TriggerWidget(QWidget):
             img = QPixmap(fullPath).scaled(
                 self.width(),
                 self.height(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation,
+                Qt.KeepAspectRatio,  # type: ignore
+                Qt.SmoothTransformation,  # type: ignore
             )
             # Center the image
             x = (self.width() - img.width()) // 2
@@ -200,8 +202,8 @@ class _TriggerWidget(QWidget):
                     painter.setFont(QFont("Arial", 48))
                 painter.drawText(
                     pixmap.rect(),
-                    Qt.AlignCenter,
-                    mainText.upper().replace(" ", "\n"),  # type: ignore
+                    Qt.AlignCenter,  # type: ignore
+                    mainText.upper().replace(" ", "\n"),
                 )
 
         painter.end()
@@ -354,6 +356,29 @@ class TriggerController(QObject):
         if self._restFlag:
             # Check rest duration
             restMs = self._confWidget.config["durationRest"]
+            # Compute initial seconds for countdown (round up)
+            self._restCounter = math.ceil(restMs / 1000)
+            # Determine upcoming stimulus label
+            if self._triggerCounter < len(self._triggerLabels):
+                nextLabel = self._triggerLabels[self._triggerCounter]
+                self._upcomingLabel = nextLabel
+            else:
+                self._upcomingLabel = ""
+            # Draw countdown with upcoming label
+            self._triggerWidget.renderImage(
+                f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
+            )
+            # Force triggers to zero during rest
+            for streamingController in self._streamingControllers.values():
+                streamingController.setTrigger(0)
+            logging.info(
+                f"Rest started: upcoming='{self._upcomingLabel}' \
+                countdown={self._restCounter}s (durationRest={restMs}ms)."
+            )
+            # Schedule end of rest after exactly restMs
+            QTimer.singleShot(restMs, self._endRest)
+            # Begin per-second countdown updates
+            self._countdownTimer.start()
 
             # Skip rest phase entirely if durationRest is 0 (continuous mode)
             if restMs == 0:
@@ -452,7 +477,7 @@ class TriggerController(QObject):
         self._restCounter -= 1
         if self._restCounter > 0:
             self._triggerWidget.renderImage(
-                self._upcomingLabel, "", str(self._restCounter)
+                f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
             )
             logging.info(
                 f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
@@ -469,15 +494,38 @@ class TriggerController(QObject):
         self._updateTriggerAndImage()
 
     def _startTriggerGen(self) -> None:
-        """Begin the whole trigger sequence (called once when streaming starts)."""
         if not self._confWidget.config:
             return
 
-        # Initialize the trigger to zero for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
             streamingController.setTriggerStr("init")
 
+        self._triggerIds = {}
+        self._triggerLabels = []
+        self._triggerCounter = 0
+
+        trigger_keys = list(self._confWidget.config["triggers"].keys())
+
+        # IDs stay deterministic (based on JSON order)
+        for i, k in enumerate(trigger_keys):
+            self._triggerIds[k] = i + 1
+
+        # Build repeated labels
+        n_reps = self._confWidget.config["nReps"]
+        labels = []
+        for k in trigger_keys:
+            labels.extend([k] * n_reps)
+
+        # Shuffle if enabled
+        if self._confWidget.config.get("shuffle", False):
+            random.shuffle(labels)
+
+        # Append stop marker at the end
+        labels.append("last_stop")
+        self._triggerLabels = labels
+
+        self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
         # Build trigger IDs
         trigger_names = list(self._confWidget.config["triggers"].keys())
         for i, k in enumerate(trigger_names):
@@ -507,7 +555,6 @@ class TriggerController(QObject):
         self._triggerWidget.renderImage("start", "")
         self._triggerWidget.show()
 
-        # Wait for durationStart before showing the first rest phase (with upcoming gesture)
         self._timer.start(self._confWidget.config["durationStart"])
 
     def _stopTriggerGen(self) -> None:
