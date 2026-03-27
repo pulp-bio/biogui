@@ -1,19 +1,10 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the microphone data source.
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
@@ -24,22 +15,25 @@ from PySide6.QtCore import QByteArray, QIODevice
 from PySide6.QtGui import QIntValidator
 from PySide6.QtMultimedia import (
     QAudio,
+    QAudioDevice,
     QAudioFormat,
     QAudioSource,
-    QAudioDevice,
     QMediaDevices,
 )
 from PySide6.QtWidgets import QWidget
 
-from ..ui.microphone_data_source_config_widget_ui import (
+from biogui.ui.ui_microphone_data_source_config_widget import (
     Ui_MicrophoneDataSourceConfigWidget,
 )
+
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
     DataSourceType,
     DataSourceWorker,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class MicrophoneConfigWidget(
@@ -192,9 +186,9 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logging.warning(
-                "DataWorker: setBufferSize not available on this Qt version."
-            )(self._device, self.fmt, self)
+            logger.warning(
+                'The "setBufferSize" method is not available on this Qt version.'
+            )
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:
@@ -211,7 +205,7 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         # Start and hook up the new I/O device
         self._ioDevice = self._audioSource.start()
         self._ioDevice.readyRead.connect(self._collectData)  # type: ignore
-        logging.info("DataWorker: microphone audio collection started.")
+        logger.info("Microphone audio collection started.")
 
     def stopCollecting(self) -> None:
         """Halt audio streaming."""
@@ -230,7 +224,7 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
 
         # Clear any buffered data
         self._buffer.clear()
-        logging.info("DataWorker: microphone audio collection stopped.")
+        logger.info("Microphone audio collection stopped.")
 
     def _collectData(self) -> None:
         """Emit fixed-size packets from the audio buffer."""

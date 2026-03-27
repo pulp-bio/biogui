@@ -1,20 +1,10 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains controller and widgets to configure forwarding.
-
-
-Copyright 2025 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
@@ -27,14 +17,22 @@ from sys import platform
 from types import MappingProxyType
 
 import numpy as np
-from PySide6.QtCore import Qt, QLocale, QObject, QThread, Signal
-from PySide6.QtGui import QIntValidator, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QLocale, QObject, Qt, QThread, Signal, Slot
+from PySide6.QtGui import (
+    QDoubleValidator,
+    QIntValidator,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from biogui.controllers import MainController
-from biogui.ui.forwarding_config_widget_ui import Ui_ForwardingConfigWidget
-from biogui.utils import SigData, Slot
+from biogui.ui.ui_forwarding_config_widget import Ui_ForwardingConfigWidget
+from biogui.utils import SigData
 from biogui.views import MainWindow
+
+# Create logger for this module
+logger = logging.getLogger(__name__)
 
 
 def getCheckedSignals(dataSourceModel: QStandardItemModel) -> dict[str, list[str]]:
@@ -78,6 +76,8 @@ class _ForwardingWorker(QObject):
         Instance of _Socket.
     _buffers : dict
         Dictionary containing one buffer per signal.
+    _connected : bool
+        Whether the worker is connected to the server.
 
     Class attributes
     ----------------
@@ -160,17 +160,19 @@ class _ForwardingWorker(QObject):
             return
 
         # Get data source ID
-        dataSourceId = str(self.sender())
+        curDataSourceId = str(self.sender())
 
         # Fill buffer
         for sigData in dataPacket:
-            if sigData.sigName not in self._buffers[dataSourceId]:
+            if sigData.sigName not in self._buffers[curDataSourceId]:
                 continue
-            for samples in sigData.data:
-                self._buffers[dataSourceId][sigData.sigName]["queue"].append(samples)
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
+                sigData.data
+            )
 
-        # Check if all buffers are full
+        # Exhaustively send data until some buffers are empty
         while True:
+            # Check if all buffers are full
             bufferFilled = all(
                 len(sigBuffers["queue"]) >= sigBuffers["winLen"]
                 for dataSourceBuffers in self._buffers.values()
@@ -180,8 +182,14 @@ class _ForwardingWorker(QObject):
                 break
 
             data = bytearray()
-            for dataSourceBuffers in self._buffers.values():
-                for sigBuffers in dataSourceBuffers.values():
+            for dataSourceId in sorted(
+                self._buffers
+            ):  # iterate over data sources in alphabetical order
+                dataSourceBuffers = self._buffers[dataSourceId]
+                for sigName in sorted(
+                    dataSourceBuffers
+                ):  # iterate over signals in alphabetical order
+                    sigBuffers = dataSourceBuffers[sigName]
                     queue = sigBuffers["queue"]
                     winLen = sigBuffers["winLen"]
                     stepLen = sigBuffers["stepLen"]
@@ -194,6 +202,7 @@ class _ForwardingWorker(QObject):
     def reset(self) -> None:
         """Reset the worker."""
         self._buffers = {}
+        self._connected = False
 
         # Disconnect socket
         if self._socket is not None:
@@ -211,7 +220,7 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
 
         # Validation rules
         lo = QLocale()
-        winValidator = QIntValidator(bottom=1, top=10000)
+        winValidator = QDoubleValidator(bottom=0.001, top=100000.0, decimals=3)
         self.winLenTextField.setValidator(winValidator)
         self.winStrideTextField.setValidator(winValidator)
         minPort, maxPort = 1024, 49151
@@ -248,13 +257,17 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         # Read and validate configuration
         config = {}
 
-        # 1. Window settings
-        if not self.winLenTextField.hasAcceptableInput():
-            return None, 'The "Window length" field is invalid.'
-        config["winLenS"] = lo.toFloat(self.winLenTextField.text())[0] / 1000
-        if not self.winStrideTextField.hasAcceptableInput():
-            return None, 'The "Window stride" field is invalid.'
-        config["winStrideS"] = lo.toFloat(self.winStrideTextField.text())[0] / 1000
+        # 1. Forwarding mode and window settings
+        if self.eagerModeRadioButton.isChecked():  # eager mode
+            config["winLenS"] = -1
+            config["winStrideS"] = -1
+        else:  # window mode
+            if not self.winLenTextField.hasAcceptableInput():
+                return None, 'The "Window length" field is invalid.'
+            config["winLenS"] = lo.toFloat(self.winLenTextField.text())[0] / 1000
+            if not self.winStrideTextField.hasAcceptableInput():
+                return None, 'The "Window stride" field is invalid.'
+            config["winStrideS"] = lo.toFloat(self.winStrideTextField.text())[0] / 1000
 
         # 2. Socket settings
         if self.socketTypeComboBox.currentText() == "TCP":
@@ -337,7 +350,7 @@ class ForwardingController(QObject):
         # Error handling
         self._forwardingWorker.errorOccurred.connect(self._handleErrors)
         self._forwardingWorker.errorOccurred.connect(
-            lambda: logging.error("ForwardingWorker: cannot connect to server.")
+            lambda: logger.error("ForwardingWorker: cannot connect to server.")
         )
 
         # Setup UI data source tree
@@ -409,11 +422,12 @@ class ForwardingController(QObject):
             dataSourceNode.setEditable(False)
             self.dataSourceModel.appendRow(dataSourceNode)
 
-            for sigName in streamingController.sigInfo:
+            # Sort signals alphabetically for consistent display
+            for sigName in sorted(streamingController.sigInfo.keys()):
                 sigNode = QStandardItem(sigName)
                 sigNode.setEditable(False)
                 sigNode.setFlags(sigNode.flags() | Qt.ItemIsUserCheckable)  # type: ignore
-                sigNode.setData(Qt.Unchecked, Qt.CheckStateRole)  # type: ignore
+                sigNode.setData(Qt.Checked, Qt.CheckStateRole)  # type: ignore
                 dataSourceNode.appendRow(sigNode)
 
         self._confWidget.dataSourceTree.expandAll()
@@ -439,8 +453,8 @@ class ForwardingController(QObject):
             streamingController = self._streamingControllers[dataSourceId]
             for sigName in sigNames:
                 fs = streamingController.sigInfo[sigName]["fs"]
-                winLen = int(round(winLenS * fs))
-                stepLen = int(round(winStrideS * fs))
+                winLen = int(round(winLenS * fs)) if winLenS > 0 else 1
+                stepLen = int(round(winStrideS * fs)) if winStrideS > 0 else 1
                 buffersConfig[dataSourceId][sigName] = {
                     "winLen": winLen,
                     "stepLen": stepLen,

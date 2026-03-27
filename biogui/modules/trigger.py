@@ -1,28 +1,19 @@
+# Copyright ETH Zurich - University of Bologna 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains controller and widgets for trigger configuration.
-
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import math
+import os
+import random
 from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
@@ -30,10 +21,9 @@ from PySide6.QtGui import QCloseEvent, QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QFileDialog, QLabel, QMessageBox, QWidget
 
 from biogui.controllers import MainController
-from biogui.ui.trigger_config_widget_ui import Ui_TriggerConfigWidget
+from biogui.ui.ui_trigger_config_widget import Ui_TriggerConfigWidget
 from biogui.utils import detectTheme
 from biogui.views import MainWindow
-import random
 
 
 def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
@@ -67,10 +57,15 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         "durationStart",
         "durationRest",
         "imageFolder",
-        "shuffle"
+        "alternating",  # optional
+        "shuffle",  # optional
     }
-    if providedKeys != validKeys:
-        return None, "The provided keys are not valid."
+    requiredKeys = validKeys - {"alternating", "shuffle"}
+
+    if not requiredKeys.issubset(providedKeys):
+        return None, "Required keys are missing."
+    if not providedKeys.issubset(validKeys):
+        return None, "Invalid keys provided."
 
     # Check values
     if not isinstance(config["nReps"], int) or config["nReps"] <= 0:
@@ -81,6 +76,11 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         return None, "The duration of the start period must be a non-negative int."
     if not isinstance(config["durationRest"], int) or config["durationRest"] < 0:
         return None, "The duration of the rest period must be a non-negative int."
+
+    # Validate alternating if provided
+    if "alternating" in config:
+        if not isinstance(config["alternating"], bool):
+            return None, "alternating must be true or false."
 
     # Check paths
     if not os.path.isdir(config["imageFolder"]):
@@ -118,12 +118,16 @@ class _TriggerWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle("Trigger Viewer")
-        self.resize(480, 480)
+        self.resize(600, 600)
 
         self._label = QLabel(self)
         self._qColor = QColor("black" if detectTheme() == "light" else "white")
 
         self._imageFolder = ""
+        # Store last render parameters for re-rendering on resize
+        self._lastMainText = ""
+        self._lastImagePath = ""
+        self._lastSubText = ""
 
     @property
     def imageFolder(self) -> str:
@@ -151,6 +155,11 @@ class _TriggerWidget(QWidget):
         subText : str
             If provided (during rest), the countdown number as a string.
         """
+        # Store parameters for potential re-render
+        self._lastMainText = mainText
+        self._lastImagePath = imagePath
+        self._lastSubText = subText
+
         pixmap = QPixmap(self.width(), self.height())
         pixmap.fill(Qt.transparent)  # type: ignore
 
@@ -159,10 +168,19 @@ class _TriggerWidget(QWidget):
         painter.setPen(self._qColor)
 
         if imagePath:
-            # Display the image file scaled to widget size
+            # Display the image file scaled to widget size, preserving aspect ratio
             fullPath = os.path.join(self._imageFolder, imagePath)
-            img = QPixmap(fullPath).scaled(self.width(), self.height())
-            painter.drawPixmap(0, 0, img)
+            img = QPixmap(fullPath).scaled(
+                self.width(),
+                self.height(),
+                Qt.KeepAspectRatio,  # type: ignore
+                Qt.SmoothTransformation,  # type: ignore
+            )
+            # Center the image
+            x = (self.width() - img.width()) // 2
+            y = (self.height() - img.height()) // 2
+            painter.drawPixmap(x, y, img)
+
         else:
             if subText:
                 # Rest period: draw upcoming label and countdown
@@ -183,11 +201,20 @@ class _TriggerWidget(QWidget):
                 except ValueError:
                     painter.setFont(QFont("Arial", 48))
                 painter.drawText(
-                    pixmap.rect(), Qt.AlignCenter, mainText.upper().replace(" ", "\n")  # type: ignore
+                    pixmap.rect(),
+                    Qt.AlignCenter,  # type: ignore
+                    mainText.upper().replace(" ", "\n"),
                 )
 
         painter.end()
         self._label.setPixmap(pixmap)
+
+    def resizeEvent(self, event) -> None:
+        """Re-render when window is resized."""
+        super().resizeEvent(event)
+        self._label.resize(self.size())
+        if self._lastMainText:  # Only if we've rendered something
+            self.renderImage(self._lastMainText, self._lastImagePath, self._lastSubText)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.widgetClosed.emit()
@@ -327,7 +354,7 @@ class TriggerController(QObject):
             return
 
         if self._restFlag:
-            # Start a new rest interval
+            # Check rest duration
             restMs = self._confWidget.config["durationRest"]
             # Compute initial seconds for countdown (round up)
             self._restCounter = math.ceil(restMs / 1000)
@@ -338,9 +365,6 @@ class TriggerController(QObject):
             else:
                 self._upcomingLabel = ""
             # Draw countdown with upcoming label
-            # self._triggerWidget.renderImage(
-            #     self._upcomingLabel, "", str(self._restCounter)
-            # )
             self._triggerWidget.renderImage(
                 f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
             )
@@ -356,10 +380,42 @@ class TriggerController(QObject):
             # Begin per-second countdown updates
             self._countdownTimer.start()
 
-        else:
-            # Stimulus interval
+            # Skip rest phase entirely if durationRest is 0 (continuous mode)
+            if restMs == 0:
+                self._restFlag = False
+                # Don't recurse - just fall through to stimulus code below
+            else:
+                # Start a new rest interval (only if restMs > 0)
+                # Compute initial seconds for countdown (round up)
+                self._restCounter = math.ceil(restMs / 1000)
+                # Determine upcoming stimulus label
+                if self._triggerCounter < len(self._triggerLabels):
+                    nextLabel = self._triggerLabels[self._triggerCounter]
+                    self._upcomingLabel = nextLabel
+                else:
+                    self._upcomingLabel = ""
+                # Draw countdown with upcoming label
+                self._triggerWidget.renderImage(
+                    self._upcomingLabel, "", str(self._restCounter)
+                )
+                # Force triggers to zero during rest
+                for streamingController in self._streamingControllers.values():
+                    streamingController.setTrigger(0)
+                    streamingController.setTriggerStr("rest")
+                logging.info(
+                    f"Rest started: upcoming='{self._upcomingLabel}' \
+                    countdown={self._restCounter}s (durationRest={restMs}ms)."
+                )
+                # Schedule end of rest after exactly restMs
+                QTimer.singleShot(restMs, self._endRest)
+                # Begin per-second countdown updates
+                self._countdownTimer.start()
+                return  # ← Exit here for rest phase
+
+        # Stimulus interval (executed when _restFlag is False)
+        if not self._restFlag:
             triggerLabel = self._triggerLabels[self._triggerCounter]
-            if triggerLabel != "last_stop":
+            if triggerLabel != "stop":
                 newTrigger = self._triggerIds[triggerLabel]
                 imagePath = self._confWidget.config["triggers"][triggerLabel]
             else:
@@ -370,10 +426,46 @@ class TriggerController(QObject):
             self._triggerWidget.renderImage(triggerLabel, imagePath)
             for streamingController in self._streamingControllers.values():
                 streamingController.setTrigger(newTrigger)
+                streamingController.setTriggerStr(triggerLabel)
             logging.info(f"Trigger updated: {newTrigger} (label: {triggerLabel}).")
 
             self._triggerCounter += 1
-            self._restFlag = True
+
+            # Check if this was the stop trigger - if so, we're done
+            if triggerLabel == "stop":
+                # Don't start timer, just let it finish
+                self._stopTriggerGen()
+                return
+
+            # Determine if we should enter rest phase after this trigger
+            alternating = self._confWidget.config.get("alternating", False)
+            numTriggerTypes = len(self._confWidget.config["triggers"])
+            print("")
+
+            if alternating:
+                # In alternating mode, rest after every complete set of trigger types
+                # But NOT before the stop trigger
+                if self._triggerCounter % numTriggerTypes == 0:
+                    # Check if next trigger is "stop"
+                    if (
+                        self._triggerCounter < len(self._triggerLabels)
+                        and self._triggerLabels[self._triggerCounter] == "stop"
+                    ):
+                        self._restFlag = False
+                    else:
+                        self._restFlag = True
+                else:
+                    self._restFlag = False
+            else:
+                # In blocked mode, check if next is stop
+                if (
+                    self._triggerCounter < len(self._triggerLabels)
+                    and self._triggerLabels[self._triggerCounter] == "stop"
+                ):
+                    self._restFlag = False
+                else:
+                    self._restFlag = True
+
             # After `durationTrigger` ms, call this same function again
             self._timer.start(self._confWidget.config["durationTrigger"])
 
@@ -384,9 +476,6 @@ class TriggerController(QObject):
         """
         self._restCounter -= 1
         if self._restCounter > 0:
-            # self._triggerWidget.renderImage(
-            #     self._upcomingLabel, "", str(self._restCounter)
-            # )
             self._triggerWidget.renderImage(
                 f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
             )
@@ -404,41 +493,13 @@ class TriggerController(QObject):
         logging.info("Rest ended, proceeding to next trigger.")
         self._updateTriggerAndImage()
 
-    # def _startTriggerGen(self) -> None:
-    #     """Begin the whole trigger sequence (called once when streaming starts)."""
-    #     if not self._confWidget.config:
-    #         return
-
-    #     # Initialize the trigger to zero for all streaming controllers
-    #     for streamingController in self._streamingControllers.values():
-    #         streamingController.setTrigger(0)
-
-    #     # Build trigger IDs and replicate each label nReps times
-    #     for i, k in enumerate(self._confWidget.config["triggers"].keys()):
-    #         self._triggerIds[k] = i + 1
-    #         self._triggerLabels.extend([k] * self._confWidget.config["nReps"])
-        
-    #     # Verifiy if Shuffling is Enable or not
-    #     shuffle_enabled = self._confWidget.get("shuffle", False)
-    #     if shuffle_enabled:
-    #         print("Triggers will be shuffled")
-    #         random.shuffle(self._triggerLabels)
-    #     self._triggerLabels.append("last_stop")
-
-    #     self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
-    #     # Show an initial “start” label
-    #     self._restFlag = True
-    #     self._triggerWidget.renderImage("start", "")
-    #     self._triggerWidget.show()
-
-    #     # Wait for durationStart before firing the very first stimulus
-    #     self._timer.start(self._confWidget.config["durationStart"])
     def _startTriggerGen(self) -> None:
         if not self._confWidget.config:
             return
 
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(0)
+            streamingController.setTriggerStr("init")
 
         self._triggerIds = {}
         self._triggerLabels = []
@@ -465,6 +526,31 @@ class TriggerController(QObject):
         self._triggerLabels = labels
 
         self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+        # Build trigger IDs
+        trigger_names = list(self._confWidget.config["triggers"].keys())
+        for i, k in enumerate(trigger_names):
+            self._triggerIds[k] = i + 1
+
+        # Create trigger sequence based on alternating flag
+        alternating = self._confWidget.config.get("alternating", False)
+
+        self._triggerLabels = []
+        if alternating:
+            # Alternating mode: [T1, T2, T1, T2, ...] x nReps
+            for _ in range(self._confWidget.config["nReps"]):
+                for trigger_name in trigger_names:
+                    self._triggerLabels.append(trigger_name)
+        else:
+            # Blocked mode (default, original behavior): [T1, T1, ..., T2, T2, ...]
+            for trigger_name in trigger_names:
+                self._triggerLabels.extend(
+                    [trigger_name] * self._confWidget.config["nReps"]
+                )
+
+        self._triggerLabels.append("stop")
+
+        self._triggerWidget.imageFolder = self._confWidget.config["imageFolder"]
+        # Show an initial "start" label and begin with rest phase to show upcoming gesture
         self._restFlag = True
         self._triggerWidget.renderImage("start", "")
         self._triggerWidget.show()
@@ -495,3 +581,4 @@ class TriggerController(QObject):
         # Reset triggers for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(None)
+            streamingController.setTriggerStr(None)

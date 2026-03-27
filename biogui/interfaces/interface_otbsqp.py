@@ -1,0 +1,153 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+This module contains the OTBioelettronica Sessantaquattro+
+interface for HD-sEMG.
+"""
+
+import struct
+
+import numpy as np
+
+N_BUFF = 50
+
+
+def createCommand(start=1):
+    """Internal function to create start/stop commands."""
+    # The command comprises 2 control bytes. For further details, please refer to the manual:
+    # https://otbioelettronica.it/download/182/sessantaquattro/2943/sessantaquattro-tcp-communication-protocol
+
+    # Bit 0
+    go = start
+    # Bit 1
+    rec = 0
+    # Bits 3-2
+    trig = 0
+    # Bit 5-4:
+    # - gain = 0:
+    #   - hres = 0 -> preamp gain is 8;
+    #   - hres = 1 -> preamp gain is 2;
+    # - gain = 1 -> preamp gain is 4;
+    # - gain = 2 -> preamp gain is 6;
+    # - gain = 3 -> preamp gain is 8.
+    gain = 0
+    # Bit 6:
+    # - hpf = 0 -> no high pass filter
+    # - hpf = 1 -> high pass filter with EMA (cut-off of fs / 190 = 10.5 Hz)
+    hpf = 1
+    # Bit 7:
+    # - hres = 0 -> 16 bits
+    # - hres = 1 -> 24 bits
+    hres = 0
+
+    # Bits 2-0:
+    # - mode = 0 -> monopolar;
+    # - mode = 1 -> bipolar (AD8x1SP);
+    # - mode = 2 -> differential;
+    # - mode = 3 -> accelerometers;
+    # - mode = 4 -> bipolar (AD4x8SP);
+    # - mode = 5 -> impedance check advanced;
+    # - mode = 6 -> impedance check;
+    # - mode = 7 -> test mode (i.e., ramps).
+    mode = 0
+    # Bits 4-3:
+    # nch = 0 -> 8 channels;
+    # nch = 1 -> 16 channels;
+    # nch = 2 -> 32 channels;
+    # nch = 3 -> 64 channels.
+    nch = 3
+    # Bits 6-5:
+    # - fsamp = 0 -> 500 sps;
+    # - fsamp = 1 -> 1000 sps;
+    # - fsamp = 2 -> 2000 sps;
+    # - fsamp = 3 -> 4000 sps (only for reduced number of channels);
+    fsamp = 2
+    # Bit 7
+    getset = 0
+
+    # Build command
+    command = go + rec * 2 + trig * 4 + gain * 16 + hpf * 64 + hres * 128
+    command += mode * 256 + nch * 2048 + fsamp * 8192 + getset * 32768
+
+    return command
+
+
+packetSize: int = 144 * N_BUFF
+"""Number of bytes in each package."""
+
+startSeq: list[bytes | float] = [
+    createCommand(1).to_bytes(2, byteorder="big"),
+]
+"""
+Sequence of commands (as bytes) to start the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
+
+stopSeq: list[bytes | float] = [
+    createCommand(0).to_bytes(2, byteorder="big"),
+]
+"""
+Sequence of commands (as bytes) to stop the device; floats are
+interpreted as delays (in seconds) between commands.
+"""
+
+sigInfo: dict = {
+    "emg": {"fs": 2000, "nCh": 64},
+    "aux": {"fs": 2000, "nCh": 2},
+    "imu": {"fs": 2000, "nCh": 4},
+}
+"""Dictionary containing the signals information."""
+
+
+def decodeFn(data: bytes) -> dict[str, np.ndarray]:
+    """
+    Function to decode the binary data received from the device into signals.
+
+    Parameters
+    ----------
+    data : bytes
+        A packet of bytes.
+
+    Returns
+    -------
+    dict of (str: ndarray)
+        Dictionary containing the signal data packets, each with shape (nSamp, nCh);
+        the keys must match with those of the "sigInfo" dictionary.
+    """
+    # 72 shorts:
+    # - 64 for EMG data
+    # - 2 for AUX
+    # - 4 for IMU
+    # - 1 for SyncStation trigger
+    # - 1 for sample counter
+
+    dataEMG = bytearray()
+    dataAux = bytearray()
+    dataIMU = bytearray()
+    for i in range(N_BUFF):
+        dataEMG.extend(bytearray(data[i * 144 : i * 144 + 128]))
+        dataAux.extend(bytearray(data[i * 144 + 128 : i * 144 + 132]))
+        dataIMU.extend(bytearray(data[i * 144 + 132 : i * 144 + 140]))
+
+    # Get EMG data
+    emg = np.asarray(
+        struct.unpack(f">{N_BUFF * 64}h", dataEMG), dtype=np.int32
+    ).reshape(-1, 64)
+    # Convert ADC readings to mV
+    mVConvF = 2.86e-4  # conversion factor
+    emg = (emg * mVConvF).astype(np.float32)
+
+    # Get AUX data
+    aux = np.asarray(
+        struct.unpack(f">{N_BUFF * 2}h", dataAux), dtype=np.float32
+    ).reshape(-1, 2)
+
+    # Get IMU data
+    imu = np.asarray(
+        struct.unpack(f">{N_BUFF * 4}h", dataIMU), dtype=np.float32
+    ).reshape(-1, 4)
+
+    return {"emg": emg, "aux": aux, "imu": imu}
