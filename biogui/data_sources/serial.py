@@ -194,6 +194,7 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
         self._buffer = QByteArray()
+        self._guard = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
@@ -223,56 +224,52 @@ class SerialDataSourceWorker(DataSourceWorker):
             self._serialPort.setDataTerminalReady(True)
             self._serialPort.setRequestToSend(True)
 
-        # Reset serial-port state before starting a new acquisition.
-        self._serialPort.clear()  # type: ignore
+        # Reset serial-port state before starting a new acquisition
+        self._serialPort.clear()
         self._buffer.clear()
 
+        # Send start sequence, set guard flag, and connect readyRead signal
         self._sendSequence(self._startSeq)
+        self._guard = True
         self._serialPort.readyRead.connect(self._collectData)
 
         logger.info("Serial communication started.")
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
+        # Un-set guard flag
+        self._guard = False
+
+        # Handle double-stop, or stop-before start edge cases
         if not self._serialPort.isOpen():
             self._buffer.clear()
             return
 
-        logger.info("Serial communication stopped.")
-
-        # Stop reacting to incoming data while shutting the device down.
+        # Disconnect readyRead signal to stop reacting to incoming data, and send stop sequence
         try:
             self._serialPort.readyRead.disconnect(self._collectData)
         except Exception:
             pass
-
         self._sendSequence(self._stopSeq)
 
-        attempts = 0
-        max_attempts = 30  # Safety break to avoid an infinite shutdown loop.
-        while self._serialPort.waitForReadyRead(300):
-            self._serialPort.clear()  # type: ignore
-            attempts += 1
-            QThread.msleep(100)
-
-            if attempts % 3 == 0:
-                logger.warning("Device still sending data, resending stop command.")
-                self._sendSequence(self._stopSeq)
-
-            if attempts >= max_attempts:
-                logger.error("Device failed to stop streaming. Forcing port close.")
-                break
-
+        # Reset accumulation buffer and serial port buffer
         self._buffer.clear()
-        self._serialPort.clear()  # type: ignore
+        self._serialPort.clear()
 
         # Close port
         self._serialPort.close()
+
+        logger.info("Serial communication stopped.")
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
         # Accumulate new data
         self._buffer.append(self._serialPort.readAll())
+
+        # Guard check
+        if not self._guard:
+            self._buffer.clear()
+            return
 
         # Emit all data packets in the buffer
         while self._buffer.size() >= self._packetSize:
