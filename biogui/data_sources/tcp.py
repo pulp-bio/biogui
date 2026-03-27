@@ -1,20 +1,10 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Classes for the TCP socket data source.
-
-
-Copyright 2024 Mattia Orlandi, Pierangelo Maria Rapa
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 
 from __future__ import annotations
@@ -26,13 +16,16 @@ from PySide6.QtGui import QIntValidator
 from PySide6.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide6.QtWidgets import QWidget
 
-from ..ui.tcp_data_source_config_widget_ui import Ui_TCPDataSourceConfigWidget
+from biogui.ui.ui_tcp_data_source_config_widget import Ui_TCPDataSourceConfigWidget
+
 from .base import (
     DataSourceConfigResult,
     DataSourceConfigWidget,
     DataSourceType,
     DataSourceWorker,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TCPConfigWidget(DataSourceConfigWidget, Ui_TCPDataSourceConfigWidget):
@@ -179,12 +172,10 @@ class TCPDataSourceWorker(DataSourceWorker):
         if not self._tcpServer.listen(QHostAddress.Any, self._socketPort):  # type: ignore
             errMsg = f"Cannot start TCP server due to the following error:\n{self._tcpServer.errorString()}."
             self.errorOccurred.emit(errMsg)
-            logging.error(f"DataWorker: {errMsg}")
+            logger.error(errMsg)
             return
 
-        logging.info(
-            f"DataWorker: waiting for TCP connection on port {self._socketPort}."
-        )
+        logger.info("Waiting for TCP connection on port %d", self._socketPort)
 
     def stopCollecting(self) -> None:
         """Stop data collection."""
@@ -196,7 +187,9 @@ class TCPDataSourceWorker(DataSourceWorker):
             for c in self._stopSeq:
                 if isinstance(c, (bytes, bytearray)):
                     self._clientSock.write(c)
-                    self._clientSock.waitForBytesWritten(1000)
+                    # Make sure the full command is sent
+                    while self._clientSock.bytesToWrite() > 0:
+                        self._clientSock.waitForBytesWritten(100)
                 elif isinstance(c, float):
                     QThread.msleep(int(c * 1000))
 
@@ -209,7 +202,7 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._tcpServer.close()
         self._buffer = QByteArray()
 
-        logging.info("DataWorker: TCP communication stopped.")
+        logger.info("TCP communication stopped.")
 
     def _handleConnection(self) -> None:
         """Handle a new TCP connection."""
@@ -228,17 +221,19 @@ class TCPDataSourceWorker(DataSourceWorker):
         self._clientSock = self._tcpServer.nextPendingConnection()
         self._clientSock.readyRead.connect(self._collectData)
 
-        logging.info("DataWorker: new TCP connection.")
+        logger.info("New TCP connection.")
 
         # Start command
         for c in self._startSeq:
             if isinstance(c, (bytes, bytearray)):
                 self._clientSock.write(c)
-                self._clientSock.waitForBytesWritten(1000)
+                # Make sure the full command is sent
+                while self._clientSock.bytesToWrite() > 0:
+                    self._clientSock.waitForBytesWritten(100)
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
-        logging.info("DataWorker: TCP communication started.")
+        logger.info("TCP communication started.")
 
         # Set guard flag
         self._guard = True

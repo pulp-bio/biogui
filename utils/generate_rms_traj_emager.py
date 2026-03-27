@@ -131,7 +131,7 @@ def main():
     rest_level, mvc, p_mvc, slope, plateau_duration_s, gap_width = _parse_input()
 
     # Trapezoidal trajectories
-    trap_fs = 1000 // WIN_SIZE  # Hz
+    trap_fs = 20  # Hz
     traj_low, traj_high = _gen_trajectories(
         p_mvc,
         slope,
