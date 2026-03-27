@@ -4,7 +4,7 @@ Middleware connecting BioGUI to MotionLab (Unity). Receives ultrasound and IMU d
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- `uv`: The project uses uv as its package manager. uv will automatically download and manage the required Python version for you (the project is pinned to Python 3.11). To install uv: `pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 - Pre-trained PyTorch model file placed in `nn/models/`
 
 ## Setup

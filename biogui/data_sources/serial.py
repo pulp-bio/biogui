@@ -193,12 +193,22 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
         self._serialPort.setBaudRate(baudRate)
-        self._serialPort.readyRead.connect(self._collectData)
         self._buffer = QByteArray()
         self._guard = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
+
+    def _sendSequence(self, seq: list[bytes | float]) -> None:
+        """Send a command sequence to the serial port."""
+        for c in seq:
+            if isinstance(c, (bytes, bytearray)):
+                self._serialPort.write(c)
+                # Make sure the full command is sent before continuing.
+                while self._serialPort.bytesToWrite() > 0:
+                    self._serialPort.waitForBytesWritten(100)
+            elif isinstance(c, float):
+                QThread.msleep(int(c * 1000))
 
     def startCollecting(self) -> None:
         """Collect data from the configured source."""
@@ -214,21 +224,14 @@ class SerialDataSourceWorker(DataSourceWorker):
             self._serialPort.setDataTerminalReady(True)
             self._serialPort.setRequestToSend(True)
 
-        # Reset serial port input buffer
-        self._serialPort.clear(QSerialPort.Input)  # type: ignore
+        # Reset serial-port state before starting a new acquisition
+        self._serialPort.clear()
+        self._buffer.clear()
 
-        # Start command
-        for c in self._startSeq:
-            if isinstance(c, (bytes, bytearray)):
-                self._serialPort.write(c)
-                # Make sure the full command is sent
-                while self._serialPort.bytesToWrite() > 0:
-                    self._serialPort.waitForBytesWritten(100)
-            elif isinstance(c, float):
-                QThread.msleep(int(c * 1000))
-
-        # Set guard flag
+        # Send start sequence, set guard flag, and connect readyRead signal
+        self._sendSequence(self._startSeq)
         self._guard = True
+        self._serialPort.readyRead.connect(self._collectData)
 
         logger.info("Serial communication started.")
 
@@ -237,24 +240,26 @@ class SerialDataSourceWorker(DataSourceWorker):
         # Un-set guard flag
         self._guard = False
 
-        logger.info("Serial communication stopped.")
+        # Handle double-stop, or stop-before start edge cases
+        if not self._serialPort.isOpen():
+            self._buffer.clear()
+            return
 
-        # Stop command
-        for c in self._stopSeq:
-            if isinstance(c, (bytes, bytearray)):
-                self._serialPort.write(c)
-                # Make sure the full command is sent
-                while self._serialPort.bytesToWrite() > 0:
-                    self._serialPort.waitForBytesWritten(100)
-            elif isinstance(c, float):
-                QThread.msleep(int(c * 1000))
+        # Disconnect readyRead signal to stop reacting to incoming data, and send stop sequence
+        try:
+            self._serialPort.readyRead.disconnect(self._collectData)
+        except Exception:
+            pass
+        self._sendSequence(self._stopSeq)
 
-        # Reset accumulation buffer and serial port input buffer
+        # Reset accumulation buffer and serial port buffer
         self._buffer.clear()
-        self._serialPort.clear(QSerialPort.Input)  # type: ignore
+        self._serialPort.clear()
 
         # Close port
         self._serialPort.close()
+
+        logger.info("Serial communication stopped.")
 
     def _collectData(self) -> None:
         """Fill input buffer when data is ready."""
