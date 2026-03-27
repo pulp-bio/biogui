@@ -1,0 +1,18 @@
+{
+    "triggers": {
+        "up": "",
+        "down": "",
+        "left": "",
+        "right": "",
+        "forward": "",
+        "backward": "",
+        "start": "", 
+        "stop": ""
+    },
+    "nReps": 20,
+    "durationTrigger": 2000,
+    "durationStart": 5000,
+    "durationRest": 1500,
+    "imageFolder": "acquisitions/gestures_images", 
+    "shuffle" : true
+}
