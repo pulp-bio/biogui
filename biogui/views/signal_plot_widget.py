@@ -43,7 +43,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         Parent widget.
     **kwargs : dict
         Optional keyword arguments, including:
-        - extras: Dict with extra signal configuration
+        - extras: Dict with signal configuration
         - ultrasoundMode: "A-mode" or "M-mode" for ultrasound signals
         - dataQueue: Optional pre-existing data queue
         - minRange: Optional minimum Y range
@@ -101,9 +101,7 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             self.label1.setText("Sampling rate:")
 
         # Determine plot mode and create appropriate instance
-        self._plot_mode = self._create_plot_mode(
-            fs, nCh, chSpacing, renderLenMs, **kwargs
-        )
+        self._plot_mode = self._create_plot_mode(fs, nCh, chSpacing, renderLenMs, **kwargs)
 
         # Setup UI
         self._setup_graph_widget(sigName)

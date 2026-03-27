@@ -2,62 +2,49 @@
 
 Follow these steps to set up the BioGUI project on your local machine.
 
-## Prerequisites
+## Requirements
 
-- Python 3.7 or higher.
-- `pip` (Python package installer).
-- A virtual environment (recommended).
+- `uv`: The project uses uv as its package manager. uv will automatically download and manage the required Python version for you (the project is pinned to Python 3.11). To install uv: `pip install uv` or see [installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## Installation
 
-
-### Linux/MacOS
-
-To install BioGUI on Linux or MacOS, follow these steps:
+To install the BioGUI, follow these steps:
 
 1.  **Clone the repository**:
+
     ```bash
     git clone https://github.com/pulp-bio/biogui.git
     cd biogui
     ```
 
-2.  **Set up a virtual environment**:
+2.  **Set up the virtual environment with all its dependencies**:
+
     ```bash
-    python3 -m venv venv
-    source venv/bin/activate
+    uv sync
     ```
 
-3.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Development
 
-### Windows
+To install the pre-commit hooks, run:
 
-To install BioGUI on Windows, follow these steps:
-
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/pulp-bio/biogui.git
-    cd biogui
-    ```
-
-2.  **Set up a virtual environment**:
-    ```powershell
-    python3 -m venv venv
-    venv\Scripts\activate
-    ```
-
-3.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+uv run pre-commit install
+```
 
 ## Running the Application
 
-Once the dependencies are installed, you can launch the main GUI by running:
+Once the dependencies are installed, you can launch the main GUI in two ways:
+
+**Option 1**: Run with uv:
 
 ```bash
+uv run main.py
+```
+
+**Option 2**: Activate the virtual environment and run directly:
+
+```bash
+source .venv/bin/activate
 python main.py
 ```
 
