@@ -126,17 +126,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.filterGroupBox.setVisible(False)
             self.notchFilterGroupBox.setVisible(False)
 
-            # Enable ultrasound mode dropdown
-            self.label14.setEnabled(True)
-            self.ultrasoundModeComboBox.setEnabled(True)
-
-            # Enable processing mode section
-            self.label15.setEnabled(True)
-
-            # Enable all processing mode options (as checkboxes)
-            self.showRawCheckBox.setEnabled(True)
-            self.showFilteredCheckBox.setEnabled(True)
-            self.showEnvelopeCheckBox.setEnabled(True)
+            self._setUltrasoundControlsState(visible=True, enabled=True)
 
             # Get ADC sampling frequency
             adc_fs = extras.get("adc_sampling_freq", fs)
@@ -158,33 +148,43 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.showEnvelopeCheckBox.toggled.connect(self._onUsProcessingModeChange)
 
             # Connect ultrasound mode change
-            self.ultrasoundModeComboBox.currentTextChanged.connect(
-                self._onUltrasoundModeChange
-            )
+            self.ultrasoundModeComboBox.currentTextChanged.connect(self._onUltrasoundModeChange)
 
             # Initialize state
             self._onUsProcessingModeChange()
-            self._configureDisplayOptionsForMode(
-                self.ultrasoundModeComboBox.currentText()
-            )
+            self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
 
         else:
-            # Time-series signal - disable ultrasound controls
-            self.label14.setEnabled(False)
-            self.ultrasoundModeComboBox.setEnabled(False)
-            self.label15.setEnabled(False)
-            self.showRawCheckBox.setEnabled(False)
-            self.showFilteredCheckBox.setEnabled(False)
-            self.showEnvelopeCheckBox.setEnabled(False)
-            self.lowFreqSpinBox.setEnabled(False)
-            self.highFreqSpinBox.setEnabled(False)
+            # Time-series signal - hide ultrasound controls entirely
+            self._setUltrasoundControlsState(visible=False, enabled=False)
+
+    def _setUltrasoundControlsState(self, *, visible: bool, enabled: bool) -> None:
+        """Apply visibility and enabled state to ultrasound-only controls."""
+        self.label14.setVisible(visible)
+        self.label14.setEnabled(enabled)
+        self.ultrasoundModeComboBox.setVisible(visible)
+        self.ultrasoundModeComboBox.setEnabled(enabled)
+        self.label15.setVisible(visible)
+        self.label15.setEnabled(enabled)
+        self.showRawCheckBox.setVisible(visible)
+        self.showRawCheckBox.setEnabled(enabled)
+        self.showFilteredCheckBox.setVisible(visible)
+        self.showFilteredCheckBox.setEnabled(enabled)
+        self.showEnvelopeCheckBox.setVisible(visible)
+        self.showEnvelopeCheckBox.setEnabled(enabled)
+        self.lowFreqSpinBox.setVisible(visible)
+        self.lowFreqSpinBox.setEnabled(enabled)
+        self.highFreqSpinBox.setVisible(visible)
+        self.highFreqSpinBox.setEnabled(enabled)
+        # "to" label between low/high frequency spinboxes in the UI form.
+        self.label.setVisible(visible)
+        self.label.setEnabled(enabled)
 
     def _onUsProcessingModeChange(self) -> None:
         """Enable/disable frequency controls based on ultrasound processing mode."""
         # Enable frequency controls only if filtered or envelope is selected
         needs_filter = (
-            self.showFilteredCheckBox.isChecked()
-            or self.showEnvelopeCheckBox.isChecked()
+            self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
         )
 
         self.lowFreqSpinBox.setEnabled(needs_filter)
@@ -214,8 +214,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Bandpass is enabled if filtered or envelope is shown
             config["enableBandpass"] = (
-                self.showFilteredCheckBox.isChecked()
-                or self.showEnvelopeCheckBox.isChecked()
+                self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
             )
 
             # Bandpass settings for plot mode
@@ -290,9 +289,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if self.notchFilterGroupBox.isChecked():
             if not self.qFactorTextField.hasAcceptableInput():
                 return False, 'The "Quality factor" field is invalid.'
-            self._sigConfig["notchFreq"] = lo.toFloat(
-                self.notchFreqComboBox.currentText()
-            )[0]
+            self._sigConfig["notchFreq"] = lo.toFloat(self.notchFreqComboBox.currentText())[0]
             self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
 
         # 2. Plot settings
@@ -412,9 +409,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Restore bandpass filter settings
             if "bandpassLow" in kwargs and "bandpassHigh" in kwargs:
-                self.lowFreqSpinBox.setValue(
-                    kwargs["bandpassLow"] / 1e6
-                )  # Convert from Hz to MHz
+                self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
             # Re-apply mode configuration after prefilling
