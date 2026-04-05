@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'wulpus_config_widgeturMkGh.ui'
+## Form generated from reading UI file 'wulpus_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.2
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -242,6 +242,16 @@ class Ui_WulpusConfigWidget(object):
 
         self.txRxButtonLayout.addWidget(self.removeTxRxConfigButton)
 
+        self.moveTxRxUpButton = QPushButton(self.txRxTab)
+        self.moveTxRxUpButton.setObjectName(u"moveTxRxUpButton")
+
+        self.txRxButtonLayout.addWidget(self.moveTxRxUpButton)
+
+        self.moveTxRxDownButton = QPushButton(self.txRxTab)
+        self.moveTxRxDownButton.setObjectName(u"moveTxRxDownButton")
+
+        self.txRxButtonLayout.addWidget(self.moveTxRxDownButton)
+
         self.clearTxRxConfigButton = QPushButton(self.txRxTab)
         self.clearTxRxConfigButton.setObjectName(u"clearTxRxConfigButton")
 
@@ -251,17 +261,16 @@ class Ui_WulpusConfigWidget(object):
         self.txRxVerticalLayout.addLayout(self.txRxButtonLayout)
 
         self.txRxTableWidget = QTableWidget(self.txRxTab)
-        if (self.txRxTableWidget.columnCount() < 4):
-            self.txRxTableWidget.setColumnCount(4)
+        if (self.txRxTableWidget.columnCount() < 3):
+            self.txRxTableWidget.setColumnCount(3)
         __qtablewidgetitem = QTableWidgetItem()
         self.txRxTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem)
         __qtablewidgetitem1 = QTableWidgetItem()
         self.txRxTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem1)
         __qtablewidgetitem2 = QTableWidgetItem()
         self.txRxTableWidget.setHorizontalHeaderItem(2, __qtablewidgetitem2)
-        __qtablewidgetitem3 = QTableWidgetItem()
-        self.txRxTableWidget.setHorizontalHeaderItem(3, __qtablewidgetitem3)
         self.txRxTableWidget.setObjectName(u"txRxTableWidget")
+        self.txRxTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.txRxTableWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
         self.txRxVerticalLayout.addWidget(self.txRxTableWidget)
@@ -394,18 +403,18 @@ class Ui_WulpusConfigWidget(object):
         self.captTimeoutLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Capture Timeout (\u00b5s):", None))
         self.captTimeoutLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"3000", None))
         self.configTabWidget.setTabText(self.configTabWidget.indexOf(self.advancedTab), QCoreApplication.translate("WulpusConfigWidget", u"Advanced Timing", None))
-        self.txRxInfoLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Configure transmitter and receiver channels. Each configuration specifies which channels are active.", None))
+        self.txRxInfoLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Configure transmitter and receiver channels. Use Move Up/Down to change configuration order.", None))
         self.addTxRxConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Add Config", None))
         self.removeTxRxConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Remove Selected", None))
+        self.moveTxRxUpButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Move Up", None))
+        self.moveTxRxDownButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Move Down", None))
         self.clearTxRxConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Clear All", None))
         ___qtablewidgetitem = self.txRxTableWidget.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("WulpusConfigWidget", u"#", None));
+        ___qtablewidgetitem.setText(QCoreApplication.translate("WulpusConfigWidget", u"TX Channels", None));
         ___qtablewidgetitem1 = self.txRxTableWidget.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("WulpusConfigWidget", u"TX Channels", None));
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("WulpusConfigWidget", u"RX Channel", None));
         ___qtablewidgetitem2 = self.txRxTableWidget.horizontalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("WulpusConfigWidget", u"RX Channels", None));
-        ___qtablewidgetitem3 = self.txRxTableWidget.horizontalHeaderItem(3)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("WulpusConfigWidget", u"Optimized Switching", None));
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("WulpusConfigWidget", u"Optimized Switching", None));
 #if QT_CONFIG(tooltip)
         self.txRxTableWidget.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"List of TX/RX channel configurations", None))
 #endif // QT_CONFIG(tooltip)

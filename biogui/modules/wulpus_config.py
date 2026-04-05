@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QGridLayout,
-    QHBoxLayout,
     QLabel,
     QMessageBox,
     QRadioButton,
@@ -150,6 +149,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._tx_rx_configs: list[dict[str, Any]] = []
         self._presets_dir = self._get_presets_directory()
         self._loading_preset = False  # Flag to prevent marking as custom while loading
+        self._updating_tx_rx_table = False
 
         self._setup_validators()
         self._populate_combo_boxes()
@@ -218,11 +218,15 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _connect_signals(self) -> None:
         self.txRxTableWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.txRxTableWidget.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
         self.presetComboBox.currentTextChanged.connect(self._on_preset_changed)
         self.saveConfigButton.clicked.connect(self._save_to_json)
         self.addTxRxConfigButton.clicked.connect(self._add_tx_rx_config)
         self.removeTxRxConfigButton.clicked.connect(self._remove_tx_rx_config)
         self.clearTxRxConfigButton.clicked.connect(self._clear_tx_rx_configs)
+        self.moveTxRxUpButton.clicked.connect(self._move_tx_rx_config_up)
+        self.moveTxRxDownButton.clicked.connect(self._move_tx_rx_config_down)
+        self.txRxTableWidget.itemChanged.connect(self._on_tx_rx_item_changed)
 
         # Enable double-click to edit TX/RX configs
         self.txRxTableWidget.doubleClicked.connect(lambda: self._edit_tx_rx_config())
@@ -366,6 +370,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             logger.info(f"Added TX/RX config: {config}")
 
     def _remove_tx_rx_config(self) -> None:
+        self._sync_tx_rx_configs_from_table()
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
             QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
@@ -380,6 +385,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _edit_tx_rx_config(self) -> None:
         """Edit the selected TX/RX configuration."""
+        self._sync_tx_rx_configs_from_table()
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
             QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
@@ -404,38 +410,115 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._update_tx_rx_table()
         logger.info("Cleared all TX/RX configs")
 
+    def _move_tx_rx_config_up(self) -> None:
+        self._sync_tx_rx_configs_from_table()
+        selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to move.")
+            return
+
+        row = selected_rows[0].row()
+        if row <= 0 or row >= len(self._tx_rx_configs):
+            return
+
+        self._tx_rx_configs[row - 1], self._tx_rx_configs[row] = (
+            self._tx_rx_configs[row],
+            self._tx_rx_configs[row - 1],
+        )
+        self._update_tx_rx_table()
+        self.txRxTableWidget.selectRow(row - 1)
+        self._mark_as_custom()
+
+    def _move_tx_rx_config_down(self) -> None:
+        self._sync_tx_rx_configs_from_table()
+        selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to move.")
+            return
+
+        row = selected_rows[0].row()
+        if row < 0 or row >= len(self._tx_rx_configs) - 1:
+            return
+
+        self._tx_rx_configs[row], self._tx_rx_configs[row + 1] = (
+            self._tx_rx_configs[row + 1],
+            self._tx_rx_configs[row],
+        )
+        self._update_tx_rx_table()
+        self.txRxTableWidget.selectRow(row + 1)
+        self._mark_as_custom()
+
     def _update_tx_rx_table(self) -> None:
         # Clear existing content and widgets before rebuilding
+        self._updating_tx_rx_table = True
+        self.txRxTableWidget.blockSignals(True)
         self.txRxTableWidget.clearContents()
         self.txRxTableWidget.setRowCount(len(self._tx_rx_configs))
 
         for i, config in enumerate(self._tx_rx_configs):
-            self.txRxTableWidget.setItem(i, 0, QTableWidgetItem(str(i)))
             tx_str = ", ".join(str(ch) for ch in config["tx_channels"])
-            self.txRxTableWidget.setItem(i, 1, QTableWidgetItem(tx_str))
+            tx_item = QTableWidgetItem(tx_str)
+            tx_item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+            self.txRxTableWidget.setItem(i, 0, tx_item)
+
             rx_str = ", ".join(str(ch) for ch in config["rx_channels"])
-            self.txRxTableWidget.setItem(i, 2, QTableWidgetItem(rx_str))
+            rx_item = QTableWidgetItem(rx_str)
+            rx_item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+            self.txRxTableWidget.setItem(i, 1, rx_item)
 
-            # Add checkbox for optimized switching
-            checkbox_widget = QWidget()
-            checkbox = QCheckBox()
-            checkbox.setChecked(config["optimized_switching"])
-            checkbox.stateChanged.connect(
-                lambda state, row=i: self._on_optimized_checkbox_changed(row, state)
+            optimized_item = QTableWidgetItem()
+            optimized_item.setFlags(
+                Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsUserCheckable
             )
-            layout = QHBoxLayout(checkbox_widget)
-            layout.addWidget(checkbox)
-            layout.setAlignment(Qt.AlignCenter)  # type: ignore
-            layout.setContentsMargins(0, 0, 0, 0)
-            self.txRxTableWidget.setIndexWidget(
-                self.txRxTableWidget.model().index(i, 3), checkbox_widget
+            optimized_item.setCheckState(
+                Qt.CheckState.Checked if config["optimized_switching"] else Qt.CheckState.Unchecked
+            )
+            self.txRxTableWidget.setItem(i, 2, optimized_item)
+
+        self.txRxTableWidget.blockSignals(False)
+        self._updating_tx_rx_table = False
+
+    def _sync_tx_rx_configs_from_table(self) -> None:
+        synced_configs: list[dict[str, Any]] = []
+
+        for row in range(self.txRxTableWidget.rowCount()):
+            tx_item = self.txRxTableWidget.item(row, 0)
+            rx_item = self.txRxTableWidget.item(row, 1)
+            if tx_item is None or rx_item is None:
+                continue
+
+            try:
+                tx_channels = [int(ch.strip()) for ch in tx_item.text().split(",") if ch.strip()]
+                rx_channels = [int(ch.strip()) for ch in rx_item.text().split(",") if ch.strip()]
+            except ValueError:
+                continue
+            if not tx_channels or not rx_channels:
+                continue
+
+            optimized_item = self.txRxTableWidget.item(row, 2)
+            optimized_switching = (
+                optimized_item is not None and optimized_item.checkState() == Qt.CheckState.Checked
             )
 
-    def _on_optimized_checkbox_changed(self, row: int, state: int) -> None:
-        """Update optimized switching setting when checkbox changes."""
-        if row < len(self._tx_rx_configs):
-            self._tx_rx_configs[row]["optimized_switching"] = bool(state)
-            self._mark_as_custom()
+            synced_configs.append(
+                {
+                    "tx_channels": tx_channels,
+                    "rx_channels": rx_channels,
+                    "optimized_switching": optimized_switching,
+                }
+            )
+
+        self._tx_rx_configs = synced_configs
+
+    def _on_tx_rx_item_changed(self, item: QTableWidgetItem) -> None:
+        if self._updating_tx_rx_table:
+            return
+        if item.column() != 2:
+            return
+        self._sync_tx_rx_configs_from_table()
+        self._mark_as_custom()
 
     def _save_to_json(self) -> None:
         """Save current configuration as a preset in the presets directory."""
@@ -478,6 +561,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def get_current_config(self) -> interface_wulpus.WulpusUssConfig:
         """Create and validate WulpusUssConfig from current widget values."""
+        self._sync_tx_rx_configs_from_table()
         rx_tx_config = interface_wulpus.WulpusRxTxConfigGen()
         for config in self._tx_rx_configs:
             rx_tx_config.add_config(
@@ -507,6 +591,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         )
 
     def _get_config_dict(self) -> dict:
+        self._sync_tx_rx_configs_from_table()
         return {
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
