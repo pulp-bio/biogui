@@ -18,14 +18,18 @@ from typing import Any
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QButtonGroup,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
-    QLineEdit,
+    QLabel,
     QMessageBox,
+    QRadioButton,
     QTableWidgetItem,
     QWidget,
 )
@@ -43,17 +47,41 @@ logger = logging.getLogger(__name__)
 class TxRxConfigDialog(QDialog):
     """Dialog for configuring TX/RX channels."""
 
+    CHANNEL_COUNT = 8
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("TX/RX Configuration")
 
         layout = QFormLayout(self)
-        self.tx_channels_edit = QLineEdit()
-        self.tx_channels_edit.setPlaceholderText("e.g., 3 or 1,2,3")
-        layout.addRow("TX Channels (0-7):", self.tx_channels_edit)
-        self.rx_channels_edit = QLineEdit()
-        self.rx_channels_edit.setPlaceholderText("e.g., 3 or 1,2,3")
-        layout.addRow("RX Channels (0-7):", self.rx_channels_edit)
+
+        tx_widget = QWidget(self)
+        tx_layout = QGridLayout(tx_widget)
+        tx_layout.setContentsMargins(0, 0, 0, 0)
+        self.tx_checkboxes: list[QCheckBox] = []
+        for ch in range(self.CHANNEL_COUNT):
+            checkbox = QCheckBox(str(ch), tx_widget)
+            self.tx_checkboxes.append(checkbox)
+            tx_layout.addWidget(checkbox, ch // 4, ch % 4)
+        layout.addRow("TX Channels (0-7):", tx_widget)
+
+        rx_widget = QWidget(self)
+        rx_layout = QGridLayout(rx_widget)
+        rx_layout.setContentsMargins(0, 0, 0, 0)
+        self.rx_button_group = QButtonGroup(self)
+        self.rx_button_group.setExclusive(True)
+        self.rx_radio_buttons: list[QRadioButton] = []
+        for ch in range(self.CHANNEL_COUNT):
+            radio = QRadioButton(str(ch), rx_widget)
+            self.rx_button_group.addButton(radio, ch)
+            self.rx_radio_buttons.append(radio)
+            rx_layout.addWidget(radio, ch // 4, ch % 4)
+        self.rx_radio_buttons[0].setChecked(True)
+        layout.addRow("RX Channel (0-7):", rx_widget)
+
+        helper_label = QLabel("TX: multiple channels possible, RX: exactly one channel.", self)
+        layout.addRow("", helper_label)
+
         self.optimized_checkbox = QCheckBox()
         layout.addRow("Optimized Switching:", self.optimized_checkbox)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
@@ -69,20 +97,36 @@ class TxRxConfigDialog(QDialog):
             QMessageBox.warning(self, "Invalid Input", str(e))
 
     def _parse_channels(self) -> tuple[list[int], list[int]]:
-        def parse_channel_str(s: str) -> list[int]:
-            channels = [int(x.strip()) for x in s.split(",") if x.strip()]
-            for ch in channels:
-                if not 0 <= ch <= 7:
-                    raise ValueError(f"Channel {ch} out of range (0-7)")
-            return channels
+        tx = [index for index, checkbox in enumerate(self.tx_checkboxes) if checkbox.isChecked()]
+        rx_id = self.rx_button_group.checkedId()
+        rx = [rx_id] if 0 <= rx_id < self.CHANNEL_COUNT else []
 
-        tx = parse_channel_str(self.tx_channels_edit.text())
-        rx = parse_channel_str(self.rx_channels_edit.text())
         if not tx:
             raise ValueError("At least one TX channel required")
         if not rx:
-            raise ValueError("At least one RX channel required")
+            raise ValueError("Exactly one RX channel must be selected")
         return tx, rx
+
+    def set_config(self, config: dict[str, Any]) -> None:
+        tx_channels = config.get("tx_channels", [])
+        rx_channels = config.get("rx_channels", [])
+
+        for checkbox in self.tx_checkboxes:
+            checkbox.setChecked(False)
+        for ch in tx_channels:
+            if 0 <= ch < self.CHANNEL_COUNT:
+                self.tx_checkboxes[ch].setChecked(True)
+
+        if rx_channels:
+            rx_channel = rx_channels[0]
+            if 0 <= rx_channel < self.CHANNEL_COUNT:
+                self.rx_radio_buttons[rx_channel].setChecked(True)
+            else:
+                self.rx_radio_buttons[0].setChecked(True)
+        else:
+            self.rx_radio_buttons[0].setChecked(True)
+
+        self.optimized_checkbox.setChecked(bool(config.get("optimized_switching", False)))
 
     def get_config(self) -> dict:
         tx, rx = self._parse_channels()
@@ -173,6 +217,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             self.rxGainComboBox.addItem(f"{gain:.1f} dB", gain)
 
     def _connect_signals(self) -> None:
+        self.txRxTableWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.presetComboBox.currentTextChanged.connect(self._on_preset_changed)
         self.saveConfigButton.clicked.connect(self._save_to_json)
         self.addTxRxConfigButton.clicked.connect(self._add_tx_rx_config)
@@ -281,14 +326,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 rx_bits = int(config.rx_configs[i])
 
                 tx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
+                    ch for ch in range(8) if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
                 ]
                 rx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
+                    ch for ch in range(8) if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
                 ]
 
                 # Try to detect optimized switching by checking if RX bits appear in TX config
@@ -327,9 +368,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _remove_tx_rx_config(self) -> None:
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to remove."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
             return
         for index in sorted(selected_rows, reverse=True):
             row = index.row()
@@ -343,9 +382,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Edit the selected TX/RX configuration."""
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to edit."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
             return
 
         row = selected_rows[0].row()
@@ -354,15 +391,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
         current_config = self._tx_rx_configs[row]
         dialog = TxRxConfigDialog(self)
-
-        # Pre-fill with current values
-        dialog.tx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["tx_channels"])
-        )
-        dialog.rx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["rx_channels"])
-        )
-        dialog.optimized_checkbox.setChecked(current_config["optimized_switching"])
+        dialog.set_config(current_config)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._tx_rx_configs[row] = dialog.get_config()
@@ -444,9 +473,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                         self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
-            QMessageBox.critical(
-                self, "Save Error", f"Failed to save configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
             logger.error(f"Failed to save config to {file_path}: {e}")
 
     def get_current_config(self) -> interface_wulpus.WulpusUssConfig:
@@ -641,9 +668,7 @@ class WulpusConfigController(QObject):
         new_sigInfo = {}
         new_config_to_signal_name = {}
         for config_id in range(new_config.num_txrx_configs):
-            rx_channel = interface_wulpus.get_rx_channel_for_config(
-                new_config, config_id
-            )
+            rx_channel = interface_wulpus.get_rx_channel_for_config(new_config, config_id)
             if rx_channel is None:
                 continue
 
@@ -670,9 +695,7 @@ class WulpusConfigController(QObject):
             }
 
         # Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
-        new_sigInfo.update(
-            interface_wulpus.get_standard_signal_definitions(meas_period_s)
-        )
+        new_sigInfo.update(interface_wulpus.get_standard_signal_definitions(meas_period_s))
 
         interface_wulpus.sigInfo = new_sigInfo
         interface_wulpus.config_to_signal_name = new_config_to_signal_name
@@ -707,9 +730,7 @@ class WulpusConfigController(QObject):
                     self._mainController._deleteDataSource(item)
 
                     # Create new config with updated interface module (without sigsConfigs)
-                    new_ds_config = {
-                        k: v for k, v in old_ds_config.items() if k != "sigsConfigs"
-                    }
+                    new_ds_config = {k: v for k, v in old_ds_config.items() if k != "sigsConfigs"}
                     new_ds_config["interfaceModule"] = InterfaceModule(
                         packetSize=interface_wulpus.packetSize,
                         startSeq=interface_wulpus.startSeq,
@@ -727,9 +748,7 @@ class WulpusConfigController(QObject):
                             new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
                             new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
                             new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
-                            new_sigsConfigs[sig_name]["extras"] = sig_info.get(
-                                "extras", {}
-                            )
+                            new_sigsConfigs[sig_name]["extras"] = sig_info.get("extras", {})
                         else:
                             # Create new default config for new signal
                             new_sigsConfigs[sig_name] = {
