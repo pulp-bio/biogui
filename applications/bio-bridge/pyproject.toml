@@ -19,3 +19,8 @@ dependencies = [
 
 [dependency-groups]
 dev = ["ruff>=0.14.6"]
+
+[tool.ruff]
+line-length = 100
+fix = true
+lint.ignore = ["E402", "F401", "F841", "E712", "F403", "F405"]
