@@ -64,9 +64,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             num_samples = extras.get("num_samples", 397)  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
-            self.freqLabel.setText(f"{prf:.2f} Hz")
+            self.freqLabel.setText(f"{self._formatRateForDisplay(prf)} Hz")
         else:
-            self.freqLabel.setText(str(fs))
+            self.freqLabel.setText(self._formatRateForDisplay(fs))
 
         if nCh == 1:
             self.label10.setEnabled(False)
@@ -158,15 +158,11 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.showEnvelopeCheckBox.toggled.connect(self._onUsProcessingModeChange)
 
             # Connect ultrasound mode change
-            self.ultrasoundModeComboBox.currentTextChanged.connect(
-                self._onUltrasoundModeChange
-            )
+            self.ultrasoundModeComboBox.currentTextChanged.connect(self._onUltrasoundModeChange)
 
             # Initialize state
             self._onUsProcessingModeChange()
-            self._configureDisplayOptionsForMode(
-                self.ultrasoundModeComboBox.currentText()
-            )
+            self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
 
         else:
             # Time-series signal - disable ultrasound controls
@@ -179,12 +175,15 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.lowFreqSpinBox.setEnabled(False)
             self.highFreqSpinBox.setEnabled(False)
 
+    def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
+        """Format sampling-rate labels with at most {precision} decimal places."""
+        return f"{value:.{precision}f}".rstrip("0").rstrip(".")
+
     def _onUsProcessingModeChange(self) -> None:
         """Enable/disable frequency controls based on ultrasound processing mode."""
         # Enable frequency controls only if filtered or envelope is selected
         needs_filter = (
-            self.showFilteredCheckBox.isChecked()
-            or self.showEnvelopeCheckBox.isChecked()
+            self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
         )
 
         self.lowFreqSpinBox.setEnabled(needs_filter)
@@ -214,8 +213,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Bandpass is enabled if filtered or envelope is shown
             config["enableBandpass"] = (
-                self.showFilteredCheckBox.isChecked()
-                or self.showEnvelopeCheckBox.isChecked()
+                self.showFilteredCheckBox.isChecked() or self.showEnvelopeCheckBox.isChecked()
             )
 
             # Bandpass settings for plot mode
@@ -290,9 +288,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         if self.notchFilterGroupBox.isChecked():
             if not self.qFactorTextField.hasAcceptableInput():
                 return False, 'The "Quality factor" field is invalid.'
-            self._sigConfig["notchFreq"] = lo.toFloat(
-                self.notchFreqComboBox.currentText()
-            )[0]
+            self._sigConfig["notchFreq"] = lo.toFloat(self.notchFreqComboBox.currentText())[0]
             self._sigConfig["qFactor"] = lo.toFloat(self.qFactorTextField.text())[0]
 
         # 2. Plot settings
@@ -412,9 +408,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Restore bandpass filter settings
             if "bandpassLow" in kwargs and "bandpassHigh" in kwargs:
-                self.lowFreqSpinBox.setValue(
-                    kwargs["bandpassLow"] / 1e6
-                )  # Convert from Hz to MHz
+                self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
             # Re-apply mode configuration after prefilling
