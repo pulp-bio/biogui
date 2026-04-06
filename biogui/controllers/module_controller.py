@@ -74,12 +74,6 @@ class ModuleController(QObject):
         teleprompterAction.triggered.connect(self._teleprompterActionHandler)
         moduleMenu.addAction(teleprompterAction)
 
-        # 4. Wulpus Config
-        wulpusConfigAction = QAction("Configure Wulpus", self)
-        wulpusConfigAction.setCheckable(True)
-        wulpusConfigAction.triggered.connect(self._wulpusConfigActionHandler)
-        moduleMenu.addAction(wulpusConfigAction)
-
     def _triggerActionHandler(self, checked: bool) -> None:
         """Handler for the "configure triggers" action."""
         if checked:
@@ -118,16 +112,3 @@ class ModuleController(QObject):
             teleprompterModule = self._modules.pop("teleprompter")
             teleprompterModule.unsubscribe(self._mainController, self._mainWin)
             del teleprompterModule
-
-    def _wulpusConfigActionHandler(self, checked: bool) -> None:
-        """Handler for the "configure Wulpus" action."""
-        if checked:
-            wulpusConfigModule = modules.WulpusConfigController(
-                self._mainController.streamingControllers, parent=self
-            )
-            wulpusConfigModule.subscribe(self._mainController, self._mainWin)
-            self._modules["wulpusConfig"] = wulpusConfigModule
-        else:
-            wulpusConfigModule = self._modules.pop("wulpusConfig")
-            wulpusConfigModule.unsubscribe(self._mainController, self._mainWin)
-            del wulpusConfigModule
