@@ -177,7 +177,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
     def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
         """Format sampling-rate labels with at most {precision} decimal places."""
-        return f"{value:.{precision}f}".rstrip("0").rstrip(".")
+        return f"{round(value, precision):g}"
 
     def _onUsProcessingModeChange(self) -> None:
         """Enable/disable frequency controls based on ultrasound processing mode."""
