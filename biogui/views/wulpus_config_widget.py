@@ -576,7 +576,7 @@ class TxRxConfigDialog(QDialog):
         self.rx_radio_buttons[0].setChecked(True)
         layout.addRow("RX Channel (0-7):", rx_widget)
 
-        helper_label = QLabel("TX: mehrere Kanaele moeglich, RX: genau ein Kanal.", self)
+        helper_label = QLabel("TX: multiple channels possible, RX: exactly one channel.", self)
         layout.addRow("", helper_label)
 
         self.optimized_checkbox = QCheckBox()
