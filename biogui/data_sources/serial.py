@@ -252,9 +252,11 @@ class SerialDataSourceWorker(DataSourceWorker):
             pass
         self._sendSequence(self._stopSeq)
 
-        # Reset accumulation buffer and serial port buffer
+        # Reset accumulation buffer and stale RX only. Do not clear the output
+        # direction: QSerialPort.clear(AllDirections) calls tcflush(TCOFLUSH) on
+        # Unix and can discard stop bytes still queued for transmission.
         self._buffer.clear()
-        self._serialPort.clear()
+        self._serialPort.clear(QSerialPort.Input)
 
         # Close port
         self._serialPort.close()
