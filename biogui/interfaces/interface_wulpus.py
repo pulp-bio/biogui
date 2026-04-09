@@ -25,17 +25,20 @@ import logging
 
 import numpy as np
 
-from biogui.hardware import wulpus as _wulpus_hw
+from biogui.hardware.wulpus import (
+    ACQ_LENGTH_SAMPLES,
+    NUM_IMU_SAMPLES,
+    NUM_US_SAMPLES,
+    RX_MAP,
+    WulpusRxTxConfigGen,
+    WulpusUssConfig,
+)
+from biogui.hardware.wulpus import (
+    PGA_GAIN as PGA_GAIN,
+    TX_MAP as TX_MAP,
+    USS_CAPTURE_ACQ_RATES as USS_CAPTURE_ACQ_RATES,
+)
 
-ACQ_LENGTH_SAMPLES = _wulpus_hw.ACQ_LENGTH_SAMPLES
-NUM_IMU_SAMPLES = _wulpus_hw.NUM_IMU_SAMPLES
-NUM_US_SAMPLES = _wulpus_hw.NUM_US_SAMPLES
-PGA_GAIN = _wulpus_hw.PGA_GAIN
-RX_MAP = _wulpus_hw.RX_MAP
-TX_MAP = _wulpus_hw.TX_MAP
-USS_CAPTURE_ACQ_RATES = _wulpus_hw.USS_CAPTURE_ACQ_RATES
-WulpusRxTxConfigGen = _wulpus_hw.WulpusRxTxConfigGen
-WulpusUssConfig = _wulpus_hw.WulpusUssConfig
 
 logger = logging.getLogger(__name__)
 
