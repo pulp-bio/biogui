@@ -15,7 +15,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QObject, QSize, Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -26,15 +26,20 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
     QMessageBox,
+    QToolButton,
     QTableWidgetItem,
+    QLabel,
+    QStyle,
     QWidget,
 )
 
 from biogui.controllers import MainController
 from biogui.interfaces import interface_wulpus
+from biogui.paths import APP_DIR
 from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
 from biogui.utils import InterfaceModule
 from biogui.views import MainWindow
+from biogui.views.help_dialog import HelpDialog
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -107,10 +112,12 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._tx_rx_configs: list[dict[str, Any]] = []
         self._presets_dir = self._get_presets_directory()
         self._loading_preset = False  # Flag to prevent marking as custom while loading
+        self._help_content = self._load_help_content()
 
         self._setup_validators()
         self._populate_combo_boxes()
         self._populate_presets()
+        self._setup_help_buttons()
         self._connect_signals()
 
         logger.info("WulpusConfigWidget initialized")
@@ -125,6 +132,109 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         presets_dir.mkdir(parents=True, exist_ok=True)
 
         return presets_dir
+
+    def _load_help_content(self) -> dict[str, dict]:
+        """Load local help content for WULPUS settings."""
+        help_file = APP_DIR / "resources" / "help" / "wulpus_settings_help.json"
+        if not help_file.exists():
+            logger.warning(f"WULPUS help file not found: {help_file}")
+            return {}
+
+        try:
+            with open(help_file, "r") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            logger.warning(f"Failed to load WULPUS help content: {e}")
+
+        return {}
+
+    def _setup_help_buttons(self) -> None:
+        """Attach compact info buttons next to labels for contextual help."""
+        self._attach_help_button(self.basicFormLayout, self.dcdcTurnonLabel, "dcdc_turnon")
+        self._attach_help_button(self.basicFormLayout, self.measPeriodLabel, "meas_period")
+        self._attach_help_button(self.basicFormLayout, self.transFreqLabel, "trans_freq")
+        self._attach_help_button(self.basicFormLayout, self.pulseFreqLabel, "pulse_freq")
+        self._attach_help_button(self.basicFormLayout, self.numPulsesLabel, "num_pulses")
+        self._attach_help_button(self.basicFormLayout, self.samplingFreqLabel, "sampling_freq")
+        self._attach_help_button(self.basicFormLayout, self.numSamplesLabel, "num_samples")
+        self._attach_help_button(self.basicFormLayout, self.rxGainLabel, "rx_gain")
+
+        self._attach_help_button(self.advancedFormLayout, self.startHvmuxrxLabel, "start_hvmuxrx")
+        self._attach_help_button(self.advancedFormLayout, self.startPpgLabel, "start_ppg")
+        self._attach_help_button(self.advancedFormLayout, self.turnonAdcLabel, "turnon_adc")
+        self._attach_help_button(
+            self.advancedFormLayout, self.startPgainbiasLabel, "start_pgainbias"
+        )
+        self._attach_help_button(
+            self.advancedFormLayout, self.startAdcsampleLabel, "start_adcsampl"
+        )
+        self._attach_help_button(self.advancedFormLayout, self.restartCaptLabel, "restart_capt")
+        self._attach_help_button(self.advancedFormLayout, self.captTimeoutLabel, "capt_timeout")
+
+        self.txRxInfoLabel.setToolTip(self._help_content.get("tx_rx_configs", {}).get("short", ""))
+
+    def _attach_help_button(self, form_layout: QFormLayout, label: QLabel, help_key: str) -> None:
+        """Replace a form label with a compact label+help-icon container."""
+        row = -1
+        for i in range(form_layout.rowCount()):
+            item = form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            if item is None or item.widget() is None:
+                continue
+            if item.widget() is label:
+                row = i
+                break
+
+        if row < 0:
+            return
+
+        container = QWidget(self)
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        # Keep the original label widget to preserve styling/translations.
+        label.setParent(container)
+        layout.addWidget(label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        info_button = QToolButton(container)
+        info_button.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+        )
+        info_button.setIconSize(QSize(14, 14))
+        info_button.setText("")
+        info_button.setAutoRaise(True)
+        info_button.setCursor(Qt.PointingHandCursor)  # type: ignore
+        info_button.setToolTip(self._help_content.get(help_key, {}).get("short", "More info"))
+        info_button.setFixedSize(18, 18)
+        info_button.setStyleSheet(
+            """
+            QToolButton {
+                border: none;
+                border-radius: 9px;
+                background: transparent;
+            }
+            QToolButton:hover {
+                background: #e9edf5;
+            }
+            """
+        )
+        info_button.clicked.connect(lambda _=False, key=help_key: self._show_help_dialog(key))
+        layout.addWidget(info_button, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        form_layout.setWidget(row, QFormLayout.ItemRole.LabelRole, container)
+
+    def _show_help_dialog(self, help_key: str) -> None:
+        """Open the detailed help dialog for a parameter."""
+        content = self._help_content.get(help_key)
+        if content is None:
+            QMessageBox.information(self, "Help", "No help available for this parameter yet.")
+            return
+
+        title = content.get("title", help_key)
+        dialog = HelpDialog(title, content, parent=self)
+        dialog.exec()
 
     def _populate_presets(self) -> None:
         """Populate the preset combo box from JSON files in the presets directory."""
