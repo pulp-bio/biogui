@@ -1,0 +1,116 @@
+{
+  "dcdc_turnon": {
+    "title": "DC-DC Turn On Time",
+    "short": "Time when the high-voltage DC-DC converter is turned on, referenced to the end of the previous acquisition.",
+    "units": "microseconds (us)",
+    "recommended": "Values below 19500 us are considered safe; tune mainly for energy optimization.",
+    "details": "Controlled by the low-frequency crystal clock domain (LFXT).",
+    "notes": "In most setups this does not need frequent retuning once stable behavior is reached."
+  },
+  "meas_period": {
+    "title": "Acquisition Period",
+    "short": "Inverse of PRF / frame rate.",
+    "units": "microseconds (us)",
+    "recommended": "33333 us corresponds to about 30 Hz.",
+    "details": "Higher frame rates can become less stable due to BLE bandwidth limits.",
+    "formula_display": "PRF = 1 / T_acq",
+    "formula_latex": "\\mathrm{PRF}=\\frac{1}{T_{acq}}"
+  },
+  "sampling_freq": {
+    "title": "Sampling Frequency",
+    "short": "ADC sampling frequency used during ultrasound acquisition.",
+    "units": "Hz",
+    "recommended": "8 MHz is the recommended default for WULPUS.",
+    "details": "This value affects depth sampling resolution and depth range together with the number of samples."
+  },
+  "num_samples": {
+    "title": "Number of Samples",
+    "short": "Number of ADC samples acquired per ultrasound frame.",
+    "units": "samples",
+    "recommended": "Current firmware uses 400 samples.",
+    "details": "Depth in tissue can be approximated from speed of sound c, number of samples N, and sampling frequency fs.",
+    "formula_display": "Depth = (c * N) / (2 * f_s)",
+    "formula_latex": "\\mathrm{Depth}=\\frac{c\\cdot N}{2 f_s}",
+    "notes": "With c ~= 1540 m/s, N = 400, fs = 8 MHz, depth is approximately 38.5 mm."
+  },
+  "rx_gain": {
+    "title": "Receive (RX) Gain",
+    "short": "Gain of the programmable gain amplifier (PGA) in the receive path.",
+    "units": "dB",
+    "recommended": "Tune per transducer and setup.",
+    "details": "A higher gain increases sensitivity but may increase noise and saturation risk."
+  },
+  "pulse_freq": {
+    "title": "Pulse Frequency",
+    "short": "Frequency of emitted ultrasound pulses.",
+    "units": "Hz",
+    "recommended": "Typically set near transducer center frequency; often 1.5-2.5 MHz.",
+    "details": "Best performance usually occurs when transmit frequency matches transducer resonance."
+  },
+  "trans_freq": {
+    "title": "Transducer Frequency",
+    "short": "Configured transducer operating frequency.",
+    "units": "Hz",
+    "recommended": "Use your transducer center frequency.",
+    "details": "Keep this aligned with pulse frequency for consistent excitation behavior."
+  },
+  "num_pulses": {
+    "title": "Number of Pulses",
+    "short": "Number of excitation pulses emitted per acquisition.",
+    "units": "count",
+    "recommended": "Use the minimum that yields robust SNR for your probe.",
+    "details": "Increasing pulse count can improve excitation energy but may also affect timing and power."
+  },
+  "start_hvmuxrx": {
+    "title": "HV-MUX RX Start Time",
+    "short": "Time when the high-voltage multiplexer switches from TX to RX path.",
+    "units": "microseconds (us)",
+    "details": "Controlled by SMCLK. Alignment relative to HSPLL is not perfect and can be device-dependent.",
+    "notes": "Treat absolute value as empirical tuning parameter per probe and setup."
+  },
+  "start_ppg": {
+    "title": "PPG Start Time",
+    "short": "Time when ultrasound pulses are generated.",
+    "units": "microseconds (us)",
+    "details": "Controlled by HSPLL and used as transmit timing reference."
+  },
+  "turnon_adc": {
+    "title": "ADC Turn On Time",
+    "short": "Time when ADC power-up starts (sampling has not started yet).",
+    "units": "microseconds (us)",
+    "recommended": "Keep at 5 us unless specifically required.",
+    "details": "Controlled by HSPLL."
+  },
+  "start_pgainbias": {
+    "title": "PGA Bias Start Time",
+    "short": "Time when internal PGA bias is enabled.",
+    "units": "microseconds (us)",
+    "recommended": "Keep at 5 us unless specifically required.",
+    "details": "Controlled by HSPLL."
+  },
+  "start_adcsampl": {
+    "title": "ADC Sampling Start Time",
+    "short": "Time when ADC begins sampling reflected ultrasound signal.",
+    "units": "microseconds (us)",
+    "details": "Delaying this value shifts the acquisition window deeper in tissue.",
+    "formula_display": "Depth_delay = (c * t_delay) / 2",
+    "formula_latex": "\\mathrm{Depth}_{delay}=\\frac{c\\cdot t_{delay}}{2}",
+    "notes": "If equal to PPG start time, initial samples are often unusable due to TX/RX switching latency."
+  },
+  "restart_capt": {
+    "title": "Capture Restart Time",
+    "short": "Currently not used in the active firmware path.",
+    "units": "microseconds (us)"
+  },
+  "capt_timeout": {
+    "title": "Capture Timeout Time",
+    "short": "Currently not used in the active firmware path.",
+    "units": "microseconds (us)"
+  },
+  "tx_rx_configs": {
+    "title": "TX/RX Configurations",
+    "short": "Defines active transmit and receive channel combinations.",
+    "details": "Each row is one acquisition configuration; the firmware cycles through configurations round-robin.",
+    "notes": "Optimized switching can reduce switching artifacts depending on channel overlap."
+  }
+}
