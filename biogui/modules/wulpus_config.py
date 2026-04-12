@@ -101,6 +101,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setupUi(self)
+        self.configTabWidget.setCurrentIndex(0)
 
         self._current_config: interface_wulpus.WulpusUssConfig | None = None
         self._tx_rx_configs: list[dict[str, Any]] = []
@@ -140,12 +141,51 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 preset_name = preset_file.stem
                 self.presetComboBox.addItem(preset_name)
 
-        # Set default to first preset if available, otherwise Custom
-        if self.presetComboBox.count() > 1:
-            self.presetComboBox.setCurrentIndex(1)  # First preset after "Custom"
-            self._load_preset(self.presetComboBox.currentText())
+        # Keep startup deterministic: do not auto-load any preset here.
+        self.presetComboBox.setCurrentText("Custom")
+
+    def _normalized_config_dict(self, config_dict: dict) -> dict:
+        """Return a normalized dictionary for robust preset comparison."""
+        normalized = dict(config_dict)
+
+        if "tx_rx_configs" in normalized:
+            normalized["tx_rx_configs"] = [
+                {
+                    "tx_channels": list(cfg.get("tx_channels", [])),
+                    "rx_channels": list(cfg.get("rx_channels", [])),
+                    "optimized_switching": bool(cfg.get("optimized_switching", False)),
+                }
+                for cfg in normalized["tx_rx_configs"]
+            ]
+
+        return normalized
+
+    def _sync_preset_selection_with_current_config(self) -> None:
+        """Select preset matching current settings, or fallback to Custom."""
+        current_config = self._normalized_config_dict(self._get_config_dict())
+
+        matched_preset_name = None
+        if self._presets_dir.exists():
+            for preset_file in sorted(self._presets_dir.glob("*.json")):
+                try:
+                    with open(preset_file, "r") as f:
+                        preset_config = json.load(f)
+                except Exception:
+                    continue
+
+                if self._normalized_config_dict(preset_config) == current_config:
+                    matched_preset_name = preset_file.stem
+                    break
+
+        self.presetComboBox.blockSignals(True)
+        if (
+            matched_preset_name is not None
+            and self.presetComboBox.findText(matched_preset_name) >= 0
+        ):
+            self.presetComboBox.setCurrentText(matched_preset_name)
         else:
-            self.presetComboBox.setCurrentIndex(0)  # "Custom"
+            self.presetComboBox.setCurrentText("Custom")
+        self.presetComboBox.blockSignals(False)
 
     def _setup_validators(self) -> None:
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
@@ -304,7 +344,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 )
 
             self._update_tx_rx_table()
-            self.presetComboBox.setCurrentText("Custom")
+            self._sync_preset_selection_with_current_config()
             self.statusLabel.setText("Status: Loaded current configuration")
             logger.info("Loaded existing config into widget")
         finally:
@@ -560,6 +600,26 @@ class WulpusConfigController(QObject):
         # Add configuration widget to main window
         mainWin.moduleContainer.layout().addWidget(self._confWidget)  # type: ignore
         self._mainController = mainController
+
+        # Initialize UI from the currently active WULPUS configuration.
+        current_wulpus_config = interface_wulpus.wulpus_config
+        for ds_config in mainController._config.values():
+            interfacePath = str(ds_config.get("interfacePath", ""))
+            if "wulpus" not in interfacePath.lower():
+                continue
+
+            decode_fn = ds_config.get("interfaceModule", None)
+            if decode_fn is None:
+                continue
+
+            decode_fn = ds_config["interfaceModule"].decodeFn
+            iface_globals = getattr(decode_fn, "__globals__", {})
+            candidate = iface_globals.get("wulpus_config", None)
+            if isinstance(candidate, interface_wulpus.WulpusUssConfig):
+                current_wulpus_config = candidate
+            break
+
+        self._confWidget.load_config(current_wulpus_config)
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
