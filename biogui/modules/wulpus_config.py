@@ -281,14 +281,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 rx_bits = int(config.rx_configs[i])
 
                 tx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
+                    ch for ch in range(8) if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
                 ]
                 rx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
+                    ch for ch in range(8) if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
                 ]
 
                 # Try to detect optimized switching by checking if RX bits appear in TX config
@@ -327,9 +323,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _remove_tx_rx_config(self) -> None:
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to remove."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
             return
         for index in sorted(selected_rows, reverse=True):
             row = index.row()
@@ -343,9 +337,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Edit the selected TX/RX configuration."""
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to edit."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
             return
 
         row = selected_rows[0].row()
@@ -356,12 +348,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         dialog = TxRxConfigDialog(self)
 
         # Pre-fill with current values
-        dialog.tx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["tx_channels"])
-        )
-        dialog.rx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["rx_channels"])
-        )
+        dialog.tx_channels_edit.setText(",".join(str(ch) for ch in current_config["tx_channels"]))
+        dialog.rx_channels_edit.setText(",".join(str(ch) for ch in current_config["rx_channels"]))
         dialog.optimized_checkbox.setChecked(current_config["optimized_switching"])
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -444,9 +432,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                         self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
-            QMessageBox.critical(
-                self, "Save Error", f"Failed to save configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
             logger.error(f"Failed to save config to {file_path}: {e}")
 
     def get_current_config(self) -> interface_wulpus.WulpusUssConfig:
@@ -596,6 +582,84 @@ class WulpusConfigController(QObject):
         if self._mainController is None:  # should never happen
             return
 
+        def _build_interface_runtime_state(
+            decode_fn: Any, config: interface_wulpus.WulpusUssConfig
+        ) -> tuple[InterfaceModule, dict, dict[int, str]]:
+            """Build an updated interface module and sync its module globals."""
+            iface_globals = getattr(decode_fn, "__globals__", {})
+
+            get_rx_channel_for_config = iface_globals.get(
+                "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
+            )
+            get_standard_signal_definitions = iface_globals.get(
+                "get_standard_signal_definitions",
+                interface_wulpus.get_standard_signal_definitions,
+            )
+            num_us_samples = iface_globals.get("NUM_US_SAMPLES", interface_wulpus.NUM_US_SAMPLES)
+
+            packet_size = config.num_samples * 2 + 7 + 6
+            start_seq = [
+                config.get_restart_package(),
+                0.5,
+                config.get_conf_package(),
+            ]
+            stop_seq = [config.get_restart_package()]
+
+            meas_period_s = config.meas_period / 1e6
+            period_per_config_s = meas_period_s * config.num_txrx_configs
+            samples_per_second = num_us_samples / period_per_config_s
+            adc_start_delay = (config.start_adcsampl - config.start_ppg) * 1e-6
+
+            new_sigInfo = {}
+            new_config_to_signal_name = {}
+            for config_id in range(config.num_txrx_configs):
+                rx_channel = get_rx_channel_for_config(config, config_id)
+                if rx_channel is None:
+                    continue
+
+                signal_name = (
+                    "ultrasound"
+                    if config.num_txrx_configs == 1
+                    else f"ultrasound_cfg{config_id}_rx{rx_channel}"
+                )
+
+                new_config_to_signal_name[config_id] = signal_name
+
+                new_sigInfo[signal_name] = {
+                    "fs": samples_per_second,
+                    "nCh": 1,
+                    "extras": {
+                        "type": "ultrasound",
+                        "config_id": config_id,
+                        "rx_channel": rx_channel,
+                        "num_samples": num_us_samples,
+                        "meas_period": config.meas_period,
+                        "adc_sampling_freq": config.sampling_freq,
+                        "adc_start_delay": adc_start_delay,
+                    },
+                }
+
+            # Add standard signals (IMU + metadata + synchronization_signal)
+            new_sigInfo.update(get_standard_signal_definitions(meas_period_s))
+
+            # Keep module-level globals in sync for decode functions that use them.
+            iface_globals["wulpus_config"] = config
+            iface_globals["packetSize"] = packet_size
+            iface_globals["startSeq"] = start_seq
+            iface_globals["stopSeq"] = stop_seq
+            iface_globals["sigInfo"] = new_sigInfo
+            iface_globals["config_to_signal_name"] = new_config_to_signal_name
+
+            new_interface_module = InterfaceModule(
+                packetSize=packet_size,
+                startSeq=start_seq,
+                stopSeq=stop_seq,
+                sigInfo=new_sigInfo,
+                decodeFn=decode_fn,
+            )
+
+            return new_interface_module, new_sigInfo, new_config_to_signal_name
+
         # Check if WULPUS is in use
         is_wulpus = False
         for ds_config in self._mainController._config.values():
@@ -623,61 +687,7 @@ class WulpusConfigController(QObject):
             )
             return
 
-        interface_wulpus.wulpus_config = new_config
-        interface_wulpus.packetSize = new_config.num_samples * 2 + 7 + 6
-        interface_wulpus.startSeq = [
-            new_config.get_restart_package(),
-            0.5,
-            new_config.get_conf_package(),
-        ]
-        interface_wulpus.stopSeq = [new_config.get_restart_package()]
-
-        # Rebuild signal info with new configuration
-        meas_period_s = new_config.meas_period / 1e6
-        period_per_config_s = meas_period_s * new_config.num_txrx_configs
-        samples_per_second = interface_wulpus.NUM_US_SAMPLES / period_per_config_s
-        adc_start_delay = (new_config.start_adcsampl - new_config.start_ppg) * 1e-6
-
-        new_sigInfo = {}
-        new_config_to_signal_name = {}
-        for config_id in range(new_config.num_txrx_configs):
-            rx_channel = interface_wulpus.get_rx_channel_for_config(
-                new_config, config_id
-            )
-            if rx_channel is None:
-                continue
-
-            signal_name = (
-                "ultrasound"
-                if new_config.num_txrx_configs == 1
-                else f"ultrasound_cfg{config_id}_rx{rx_channel}"
-            )
-
-            new_config_to_signal_name[config_id] = signal_name
-
-            new_sigInfo[signal_name] = {
-                "fs": samples_per_second,
-                "nCh": 1,
-                "extras": {
-                    "type": "ultrasound",
-                    "config_id": config_id,
-                    "rx_channel": rx_channel,
-                    "num_samples": interface_wulpus.NUM_US_SAMPLES,
-                    "meas_period": new_config.meas_period,
-                    "adc_sampling_freq": new_config.sampling_freq,
-                    "adc_start_delay": adc_start_delay,
-                },
-            }
-
-        # Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
-        new_sigInfo.update(
-            interface_wulpus.get_standard_signal_definitions(meas_period_s)
-        )
-
-        interface_wulpus.sigInfo = new_sigInfo
-        interface_wulpus.config_to_signal_name = new_config_to_signal_name
-
-        # Identify Wulpus sources and check if signal structure changed
+        # Identify WULPUS sources and check if signal structure changed
         sources_to_recreate = []
         sources_to_update = []
 
@@ -686,19 +696,29 @@ class WulpusConfigController(QObject):
             if "wulpus" not in interfacePath.lower():
                 continue
 
+            old_interface_module = ds_config["interfaceModule"]
+            new_interface_module, new_sigInfo, _ = _build_interface_runtime_state(
+                old_interface_module.decodeFn, new_config
+            )
+
             old_sig_names = set(ds_config["interfaceModule"].sigInfo.keys())
             new_sig_names = set(new_sigInfo.keys())
 
             if old_sig_names != new_sig_names:
-                sources_to_recreate.append((ds_name, ds_config))
+                sources_to_recreate.append((ds_name, ds_config, new_interface_module, new_sigInfo))
             else:
-                sources_to_update.append((ds_name, ds_config))
+                sources_to_update.append((ds_name, ds_config, new_interface_module, new_sigInfo))
 
         if not is_wulpus:
             return
 
         # Recreate sources where signal structure changed
-        for ds_name, old_ds_config in sources_to_recreate:
+        for (
+            ds_name,
+            old_ds_config,
+            new_interface_module,
+            new_sigInfo,
+        ) in sources_to_recreate:
             # Find the item in the tree
             for row in range(self._mainController.dataSourceModel.rowCount()):
                 item = self._mainController.dataSourceModel.item(row)
@@ -707,16 +727,8 @@ class WulpusConfigController(QObject):
                     self._mainController._deleteDataSource(item)
 
                     # Create new config with updated interface module (without sigsConfigs)
-                    new_ds_config = {
-                        k: v for k, v in old_ds_config.items() if k != "sigsConfigs"
-                    }
-                    new_ds_config["interfaceModule"] = InterfaceModule(
-                        packetSize=interface_wulpus.packetSize,
-                        startSeq=interface_wulpus.startSeq,
-                        stopSeq=interface_wulpus.stopSeq,
-                        sigInfo=interface_wulpus.sigInfo,
-                        decodeFn=interface_wulpus.decodeFn,
-                    )
+                    new_ds_config = {k: v for k, v in old_ds_config.items() if k != "sigsConfigs"}
+                    new_ds_config["interfaceModule"] = new_interface_module
 
                     # Preserve old signal configs where names match, create new for others
                     old_sigsConfigs = old_ds_config.get("sigsConfigs", {})
@@ -727,33 +739,45 @@ class WulpusConfigController(QObject):
                             new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
                             new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
                             new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
-                            new_sigsConfigs[sig_name]["extras"] = sig_info.get(
-                                "extras", {}
-                            )
+                            new_sigsConfigs[sig_name]["extras"] = sig_info.get("extras", {})
                         else:
                             # Create new default config for new signal
-                            new_sigsConfigs[sig_name] = {
+                            default_sig_config = {
                                 "fs": sig_info["fs"],
                                 "nCh": sig_info["nCh"],
                                 "extras": sig_info.get("extras", {}),
-                                "chSpacing": 1.0,
                             }
+                            if not sig_info.get("hidden", False):
+                                default_sig_config["chSpacing"] = 1.0
+                            new_sigsConfigs[sig_name] = default_sig_config
 
                     # Re-add the source with new config
                     self._mainController._addDataSource(new_ds_config, new_sigsConfigs)
                     break
 
         # Update sources where signal structure didn't change
-        for ds_name, ds_config in sources_to_update:
-            new_interface_module = InterfaceModule(
-                packetSize=interface_wulpus.packetSize,
-                startSeq=interface_wulpus.startSeq,
-                stopSeq=interface_wulpus.stopSeq,
-                sigInfo=interface_wulpus.sigInfo,
-                decodeFn=interface_wulpus.decodeFn,
-            )
-
+        for ds_name, ds_config, new_interface_module, new_sigInfo in sources_to_update:
             ds_config["interfaceModule"] = new_interface_module
+
+            # Refresh per-signal metadata so downstream components stay coherent.
+            old_sigsConfigs = ds_config.get("sigsConfigs", {})
+            new_sigsConfigs = {}
+            for sig_name, sig_info in new_sigInfo.items():
+                if sig_name in old_sigsConfigs:
+                    new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
+                    new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
+                    new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
+                    new_sigsConfigs[sig_name]["extras"] = sig_info.get("extras", {})
+                else:
+                    default_sig_config = {
+                        "fs": sig_info["fs"],
+                        "nCh": sig_info["nCh"],
+                        "extras": sig_info.get("extras", {}),
+                    }
+                    if not sig_info.get("hidden", False):
+                        default_sig_config["chSpacing"] = 1.0
+                    new_sigsConfigs[sig_name] = default_sig_config
+            ds_config["sigsConfigs"] = new_sigsConfigs
 
             if ds_name in self._streamingControllers:
                 self._streamingControllers[ds_name].editDataSourceConfig(ds_config)
