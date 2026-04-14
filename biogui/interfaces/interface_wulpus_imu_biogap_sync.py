@@ -118,7 +118,7 @@ def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | 
 
 def get_standard_signal_definitions(meas_period_s: float) -> dict:
     """
-    Get standard signal definitions for WULPUS (IMU + metadata).
+    Get standard signal definitions for WULPUS (IMU + metadata + synchronization).
     """
     fs = 1.0 / meas_period_s
     return {
@@ -137,6 +137,11 @@ def get_standard_signal_definitions(meas_period_s: float) -> dict:
             "fs": fs,
             "nCh": 1,
             "hidden": True,
+            "extras": {"type": "time-series"},
+        },
+        "synchronization_signal": {
+            "fs": fs,
+            "nCh": 1,
             "extras": {"type": "time-series"},
         },
     }
@@ -193,7 +198,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
     )
 
 
-# Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
+# Add standard signals (IMU + metadata + synchronization_signal)
 sigInfo.update(get_standard_signal_definitions(meas_period_s))
 logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
 
@@ -219,17 +224,15 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             "b'START\\n' sequence. Data alignment error."
         )
 
-    # Remove start sequence (b'START\n')
-    data = data[6:]
+    data = data[9:]  # Remove b'START\n' + 3 bytes of header (total 9 bytes)
+    frame_mask = data[0]
+    tx_rx_id = data[1]
+    acq_nr = data[2]
+    sync_signal = data[3]
+    rf_arr = np.frombuffer(data[4:], dtype="<i2")
 
-    # Parse packet structure (after removing b'START\n'):
-    # [0:4]   = header (4 bytes)
-    # [4]     = tx_rx_id (config ID from hardware)
-    # [5:7]   = acq_nr (acquisition number, uint16)
-    # [7:]    = rf_data (400 int16 samples: 397 US + 3 IMU)
-    tx_rx_id = data[4]
-    acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
-    rf_arr = np.frombuffer(data[7:], dtype="<i2")
+    # logger.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
+    # logger.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
     # Split frame: first 397 samples = ultrasound, last 3 = IMU
     us_samples = rf_arr[:NUM_US_SAMPLES]
@@ -250,6 +253,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         elif signal_name == "imu":
             result[signal_name] = imu_samples.reshape(1, 3)
 
+        elif signal_name == "synchronization_signal":
+            # Forward synchronization signal from HW (e.g. for BIOGAP synchronization)
+            result[signal_name] = np.array([[sync_signal]], dtype=np.uint8)
         else:
             # Ultrasound signal: check if this config is active in current frame
             if config_to_signal_name.get(tx_rx_id) == signal_name:
