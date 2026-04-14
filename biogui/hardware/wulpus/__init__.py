@@ -8,6 +8,8 @@
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
     MAX_CH_ID,
+    MEAS_MODE_ACCELEROMETER_ENABLED,
+    MEAS_MODE_ULTRASOUND_ONLY,
     NUM_IMU_SAMPLES,
     NUM_US_SAMPLES,
     PACKAGE_LEN,
@@ -21,6 +23,10 @@ from .protocol import (
     USS_CAPTURE_ACQ_RATES,
     USS_CAPTURE_OVER_SAMPLE_RATES,
     USS_CAPT_OVER_SAMPLE_RATES_REG,
+    get_num_us_samples_from_config,
+    get_num_us_samples_from_mode,
+    is_accelerometer_enabled_from_config,
+    is_accelerometer_enabled_from_mode,
     WulpusRxTxConfigGen,
     WulpusUssConfig,
 )
@@ -28,6 +34,8 @@ from .protocol import (
 __all__ = [
     "ACQ_LENGTH_SAMPLES",
     "MAX_CH_ID",
+    "MEAS_MODE_ACCELEROMETER_ENABLED",
+    "MEAS_MODE_ULTRASOUND_ONLY",
     "NUM_IMU_SAMPLES",
     "NUM_US_SAMPLES",
     "PACKAGE_LEN",
@@ -41,6 +49,10 @@ __all__ = [
     "USS_CAPTURE_ACQ_RATES",
     "USS_CAPTURE_OVER_SAMPLE_RATES",
     "USS_CAPT_OVER_SAMPLE_RATES_REG",
+    "get_num_us_samples_from_config",
+    "get_num_us_samples_from_mode",
+    "is_accelerometer_enabled_from_config",
+    "is_accelerometer_enabled_from_mode",
     "WulpusRxTxConfigGen",
     "WulpusUssConfig",
 ]

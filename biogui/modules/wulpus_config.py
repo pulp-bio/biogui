@@ -34,6 +34,12 @@ from PySide6.QtWidgets import (
 )
 
 from biogui.controllers import MainController
+from biogui.hardware.wulpus import (
+    MEAS_MODE_ACCELEROMETER_ENABLED,
+    MEAS_MODE_ULTRASOUND_ONLY,
+    get_num_us_samples_from_config,
+    is_accelerometer_enabled_from_mode,
+)
 from biogui.interfaces import interface_wulpus
 from biogui.paths import APP_DIR
 from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
@@ -43,6 +49,26 @@ from biogui.views.help_dialog import HelpDialog
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
+
+
+def _is_accelerometer_enabled_from_meas_mode(meas_mode: int) -> bool:
+    return is_accelerometer_enabled_from_mode(int(meas_mode))
+
+
+def _meas_mode_from_accelerometer_enabled(accelerometer_enabled: bool) -> int:
+    if accelerometer_enabled:
+        return MEAS_MODE_ACCELEROMETER_ENABLED
+    return MEAS_MODE_ULTRASOUND_ONLY
+
+
+def _get_imu_active_from_config_dict(config_dict: dict) -> bool:
+    """Extract IMU activity from a preset dictionary."""
+    if "imu_active" in config_dict:
+        return bool(config_dict["imu_active"])
+
+    # Graceful conversion path for existing preset files.
+    meas_mode = int(config_dict.get("meas_mode", MEAS_MODE_ULTRASOUND_ONLY))
+    return _is_accelerometer_enabled_from_meas_mode(meas_mode)
 
 
 class TxRxConfigDialog(QDialog):
@@ -154,7 +180,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Attach compact info buttons next to labels for contextual help."""
         self._attach_help_button(self.basicFormLayout, self.dcdcTurnonLabel, "dcdc_turnon")
         self._attach_help_button(self.basicFormLayout, self.measPeriodLabel, "meas_period")
-        self._attach_help_button(self.basicFormLayout, self.transFreqLabel, "trans_freq")
+        self._attach_help_button(self.basicFormLayout, self.transFreqLabel, "imu_active")
         self._attach_help_button(self.basicFormLayout, self.pulseFreqLabel, "pulse_freq")
         self._attach_help_button(self.basicFormLayout, self.numPulsesLabel, "num_pulses")
         self._attach_help_button(self.basicFormLayout, self.samplingFreqLabel, "sampling_freq")
@@ -258,6 +284,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Return a normalized dictionary for robust preset comparison."""
         normalized = dict(config_dict)
 
+        normalized["imu_active"] = _get_imu_active_from_config_dict(normalized)
+        normalized.pop("meas_mode", None)
+
         if "tx_rx_configs" in normalized:
             normalized["tx_rx_configs"] = [
                 {
@@ -300,7 +329,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _setup_validators(self) -> None:
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
         self.measPeriodLineEdit.setValidator(QIntValidator(0, 1000000))  # No minimum
-        self.transFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.pulseFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.numPulsesLineEdit.setValidator(QIntValidator(0, 100))
         self.numSamplesLineEdit.setValidator(QIntValidator(0, 10000))
@@ -334,7 +362,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         for widget in [
             self.dcdcTurnonLineEdit,
             self.measPeriodLineEdit,
-            self.transFreqLineEdit,
             self.pulseFreqLineEdit,
             self.numPulsesLineEdit,
             self.numSamplesLineEdit,
@@ -350,6 +377,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
         self.samplingFreqComboBox.currentIndexChanged.connect(self._mark_as_custom)
         self.rxGainComboBox.currentIndexChanged.connect(self._mark_as_custom)
+        self.imuActiveCheckBox.stateChanged.connect(self._mark_as_custom)
 
     def _mark_as_custom(self) -> None:
         # Don't mark as custom if we're currently loading a preset
@@ -404,7 +432,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         try:
             self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
             self.measPeriodLineEdit.setText(str(config.meas_period))
-            self.transFreqLineEdit.setText(str(config.trans_freq))
+            self.imuActiveCheckBox.setChecked(
+                _is_accelerometer_enabled_from_meas_mode(config.meas_mode)
+            )
             self.pulseFreqLineEdit.setText(str(config.pulse_freq))
             self.numPulsesLineEdit.setText(str(config.num_pulses))
             self.numSamplesLineEdit.setText(str(config.num_samples))
@@ -597,7 +627,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         return interface_wulpus.WulpusUssConfig(
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
-            trans_freq=int(self.transFreqLineEdit.text()),
+            meas_mode=_meas_mode_from_accelerometer_enabled(self.imuActiveCheckBox.isChecked()),
             pulse_freq=int(self.pulseFreqLineEdit.text()),
             num_pulses=int(self.numPulsesLineEdit.text()),
             sampling_freq=self.samplingFreqComboBox.currentData(),
@@ -616,10 +646,11 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         )
 
     def _get_config_dict(self) -> dict:
+        accelerometer_enabled = self.imuActiveCheckBox.isChecked()
         return {
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
-            "trans_freq": int(self.transFreqLineEdit.text()),
+            "imu_active": accelerometer_enabled,
             "pulse_freq": int(self.pulseFreqLineEdit.text()),
             "num_pulses": int(self.numPulsesLineEdit.text()),
             "sampling_freq": self.samplingFreqComboBox.currentData(),
@@ -639,7 +670,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         # Note: _loading_preset flag should be set by caller
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
-        self.transFreqLineEdit.setText(str(config_dict["trans_freq"]))
+        accelerometer_enabled = _get_imu_active_from_config_dict(config_dict)
+        self.imuActiveCheckBox.setChecked(accelerometer_enabled)
         self.pulseFreqLineEdit.setText(str(config_dict["pulse_freq"]))
         self.numPulsesLineEdit.setText(str(config_dict["num_pulses"]))
         self.numSamplesLineEdit.setText(str(config_dict["num_samples"]))
@@ -770,11 +802,41 @@ class WulpusConfigController(QObject):
             decode_fn = old_interface_module.decodeFn
             iface_globals = getattr(decode_fn, "__globals__", {})
 
+            # Keep config-dependent helper functions deterministic during this rebuild.
+            iface_globals["wulpus_config"] = config
+
             get_rx_channel_for_config = iface_globals.get(
                 "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
             )
             get_standard_signal_definitions = iface_globals.get("get_standard_signal_definitions")
-            num_us_samples = iface_globals.get("NUM_US_SAMPLES", interface_wulpus.NUM_US_SAMPLES)
+            get_standard_signal_definitions_for_mode = iface_globals.get(
+                "get_standard_signal_definitions_for_mode"
+            )
+            get_num_us_samples = iface_globals.get("get_num_us_samples_from_config")
+            if not callable(get_num_us_samples):
+                get_num_us_samples = iface_globals.get("get_num_us_samples")
+
+            is_accelerometer_enabled = iface_globals.get("is_accelerometer_enabled_from_config")
+            if not callable(is_accelerometer_enabled):
+                is_accelerometer_enabled = iface_globals.get("is_accelerometer_enabled")
+
+            if callable(is_accelerometer_enabled):
+                accelerometer_enabled = bool(is_accelerometer_enabled(config))
+            else:
+                accelerometer_enabled = _is_accelerometer_enabled_from_meas_mode(config.meas_mode)
+
+            if callable(get_num_us_samples):
+                mode_specific_samples = get_num_us_samples(config)
+                if isinstance(mode_specific_samples, bool):
+                    num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
+                elif isinstance(mode_specific_samples, (int, float, str)):
+                    num_us_samples = int(mode_specific_samples)
+                else:
+                    num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
+            elif accelerometer_enabled:
+                num_us_samples = get_num_us_samples_from_config(config)
+            else:
+                num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
 
             packet_size = config.num_samples * 2 + 7 + 6
             start_seq = [
@@ -819,8 +881,21 @@ class WulpusConfigController(QObject):
                 }
 
             # Keep standard signals defined by the active interface module.
-            if callable(get_standard_signal_definitions):
-                standard_sig_info = get_standard_signal_definitions(meas_period_s)
+            if callable(get_standard_signal_definitions_for_mode):
+                standard_sig_info = get_standard_signal_definitions_for_mode(
+                    meas_period_s,
+                    accelerometer_enabled,
+                )
+                if isinstance(standard_sig_info, dict):
+                    new_sigInfo.update(standard_sig_info)
+            elif callable(get_standard_signal_definitions):
+                try:
+                    standard_sig_info = get_standard_signal_definitions(
+                        meas_period_s,
+                        accelerometer_enabled,
+                    )
+                except TypeError:
+                    standard_sig_info = get_standard_signal_definitions(meas_period_s)
                 if isinstance(standard_sig_info, dict):
                     new_sigInfo.update(standard_sig_info)
             else:

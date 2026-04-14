@@ -30,6 +30,10 @@ from PySide6.QtWidgets import (
 )
 
 from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
+from biogui.hardware.wulpus import (
+    MEAS_MODE_ACCELEROMETER_ENABLED,
+    MEAS_MODE_ULTRASOUND_ONLY,
+)
 
 from ..interfaces import interface_wulpus
 
@@ -93,7 +97,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _setup_validators(self) -> None:
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
         self.measPeriodLineEdit.setValidator(QIntValidator(0, 1000000))  # No minimum
-        self.transFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.pulseFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.numPulsesLineEdit.setValidator(QIntValidator(0, 100))
         self.numSamplesLineEdit.setValidator(QIntValidator(0, 10000))
@@ -127,7 +130,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         for widget in [
             self.dcdcTurnonLineEdit,
             self.measPeriodLineEdit,
-            self.transFreqLineEdit,
             self.pulseFreqLineEdit,
             self.numPulsesLineEdit,
             self.numSamplesLineEdit,
@@ -143,6 +145,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
         self.samplingFreqComboBox.currentIndexChanged.connect(self._mark_as_custom)
         self.rxGainComboBox.currentIndexChanged.connect(self._mark_as_custom)
+        self.imuActiveCheckBox.stateChanged.connect(self._mark_as_custom)
 
     def _mark_as_custom(self) -> None:
         # Don't mark as custom if we're currently loading a preset
@@ -197,7 +200,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         try:
             self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
             self.measPeriodLineEdit.setText(str(config.meas_period))
-            self.transFreqLineEdit.setText(str(config.trans_freq))
+            self.imuActiveCheckBox.setChecked(
+                int(config.meas_mode) == interface_wulpus.MEAS_MODE_ACCELEROMETER_ENABLED
+            )
             self.pulseFreqLineEdit.setText(str(config.pulse_freq))
             self.numPulsesLineEdit.setText(str(config.num_pulses))
             self.numSamplesLineEdit.setText(str(config.num_samples))
@@ -224,14 +229,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 rx_bits = int(config.rx_configs[i])
 
                 tx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
+                    ch for ch in range(8) if (tx_bits >> interface_wulpus.TX_MAP[ch]) & 1
                 ]
                 rx_channels = [
-                    ch
-                    for ch in range(8)
-                    if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
+                    ch for ch in range(8) if (rx_bits >> interface_wulpus.RX_MAP[ch]) & 1
                 ]
 
                 # Try to detect optimized switching by checking if RX bits appear in TX config
@@ -270,9 +271,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _remove_tx_rx_config(self) -> None:
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to remove."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to remove.")
             return
         for index in sorted(selected_rows, reverse=True):
             row = index.row()
@@ -286,9 +285,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         """Edit the selected TX/RX configuration."""
         selected_rows = self.txRxTableWidget.selectionModel().selectedRows()
         if not selected_rows:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a configuration to edit."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select a configuration to edit.")
             return
 
         row = selected_rows[0].row()
@@ -299,12 +296,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         dialog = TxRxConfigDialog(self)
 
         # Pre-fill with current values
-        dialog.tx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["tx_channels"])
-        )
-        dialog.rx_channels_edit.setText(
-            ",".join(str(ch) for ch in current_config["rx_channels"])
-        )
+        dialog.tx_channels_edit.setText(",".join(str(ch) for ch in current_config["tx_channels"]))
+        dialog.rx_channels_edit.setText(",".join(str(ch) for ch in current_config["rx_channels"]))
         dialog.optimized_checkbox.setChecked(current_config["optimized_switching"])
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -387,9 +380,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                         self.presetComboBox.setCurrentIndex(idx)
 
         except Exception as e:
-            QMessageBox.critical(
-                self, "Save Error", f"Failed to save configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
             logger.error(f"Failed to save config to {file_path}: {e}")
 
     def get_current_config(self) -> interface_wulpus.WulpusUssConfig:
@@ -404,7 +395,11 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         return interface_wulpus.WulpusUssConfig(
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
-            trans_freq=int(self.transFreqLineEdit.text()),
+            meas_mode=(
+                MEAS_MODE_ACCELEROMETER_ENABLED
+                if self.imuActiveCheckBox.isChecked()
+                else MEAS_MODE_ULTRASOUND_ONLY
+            ),
             pulse_freq=int(self.pulseFreqLineEdit.text()),
             num_pulses=int(self.numPulsesLineEdit.text()),
             sampling_freq=self.samplingFreqComboBox.currentData(),
@@ -423,10 +418,15 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         )
 
     def _get_config_dict(self) -> dict:
+        meas_mode = (
+            MEAS_MODE_ACCELEROMETER_ENABLED
+            if self.imuActiveCheckBox.isChecked()
+            else MEAS_MODE_ULTRASOUND_ONLY
+        )
         return {
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
-            "trans_freq": int(self.transFreqLineEdit.text()),
+            "meas_mode": meas_mode,
             "pulse_freq": int(self.pulseFreqLineEdit.text()),
             "num_pulses": int(self.numPulsesLineEdit.text()),
             "sampling_freq": self.samplingFreqComboBox.currentData(),
@@ -446,7 +446,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         # Note: _loading_preset flag should be set by caller
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
-        self.transFreqLineEdit.setText(str(config_dict["trans_freq"]))
+        self.imuActiveCheckBox.setChecked(
+            int(config_dict["meas_mode"]) == MEAS_MODE_ACCELEROMETER_ENABLED
+        )
         self.pulseFreqLineEdit.setText(str(config_dict["pulse_freq"]))
         self.numPulsesLineEdit.setText(str(config_dict["num_pulses"]))
         self.numSamplesLineEdit.setText(str(config_dict["num_samples"]))
