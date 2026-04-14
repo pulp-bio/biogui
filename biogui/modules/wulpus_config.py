@@ -696,6 +696,20 @@ class WulpusConfigController(QObject):
 
         self._confWidget.applyConfigButton.clicked.connect(self._applyConfigHandler)
 
+    @staticmethod
+    def _is_wulpus_interface_path(interface_path: Any) -> bool:
+        """Return True if a data source interface path points to a WULPUS interface."""
+        return "wulpus" in str(interface_path).lower()
+
+    def _iter_wulpus_data_sources(self):
+        """Iterate over configured data sources that use a WULPUS interface."""
+        if self._mainController is None:
+            return
+
+        for ds_name, ds_config in self._mainController._config.items():
+            if self._is_wulpus_interface_path(ds_config.get("interfacePath", "")):
+                yield ds_name, ds_config
+
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
         Subscribe to the main controller.
@@ -713,11 +727,7 @@ class WulpusConfigController(QObject):
 
         # Initialize UI from the currently active WULPUS configuration.
         current_wulpus_config = interface_wulpus.wulpus_config
-        for ds_config in mainController._config.values():
-            interfacePath = str(ds_config.get("interfacePath", ""))
-            if "wulpus" not in interfacePath.lower():
-                continue
-
+        for _, ds_config in self._iter_wulpus_data_sources():
             decode_fn = ds_config.get("interfaceModule", None)
             if decode_fn is None:
                 continue
@@ -753,18 +763,17 @@ class WulpusConfigController(QObject):
             return
 
         def _build_interface_runtime_state(
-            decode_fn: Any, config: interface_wulpus.WulpusUssConfig
+            old_interface_module: InterfaceModule,
+            config: interface_wulpus.WulpusUssConfig,
         ) -> tuple[InterfaceModule, dict, dict[int, str]]:
             """Build an updated interface module and sync its module globals."""
+            decode_fn = old_interface_module.decodeFn
             iface_globals = getattr(decode_fn, "__globals__", {})
 
             get_rx_channel_for_config = iface_globals.get(
                 "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
             )
-            get_standard_signal_definitions = iface_globals.get(
-                "get_standard_signal_definitions",
-                interface_wulpus.get_standard_signal_definitions,
-            )
+            get_standard_signal_definitions = iface_globals.get("get_standard_signal_definitions")
             num_us_samples = iface_globals.get("NUM_US_SAMPLES", interface_wulpus.NUM_US_SAMPLES)
 
             packet_size = config.num_samples * 2 + 7 + 6
@@ -809,8 +818,19 @@ class WulpusConfigController(QObject):
                     },
                 }
 
-            # Add standard signals (IMU + metadata + synchronization_signal)
-            new_sigInfo.update(get_standard_signal_definitions(meas_period_s))
+            # Keep standard signals defined by the active interface module.
+            if callable(get_standard_signal_definitions):
+                standard_sig_info = get_standard_signal_definitions(meas_period_s)
+                if isinstance(standard_sig_info, dict):
+                    new_sigInfo.update(standard_sig_info)
+            else:
+                for sig_name, sig_info in old_interface_module.sigInfo.items():
+                    if sig_info.get("extras", {}).get("type") == "ultrasound":
+                        continue
+
+                    updated_sig_info = sig_info.copy()
+                    updated_sig_info["fs"] = 1.0 / meas_period_s
+                    new_sigInfo[sig_name] = updated_sig_info
 
             # Keep module-level globals in sync for decode functions that use them.
             iface_globals["wulpus_config"] = config
@@ -831,12 +851,8 @@ class WulpusConfigController(QObject):
             return new_interface_module, new_sigInfo, new_config_to_signal_name
 
         # Check if WULPUS is in use
-        is_wulpus = False
-        for ds_config in self._mainController._config.values():
-            interfacePath = str(ds_config.get("interfacePath", ""))
-            if "wulpus" not in interfacePath.lower():
-                continue
-            is_wulpus = True
+        wulpus_sources = list(self._iter_wulpus_data_sources())
+        is_wulpus = len(wulpus_sources) > 0
         if not is_wulpus:
             QMessageBox.warning(
                 self._confWidget,
@@ -861,14 +877,10 @@ class WulpusConfigController(QObject):
         sources_to_recreate = []
         sources_to_update = []
 
-        for ds_name, ds_config in self._mainController._config.items():
-            interfacePath = str(ds_config.get("interfacePath", ""))
-            if "wulpus" not in interfacePath.lower():
-                continue
-
+        for ds_name, ds_config in wulpus_sources:
             old_interface_module = ds_config["interfaceModule"]
             new_interface_module, new_sigInfo, _ = _build_interface_runtime_state(
-                old_interface_module.decodeFn, new_config
+                old_interface_module, new_config
             )
 
             old_sig_names = set(ds_config["interfaceModule"].sigInfo.keys())
@@ -878,9 +890,6 @@ class WulpusConfigController(QObject):
                 sources_to_recreate.append((ds_name, ds_config, new_interface_module, new_sigInfo))
             else:
                 sources_to_update.append((ds_name, ds_config, new_interface_module, new_sigInfo))
-
-        if not is_wulpus:
-            return
 
         # Recreate sources where signal structure changed
         for (
