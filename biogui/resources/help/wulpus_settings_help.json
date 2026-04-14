@@ -47,12 +47,12 @@
     "recommended": "Typically set near transducer center frequency; often 1.5-2.5 MHz.",
     "details": "Best performance usually occurs when transmit frequency matches transducer resonance."
   },
-  "trans_freq": {
-    "title": "Transducer Frequency",
-    "short": "Configured transducer operating frequency.",
-    "units": "Hz",
-    "recommended": "Use your transducer center frequency.",
-    "details": "Keep this aligned with pulse frequency for consistent excitation behavior."
+  "imu_active": {
+    "title": "IMU Active",
+    "short": "Enable or disable IMU data in each acquisition frame.",
+    "units": "boolean (true/false)",
+    "recommended": "Set true only when IMU data is needed; set false for ultrasound-only acquisition.",
+    "details": "In presets, this is stored as imu_active: true/false. Internally, true maps to firmware mode value 101 and false maps to 0. If IMU is off, all 400 frame samples are forwarded as ultrasound."
   },
   "num_pulses": {
     "title": "Number of Pulses",

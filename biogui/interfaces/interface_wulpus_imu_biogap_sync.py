@@ -27,11 +27,13 @@ import numpy as np
 
 from biogui.hardware.wulpus import (
     ACQ_LENGTH_SAMPLES,
+    MEAS_MODE_ACCELEROMETER_ENABLED,
     NUM_IMU_SAMPLES,
-    NUM_US_SAMPLES,
     RX_MAP,
     WulpusRxTxConfigGen,
     WulpusUssConfig,
+    get_num_us_samples_from_config,
+    is_accelerometer_enabled_from_config,
 )
 from biogui.hardware.wulpus import (
     PGA_GAIN as PGA_GAIN,
@@ -55,7 +57,7 @@ rx_tx_config.add_config(
 wulpus_config = WulpusUssConfig(
     dcdc_turnon=19530,
     meas_period=33333,
-    trans_freq=2250000,
+    meas_mode=MEAS_MODE_ACCELEROMETER_ENABLED,
     pulse_freq=2250000,
     num_pulses=2,
     sampling_freq=8000000.0,
@@ -120,13 +122,20 @@ def get_standard_signal_definitions(meas_period_s: float) -> dict:
     """
     Get standard signal definitions for WULPUS (IMU + metadata + synchronization).
     """
+
+    return get_standard_signal_definitions_for_mode(
+        meas_period_s,
+        is_accelerometer_enabled_from_config(wulpus_config),
+    )
+
+
+def get_standard_signal_definitions_for_mode(
+    meas_period_s: float,
+    accelerometer_enabled: bool,
+) -> dict:
+    """Get standard signal definitions for WULPUS metadata, sync, and optional IMU."""
     fs = 1.0 / meas_period_s
-    return {
-        "imu": {
-            "fs": fs,
-            "nCh": 3,
-            "extras": {"type": "time-series"},
-        },
+    definitions = {
         "acquisition_number": {
             "fs": fs,
             "nCh": 1,
@@ -146,13 +155,24 @@ def get_standard_signal_definitions(meas_period_s: float) -> dict:
         },
     }
 
+    if accelerometer_enabled:
+        definitions["imu"] = {
+            "fs": fs,
+            "nCh": 3,
+            "extras": {"type": "time-series"},
+        }
+
+    return definitions
+
 
 # Each configuration gets data every (num_txrx_configs * meas_period) due to round-robin
 meas_period_s = wulpus_config.meas_period / 1e6  # Convert to seconds
 period_per_config_s = meas_period_s * wulpus_config.num_txrx_configs
+accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
+num_us_samples = get_num_us_samples_from_config(wulpus_config)
 
 # Effective sampling rate: samples delivered per second for each configuration
-samples_per_second_per_config = NUM_US_SAMPLES / period_per_config_s
+samples_per_second_per_config = num_us_samples / period_per_config_s
 
 # ADC start delay relative to pulse generation
 adc_start_delay = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
@@ -185,7 +205,7 @@ for config_id in range(wulpus_config.num_txrx_configs):
             "type": "ultrasound",
             "config_id": config_id,
             "rx_channel": rx_channel,
-            "num_samples": NUM_US_SAMPLES,
+            "num_samples": num_us_samples,
             "meas_period": wulpus_config.meas_period,
             "adc_sampling_freq": wulpus_config.sampling_freq,
             "adc_start_delay": adc_start_delay,
@@ -199,8 +219,9 @@ for config_id in range(wulpus_config.num_txrx_configs):
 
 
 # Add standard signals (IMU + metadata + synchronization_signal)
-sigInfo.update(get_standard_signal_definitions(meas_period_s))
-logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
+sigInfo.update(get_standard_signal_definitions_for_mode(meas_period_s, accelerometer_enabled))
+if accelerometer_enabled:
+    logger.info(f"WULPUS: Created signal 'imu' (fs={1.0 / meas_period_s:.2f} Hz)")
 
 
 if len(sigInfo) == 0:
@@ -234,9 +255,14 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     # logger.info(f"Wulpus Interface: {acq_nr=}, {tx_rx_id=}")
     # logger.info(f"Wulpus Interface: {rf_arr[:20]=}\n")
 
-    # Split frame: first 397 samples = ultrasound, last 3 = IMU
-    us_samples = rf_arr[:NUM_US_SAMPLES]
-    imu_samples = rf_arr[NUM_US_SAMPLES : NUM_US_SAMPLES + NUM_IMU_SAMPLES]
+    accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
+    num_us_samples = get_num_us_samples_from_config(wulpus_config)
+
+    # Split frame depending on measurement mode.
+    us_samples = rf_arr[:num_us_samples]
+    imu_samples = None
+    if accelerometer_enabled:
+        imu_samples = rf_arr[num_us_samples : num_us_samples + NUM_IMU_SAMPLES]
 
     # Build result dictionary with all signals
     result = {}
@@ -251,7 +277,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             result[signal_name] = np.array([[tx_rx_id]], dtype=np.uint8)
 
         elif signal_name == "imu":
-            result[signal_name] = imu_samples.reshape(1, 3)
+            if imu_samples is None:
+                result[signal_name] = np.empty((0, 3), dtype=np.int16)
+            else:
+                result[signal_name] = imu_samples.reshape(1, 3)
 
         elif signal_name == "synchronization_signal":
             # Forward synchronization signal from HW (e.g. for BIOGAP synchronization)

@@ -9,8 +9,8 @@ WULPUS hardware protocol: frame layout, configuration bytes, and USS config.
 Frame structure:
 ----------------
 Hardware sends 400 int16 values per acquisition frame:
-  - First 397 samples: Ultrasound data from ADC
-  - Last 3 samples: IMU acceleration (ax, ay, az)
+    - IMU enabled (meas_mode=101): 397 ultrasound + 3 IMU samples
+    - IMU disabled (meas_mode=0): 400 ultrasound samples
 """
 
 import numpy as np
@@ -31,6 +31,33 @@ assert (
 START_BYTE_CONF_PACK = 250
 START_BYTE_RESTART = 251  # stops acquisition loop on WULPUS and WULPUS will wait for a new valid configuration package
 PACKAGE_LEN = 68
+
+
+# Measurement mode values encoded in the firmware transFreq field.
+MEAS_MODE_ACCELEROMETER_ENABLED = 101
+MEAS_MODE_ULTRASOUND_ONLY = 0
+
+
+def is_accelerometer_enabled_from_mode(meas_mode: int) -> bool:
+    """Return True if accelerometer bytes are enabled for the given measurement mode."""
+    return int(meas_mode) == MEAS_MODE_ACCELEROMETER_ENABLED
+
+
+def get_num_us_samples_from_mode(meas_mode: int) -> int:
+    """Return number of ultrasound samples in each frame for the selected mode."""
+    if is_accelerometer_enabled_from_mode(meas_mode):
+        return ACQ_LENGTH_SAMPLES - NUM_IMU_SAMPLES
+    return ACQ_LENGTH_SAMPLES
+
+
+def is_accelerometer_enabled_from_config(config: "WulpusUssConfig") -> bool:
+    """Return True if accelerometer data is enabled in the provided configuration."""
+    return is_accelerometer_enabled_from_mode(config.meas_mode)
+
+
+def get_num_us_samples_from_config(config: "WulpusUssConfig") -> int:
+    """Return number of ultrasound samples for the provided configuration."""
+    return get_num_us_samples_from_mode(config.meas_mode)
 
 
 # Oversampling rate
@@ -158,7 +185,7 @@ configuration_package = [
     [
         _ConfigBytes("dcdc_turnon", "DC-DC turn on time [us]", "limit", 0, 65535, "<u2"),
         _ConfigBytes("meas_period", "Acquisition Period [us]", "limit", 655, 65535, "<u2"),
-        _ConfigBytes("trans_freq", "Transmitter frequency [Hz]", "limit", 0, 5000000, "<u4"),
+        _ConfigBytes("meas_mode", "Measurement mode", "limit", 0, 5000000, "<u4"),
         _ConfigBytes("pulse_freq", "Pulse frequency [Hz]", "limit", 0, 5000000, "<u4"),
         _ConfigBytes("num_pulses", "Number of pulses", "limit", 0, 30, "<u1"),
         _ConfigBytes(
@@ -265,7 +292,7 @@ class WulpusUssConfig:
         self,
         dcdc_turnon=195300,
         meas_period=321965,
-        trans_freq=225e4,
+        meas_mode=MEAS_MODE_ACCELEROMETER_ENABLED,
         pulse_freq=225e4,
         num_pulses=2,
         sampling_freq=USS_CAPTURE_ACQ_RATES[0],
@@ -290,7 +317,7 @@ class WulpusUssConfig:
 
         self.dcdc_turnon = int(dcdc_turnon)
         self.meas_period = int(meas_period)
-        self.trans_freq = int(trans_freq)
+        self.meas_mode = int(meas_mode)
         self.pulse_freq = int(pulse_freq)
         self.num_pulses = int(num_pulses)
         self.sampling_freq = int(sampling_freq)
@@ -314,7 +341,7 @@ class WulpusUssConfig:
     def convert_to_registers(self):
         self.dcdc_turnon_reg = int(self.dcdc_turnon * us_to_ticks["dcdc_turnon"])
         self.meas_period_reg = int(self.meas_period * us_to_ticks["meas_period"])
-        self.trans_freq_reg = int(self.trans_freq)
+        self.meas_mode_reg = int(self.meas_mode)
         self.pulse_freq_reg = int(self.pulse_freq)
         self.num_pulses_reg = int(self.num_pulses)
         self.sampling_freq_reg = int(
