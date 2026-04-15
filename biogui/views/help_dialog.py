@@ -29,7 +29,7 @@ class HelpDialog(QDialog):
     DIALOG_MIN_HEIGHT = 620
     DIALOG_DEFAULT_WIDTH = 820
     DIALOG_DEFAULT_HEIGHT = 700
-    FORMULA_MAX_WIDTH_PX = 180
+    FORMULA_MAX_WIDTH_PX = 165
 
     def __init__(self, title: str, help_content: dict, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -73,7 +73,7 @@ class HelpDialog(QDialog):
                 padding: 10px;
                 background: #fcfcfe;
                 color: #202226;
-                font-size: 13px;
+                font-size: 18px;
                 line-height: 1.35em;
             }
             QPushButton {
