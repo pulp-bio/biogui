@@ -89,7 +89,6 @@ class HelpDialog(QDialog):
         units = escape(content.get("units", ""))
         recommended = escape(content.get("recommended", ""))
         notes = escape(content.get("notes", ""))
-        formula_display = escape(content.get("formula_display", ""))
         formula_latex_raw = str(content.get("formula_latex", "")).strip()
 
         sections = []
@@ -101,10 +100,6 @@ class HelpDialog(QDialog):
             sections.append(f"<p><b>Recommended:</b> {recommended}</p>")
         if details:
             sections.append(f"<p><b>Details:</b><br>{details}</p>")
-        if formula_display:
-            sections.append(
-                f"<p><b>Formula:</b></p><pre style='background:#f4f5f8;padding:8px;border-radius:6px;'>{formula_display}</pre>"
-            )
         if formula_latex_raw:
             rendered = self._render_latex_to_png_data_uri(formula_latex_raw)
             if rendered is not None:
