@@ -30,19 +30,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     """
 
     renderLenChanged = Signal(int)
+    PLOTS_LAYOUT_MARGINS = (2, 2, 2, 2)
+    PLOTS_LAYOUT_SPACING = 4
 
     def __init__(self) -> None:
         super().__init__()
 
         # Setup UI
         self.setupUi(self)
+
+        self.plotsLayout.setContentsMargins(*self.PLOTS_LAYOUT_MARGINS)
+        self.plotsLayout.setSpacing(self.PLOTS_LAYOUT_SPACING)
+
         theme = detectTheme()
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
-        self.editButton.setIcon(
-            QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
-        )
+        self.editButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
 
         # Set default render length to 5 s
         self.renderLenComboBox.setCurrentText("5 s")

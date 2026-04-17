@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Main controller of BioGUI.
 
@@ -123,6 +128,11 @@ class MainController(QObject):
     streamingStopped = Signal()
     signalsReady = Signal(SigData)
     streamingControllersChanged = Signal()
+    COMPACT_THRESHOLD = 8
+    DENSE_THRESHOLD = 14
+    REGULAR_PLOT_MIN_HEIGHT = 190
+    COMPACT_PLOT_MIN_HEIGHT = 150
+    DENSE_PLOT_MIN_HEIGHT = 120
 
     def __init__(self, mainWin: MainWindow, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -148,9 +158,7 @@ class MainController(QObject):
         """Connect Qt signals and slots."""
         # Data source and signal management
         self._mainWin.addDataSourceButton.clicked.connect(self._addDataSourceHandler)
-        self._mainWin.deleteDataSourceButton.clicked.connect(
-            self._deleteDataSourceHandler
-        )
+        self._mainWin.deleteDataSourceButton.clicked.connect(self._deleteDataSourceHandler)
         self._mainWin.editButton.clicked.connect(self._editDataSourceHandler)
         self._mainWin.dataSourceTree.clicked.connect(self._selectionHandler)
 
@@ -241,9 +249,9 @@ class MainController(QObject):
                 self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
                 self._mainWin.plotsLayout.addWidget(signalPlotWidget)
 
-                self._signalPlotWidgets[f"{str(streamingController)}%{iSigName}"] = (
-                    signalPlotWidget
-                )
+                self._signalPlotWidgets[f"{str(streamingController)}%{iSigName}"] = signalPlotWidget
+
+        self._apply_plot_density()
 
         # Save configuration
         dataSourceConfig["sigsConfigs"] = sigsConfigs
@@ -279,6 +287,8 @@ class MainController(QObject):
                 plotWidgetToRemove = self._signalPlotWidgets.pop(plotId)
                 self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
                 plotWidgetToRemove.deleteLater()
+
+        self._apply_plot_density()
 
         # Delete streaming controller and config
         self._streamingControllers[dataSource].deleteLater()
@@ -471,12 +481,12 @@ class MainController(QObject):
             self.streamingStarted.connect(newSignalPlotWidget.startTimers)
             self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
             self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
-            self._mainWin.plotsLayout.replaceWidget(
-                oldSignalPlotWidget, newSignalPlotWidget
-            )
+            self._mainWin.plotsLayout.replaceWidget(oldSignalPlotWidget, newSignalPlotWidget)
             self._signalPlotWidgets[newPlotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
+
+        self._apply_plot_density()
 
         # Inform other modules that a source was modified
         self.streamingControllersChanged.emit()
@@ -491,9 +501,7 @@ class MainController(QObject):
 
         # Open the dialog
         sigConfig = self._config[dataSource]["sigsConfigs"][sigName]
-        signalConfigDialog = SignalConfigDialog(
-            sigName, **sigConfig, parent=self._mainWin
-        )
+        signalConfigDialog = SignalConfigDialog(sigName, **sigConfig, parent=self._mainWin)
         accepted = signalConfigDialog.exec()
         if not accepted:
             return
@@ -522,9 +530,7 @@ class MainController(QObject):
                 self.streamingStarted.connect(newSignalPlotWidget.startTimers)
                 self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
                 self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
-                self._mainWin.plotsLayout.replaceWidget(
-                    oldSignalPlotWidget, newSignalPlotWidget
-                )
+                self._mainWin.plotsLayout.replaceWidget(oldSignalPlotWidget, newSignalPlotWidget)
                 self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
@@ -541,5 +547,20 @@ class MainController(QObject):
             self._mainWin.plotsLayout.addWidget(newSignalPlotWidget)
             self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
+        self._apply_plot_density()
+
         # Save new settings
         self._config[dataSource]["sigsConfigs"][sigName] = sigConfig
+
+    def _apply_plot_density(self) -> None:
+        """Adapt plot minimum height according to the number of active plots."""
+        n_plots = len(self._signalPlotWidgets)
+        if n_plots >= self.DENSE_THRESHOLD:
+            min_height = self.DENSE_PLOT_MIN_HEIGHT
+        elif n_plots >= self.COMPACT_THRESHOLD:
+            min_height = self.COMPACT_PLOT_MIN_HEIGHT
+        else:
+            min_height = self.REGULAR_PLOT_MIN_HEIGHT
+
+        for plot_widget in self._signalPlotWidgets.values():
+            plot_widget.setMinimumHeight(min_height)

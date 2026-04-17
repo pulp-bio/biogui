@@ -62,6 +62,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
     # Constants
     PLOT_UPDATE_RATE = 50  # ms (20 FPS)
     SPS_UPDATE_RATE = 1000  # ms
+    PLOT_INNER_MARGINS = (2, 2, 2, 2)
+    PLOT_LAYOUT_SPACING = 2
 
     def __init__(
         self,
@@ -157,8 +159,18 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
     def _setup_graph_widget(self, sig_name: str) -> None:
         """Configure the graph widget."""
+        self.verticalLayout.setContentsMargins(*self.PLOT_INNER_MARGINS)
+        self.verticalLayout.setSpacing(self.PLOT_LAYOUT_SPACING)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setSpacing(6)
+
         self.graphWidget.setTitle(sig_name)
-        self.graphWidget.getPlotItem().setMouseEnabled(False, False)
+        plot_item = self.graphWidget.getPlotItem()
+        plot_item.setMouseEnabled(False, False)
+
+        # Reduce plot chrome while preserving axis information and scientific readability.
+        plot_item.layout.setContentsMargins(4, 2, 2, 2)
+        plot_item.getViewBox().setDefaultPadding(0.005)
 
     def _setup_timers(self) -> None:
         """Configure plot and sampling rate timers."""
