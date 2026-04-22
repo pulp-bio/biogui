@@ -291,11 +291,7 @@ class AModePlotMode(BasePlotMode):
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""
-        if self._meas_period_us:
-            return self._scan_count * self._meas_period_us / 1e6
-        else:
-            # Fallback to sample-based calculation
-            return (self._scan_count * self._num_samples) / self.fs
+        return self._scan_count * self._get_scan_period_s()
 
     def _get_latest_scan_data(self) -> np.ndarray:
         """Extract the latest complete scan from the data queue."""
@@ -307,20 +303,18 @@ class AModePlotMode(BasePlotMode):
 
     def _calculate_distance_axis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display in millimeters."""
-        # Calculate minimum depth based on ADC start delay
-        min_depth = (self.SPEED_OF_SOUND * self._adc_start_delay) / 2  # in meters
+        sample_times_s = self._adc_start_delay + (
+            np.arange(self._num_samples) / self._adc_sampling_freq
+        )
+        return (self.SPEED_OF_SOUND * sample_times_s / 2) * 1e3
 
-        # Calculate maximum acquisition time
-        max_time = self._num_samples / self._adc_sampling_freq  # in seconds
-
-        # Calculate maximum depth
-        max_depth = (self.SPEED_OF_SOUND * max_time) / 2 + min_depth  # in meters
-
-        # Create linearly spaced depth array and convert to millimeters
-        depths_m = np.linspace(min_depth, max_depth, self._num_samples)
-        depths_mm = depths_m * 1e3  # Convert to millimeters
-
-        return depths_mm
+    def _get_scan_period_s(self) -> float:
+        """Return the effective time between two displayed A-lines."""
+        if self.fs > 0:
+            return self._num_samples / self.fs
+        if self._meas_period_us:
+            return self._meas_period_us / 1e6
+        return 0.0
 
     def reinitialize(self, render_len_ms: int) -> None:
         """Re-initialize with new render length."""
