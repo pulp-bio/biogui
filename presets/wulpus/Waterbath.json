@@ -1,7 +1,7 @@
 {
   "dcdc_turnon": 100,
   "meas_period": 228885,
-  "trans_freq": 2250000,
+  "imu_active": false,
   "pulse_freq": 1000000,
   "num_pulses": 11,
   "sampling_freq": 4000000.0,

@@ -15,7 +15,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QObject, QSize, Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -26,21 +26,52 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QRadioButton,
+    QToolButton,
     QTableWidgetItem,
+    QStyle,
     QWidget,
 )
 
 from biogui.controllers import MainController
+from biogui.hardware.wulpus import (
+    MEAS_MODE_ACCELEROMETER_ENABLED,
+    MEAS_MODE_ULTRASOUND_ONLY,
+    get_num_us_samples_from_config,
+    is_accelerometer_enabled_from_mode,
+)
 from biogui.interfaces import interface_wulpus
+from biogui.paths import APP_DIR
 from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
 from biogui.utils import InterfaceModule
 from biogui.views import MainWindow
+from biogui.views.help_dialog import HelpDialog
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
+
+
+def _is_accelerometer_enabled_from_meas_mode(meas_mode: int) -> bool:
+    return is_accelerometer_enabled_from_mode(int(meas_mode))
+
+
+def _meas_mode_from_accelerometer_enabled(accelerometer_enabled: bool) -> int:
+    if accelerometer_enabled:
+        return MEAS_MODE_ACCELEROMETER_ENABLED
+    return MEAS_MODE_ULTRASOUND_ONLY
+
+
+def _get_imu_active_from_config_dict(config_dict: dict) -> bool:
+    """Extract IMU activity from a preset dictionary."""
+    if "imu_active" in config_dict:
+        return bool(config_dict["imu_active"])
+
+    # Graceful conversion path for existing preset files.
+    meas_mode = int(config_dict.get("meas_mode", MEAS_MODE_ULTRASOUND_ONLY))
+    return _is_accelerometer_enabled_from_meas_mode(meas_mode)
 
 
 class TxRxConfigDialog(QDialog):
@@ -144,16 +175,19 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setupUi(self)
+        self.configTabWidget.setCurrentIndex(0)
 
         self._current_config: interface_wulpus.WulpusUssConfig | None = None
         self._tx_rx_configs: list[dict[str, Any]] = []
         self._presets_dir = self._get_presets_directory()
         self._loading_preset = False  # Flag to prevent marking as custom while loading
         self._updating_tx_rx_table = False
+        self._help_content = self._load_help_content()
 
         self._setup_validators()
         self._populate_combo_boxes()
         self._populate_presets()
+        self._setup_help_buttons()
         self._connect_signals()
 
         logger.info("WulpusConfigWidget initialized")
@@ -168,6 +202,109 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         presets_dir.mkdir(parents=True, exist_ok=True)
 
         return presets_dir
+
+    def _load_help_content(self) -> dict[str, dict]:
+        """Load local help content for WULPUS settings."""
+        help_file = APP_DIR / "resources" / "help" / "wulpus_settings_help.json"
+        if not help_file.exists():
+            logger.warning(f"WULPUS help file not found: {help_file}")
+            return {}
+
+        try:
+            with open(help_file, "r") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            logger.warning(f"Failed to load WULPUS help content: {e}")
+
+        return {}
+
+    def _setup_help_buttons(self) -> None:
+        """Attach compact info buttons next to labels for contextual help."""
+        self._attach_help_button(self.basicFormLayout, self.dcdcTurnonLabel, "dcdc_turnon")
+        self._attach_help_button(self.basicFormLayout, self.measPeriodLabel, "meas_period")
+        self._attach_help_button(self.basicFormLayout, self.transFreqLabel, "imu_active")
+        self._attach_help_button(self.basicFormLayout, self.pulseFreqLabel, "pulse_freq")
+        self._attach_help_button(self.basicFormLayout, self.numPulsesLabel, "num_pulses")
+        self._attach_help_button(self.basicFormLayout, self.samplingFreqLabel, "sampling_freq")
+        self._attach_help_button(self.basicFormLayout, self.numSamplesLabel, "num_samples")
+        self._attach_help_button(self.basicFormLayout, self.rxGainLabel, "rx_gain")
+
+        self._attach_help_button(self.advancedFormLayout, self.startHvmuxrxLabel, "start_hvmuxrx")
+        self._attach_help_button(self.advancedFormLayout, self.startPpgLabel, "start_ppg")
+        self._attach_help_button(self.advancedFormLayout, self.turnonAdcLabel, "turnon_adc")
+        self._attach_help_button(
+            self.advancedFormLayout, self.startPgainbiasLabel, "start_pgainbias"
+        )
+        self._attach_help_button(
+            self.advancedFormLayout, self.startAdcsampleLabel, "start_adcsampl"
+        )
+        self._attach_help_button(self.advancedFormLayout, self.restartCaptLabel, "restart_capt")
+        self._attach_help_button(self.advancedFormLayout, self.captTimeoutLabel, "capt_timeout")
+
+        self.txRxInfoLabel.setToolTip(self._help_content.get("tx_rx_configs", {}).get("short", ""))
+
+    def _attach_help_button(self, form_layout: QFormLayout, label: QLabel, help_key: str) -> None:
+        """Replace a form label with a compact label+help-icon container."""
+        row = -1
+        for i in range(form_layout.rowCount()):
+            item = form_layout.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            if item is None or item.widget() is None:
+                continue
+            if item.widget() is label:
+                row = i
+                break
+
+        if row < 0:
+            return
+
+        container = QWidget(self)
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        # Keep the original label widget to preserve styling/translations.
+        label.setParent(container)
+        layout.addWidget(label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        info_button = QToolButton(container)
+        info_button.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+        )
+        info_button.setIconSize(QSize(14, 14))
+        info_button.setText("")
+        info_button.setAutoRaise(True)
+        info_button.setCursor(Qt.PointingHandCursor)  # type: ignore
+        info_button.setToolTip(self._help_content.get(help_key, {}).get("short", "More info"))
+        info_button.setFixedSize(18, 18)
+        info_button.setStyleSheet(
+            """
+            QToolButton {
+                border: none;
+                border-radius: 9px;
+                background: transparent;
+            }
+            QToolButton:hover {
+                background: #e9edf5;
+            }
+            """
+        )
+        info_button.clicked.connect(lambda _=False, key=help_key: self._show_help_dialog(key))
+        layout.addWidget(info_button, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        form_layout.setWidget(row, QFormLayout.ItemRole.LabelRole, container)
+
+    def _show_help_dialog(self, help_key: str) -> None:
+        """Open the detailed help dialog for a parameter."""
+        content = self._help_content.get(help_key)
+        if content is None:
+            QMessageBox.information(self, "Help", "No help available for this parameter yet.")
+            return
+
+        title = content.get("title", help_key)
+        dialog = HelpDialog(title, content, parent=self)
+        dialog.exec()
 
     def _populate_presets(self) -> None:
         """Populate the preset combo box from JSON files in the presets directory."""
@@ -184,17 +321,58 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 preset_name = preset_file.stem
                 self.presetComboBox.addItem(preset_name)
 
-        # Set default to first preset if available, otherwise Custom
-        if self.presetComboBox.count() > 1:
-            self.presetComboBox.setCurrentIndex(1)  # First preset after "Custom"
-            self._load_preset(self.presetComboBox.currentText())
+        # Keep startup deterministic: do not auto-load any preset here.
+        self.presetComboBox.setCurrentText("Custom")
+
+    def _normalized_config_dict(self, config_dict: dict) -> dict:
+        """Return a normalized dictionary for robust preset comparison."""
+        normalized = dict(config_dict)
+
+        normalized["imu_active"] = _get_imu_active_from_config_dict(normalized)
+        normalized.pop("meas_mode", None)
+
+        if "tx_rx_configs" in normalized:
+            normalized["tx_rx_configs"] = [
+                {
+                    "tx_channels": list(cfg.get("tx_channels", [])),
+                    "rx_channels": list(cfg.get("rx_channels", [])),
+                    "optimized_switching": bool(cfg.get("optimized_switching", False)),
+                }
+                for cfg in normalized["tx_rx_configs"]
+            ]
+
+        return normalized
+
+    def _sync_preset_selection_with_current_config(self) -> None:
+        """Select preset matching current settings, or fallback to Custom."""
+        current_config = self._normalized_config_dict(self._get_config_dict())
+
+        matched_preset_name = None
+        if self._presets_dir.exists():
+            for preset_file in sorted(self._presets_dir.glob("*.json")):
+                try:
+                    with open(preset_file, "r") as f:
+                        preset_config = json.load(f)
+                except Exception:
+                    continue
+
+                if self._normalized_config_dict(preset_config) == current_config:
+                    matched_preset_name = preset_file.stem
+                    break
+
+        self.presetComboBox.blockSignals(True)
+        if (
+            matched_preset_name is not None
+            and self.presetComboBox.findText(matched_preset_name) >= 0
+        ):
+            self.presetComboBox.setCurrentText(matched_preset_name)
         else:
-            self.presetComboBox.setCurrentIndex(0)  # "Custom"
+            self.presetComboBox.setCurrentText("Custom")
+        self.presetComboBox.blockSignals(False)
 
     def _setup_validators(self) -> None:
         self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
         self.measPeriodLineEdit.setValidator(QIntValidator(0, 1000000))  # No minimum
-        self.transFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.pulseFreqLineEdit.setValidator(QIntValidator(0, 10000000))
         self.numPulsesLineEdit.setValidator(QIntValidator(0, 100))
         self.numSamplesLineEdit.setValidator(QIntValidator(0, 10000))
@@ -233,7 +411,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         for widget in [
             self.dcdcTurnonLineEdit,
             self.measPeriodLineEdit,
-            self.transFreqLineEdit,
             self.pulseFreqLineEdit,
             self.numPulsesLineEdit,
             self.numSamplesLineEdit,
@@ -249,6 +426,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
         self.samplingFreqComboBox.currentIndexChanged.connect(self._mark_as_custom)
         self.rxGainComboBox.currentIndexChanged.connect(self._mark_as_custom)
+        self.imuActiveCheckBox.stateChanged.connect(self._mark_as_custom)
 
     def _mark_as_custom(self) -> None:
         # Don't mark as custom if we're currently loading a preset
@@ -303,7 +481,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         try:
             self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
             self.measPeriodLineEdit.setText(str(config.meas_period))
-            self.transFreqLineEdit.setText(str(config.trans_freq))
+            self.imuActiveCheckBox.setChecked(
+                _is_accelerometer_enabled_from_meas_mode(config.meas_mode)
+            )
             self.pulseFreqLineEdit.setText(str(config.pulse_freq))
             self.numPulsesLineEdit.setText(str(config.num_pulses))
             self.numSamplesLineEdit.setText(str(config.num_samples))
@@ -353,7 +533,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 )
 
             self._update_tx_rx_table()
-            self.presetComboBox.setCurrentText("Custom")
+            self._sync_preset_selection_with_current_config()
             self.statusLabel.setText("Status: Loaded current configuration")
             logger.info("Loaded existing config into widget")
         finally:
@@ -572,7 +752,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         return interface_wulpus.WulpusUssConfig(
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
-            trans_freq=int(self.transFreqLineEdit.text()),
+            meas_mode=_meas_mode_from_accelerometer_enabled(self.imuActiveCheckBox.isChecked()),
             pulse_freq=int(self.pulseFreqLineEdit.text()),
             num_pulses=int(self.numPulsesLineEdit.text()),
             sampling_freq=self.samplingFreqComboBox.currentData(),
@@ -592,10 +772,11 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _get_config_dict(self) -> dict:
         self._sync_tx_rx_configs_from_table()
+        accelerometer_enabled = self.imuActiveCheckBox.isChecked()
         return {
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
-            "trans_freq": int(self.transFreqLineEdit.text()),
+            "imu_active": accelerometer_enabled,
             "pulse_freq": int(self.pulseFreqLineEdit.text()),
             "num_pulses": int(self.numPulsesLineEdit.text()),
             "sampling_freq": self.samplingFreqComboBox.currentData(),
@@ -615,7 +796,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         # Note: _loading_preset flag should be set by caller
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
-        self.transFreqLineEdit.setText(str(config_dict["trans_freq"]))
+        accelerometer_enabled = _get_imu_active_from_config_dict(config_dict)
+        self.imuActiveCheckBox.setChecked(accelerometer_enabled)
         self.pulseFreqLineEdit.setText(str(config_dict["pulse_freq"]))
         self.numPulsesLineEdit.setText(str(config_dict["num_pulses"]))
         self.numSamplesLineEdit.setText(str(config_dict["num_samples"]))
@@ -672,6 +854,20 @@ class WulpusConfigController(QObject):
 
         self._confWidget.applyConfigButton.clicked.connect(self._applyConfigHandler)
 
+    @staticmethod
+    def _is_wulpus_interface_path(interface_path: Any) -> bool:
+        """Return True if a data source interface path points to a WULPUS interface."""
+        return "wulpus" in str(interface_path).lower()
+
+    def _iter_wulpus_data_sources(self):
+        """Iterate over configured data sources that use a WULPUS interface."""
+        if self._mainController is None:
+            return
+
+        for ds_name, ds_config in self._mainController._config.items():
+            if self._is_wulpus_interface_path(ds_config.get("interfacePath", "")):
+                yield ds_name, ds_config
+
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
         Subscribe to the main controller.
@@ -686,6 +882,22 @@ class WulpusConfigController(QObject):
         # Add configuration widget to main window
         mainWin.moduleContainer.layout().addWidget(self._confWidget)  # type: ignore
         self._mainController = mainController
+
+        # Initialize UI from the currently active WULPUS configuration.
+        current_wulpus_config = interface_wulpus.wulpus_config
+        for _, ds_config in self._iter_wulpus_data_sources():
+            decode_fn = ds_config.get("interfaceModule", None)
+            if decode_fn is None:
+                continue
+
+            decode_fn = ds_config["interfaceModule"].decodeFn
+            iface_globals = getattr(decode_fn, "__globals__", {})
+            candidate = iface_globals.get("wulpus_config", None)
+            if isinstance(candidate, interface_wulpus.WulpusUssConfig):
+                current_wulpus_config = candidate
+            break
+
+        self._confWidget.load_config(current_wulpus_config)
 
     def unsubscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         """
@@ -708,13 +920,140 @@ class WulpusConfigController(QObject):
         if self._mainController is None:  # should never happen
             return
 
+        def _build_interface_runtime_state(
+            old_interface_module: InterfaceModule,
+            config: interface_wulpus.WulpusUssConfig,
+        ) -> tuple[InterfaceModule, dict, dict[int, str]]:
+            """Build an updated interface module and sync its module globals."""
+            decode_fn = old_interface_module.decodeFn
+            iface_globals = getattr(decode_fn, "__globals__", {})
+
+            # Keep config-dependent helper functions deterministic during this rebuild.
+            iface_globals["wulpus_config"] = config
+
+            get_rx_channel_for_config = iface_globals.get(
+                "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
+            )
+            get_standard_signal_definitions = iface_globals.get("get_standard_signal_definitions")
+            get_standard_signal_definitions_for_mode = iface_globals.get(
+                "get_standard_signal_definitions_for_mode"
+            )
+            get_num_us_samples = iface_globals.get("get_num_us_samples_from_config")
+            if not callable(get_num_us_samples):
+                get_num_us_samples = iface_globals.get("get_num_us_samples")
+
+            is_accelerometer_enabled = iface_globals.get("is_accelerometer_enabled_from_config")
+            if not callable(is_accelerometer_enabled):
+                is_accelerometer_enabled = iface_globals.get("is_accelerometer_enabled")
+
+            if callable(is_accelerometer_enabled):
+                accelerometer_enabled = bool(is_accelerometer_enabled(config))
+            else:
+                accelerometer_enabled = _is_accelerometer_enabled_from_meas_mode(config.meas_mode)
+
+            if callable(get_num_us_samples):
+                mode_specific_samples = get_num_us_samples(config)
+                if isinstance(mode_specific_samples, bool):
+                    num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
+                elif isinstance(mode_specific_samples, (int, float, str)):
+                    num_us_samples = int(mode_specific_samples)
+                else:
+                    num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
+            elif accelerometer_enabled:
+                num_us_samples = get_num_us_samples_from_config(config)
+            else:
+                num_us_samples = interface_wulpus.ACQ_LENGTH_SAMPLES
+
+            packet_size = config.num_samples * 2 + 7 + 6
+            start_seq = [
+                config.get_restart_package(),
+                0.5,
+                config.get_conf_package(),
+            ]
+            stop_seq = [config.get_restart_package()]
+
+            meas_period_s = config.meas_period / 1e6
+            period_per_config_s = meas_period_s * config.num_txrx_configs
+            samples_per_second = num_us_samples / period_per_config_s
+            adc_start_delay = (config.start_adcsampl - config.start_ppg) * 1e-6
+
+            new_sigInfo = {}
+            new_config_to_signal_name = {}
+            for config_id in range(config.num_txrx_configs):
+                rx_channel = get_rx_channel_for_config(config, config_id)
+                if rx_channel is None:
+                    continue
+
+                signal_name = (
+                    "ultrasound"
+                    if config.num_txrx_configs == 1
+                    else f"ultrasound_cfg{config_id}_rx{rx_channel}"
+                )
+
+                new_config_to_signal_name[config_id] = signal_name
+
+                new_sigInfo[signal_name] = {
+                    "fs": samples_per_second,
+                    "nCh": 1,
+                    "extras": {
+                        "type": "ultrasound",
+                        "config_id": config_id,
+                        "rx_channel": rx_channel,
+                        "num_samples": num_us_samples,
+                        "meas_period": config.meas_period,
+                        "adc_sampling_freq": config.sampling_freq,
+                        "adc_start_delay": adc_start_delay,
+                    },
+                }
+
+            # Keep standard signals defined by the active interface module.
+            if callable(get_standard_signal_definitions_for_mode):
+                standard_sig_info = get_standard_signal_definitions_for_mode(
+                    meas_period_s,
+                    accelerometer_enabled,
+                )
+                if isinstance(standard_sig_info, dict):
+                    new_sigInfo.update(standard_sig_info)
+            elif callable(get_standard_signal_definitions):
+                try:
+                    standard_sig_info = get_standard_signal_definitions(
+                        meas_period_s,
+                        accelerometer_enabled,
+                    )
+                except TypeError:
+                    standard_sig_info = get_standard_signal_definitions(meas_period_s)
+                if isinstance(standard_sig_info, dict):
+                    new_sigInfo.update(standard_sig_info)
+            else:
+                for sig_name, sig_info in old_interface_module.sigInfo.items():
+                    if sig_info.get("extras", {}).get("type") == "ultrasound":
+                        continue
+
+                    updated_sig_info = sig_info.copy()
+                    updated_sig_info["fs"] = 1.0 / meas_period_s
+                    new_sigInfo[sig_name] = updated_sig_info
+
+            # Keep module-level globals in sync for decode functions that use them.
+            iface_globals["wulpus_config"] = config
+            iface_globals["packetSize"] = packet_size
+            iface_globals["startSeq"] = start_seq
+            iface_globals["stopSeq"] = stop_seq
+            iface_globals["sigInfo"] = new_sigInfo
+            iface_globals["config_to_signal_name"] = new_config_to_signal_name
+
+            new_interface_module = InterfaceModule(
+                packetSize=packet_size,
+                startSeq=start_seq,
+                stopSeq=stop_seq,
+                sigInfo=new_sigInfo,
+                decodeFn=decode_fn,
+            )
+
+            return new_interface_module, new_sigInfo, new_config_to_signal_name
+
         # Check if WULPUS is in use
-        is_wulpus = False
-        for ds_config in self._mainController._config.values():
-            interfacePath = str(ds_config.get("interfacePath", ""))
-            if "wulpus" not in interfacePath.lower():
-                continue
-            is_wulpus = True
+        wulpus_sources = list(self._iter_wulpus_data_sources())
+        is_wulpus = len(wulpus_sources) > 0
         if not is_wulpus:
             QMessageBox.warning(
                 self._confWidget,
@@ -735,78 +1074,31 @@ class WulpusConfigController(QObject):
             )
             return
 
-        interface_wulpus.wulpus_config = new_config
-        interface_wulpus.packetSize = new_config.num_samples * 2 + 7 + 6
-        interface_wulpus.startSeq = [
-            new_config.get_restart_package(),
-            0.5,
-            new_config.get_conf_package(),
-        ]
-        interface_wulpus.stopSeq = [new_config.get_restart_package()]
-
-        # Rebuild signal info with new configuration
-        meas_period_s = new_config.meas_period / 1e6
-        period_per_config_s = meas_period_s * new_config.num_txrx_configs
-        samples_per_second = interface_wulpus.NUM_US_SAMPLES / period_per_config_s
-        adc_start_delay = (new_config.start_adcsampl - new_config.start_ppg) * 1e-6
-
-        new_sigInfo = {}
-        new_config_to_signal_name = {}
-        for config_id in range(new_config.num_txrx_configs):
-            rx_channel = interface_wulpus.get_rx_channel_for_config(new_config, config_id)
-            if rx_channel is None:
-                continue
-
-            signal_name = (
-                "ultrasound"
-                if new_config.num_txrx_configs == 1
-                else f"ultrasound_cfg{config_id}_rx{rx_channel}"
-            )
-
-            new_config_to_signal_name[config_id] = signal_name
-
-            new_sigInfo[signal_name] = {
-                "fs": samples_per_second,
-                "nCh": 1,
-                "extras": {
-                    "type": "ultrasound",
-                    "config_id": config_id,
-                    "rx_channel": rx_channel,
-                    "num_samples": interface_wulpus.NUM_US_SAMPLES,
-                    "meas_period": new_config.meas_period,
-                    "adc_sampling_freq": new_config.sampling_freq,
-                    "adc_start_delay": adc_start_delay,
-                },
-            }
-
-        # Add standard signals (IMU + metadata: acquisition_number and tx_rx_id)
-        new_sigInfo.update(interface_wulpus.get_standard_signal_definitions(meas_period_s))
-
-        interface_wulpus.sigInfo = new_sigInfo
-        interface_wulpus.config_to_signal_name = new_config_to_signal_name
-
-        # Identify Wulpus sources and check if signal structure changed
+        # Identify WULPUS sources and check if signal structure changed
         sources_to_recreate = []
         sources_to_update = []
 
-        for ds_name, ds_config in self._mainController._config.items():
-            interfacePath = str(ds_config.get("interfacePath", ""))
-            if "wulpus" not in interfacePath.lower():
-                continue
+        for ds_name, ds_config in wulpus_sources:
+            old_interface_module = ds_config["interfaceModule"]
+            new_interface_module, new_sigInfo, _ = _build_interface_runtime_state(
+                old_interface_module, new_config
+            )
 
             old_sig_names = set(ds_config["interfaceModule"].sigInfo.keys())
             new_sig_names = set(new_sigInfo.keys())
 
             if old_sig_names != new_sig_names:
-                sources_to_recreate.append((ds_name, ds_config))
+                sources_to_recreate.append((ds_name, ds_config, new_interface_module, new_sigInfo))
             else:
-                sources_to_update.append((ds_name, ds_config))
-
-        if not is_wulpus:
-            return
+                sources_to_update.append((ds_name, ds_config, new_interface_module, new_sigInfo))
 
         # Recreate sources where signal structure changed
-        for ds_name, old_ds_config in sources_to_recreate:
+        for (
+            ds_name,
+            old_ds_config,
+            new_interface_module,
+            new_sigInfo,
+        ) in sources_to_recreate:
             # Find the item in the tree
             for row in range(self._mainController.dataSourceModel.rowCount()):
                 item = self._mainController.dataSourceModel.item(row)
@@ -816,13 +1108,7 @@ class WulpusConfigController(QObject):
 
                     # Create new config with updated interface module (without sigsConfigs)
                     new_ds_config = {k: v for k, v in old_ds_config.items() if k != "sigsConfigs"}
-                    new_ds_config["interfaceModule"] = InterfaceModule(
-                        packetSize=interface_wulpus.packetSize,
-                        startSeq=interface_wulpus.startSeq,
-                        stopSeq=interface_wulpus.stopSeq,
-                        sigInfo=interface_wulpus.sigInfo,
-                        decodeFn=interface_wulpus.decodeFn,
-                    )
+                    new_ds_config["interfaceModule"] = new_interface_module
 
                     # Preserve old signal configs where names match, create new for others
                     old_sigsConfigs = old_ds_config.get("sigsConfigs", {})
@@ -836,28 +1122,42 @@ class WulpusConfigController(QObject):
                             new_sigsConfigs[sig_name]["extras"] = sig_info.get("extras", {})
                         else:
                             # Create new default config for new signal
-                            new_sigsConfigs[sig_name] = {
+                            default_sig_config = {
                                 "fs": sig_info["fs"],
                                 "nCh": sig_info["nCh"],
                                 "extras": sig_info.get("extras", {}),
-                                "chSpacing": 1.0,
                             }
+                            if not sig_info.get("hidden", False):
+                                default_sig_config["chSpacing"] = 1.0
+                            new_sigsConfigs[sig_name] = default_sig_config
 
                     # Re-add the source with new config
                     self._mainController._addDataSource(new_ds_config, new_sigsConfigs)
                     break
 
         # Update sources where signal structure didn't change
-        for ds_name, ds_config in sources_to_update:
-            new_interface_module = InterfaceModule(
-                packetSize=interface_wulpus.packetSize,
-                startSeq=interface_wulpus.startSeq,
-                stopSeq=interface_wulpus.stopSeq,
-                sigInfo=interface_wulpus.sigInfo,
-                decodeFn=interface_wulpus.decodeFn,
-            )
-
+        for ds_name, ds_config, new_interface_module, new_sigInfo in sources_to_update:
             ds_config["interfaceModule"] = new_interface_module
+
+            # Refresh per-signal metadata so downstream components stay coherent.
+            old_sigsConfigs = ds_config.get("sigsConfigs", {})
+            new_sigsConfigs = {}
+            for sig_name, sig_info in new_sigInfo.items():
+                if sig_name in old_sigsConfigs:
+                    new_sigsConfigs[sig_name] = old_sigsConfigs[sig_name].copy()
+                    new_sigsConfigs[sig_name]["fs"] = sig_info["fs"]
+                    new_sigsConfigs[sig_name]["nCh"] = sig_info["nCh"]
+                    new_sigsConfigs[sig_name]["extras"] = sig_info.get("extras", {})
+                else:
+                    default_sig_config = {
+                        "fs": sig_info["fs"],
+                        "nCh": sig_info["nCh"],
+                        "extras": sig_info.get("extras", {}),
+                    }
+                    if not sig_info.get("hidden", False):
+                        default_sig_config["chSpacing"] = 1.0
+                    new_sigsConfigs[sig_name] = default_sig_config
+            ds_config["sigsConfigs"] = new_sigsConfigs
 
             if ds_name in self._streamingControllers:
                 self._streamingControllers[ds_name].editDataSourceConfig(ds_config)

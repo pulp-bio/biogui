@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import os
 import random
 import time
@@ -308,8 +307,8 @@ class TriggerController(QObject):
         Counter for the trigger.
     _restFlag : bool
         Flag denoting the rest state.
-    _restCounter : int
-        Counter for the rest state.
+    _restCounter : float
+        Countdown value for the rest state (seconds, one decimal shown).
     _upcomingLabel : str
         Upcoming label.
     """
@@ -339,7 +338,7 @@ class TriggerController(QObject):
         self._triggerLabels: list[str] = []
         self._triggerCounter = 0
         self._restFlag = True
-        self._restCounter = 0
+        self._restCounter = 0.0
         self._restEndsAt = 0.0
         self._upcomingLabel = ""
 
@@ -381,8 +380,8 @@ class TriggerController(QObject):
                 # Don't recurse - just fall through to stimulus code below
             else:
                 self._restEndsAt = time.monotonic() + (restMs / 1000.0)
-                # Compute initial seconds for countdown (round up)
-                self._restCounter = math.ceil(restMs / 1000)
+                # Keep internal countdown as full-precision float seconds.
+                self._restCounter = max(0.0, restMs / 1000.0)
                 # Determine upcoming stimulus label
                 if self._triggerCounter < len(self._triggerLabels):
                     nextLabel = self._triggerLabels[self._triggerCounter]
@@ -391,7 +390,7 @@ class TriggerController(QObject):
                     self._upcomingLabel = ""
                 # Draw countdown with upcoming label
                 self._triggerWidget.renderImage(
-                    f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
+                    f"Next is:\n{self._upcomingLabel}", "", f"{self._restCounter:.1f}"
                 )
                 # Force triggers to zero during rest
                 for streamingController in self._streamingControllers.values():
@@ -399,7 +398,7 @@ class TriggerController(QObject):
                     streamingController.setTriggerStr("rest")
                 logging.info(
                     f"Rest started: upcoming='{self._upcomingLabel}' \
-                    countdown={self._restCounter}s (durationRest={restMs}ms)."
+                    countdown={self._restCounter:.1f}s (durationRest={restMs}ms)."
                 )
                 # Use one timer source for countdown and rest end to avoid race conditions.
                 self._countdownTimer.start()
@@ -453,15 +452,17 @@ class TriggerController(QObject):
             return
 
         remainingMs = max(0.0, (self._restEndsAt - time.monotonic()) * 1000.0)
-        remainingSeconds = math.ceil(remainingMs / 1000.0) if remainingMs > 0 else 0
+        remainingSeconds = remainingMs / 1000.0
+        displayedSeconds = f"{remainingSeconds:.1f}"
+        previousDisplayedSeconds = f"{self._restCounter:.1f}"
 
-        if remainingSeconds > 0 and remainingSeconds != self._restCounter:
+        if remainingSeconds > 0 and displayedSeconds != previousDisplayedSeconds:
             self._restCounter = remainingSeconds
             self._triggerWidget.renderImage(
-                f"Next is:\n{self._upcomingLabel}", "", str(self._restCounter)
+                f"Next is:\n{self._upcomingLabel}", "", f"{self._restCounter:.1f}"
             )
             logging.info(
-                f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter}s remaining."
+                f"Rest countdown: upcoming='{self._upcomingLabel}', {self._restCounter:.1f}s remaining."
             )
 
         if remainingMs <= 0:
@@ -545,7 +546,7 @@ class TriggerController(QObject):
         self._triggerLabels = []
         self._triggerCounter = 0
         self._restFlag = False
-        self._restCounter = 0
+        self._restCounter = 0.0
         self._restEndsAt = 0.0
         self._upcomingLabel = ""
 
