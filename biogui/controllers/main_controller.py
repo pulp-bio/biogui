@@ -49,6 +49,9 @@ from biogui.views import (
     SignalPlotWidget,
 )
 from biogui.views.wulpus_config_widget import WulpusConfigWidget
+from biogui.hardware.wulpus import (
+    get_num_us_samples_from_config,
+)
 
 from ..interfaces import interface_wulpus
 from ..utils import InterfaceModule, SigData
@@ -626,6 +629,26 @@ class MainController(QObject):
             return currentConfig
         return None
 
+    @staticmethod
+    def _resolveWulpusNumUsSamples(
+        decodeGlobals: dict[str, Any],
+        wulpusConfig: interface_wulpus.WulpusUssConfig,
+    ) -> int:
+        """Resolve ultrasound sample count from interface helpers or default hardware logic."""
+        getNumUsSamples = decodeGlobals.get("get_num_us_samples_from_config")
+        if not callable(getNumUsSamples):
+            getNumUsSamples = decodeGlobals.get("get_num_us_samples")
+
+        if callable(getNumUsSamples):
+            resolvedSamples = getNumUsSamples(wulpusConfig)
+            if not isinstance(resolvedSamples, bool):
+                try:
+                    return int(resolvedSamples)
+                except (TypeError, ValueError):
+                    pass
+
+        return get_num_us_samples_from_config(wulpusConfig)
+
     def _configureWulpusInterfaceModule(
         self,
         interfaceModule: InterfaceModule,
@@ -642,7 +665,8 @@ class MainController(QObject):
         ]
         stopSeq = [wulpusConfig.get_restart_package()]
 
-        numUsSamples = decodeGlobals.get("NUM_US_SAMPLES", interface_wulpus.NUM_US_SAMPLES)
+        numUsSamples = self._resolveWulpusNumUsSamples(decodeGlobals, wulpusConfig)
+
         getRxChannelForConfig = decodeGlobals.get(
             "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
         )

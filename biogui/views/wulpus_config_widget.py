@@ -14,7 +14,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -260,7 +260,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         info_button.setIcon(
             self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
         )
-        info_button.setIconSize(self.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize))
+        small_icon_size = self.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
+        info_button.setIconSize(QSize(small_icon_size, small_icon_size))
         info_button.setText("")
         info_button.setAutoRaise(True)
         info_button.setCursor(Qt.PointingHandCursor)  # type: ignore
