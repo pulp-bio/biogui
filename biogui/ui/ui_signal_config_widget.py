@@ -372,7 +372,7 @@ class Ui_SignalConfigWidget(object):
         self.rangeModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Automatic", None))
         self.rangeModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Manual", None))
 
-        self.ultrasoundModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"A-Mode", None))
+        self.ultrasoundModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"A-mode", None))
         self.ultrasoundModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"M-Mode", None))
 
     # retranslateUi

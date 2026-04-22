@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'tcp_data_source_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,12 +28,12 @@ class Ui_TCPDataSourceConfigWidget(object):
         self.label = QLabel(TCPDataSourceConfigWidget)
         self.label.setObjectName(u"label")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
 
         self.socketPortTextField = QLineEdit(TCPDataSourceConfigWidget)
         self.socketPortTextField.setObjectName(u"socketPortTextField")
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.socketPortTextField)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.socketPortTextField)
 
 
         self.retranslateUi(TCPDataSourceConfigWidget)
