@@ -15,10 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFormLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QTabWidget,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFormLayout, QGroupBox, QHBoxLayout, QHeaderView,
+    QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget)
 
 class Ui_WulpusConfigWidget(object):
     def setupUi(self, WulpusConfigWidget):
@@ -89,10 +90,10 @@ class Ui_WulpusConfigWidget(object):
 
         self.basicFormLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.transFreqLabel)
 
-        self.transFreqLineEdit = QLineEdit(self.basicTab)
-        self.transFreqLineEdit.setObjectName(u"transFreqLineEdit")
+        self.imuActiveCheckBox = QCheckBox(self.basicTab)
+        self.imuActiveCheckBox.setObjectName(u"imuActiveCheckBox")
 
-        self.basicFormLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.transFreqLineEdit)
+        self.basicFormLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.imuActiveCheckBox)
 
         self.pulseFreqLabel = QLabel(self.basicTab)
         self.pulseFreqLabel.setObjectName(u"pulseFreqLabel")
@@ -333,10 +334,10 @@ class Ui_WulpusConfigWidget(object):
         self.measPeriodLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Measurement Period (\u00b5s):", None))
         self.measPeriodLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"25000", None))
 #if QT_CONFIG(tooltip)
-        self.transFreqLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Frequency of the transmitter (0-5000000 Hz)", None))
+        self.transFreqLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Enable or disable accelerometer acquisition mode", None))
 #endif // QT_CONFIG(tooltip)
-        self.transFreqLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Transmitter Frequency (Hz):", None))
-        self.transFreqLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"2250000", None))
+        self.transFreqLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"IMU active:", None))
+        self.imuActiveCheckBox.setText("")
 #if QT_CONFIG(tooltip)
         self.pulseFreqLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Frequency of pulses (0-5000000 Hz)", None))
 #endif // QT_CONFIG(tooltip)

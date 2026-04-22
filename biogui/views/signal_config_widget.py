@@ -126,17 +126,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self.filterGroupBox.setVisible(False)
             self.notchFilterGroupBox.setVisible(False)
 
-            # Enable ultrasound mode dropdown
-            self.label14.setEnabled(True)
-            self.ultrasoundModeComboBox.setEnabled(True)
-
-            # Enable processing mode section
-            self.label15.setEnabled(True)
-
-            # Enable all processing mode options (as checkboxes)
-            self.showRawCheckBox.setEnabled(True)
-            self.showFilteredCheckBox.setEnabled(True)
-            self.showEnvelopeCheckBox.setEnabled(True)
+            self._setUltrasoundControlsState(visible=True, enabled=True)
 
             # Get ADC sampling frequency
             adc_fs = extras.get("adc_sampling_freq", fs)
@@ -165,15 +155,30 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
 
         else:
-            # Time-series signal - disable ultrasound controls
-            self.label14.setEnabled(False)
-            self.ultrasoundModeComboBox.setEnabled(False)
-            self.label15.setEnabled(False)
-            self.showRawCheckBox.setEnabled(False)
-            self.showFilteredCheckBox.setEnabled(False)
-            self.showEnvelopeCheckBox.setEnabled(False)
-            self.lowFreqSpinBox.setEnabled(False)
-            self.highFreqSpinBox.setEnabled(False)
+            # Time-series signal - hide ultrasound controls entirely
+            self._setUltrasoundControlsState(visible=False, enabled=False)
+
+    def _setUltrasoundControlsState(self, *, visible: bool, enabled: bool) -> None:
+        """Apply visibility and enabled state to ultrasound-only controls."""
+        self.label14.setVisible(visible)
+        self.label14.setEnabled(enabled)
+        self.ultrasoundModeComboBox.setVisible(visible)
+        self.ultrasoundModeComboBox.setEnabled(enabled)
+        self.label15.setVisible(visible)
+        self.label15.setEnabled(enabled)
+        self.showRawCheckBox.setVisible(visible)
+        self.showRawCheckBox.setEnabled(enabled)
+        self.showFilteredCheckBox.setVisible(visible)
+        self.showFilteredCheckBox.setEnabled(enabled)
+        self.showEnvelopeCheckBox.setVisible(visible)
+        self.showEnvelopeCheckBox.setEnabled(enabled)
+        self.lowFreqSpinBox.setVisible(visible)
+        self.lowFreqSpinBox.setEnabled(enabled)
+        self.highFreqSpinBox.setVisible(visible)
+        self.highFreqSpinBox.setEnabled(enabled)
+        # "to" label between low/high frequency spinboxes in the UI form.
+        self.label.setVisible(visible)
+        self.label.setEnabled(enabled)
 
     def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
         """Format sampling-rate labels with at most {precision} decimal places."""

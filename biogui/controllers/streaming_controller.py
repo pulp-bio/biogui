@@ -548,8 +548,14 @@ class StreamingController(QObject):
 
         # 2. Pre-processing settings
         self._preprocessor = _Preprocessor(
-            interfaceModule.decodeFn, dataSourceConfig["sigsConfigs"]
+            interfaceModule.decodeFn, dataSourceConfig["sigsConfigs"], parent=self
         )
+
+        # Keep signal metadata in sync with the active configuration.
+        self._sigInfo = {
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
+            for iSigName, iSigInfo in dataSourceConfig["sigsConfigs"].items()
+        }
 
         # 3. File writer settings:
         # 3.1. If configuration is empty, remove previous worker and thread (if present)
