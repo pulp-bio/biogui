@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright ETH Zurich - University of Bologna 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
@@ -17,7 +22,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources, paths
 from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
-from biogui.utils import InterfaceModule
+from biogui.utils import InterfaceModule, PlatformConfig
 
 
 def _loadInterfacesFromDirectory() -> dict[str, Path]:
@@ -96,6 +101,10 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
     if not isinstance(module.packetSize, int) or module.packetSize <= 0:
         return None, "The packet size must be a positive integer."
 
+    platformConfig = getattr(module, "platformConfig", None)
+    if platformConfig is not None and not isinstance(platformConfig, PlatformConfig):
+        return None, '"platformConfig" must be a PlatformConfig object when provided.'
+
     for sigName, sigData in module.sigInfo.items():
         if sigName in ("acq_ts", "trigger"):
             return None, '"acq_ts" and "trigger" are reserved signal names.'
@@ -128,6 +137,7 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
             stopSeq=module.stopSeq,
             sigInfo=module.sigInfo,
             decodeFn=module.decodeFn,
+            platformConfig=platformConfig,
         ),
         "",
     )
@@ -180,9 +190,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.interfaceModuleComboBox.addItem(self._BROWSE_INTERFACE)
 
         # Populate combo box with data sources and create configuration widget
-        dataSources = list(
-            map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
-        )
+        dataSources = list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
         if dataSourceType is None:
             dataSourceType = data_sources.DataSourceType(dataSources[0])
         self.dataSourceComboBox.addItems(dataSources)

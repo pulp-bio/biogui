@@ -18,24 +18,25 @@ Helper Functions:
 ----------------
 - get_standard_signal_definitions(): Returns IMU + metadata signals (acquisition_number, tx_rx_id)
 
-Protocol constants and USS configuration live in :mod:`biogui.hardware.wulpus`.
+Protocol constants and USS configuration live in :mod:`biogui.platforms.wulpus`.
 """
 
 import logging
 
 import numpy as np
 
-from biogui.hardware.wulpus import (
+from biogui.platforms.wulpus import (
     ACQ_LENGTH_SAMPLES,
     MEAS_MODE_ACCELEROMETER_ENABLED,
     NUM_IMU_SAMPLES,
     RX_MAP,
+    WULPUS_PLATFORM,
     WulpusRxTxConfigGen,
     WulpusUssConfig,
     get_num_us_samples_from_config,
     is_accelerometer_enabled_from_config,
 )
-from biogui.hardware.wulpus import (
+from biogui.platforms.wulpus import (
     PGA_GAIN as PGA_GAIN,
     TX_MAP as TX_MAP,
     USS_CAPTURE_ACQ_RATES as USS_CAPTURE_ACQ_RATES,
@@ -97,6 +98,9 @@ stopSeq: list[bytes | float] = [
 Sequence of commands (as bytes) to stop the device; floats are
 interpreted as delays (in seconds) between commands.
 """
+
+platformConfig = WULPUS_PLATFORM
+"""Optional curated platform metadata for the WULPUS interface."""
 
 
 def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | None:
