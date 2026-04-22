@@ -3,6 +3,4 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Compatibility wrapper for the curated WULPUS platform protocol."""
-
-from biogui.platforms.wulpus.protocol import *  # noqa: F403
+"""Curated platform integrations."""

@@ -24,7 +24,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, cast
@@ -32,13 +31,11 @@ from typing import Any, cast
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal, Slot
 from PySide6.QtGui import QIcon, QMouseEvent, QPainter, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
-    QDialog,
     QMessageBox,
     QStyle,
     QStyleOptionButton,
     QStyleOptionViewItem,
     QStyledItemDelegate,
-    QVBoxLayout,
 )
 
 from biogui.views import (
@@ -48,13 +45,8 @@ from biogui.views import (
     SignalConfigWizard,
     SignalPlotWidget,
 )
-from biogui.views.wulpus_config_widget import WulpusConfigWidget
-from biogui.hardware.wulpus import (
-    get_num_us_samples_from_config,
-)
 
-from ..interfaces import interface_wulpus
-from ..utils import InterfaceModule, SigData
+from ..utils import InterfaceModule, PlatformConfig, SigData
 from .streaming_controller import StreamingController
 
 
@@ -109,15 +101,22 @@ def getCheckedDataSources(dataSourceModel: QStandardItemModel) -> list[str]:
 
 
 class DataSourceTreeDelegate(QStyledItemDelegate):
-    """Draw an inline WULPUS configure button inside top-level data source rows."""
+    """Draw an optional inline configure button inside top-level data source rows."""
 
     _BUTTON_SIZE = 20
     _BUTTON_MARGIN = 6
 
-    def __init__(self, wulpusRole: int, buttonIcon: QIcon, parent: QObject | None = None):
+    def __init__(
+        self,
+        hasActionRole: int,
+        iconRole: int,
+        fallbackIcon: QIcon,
+        parent: QObject | None = None,
+    ):
         super().__init__(parent)
-        self._wulpusRole = wulpusRole
-        self._buttonIcon = buttonIcon
+        self._hasActionRole = hasActionRole
+        self._iconRole = iconRole
+        self._fallbackIcon = fallbackIcon
 
     @classmethod
     def buttonRectForRowRect(cls, rowRect: QRect) -> QRect:
@@ -132,8 +131,8 @@ class DataSourceTreeDelegate(QStyledItemDelegate):
         index: QModelIndex,
     ) -> None:
         isTopLevel = not index.parent().isValid()
-        isWulpusRow = bool(index.data(self._wulpusRole))
-        if not (index.column() == 0 and isTopLevel and isWulpusRow):
+        hasInlineAction = bool(index.data(self._hasActionRole))
+        if not (index.column() == 0 and isTopLevel and hasInlineAction):
             super().paint(painter, option, index)
             return
 
@@ -152,7 +151,7 @@ class DataSourceTreeDelegate(QStyledItemDelegate):
         buttonOptionAny = cast(Any, buttonOption)
         buttonOptionAny.rect = self.buttonRectForRowRect(optionAny.rect)
         buttonOptionAny.state = QStyle.StateFlag.State_Enabled
-        buttonOptionAny.icon = self._buttonIcon
+        buttonOptionAny.icon = index.data(self._iconRole) or self._fallbackIcon
         buttonOptionAny.iconSize = QSize(16, 16)
 
         widget = getattr(optionAny, "widget", None)
@@ -201,7 +200,8 @@ class MainController(QObject):
     streamingControllersChanged = Signal()
 
     _DATA_SOURCE_ID_ROLE = Qt.ItemDataRole.UserRole + 1
-    _DATA_SOURCE_WULPUS_ROLE = Qt.ItemDataRole.UserRole + 2
+    _DATA_SOURCE_HAS_INLINE_ACTION_ROLE = Qt.ItemDataRole.UserRole + 2
+    _DATA_SOURCE_INLINE_ACTION_ICON_ROLE = Qt.ItemDataRole.UserRole + 3
 
     def __init__(self, mainWin: MainWindow, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -214,10 +214,11 @@ class MainController(QObject):
         self.dataSourceModel = QStandardItemModel(self)
         self.dataSourceModel.setHorizontalHeaderLabels(["Data sources"])
         self._mainWin.dataSourceTree.setModel(self.dataSourceModel)
-        wulpusButtonIcon = QIcon.fromTheme("preferences-system", self._mainWin.editButton.icon())
+        inlineActionIcon = QIcon.fromTheme("preferences-system", self._mainWin.editButton.icon())
         self._dataSourceTreeDelegate = DataSourceTreeDelegate(
-            self._DATA_SOURCE_WULPUS_ROLE,
-            wulpusButtonIcon,
+            self._DATA_SOURCE_HAS_INLINE_ACTION_ROLE,
+            self._DATA_SOURCE_INLINE_ACTION_ICON_ROLE,
+            inlineActionIcon,
             self._mainWin.dataSourceTree,
         )
         self._mainWin.dataSourceTree.setItemDelegateForColumn(0, self._dataSourceTreeDelegate)
@@ -344,7 +345,12 @@ class MainController(QObject):
         )
         dataSourceNode.setData(dataSourceId, self._DATA_SOURCE_ID_ROLE)
         dataSourceNode.setData(
-            self._isWulpusDataSource(dataSourceConfig), self._DATA_SOURCE_WULPUS_ROLE
+            self._hasInlineConfigAction(dataSourceConfig),
+            self._DATA_SOURCE_HAS_INLINE_ACTION_ROLE,
+        )
+        dataSourceNode.setData(
+            self._getInlineConfigIcon(dataSourceConfig),
+            self._DATA_SOURCE_INLINE_ACTION_ICON_ROLE,
         )
         dataSourceNode.setFlags(dataSourceNode.flags() | Qt.ItemIsUserCheckable)  # type: ignore
         dataSourceNode.setData(Qt.Checked, Qt.CheckStateRole)  # type: ignore
@@ -439,9 +445,8 @@ class MainController(QObject):
             return
         dataSourceConfig = dataSourceConfigDialog.dataSourceConfig
 
-        if self._isWulpusDataSource(dataSourceConfig):
-            if not self._runWulpusConfigStep(dataSourceConfig):
-                return
+        if not self._runPlatformConfigStep(dataSourceConfig):
+            return
 
         # Get the configurations of all the signals
         signalConfigWizard = SignalConfigWizard(
@@ -500,12 +505,11 @@ class MainController(QObject):
             return
         newDataSourceConfig = dataSourceConfigDialog.dataSourceConfig
 
-        if self._isWulpusDataSource(newDataSourceConfig):
-            if not self._runWulpusConfigStep(
-                newDataSourceConfig,
-                existingInterfaceModule=oldDataSourceConfig["interfaceModule"],
-            ):
-                return
+        if not self._runPlatformConfigStep(
+            newDataSourceConfig,
+            existingInterfaceModule=oldDataSourceConfig["interfaceModule"],
+        ):
+            return
 
         self._applyEditedDataSourceConfig(
             itemToEdit=itemToEdit,
@@ -585,7 +589,12 @@ class MainController(QObject):
         self._config[newDataSourceId] = newDataSourceConfig
         itemToEdit.setData(newDataSourceId, self._DATA_SOURCE_ID_ROLE)
         itemToEdit.setData(
-            self._isWulpusDataSource(newDataSourceConfig), self._DATA_SOURCE_WULPUS_ROLE
+            self._hasInlineConfigAction(newDataSourceConfig),
+            self._DATA_SOURCE_HAS_INLINE_ACTION_ROLE,
+        )
+        itemToEdit.setData(
+            self._getInlineConfigIcon(newDataSourceConfig),
+            self._DATA_SOURCE_INLINE_ACTION_ICON_ROLE,
         )
         itemToEdit.setText(self._formatDataSourceDisplayName(newDataSourceId, newDataSourceConfig))
 
@@ -614,171 +623,62 @@ class MainController(QObject):
         # Inform other modules that a source was modified
         self.streamingControllersChanged.emit()
 
-    def _isWulpusDataSource(self, dataSourceConfig: dict) -> bool:
-        """Return True when the source uses a WULPUS interface."""
-        interfacePath = str(dataSourceConfig.get("interfacePath", "")).lower()
-        return "wulpus" in interfacePath
+    def _getPlatformConfig(self, interfaceModule: InterfaceModule | None) -> PlatformConfig | None:
+        """Return optional curated platform metadata from an interface module."""
+        if interfaceModule is None:
+            return None
+        return interfaceModule.platformConfig
 
-    def _getWulpusConfigFromInterface(
-        self, interfaceModule: InterfaceModule
-    ) -> interface_wulpus.WulpusUssConfig | None:
-        """Extract current WULPUS config from an interface module when available."""
-        decodeGlobals = getattr(interfaceModule.decodeFn, "__globals__", {})
-        currentConfig = decodeGlobals.get("wulpus_config")
-        if isinstance(currentConfig, interface_wulpus.WulpusUssConfig):
-            return currentConfig
-        return None
+    def _getPlatformConfigFromDataSource(self, dataSourceConfig: dict) -> PlatformConfig | None:
+        """Return optional curated platform metadata from a data-source config."""
+        interfaceModule = dataSourceConfig.get("interfaceModule")
+        if not isinstance(interfaceModule, InterfaceModule):
+            return None
+        return self._getPlatformConfig(interfaceModule)
 
-    @staticmethod
-    def _resolveWulpusNumUsSamples(
-        decodeGlobals: dict[str, Any],
-        wulpusConfig: interface_wulpus.WulpusUssConfig,
-    ) -> int:
-        """Resolve ultrasound sample count from interface helpers or default hardware logic."""
-        getNumUsSamples = decodeGlobals.get("get_num_us_samples_from_config")
-        if not callable(getNumUsSamples):
-            getNumUsSamples = decodeGlobals.get("get_num_us_samples")
+    def _hasInlineConfigAction(self, dataSourceConfig: dict) -> bool:
+        """Return True when the data source exposes a secondary inline config action."""
+        platformConfig = self._getPlatformConfigFromDataSource(dataSourceConfig)
+        return bool(platformConfig and platformConfig.hasInlineConfigAction)
 
-        if callable(getNumUsSamples):
-            resolvedSamples = getNumUsSamples(wulpusConfig)
-            if not isinstance(resolvedSamples, bool):
-                try:
-                    return int(resolvedSamples)
-                except (TypeError, ValueError):
-                    pass
-
-        return get_num_us_samples_from_config(wulpusConfig)
-
-    def _configureWulpusInterfaceModule(
-        self,
-        interfaceModule: InterfaceModule,
-        wulpusConfig: interface_wulpus.WulpusUssConfig,
-    ) -> InterfaceModule:
-        """Create a WULPUS interface module with parameters updated for a single source."""
-        decodeGlobals = getattr(interfaceModule.decodeFn, "__globals__", {})
-
-        packetSize = wulpusConfig.num_samples * 2 + 7 + 6
-        startSeq = [
-            wulpusConfig.get_restart_package(),
-            0.5,
-            wulpusConfig.get_conf_package(),
-        ]
-        stopSeq = [wulpusConfig.get_restart_package()]
-
-        numUsSamples = self._resolveWulpusNumUsSamples(decodeGlobals, wulpusConfig)
-
-        getRxChannelForConfig = decodeGlobals.get(
-            "get_rx_channel_for_config", interface_wulpus.get_rx_channel_for_config
+    def _getInlineConfigIcon(self, dataSourceConfig: dict) -> QIcon:
+        """Resolve the icon used for the inline config action."""
+        platformConfig = self._getPlatformConfigFromDataSource(dataSourceConfig)
+        iconName = (
+            platformConfig.inlineActionIconName
+            if platformConfig is not None
+            else "preferences-system"
         )
-        getStandardSignalDefinitions = decodeGlobals.get(
-            "get_standard_signal_definitions",
-            interface_wulpus.get_standard_signal_definitions,
-        )
+        return QIcon.fromTheme(iconName, self._mainWin.editButton.icon())
 
-        measPeriodS = wulpusConfig.meas_period / 1e6
-        periodPerConfigS = measPeriodS * wulpusConfig.num_txrx_configs
-        samplesPerSecond = numUsSamples / periodPerConfigS
-        adcStartDelay = (wulpusConfig.start_adcsampl - wulpusConfig.start_ppg) * 1e-6
-
-        sigInfo: dict = {}
-        configToSignalName: dict[int, str] = {}
-
-        for configId in range(wulpusConfig.num_txrx_configs):
-            rxChannel = getRxChannelForConfig(wulpusConfig, configId)
-            if rxChannel is None:
-                continue
-
-            signalName = (
-                "ultrasound"
-                if wulpusConfig.num_txrx_configs == 1
-                else f"ultrasound_cfg{configId}_rx{rxChannel}"
-            )
-            configToSignalName[configId] = signalName
-            sigInfo[signalName] = {
-                "fs": samplesPerSecond,
-                "nCh": 1,
-                "extras": {
-                    "type": "ultrasound",
-                    "config_id": configId,
-                    "rx_channel": rxChannel,
-                    "num_samples": numUsSamples,
-                    "meas_period": wulpusConfig.meas_period,
-                    "adc_sampling_freq": wulpusConfig.sampling_freq,
-                    "adc_start_delay": adcStartDelay,
-                },
-            }
-
-        sigInfo.update(getStandardSignalDefinitions(measPeriodS))
-        if not sigInfo:
-            raise ValueError(
-                "No active RX configurations found in WULPUS setup. "
-                "At least one configuration must have an active RX channel."
-            )
-
-        # Keep decode function globals coherent for this specific interface instance.
-        decodeGlobals["wulpus_config"] = wulpusConfig
-        decodeGlobals["packetSize"] = packetSize
-        decodeGlobals["startSeq"] = startSeq
-        decodeGlobals["stopSeq"] = stopSeq
-        decodeGlobals["sigInfo"] = sigInfo
-        decodeGlobals["config_to_signal_name"] = configToSignalName
-
-        return InterfaceModule(
-            packetSize=packetSize,
-            startSeq=startSeq,
-            stopSeq=stopSeq,
-            sigInfo=sigInfo,
-            decodeFn=interfaceModule.decodeFn,
-        )
-
-    def _runWulpusConfigStep(
+    def _runPlatformConfigStep(
         self,
         dataSourceConfig: dict,
         existingInterfaceModule: InterfaceModule | None = None,
     ) -> bool:
-        """Run WULPUS configuration dialog and update the interface module on success."""
-        if not self._isWulpusDataSource(dataSourceConfig):
+        """Run an optional curated platform configuration step and update the interface."""
+        currentInterfaceModule = existingInterfaceModule or dataSourceConfig["interfaceModule"]
+        platformConfig = self._getPlatformConfig(currentInterfaceModule)
+        if platformConfig is None:
             return True
 
-        currentInterfaceModule = existingInterfaceModule or dataSourceConfig["interfaceModule"]
-        currentWulpusConfig = self._getWulpusConfigFromInterface(currentInterfaceModule)
+        configuredInterfaceModule = platformConfig.configureInterfaceModule(
+            self._mainWin,
+            currentInterfaceModule,
+        )
+        if configuredInterfaceModule is None:
+            return False
 
-        dialog = QDialog(self._mainWin)
-        dialog.setWindowTitle("WULPUS Configuration")
-        dialog.setModal(True)
-        layout = QVBoxLayout(dialog)
-        confWidget = WulpusConfigWidget(dialog)
-        layout.addWidget(confWidget)
+        dataSourceConfig["interfaceModule"] = configuredInterfaceModule
+        return True
 
-        if currentWulpusConfig is not None:
-            confWidget.load_config(copy.deepcopy(currentWulpusConfig))
-
-        def _applyAndAccept() -> None:
-            try:
-                newConfig = confWidget.get_current_config()
-                dataSourceConfig["interfaceModule"] = self._configureWulpusInterfaceModule(
-                    dataSourceConfig["interfaceModule"],
-                    newConfig,
-                )
-                dialog.accept()
-            except Exception as err:
-                QMessageBox.critical(
-                    dialog,
-                    "Configuration Error",
-                    f"Invalid WULPUS configuration: {err}",
-                )
-
-        confWidget.applyConfigButton.clicked.connect(_applyAndAccept)
-
-        return dialog.exec() == QDialog.DialogCode.Accepted
-
-    def _openWulpusConfigDialogForDataSource(self, dataSourceId: str) -> None:
-        """Open the WULPUS configuration dialog for an already configured source."""
+    def _openInlineConfigDialogForDataSource(self, dataSourceId: str) -> None:
+        """Open the inline platform configuration dialog for an already configured source."""
         if dataSourceId not in self._config:
             return
 
         oldDataSourceConfig = self._config[dataSourceId]
-        if not self._isWulpusDataSource(oldDataSourceConfig):
+        if not self._hasInlineConfigAction(oldDataSourceConfig):
             return
 
         sourceRow = -1
@@ -795,7 +695,7 @@ class MainController(QObject):
             return
 
         newDataSourceConfig = {k: v for k, v in oldDataSourceConfig.items() if k != "sigsConfigs"}
-        if not self._runWulpusConfigStep(
+        if not self._runPlatformConfigStep(
             newDataSourceConfig,
             existingInterfaceModule=oldDataSourceConfig["interfaceModule"],
         ):
@@ -887,7 +787,7 @@ class MainController(QObject):
         return dataSourceId
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """Open WULPUS config when the inline gear button in a data-source row is clicked."""
+        """Open inline platform config when the row action button is clicked."""
         if (
             watched is self._mainWin.dataSourceTree.viewport()
             and event.type() == QEvent.Type.MouseButtonRelease
@@ -900,7 +800,7 @@ class MainController(QObject):
             if not idx.isValid() or idx.column() != 0 or idx.parent().isValid():
                 return False
 
-            if not bool(idx.data(self._DATA_SOURCE_WULPUS_ROLE)):
+            if not bool(idx.data(self._DATA_SOURCE_HAS_INLINE_ACTION_ROLE)):
                 return False
 
             visualRect = self._mainWin.dataSourceTree.visualRect(idx)
@@ -912,7 +812,7 @@ class MainController(QObject):
             if item is None:
                 return False
 
-            self._openWulpusConfigDialogForDataSource(self._getDataSourceIdFromItem(item))
+            self._openInlineConfigDialogForDataSource(self._getDataSourceIdFromItem(item))
             return True
 
         return super().eventFilter(watched, event)
