@@ -6,11 +6,15 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+import types
+from typing import Any, Callable
 
 from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
 
 from biogui.utils import InterfaceModule
+
+# Must match :data:`WULPUS_PLATFORM.id` in :mod:`biogui.platforms.wulpus`.
+WULPUS_PLATFORM_ID = "wulpus"
 
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
@@ -110,6 +114,66 @@ def read_current_config(interface_module: InterfaceModule) -> WulpusUssConfig | 
     if isinstance(current_config, WulpusUssConfig):
         return current_config
     return None
+
+
+def fork_wulpus_decode_fn(
+    base_decode: Callable[..., Any],
+    wulpus_config: WulpusUssConfig,
+    sig_info: dict[str, Any],
+    config_to_signal_name: dict[int, str],
+) -> Callable[..., Any]:
+    """
+    Build a decode function with its own ``__globals__`` mapping.
+    """
+    g = dict(base_decode.__globals__)
+    g["wulpus_config"] = wulpus_config
+    g["sigInfo"] = sig_info
+    g["config_to_signal_name"] = config_to_signal_name
+    return types.FunctionType(
+        base_decode.__code__,
+        g,
+        base_decode.__name__,
+        base_decode.__defaults__,
+        base_decode.__closure__,
+    )
+
+
+def isolate_wulpus_interface_module(interface_module: InterfaceModule) -> InterfaceModule:
+    """
+    Ensure a WULPUS interface module has a decoder with private globals.
+    """
+    pc = interface_module.platformConfig
+    if pc is None or pc.id != WULPUS_PLATFORM_ID:
+        return interface_module
+
+    base_decode = interface_module.decodeFn
+    g = getattr(base_decode, "__globals__", {})
+    wc = g.get("wulpus_config")
+    if not isinstance(wc, WulpusUssConfig):
+        return interface_module
+
+    c2n = g.get("config_to_signal_name")
+    if not isinstance(c2n, dict):
+        c2n = {}
+
+    sig_info = copy.deepcopy(interface_module.sigInfo)
+    config_to_signal_name = copy.deepcopy(c2n)
+
+    isolated = fork_wulpus_decode_fn(
+        base_decode,
+        wc,
+        sig_info,
+        config_to_signal_name,
+    )
+
+    return InterfaceModule(
+        packetSize=interface_module.packetSize,
+        startSeq=copy.deepcopy(interface_module.startSeq),
+        stopSeq=copy.deepcopy(interface_module.stopSeq),
+        sigInfo=sig_info,
+        decodeFn=isolated,
+        platformConfig=interface_module.platformConfig,
+    )
 
 
 def _resolve_num_us_samples(
@@ -215,19 +279,19 @@ def build_interface_module(
             "At least one configuration must have an active RX channel."
         )
 
-    decode_globals["wulpus_config"] = wulpus_config
-    decode_globals["packetSize"] = packet_size
-    decode_globals["startSeq"] = start_seq
-    decode_globals["stopSeq"] = stop_seq
-    decode_globals["sigInfo"] = sig_info
-    decode_globals["config_to_signal_name"] = config_to_signal_name
+    isolated_decode = fork_wulpus_decode_fn(
+        decode_fn,
+        wulpus_config,
+        sig_info,
+        config_to_signal_name,
+    )
 
     return InterfaceModule(
         packetSize=packet_size,
         startSeq=start_seq,
         stopSeq=stop_seq,
         sigInfo=sig_info,
-        decodeFn=decode_fn,
+        decodeFn=isolated_decode,
         platformConfig=interface_module.platformConfig,
     )
 
