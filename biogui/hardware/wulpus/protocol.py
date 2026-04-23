@@ -1,8 +1,0 @@
-# Copyright University of Bologna - ETH Zurich 2026
-# Licensed under Apache v2.0 see LICENSE for details.
-#
-# SPDX-License-Identifier: Apache-2.0
-
-"""Compatibility wrapper for the curated WULPUS platform protocol."""
-
-from biogui.platforms.wulpus.protocol import *  # noqa: F403

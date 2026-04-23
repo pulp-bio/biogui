@@ -145,11 +145,11 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         # Check if this is an ultrasound signal
         if extras.get("type") == "ultrasound":
-            ultrasound_mode = kwargs.get("ultrasoundMode", "A-Mode")
+            ultrasound_mode = (kwargs.get("ultrasoundMode") or "A-Mode").lower()
 
-            if ultrasound_mode == "M-Mode":
+            if ultrasound_mode == "m-mode":
                 return MModePlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
-            elif ultrasound_mode == "A-Mode":
+            if ultrasound_mode == "a-mode":
                 return AModePlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
 
         # Default: Time-Series mode
