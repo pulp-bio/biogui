@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
 
 from biogui.utils import InterfaceModule
 
-# Must match :data:`WULPUS_PLATFORM.id` in :mod:`biogui.platforms.wulpus`.
+# Must match WULPUS_PLATFORM.id in biogui.platforms.wulpus.
 WULPUS_PLATFORM_ID = "wulpus"
 
 from .protocol import (
@@ -122,9 +122,7 @@ def fork_wulpus_decode_fn(
     sig_info: dict[str, Any],
     config_to_signal_name: dict[int, str],
 ) -> Callable[..., Any]:
-    """
-    Build a decode function with its own ``__globals__`` mapping.
-    """
+    """Build a decode function with its own per-function global namespace (globals mapping)."""
     g = dict(base_decode.__globals__)
     g["wulpus_config"] = wulpus_config
     g["sigInfo"] = sig_info

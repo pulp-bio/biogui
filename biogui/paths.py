@@ -10,4 +10,6 @@ Define paths used by BioGUI.
 from pathlib import Path
 
 APP_DIR = Path(__file__).parent.resolve()
-INTERFACES_DIR = APP_DIR / "interfaces"
+# All bundled interface_*.py files live in per-platform subfolders (recursive).
+PLATFORMS_DIR = APP_DIR / "platforms"
+INTERFACES_DIR = PLATFORMS_DIR

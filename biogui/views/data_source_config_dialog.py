@@ -26,17 +26,32 @@ from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule, PlatformConfig
 
 
+def _is_bundled_interface_path(interface_path: Path) -> bool:
+    """Return True if the path is a bundled interface_*.py under paths.PLATFORMS_DIR."""
+    if not (
+        interface_path.is_file()
+        and interface_path.name.startswith("interface_")
+        and interface_path.suffix == ".py"
+    ):
+        return False
+    try:
+        interface_path.resolve().relative_to(paths.PLATFORMS_DIR.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def _loadInterfacesFromDirectory() -> dict[str, Path]:
     """
-    Load all interface modules from the interfaces directory.
+    Load all interface modules from the platforms tree (interface_*.py in subfolders).
 
     Returns
     -------
     dict of {str: Path}
         Dictionary mapping display names to full file paths.
     """
-    interfaceFiles = {}
-    for filePath in sorted(paths.INTERFACES_DIR.glob("interface_*.py")):
+    interfaceFiles: dict[str, Path] = {}
+    for filePath in sorted(paths.INTERFACES_DIR.rglob("interface_*.py")):
         displayName = filePath.stem[10:]  # remove 'interface_'
         interfaceFiles[displayName] = filePath
 
@@ -387,7 +402,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
-        if interfacePath.parent == paths.INTERFACES_DIR:
+        if _is_bundled_interface_path(interfacePath):
             # Find and select the interface in the ComboBox
             interfaceName = interfacePath.name
             if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):

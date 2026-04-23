@@ -59,9 +59,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    emgAdc = np.asarray(
-        struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, nCh)
+    emgAdc = np.asarray(struct.unpack(f">{nSamp * nCh}i", dataTmp), dtype=np.int32).reshape(
+        nSamp, nCh
+    )
 
     # ADC readings to mV
     emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V

@@ -101,9 +101,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataEMG[pos] > 127 else 0
         dataEMG.insert(pos, prefix)
         pos += 4
-    emgADC = np.asarray(
-        struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32
-    ).reshape(nSampEMG, nChEMG)
+    emgADC = np.asarray(struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32).reshape(
+        nSampEMG, nChEMG
+    )
 
     # ADC readings to mV
     emg = emgADC * vRef / (GAIN * (2 ** (nBit - 1) - 1))  # V
@@ -114,14 +114,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     emg = emg[:, CH_ORDER]
 
     # Read battery and packet counter
-    battery = np.asarray(
-        struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.uint8
-    ).reshape(nSampBat, 1)
-    counter = np.asarray(
-        struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.uint8
-    ).reshape(nSampCounter, 1)
-    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
-        nSampTs, 1
+    battery = np.asarray(struct.unpack(f"<{nSampBat}B", dataBat), dtype=np.uint8).reshape(
+        nSampBat, 1
     )
+    counter = np.asarray(struct.unpack(f">{nSampCounter}H", dataCounter), dtype=np.uint8).reshape(
+        nSampCounter, 1
+    )
+    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(nSampTs, 1)
 
     return {"emg": emg, "battery": battery, "counter": counter, "ts": ts}
