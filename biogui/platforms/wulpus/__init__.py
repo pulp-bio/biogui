@@ -38,6 +38,7 @@ from .runtime import (
     create_default_config,
     get_rx_channel_for_config,
     get_standard_signal_definitions_for_mode,
+    isolate_wulpus_interface_module,
     read_current_config,
 )
 from .wulpus_config_widget import WulpusConfigWidget
@@ -82,5 +83,6 @@ __all__ = [
     "get_standard_signal_definitions_for_mode",
     "is_accelerometer_enabled_from_config",
     "is_accelerometer_enabled_from_mode",
+    "isolate_wulpus_interface_module",
     "read_current_config",
 ]

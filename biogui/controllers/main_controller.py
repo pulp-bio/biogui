@@ -24,6 +24,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, cast
@@ -48,6 +49,13 @@ from biogui.views import (
 
 from ..utils import InterfaceModule, PlatformConfig, SigData
 from .streaming_controller import StreamingController
+
+# Suffix from StreamingController.__str__ (unique dict key); strip for tree labels only.
+_DATA_SOURCE_INTERNAL_ID_SUFFIX = re.compile(r" \[0x[0-9a-fA-F]+\]$")
+
+
+def _strip_streaming_controller_instance_suffix(data_source_id: str) -> str:
+    return _DATA_SOURCE_INTERNAL_ID_SUFFIX.sub("", data_source_id)
 
 
 def validateFreqSettings(sigConfig, fs):
@@ -780,11 +788,12 @@ class MainController(QObject):
 
     def _formatDataSourceDisplayName(self, dataSourceId: str, dataSourceConfig: dict) -> str:
         """Build a readable label including transport/device and interface module name."""
+        display_transport = _strip_streaming_controller_instance_suffix(dataSourceId)
         interfacePath = dataSourceConfig.get("interfacePath", "")
         interfaceName = Path(str(interfacePath)).stem.replace("interface_", "")
         if interfaceName:
-            return f"{dataSourceId} [{interfaceName}]"
-        return dataSourceId
+            return f"{display_transport} [{interfaceName}]"
+        return display_transport
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Open inline platform config when the row action button is clicked."""

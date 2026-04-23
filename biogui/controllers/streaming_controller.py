@@ -493,7 +493,7 @@ class StreamingController(QObject):
             self._fileWriterThread.destroyed.connect(self._fileWriterWorker.deleteLater)
 
     def __str__(self) -> str:
-        return str(self._dataSourceWorker)
+        return f"{self._dataSourceWorker} [0x{id(self):x}]"
 
     @property
     def sigInfo(self) -> MappingProxyType:

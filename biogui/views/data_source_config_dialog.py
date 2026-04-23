@@ -21,6 +21,7 @@ from sys import platform
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources, paths
+from biogui.platforms.wulpus.runtime import isolate_wulpus_interface_module
 from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule, PlatformConfig
 
@@ -130,17 +131,17 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
                 f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["extras"]["type"]}".',
             )
 
-    return (
-        InterfaceModule(
-            packetSize=module.packetSize,
-            startSeq=module.startSeq,
-            stopSeq=module.stopSeq,
-            sigInfo=module.sigInfo,
-            decodeFn=module.decodeFn,
-            platformConfig=platformConfig,
-        ),
-        "",
+    interface_module = InterfaceModule(
+        packetSize=module.packetSize,
+        startSeq=module.startSeq,
+        stopSeq=module.stopSeq,
+        sigInfo=module.sigInfo,
+        decodeFn=module.decodeFn,
+        platformConfig=platformConfig,
     )
+    interface_module = isolate_wulpus_interface_module(interface_module)
+
+    return (interface_module, "")
 
 
 class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
