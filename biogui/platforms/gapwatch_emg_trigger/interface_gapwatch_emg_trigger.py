@@ -69,19 +69,17 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataEMG[pos] > 127 else 0
         dataEMG.insert(pos, prefix)
         pos += 4
-    emgAdc = np.asarray(
-        struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32
-    ).reshape(nSampEMG, nChEMG)
+    emgAdc = np.asarray(struct.unpack(f">{nSampEMG * nChEMG}i", dataEMG), dtype=np.int32).reshape(
+        nSampEMG, nChEMG
+    )
 
     # ADC readings to mV
     emg = emgAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V
     emg *= 1_000  # mV
     emg = emg.astype(np.float32)
-    trigger = np.asarray(
-        struct.unpack(f">{nSampTrigger}B", dataTrigger), dtype=np.float32
-    ).reshape(-1, 1)
-    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(
-        nSampTs, 1
+    trigger = np.asarray(struct.unpack(f">{nSampTrigger}B", dataTrigger), dtype=np.float32).reshape(
+        -1, 1
     )
+    ts = np.asarray(struct.unpack(f"<{nSampTs}Q", dataTs), dtype=np.uint64).reshape(nSampTs, 1)
 
     return {"emg": emg, "trigger_emg": trigger, "ts": ts}

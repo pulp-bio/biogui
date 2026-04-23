@@ -133,21 +133,15 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         dataIMU.extend(bytearray(data[i * 144 + 132 : i * 144 + 140]))
 
     # Get EMG data
-    emg = np.asarray(
-        struct.unpack(f">{N_BUFF * 64}h", dataEMG), dtype=np.int32
-    ).reshape(-1, 64)
+    emg = np.asarray(struct.unpack(f">{N_BUFF * 64}h", dataEMG), dtype=np.int32).reshape(-1, 64)
     # Convert ADC readings to mV
     mVConvF = 2.86e-4  # conversion factor
     emg = (emg * mVConvF).astype(np.float32)
 
     # Get AUX data
-    aux = np.asarray(
-        struct.unpack(f">{N_BUFF * 2}h", dataAux), dtype=np.float32
-    ).reshape(-1, 2)
+    aux = np.asarray(struct.unpack(f">{N_BUFF * 2}h", dataAux), dtype=np.float32).reshape(-1, 2)
 
     # Get IMU data
-    imu = np.asarray(
-        struct.unpack(f">{N_BUFF * 4}h", dataIMU), dtype=np.float32
-    ).reshape(-1, 4)
+    imu = np.asarray(struct.unpack(f">{N_BUFF * 4}h", dataIMU), dtype=np.float32).reshape(-1, 4)
 
     return {"emg": emg, "aux": aux, "imu": imu}

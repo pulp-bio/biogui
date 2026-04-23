@@ -7,6 +7,7 @@
 
 from biogui.utils import PlatformConfig
 
+from .defaults import create_default_biceps_wulpus_uss_config
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
     MAX_CH_ID,
@@ -74,6 +75,7 @@ __all__ = [
     "WulpusRxTxConfigGen",
     "WulpusUssConfig",
     "WULPUS_PLATFORM",
+    "create_default_biceps_wulpus_uss_config",
     "build_interface_module",
     "configure_interface_module",
     "create_default_config",

@@ -59,9 +59,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataTmp[pos] > 127 else 0
         dataTmp.insert(pos, prefix)
         pos += 4
-    forceAdc = np.asarray(
-        struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32
-    ).reshape(nSamp, 16)[:, [8, 9, 10]]
+    forceAdc = np.asarray(struct.unpack(f">{nSamp * 16}i", dataTmp), dtype=np.int32).reshape(
+        nSamp, 16
+    )[:, [8, 9, 10]]
 
     # ADC readings to V
     forceV = forceAdc * vRef / (gain * (2 ** (nBit - 1) - 1))  # V

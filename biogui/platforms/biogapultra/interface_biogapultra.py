@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 This module contains the BioGAP interface for sEMG.
 
@@ -109,18 +114,14 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         prefix = 255 if dataADSATmp[pos] > 127 else 0
         dataADSATmp.insert(pos, prefix)
         pos += 4
-    emgADSA = np.asarray(
-        struct.unpack(f">{nSamp * nChSingleADS}i", dataADSATmp), dtype=np.int32
-    )
+    emgADSA = np.asarray(struct.unpack(f">{nSamp * nChSingleADS}i", dataADSATmp), dtype=np.int32)
     emgADSA = emgADSA.reshape(nSamp, nChSingleADS)
     pos = 0
     for _ in range(len(dataADSBTmp) // 3):
         prefix = 255 if dataADSBTmp[pos] > 127 else 0
         dataADSBTmp.insert(pos, prefix)
         pos += 4
-    emgADSB = np.asarray(
-        struct.unpack(f">{nSamp * nChSingleADS}i", dataADSBTmp), dtype=np.int32
-    )
+    emgADSB = np.asarray(struct.unpack(f">{nSamp * nChSingleADS}i", dataADSBTmp), dtype=np.int32)
     emgADSB = emgADSB.reshape(nSamp, nChSingleADS)
     emgAllChannels = np.concatenate((emgADSA, emgADSB), axis=1)  # (nSamp, 16)
 
