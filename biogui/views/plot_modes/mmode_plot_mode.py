@@ -80,6 +80,7 @@ class MModePlotMode(BasePlotMode):
 
     MMODE_TIME_WINDOW = 250  # Number of A-lines to display
     SPEED_OF_SOUND = 1540  # m/s in tissue
+    MMODE_COLORMAP = "viridis"
 
     def __init__(
         self,
@@ -180,14 +181,16 @@ class MModePlotMode(BasePlotMode):
         plot_item.setLabel("bottom", "Time", units="s")
         plot_item.setLabel("left", "Depth", units="mm")
 
+        # Clinical convention
+        plot_item.invertY(True)
+
         # Create image item
         self._image_item = pg.ImageItem()
         # Optimization: automatic downsampling for image
         self._image_item.setAutoDownsample(True)
         graph_widget.addItem(self._image_item)
 
-        # Set colormap
-        colormap = pg.colormap.get("CET-L2")
+        colormap = pg.colormap.get(self.MMODE_COLORMAP)
         self._image_item.setColorMap(colormap)
 
         # Display initial empty buffer
@@ -239,16 +242,7 @@ class MModePlotMode(BasePlotMode):
             self._setup_image_rect()
             self._needs_rect_setup = False
 
-        # Update the displayed image
-        data_min = self._mmode_buffer.min()
-        data_max = self._mmode_buffer.max()
-        level_range = data_max - data_min if data_max != data_min else 1.0
-
-        self._image_item.setImage(
-            self._mmode_buffer.T,
-            autoLevels=False,
-            levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
-        )
+        self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
 
         # Update counters
         self._pending_scans -= scans_to_process
