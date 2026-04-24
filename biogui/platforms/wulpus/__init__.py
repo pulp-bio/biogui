@@ -3,8 +3,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""WULPUS ultrasound hardware: protocol constants and USS configuration."""
+"""WULPUS curated platform integration."""
 
+from biogui.utils import PlatformConfig
+
+from .defaults import create_default_biceps_wulpus_uss_config
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
     MAX_CH_ID,
@@ -23,12 +26,31 @@ from .protocol import (
     USS_CAPTURE_ACQ_RATES,
     USS_CAPTURE_OVER_SAMPLE_RATES,
     USS_CAPT_OVER_SAMPLE_RATES_REG,
+    WulpusRxTxConfigGen,
+    WulpusUssConfig,
     get_num_us_samples_from_config,
     get_num_us_samples_from_mode,
     is_accelerometer_enabled_from_config,
     is_accelerometer_enabled_from_mode,
-    WulpusRxTxConfigGen,
-    WulpusUssConfig,
+)
+from .runtime import (
+    build_interface_module,
+    configure_interface_module,
+    create_default_config,
+    get_rx_channel_for_config,
+    get_standard_signal_definitions_for_mode,
+    isolate_wulpus_interface_module,
+    read_current_config,
+)
+from .wulpus_config_widget import WulpusConfigWidget
+
+WULPUS_PLATFORM = PlatformConfig(
+    id="wulpus",
+    configureInterfaceModule=configure_interface_module,
+    configWidgetClass=WulpusConfigWidget,
+    hasInlineConfigAction=True,
+    inlineActionIconName="preferences-system",
+    inlineActionToolTip="Configure WULPUS",
 )
 
 __all__ = [
@@ -49,10 +71,20 @@ __all__ = [
     "USS_CAPTURE_ACQ_RATES",
     "USS_CAPTURE_OVER_SAMPLE_RATES",
     "USS_CAPT_OVER_SAMPLE_RATES_REG",
-    "get_num_us_samples_from_config",
-    "get_num_us_samples_from_mode",
-    "is_accelerometer_enabled_from_config",
-    "is_accelerometer_enabled_from_mode",
+    "WulpusConfigWidget",
     "WulpusRxTxConfigGen",
     "WulpusUssConfig",
+    "WULPUS_PLATFORM",
+    "create_default_biceps_wulpus_uss_config",
+    "build_interface_module",
+    "configure_interface_module",
+    "create_default_config",
+    "get_num_us_samples_from_config",
+    "get_num_us_samples_from_mode",
+    "get_rx_channel_for_config",
+    "get_standard_signal_definitions_for_mode",
+    "is_accelerometer_enabled_from_config",
+    "is_accelerometer_enabled_from_mode",
+    "isolate_wulpus_interface_module",
+    "read_current_config",
 ]

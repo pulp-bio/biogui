@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright ETH Zurich - University of Bologna 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
@@ -16,21 +21,37 @@ from sys import platform
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources, paths
+from biogui.platforms.wulpus.runtime import isolate_wulpus_interface_module
 from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
-from biogui.utils import InterfaceModule
+from biogui.utils import InterfaceModule, PlatformConfig
+
+
+def _is_bundled_interface_path(interface_path: Path) -> bool:
+    """Return True if the path is a bundled interface_*.py under paths.PLATFORMS_DIR."""
+    if not (
+        interface_path.is_file()
+        and interface_path.name.startswith("interface_")
+        and interface_path.suffix == ".py"
+    ):
+        return False
+    try:
+        interface_path.resolve().relative_to(paths.PLATFORMS_DIR.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _loadInterfacesFromDirectory() -> dict[str, Path]:
     """
-    Load all interface modules from the interfaces directory.
+    Load all interface modules from the platforms tree (interface_*.py in subfolders).
 
     Returns
     -------
     dict of {str: Path}
         Dictionary mapping display names to full file paths.
     """
-    interfaceFiles = {}
-    for filePath in sorted(paths.INTERFACES_DIR.glob("interface_*.py")):
+    interfaceFiles: dict[str, Path] = {}
+    for filePath in sorted(paths.INTERFACES_DIR.rglob("interface_*.py")):
         displayName = filePath.stem[10:]  # remove 'interface_'
         interfaceFiles[displayName] = filePath
 
@@ -96,6 +117,10 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
     if not isinstance(module.packetSize, int) or module.packetSize <= 0:
         return None, "The packet size must be a positive integer."
 
+    platformConfig = getattr(module, "platformConfig", None)
+    if platformConfig is not None and not isinstance(platformConfig, PlatformConfig):
+        return None, '"platformConfig" must be a PlatformConfig object when provided.'
+
     for sigName, sigData in module.sigInfo.items():
         if sigName in ("acq_ts", "trigger"):
             return None, '"acq_ts" and "trigger" are reserved signal names.'
@@ -121,16 +146,17 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
                 f'Signal "{sigName}": signal type must be one of {validTypes}, got "{sigData["extras"]["type"]}".',
             )
 
-    return (
-        InterfaceModule(
-            packetSize=module.packetSize,
-            startSeq=module.startSeq,
-            stopSeq=module.stopSeq,
-            sigInfo=module.sigInfo,
-            decodeFn=module.decodeFn,
-        ),
-        "",
+    interface_module = InterfaceModule(
+        packetSize=module.packetSize,
+        startSeq=module.startSeq,
+        stopSeq=module.stopSeq,
+        sigInfo=module.sigInfo,
+        decodeFn=module.decodeFn,
+        platformConfig=platformConfig,
     )
+    interface_module = isolate_wulpus_interface_module(interface_module)
+
+    return (interface_module, "")
 
 
 class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
@@ -180,9 +206,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.interfaceModuleComboBox.addItem(self._BROWSE_INTERFACE)
 
         # Populate combo box with data sources and create configuration widget
-        dataSources = list(
-            map(lambda sourceType: sourceType.value, data_sources.DataSourceType)
-        )
+        dataSources = list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
         if dataSourceType is None:
             dataSourceType = data_sources.DataSourceType(dataSources[0])
         self.dataSourceComboBox.addItems(dataSources)
@@ -378,7 +402,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
-        if interfacePath.parent == paths.INTERFACES_DIR:
+        if _is_bundled_interface_path(interfacePath):
             # Find and select the interface in the ComboBox
             interfaceName = interfacePath.name
             if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):

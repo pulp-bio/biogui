@@ -55,14 +55,15 @@ To enable communication between the GUI and a board, one must provide a Python f
     - `type`: signal type, either `"ultrasound"` or `"time-series"` (string)
 - `decodeFn`: function that decodes each packet of bytes read from the board into the specified signals.
 
-Some examples of interface files are provided in the [`interfaces`](https://github.com/pulp-bio/biogui/blob/main/interfaces) folder.
+Bundled board interfaces live under [`biogui/platforms`](https://github.com/pulp-bio/biogui/blob/main/biogui/platforms) (each device family in its own subfolder, as `interface_*.py` files).
 
 ### Additional modules
 
 The BioGUI provides additional functionalities via the [`modules`](biogui/modules) sub-folder. The main modules are:
+
 - [trigger](biogui/modules/trigger.py) — Given a gesture configuration (in JSON), it shows gesture cues to the user and generates a corresponding trigger signal that is appended to the incoming data; useful for screen-guided training
 - [forwarding](biogui/modules/forwarding.py) — It forwards the incoming data from selected signals to other processes via TCP or Unix sockets; useful to integrate the BioGUI within control applications
-- [wulpus_config](biogui/modules/wulpus_config.py) — It allows to configure the WULPUS ultrasound probe and to load/store presets (in JSON)
+- WULPUS: configure the probe via the per–data source action when using a WULPUS `interface_*.py`; presets live under `presets/wulpus/`
 
 ### Utilities
 
@@ -71,6 +72,7 @@ In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, the
 ## Applications
 
 As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications`](applications) folder:
+
 - [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
 - [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 

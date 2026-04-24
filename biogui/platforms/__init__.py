@@ -3,4 +3,4 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Hardware-specific protocol and configuration helpers."""
+"""Curated platform integrations."""

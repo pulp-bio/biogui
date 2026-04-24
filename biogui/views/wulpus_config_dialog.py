@@ -9,9 +9,8 @@ Dialog for configuring WULPUS hardware parameters.
 
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QVBoxLayout
 
+from biogui.platforms.wulpus import WulpusUssConfig
 from biogui.views.wulpus_config_widget import WulpusConfigWidget
-
-from ..interfaces import interface_wulpus
 
 
 class WulpusConfigDialog(QDialog):
@@ -38,9 +37,7 @@ class WulpusConfigDialog(QDialog):
             super().accept()
         except Exception as e:
             self.configWidget.statusLabel.setText(f"Status: Error - {str(e)}")
-            QMessageBox.critical(
-                self, "Configuration Error", f"Invalid configuration: {str(e)}"
-            )
+            QMessageBox.critical(self, "Configuration Error", f"Invalid configuration: {str(e)}")
 
-    def get_config(self) -> interface_wulpus.WulpusUssConfig | None:
+    def get_config(self) -> WulpusUssConfig | None:
         return self._config

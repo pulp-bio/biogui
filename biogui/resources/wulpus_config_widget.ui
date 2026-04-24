@@ -356,7 +356,7 @@
           <item>
            <widget class="QLabel" name="txRxInfoLabel">
             <property name="text">
-             <string>Configure transmitter and receiver channels. Each configuration specifies which channels are active.</string>
+           <string>Configure transmitter and receiver channels. Use Move Up/Down to change configuration order.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -380,6 +380,20 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="moveTxRxUpButton">
+              <property name="text">
+               <string>Move Up</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="moveTxRxDownButton">
+              <property name="text">
+               <string>Move Down</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="clearTxRxConfigButton">
               <property name="text">
                <string>Clear All</string>
@@ -393,14 +407,12 @@
             <property name="toolTip">
              <string>List of TX/RX channel configurations</string>
             </property>
+                <property name="editTriggers">
+                 <set>QAbstractItemView::NoEditTriggers</set>
+                </property>
             <property name="selectionBehavior">
              <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
             </property>
-            <column>
-             <property name="text">
-              <string>#</string>
-             </property>
-            </column>
             <column>
              <property name="text">
               <string>TX Channels</string>
@@ -408,7 +420,7 @@
             </column>
             <column>
              <property name="text">
-              <string>RX Channels</string>
+                            <string>RX Channel</string>
              </property>
             </column>
             <column>

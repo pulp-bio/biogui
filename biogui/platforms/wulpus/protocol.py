@@ -29,7 +29,7 @@ assert (
 
 # Protocol related
 START_BYTE_CONF_PACK = 250
-START_BYTE_RESTART = 251  # stops acquisition loop on WULPUS and WULPUS will wait for a new valid configuration package
+START_BYTE_RESTART = 251  # stops acquisition loop on WULPUS and waits for a new valid config
 PACKAGE_LEN = 68
 
 
@@ -60,12 +60,10 @@ def get_num_us_samples_from_config(config: "WulpusUssConfig") -> int:
     return get_num_us_samples_from_mode(config.meas_mode)
 
 
-# Oversampling rate
 USS_CAPTURE_OVER_SAMPLE_RATES = (10, 20, 40, 80, 160)
 USS_CAPT_OVER_SAMPLE_RATES_REG = (0, 1, 2, 3, 4)
 USS_CAPTURE_ACQ_RATES = [80e6 / x for x in USS_CAPTURE_OVER_SAMPLE_RATES]
 
-# PGA RX gain (dB)
 PGA_GAIN = (
     -6.5,
     -5.5,
@@ -119,32 +117,21 @@ PGA_GAIN = (
 PGA_GAIN_REG = tuple(np.arange(17, 64))
 
 
-# Lookup table for us to ticks conversion (HSPLL_CLOCK_FREQ = 80MHz)
 us_to_ticks = {
-    "dcdc_turnon": 65535 / 2000000,  # cycles of LFXT (655 - 20ms, 65535 - 2s)
-    "meas_period": 65535 / 2000000,  # same as above
-    "start_hvmuxrx": 8,  # delay in s * 8MHz
-    "start_ppg": 5,  # delay in s * (HSPLL_CLOCK_FREQ / 16) = delay in s * (80MHz / 16)
-    "turnon_adc": 5,  # same as above
-    "start_pgainbias": 5,  # same as above
-    "start_adcsampl": 5,  # same as above
-    "restart_capt": 5 / 16,  # delay in s * (HSPLL_CLOCK_FREQ / 256)
-    "capt_timeout": 5 / 4,  # delay in s * (HSPLL_CLOCK_FREQ / 64)
+    "dcdc_turnon": 65535 / 2000000,
+    "meas_period": 65535 / 2000000,
+    "start_hvmuxrx": 8,
+    "start_ppg": 5,
+    "turnon_adc": 5,
+    "start_pgainbias": 5,
+    "start_adcsampl": 5,
+    "restart_capt": 5 / 16,
+    "capt_timeout": 5 / 4,
 }
 
 
 class _ConfigBytes:
-    """
-    Represents a configuration parameter.
-
-    Attributes:
-        config_name (str):      Name of the configuration parameter.
-        friendly_name (str):    Reader friendly name of the configuration parameter.
-        limit_type (str):       Type of the limit. Can be 'limit' or 'list'.
-        min_val (int):          Minimum value of the configuration parameter or list of allowed register values.
-        max_val (int):          Maximum value of the configuration parameter or list of allowed friendly values.
-        format (str):           Format of the configuration parameter. (e.g. '<u2')
-    """
+    """Represents a configuration parameter."""
 
     def __init__(self, config_name, friendly_name, limit_type, min_val, max_val, format):
         self.config_name = config_name
@@ -180,7 +167,6 @@ class _ConfigBytes:
         return np.array([value]).astype(self.format).tobytes()
 
 
-# Configuration package representation
 configuration_package = [
     [
         _ConfigBytes("dcdc_turnon", "DC-DC turn on time [us]", "limit", 0, 65535, "<u2"),
@@ -226,14 +212,7 @@ class WulpusRxTxConfigGen:
         self.tx_rx_len = 0
 
     def add_config(self, tx_channels, rx_channels, optimized_switching=False):
-        """
-        Add a new configuration to the list of configurations.
-
-        Args:
-            tx_channels: List of TX channel IDs (0...7)
-            rx_channels: List of RX channel IDs (0...7)
-            optimized_switching: Bool value to activate an algorithm for minimizing switching artifacts
-        """
+        """Add a new configuration to the list of configurations."""
         if self.tx_rx_len >= TX_RX_MAX_NUM_OF_CONFIGS:
             raise ValueError(f"Maximum number of configs is {TX_RX_MAX_NUM_OF_CONFIGS}")
 
@@ -382,7 +361,5 @@ class WulpusUssConfig:
 
     def get_restart_package(self):
         bytes_arr = np.array([START_BYTE_RESTART], dtype="<u1").tobytes()
-
         bytes_arr += np.zeros(PACKAGE_LEN - len(bytes_arr), dtype="<u1").tobytes()
-
         return bytes_arr

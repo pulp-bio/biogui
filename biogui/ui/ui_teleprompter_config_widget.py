@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'teleprompter_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,13 +36,13 @@ class Ui_TeleprompterConfigWidget(object):
         self.browseTeleprompterConfigButton = QPushButton(self.teleprompterGroupBox)
         self.browseTeleprompterConfigButton.setObjectName(u"browseTeleprompterConfigButton")
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.browseTeleprompterConfigButton)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.browseTeleprompterConfigButton)
 
         self.teleprompterConfigPathLabel = QLabel(self.teleprompterGroupBox)
         self.teleprompterConfigPathLabel.setObjectName(u"teleprompterConfigPathLabel")
         self.teleprompterConfigPathLabel.setWordWrap(True)
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.teleprompterConfigPathLabel)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.teleprompterConfigPathLabel)
 
 
         self.verticalLayout.addWidget(self.teleprompterGroupBox)

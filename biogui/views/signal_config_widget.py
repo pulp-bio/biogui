@@ -64,9 +64,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             num_samples = extras.get("num_samples", 397)  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
-            self.freqLabel.setText(f"{prf:.2f} Hz")
+            self.freqLabel.setText(f"{self._formatRateForDisplay(prf)} Hz")
         else:
-            self.freqLabel.setText(str(fs))
+            self.freqLabel.setText(self._formatRateForDisplay(fs))
 
         if nCh == 1:
             self.label10.setEnabled(False)
@@ -179,6 +179,10 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         # "to" label between low/high frequency spinboxes in the UI form.
         self.label.setVisible(visible)
         self.label.setEnabled(enabled)
+
+    def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
+        """Format sampling-rate labels with at most {precision} decimal places."""
+        return f"{round(value, precision):g}"
 
     def _onUsProcessingModeChange(self) -> None:
         """Enable/disable frequency controls based on ultrasound processing mode."""
