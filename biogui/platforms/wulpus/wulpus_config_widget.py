@@ -14,7 +14,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -29,7 +29,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QRadioButton,
-    QStyle,
     QTableWidgetItem,
     QToolButton,
     QWidget,
@@ -262,25 +261,25 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         layout.addWidget(label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         info_button = QToolButton(container)
-        info_button.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
-        )
-        small_icon_size = self.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
-        info_button.setIconSize(QSize(small_icon_size, small_icon_size))
-        info_button.setText("")
-        info_button.setAutoRaise(True)
+        info_button.setText("i")
+        info_button.setAutoRaise(False)
         info_button.setCursor(Qt.PointingHandCursor)  # type: ignore
         info_button.setToolTip(self._help_content.get(help_key, {}).get("short", "More info"))
         info_button.setFixedSize(18, 18)
         info_button.setStyleSheet(
             """
             QToolButton {
-                border: none;
+                border: 1px solid #0a4ea7;
                 border-radius: 9px;
-                background: transparent;
+                background: #0b63d1;
+                color: #ffffff;
+                font-weight: 600;
             }
             QToolButton:hover {
-                background: #e9edf5;
+                background: #0a56b8;
+            }
+            QToolButton:pressed {
+                background: #084894;
             }
             """
         )
