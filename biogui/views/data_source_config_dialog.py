@@ -93,8 +93,16 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
             None,
             'The selected Python module does not contain a "decodeFn" function.',
         )
-    if not isinstance(module.packetSize, int) or module.packetSize <= 0:
-        return None, "The packet size must be a positive integer."
+    packet_size = module.packetSize
+    if not isinstance(packet_size, (int, list)):
+        return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
+    if isinstance(packet_size, int):
+        if packet_size <= 0:
+            return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
+    elif isinstance(packet_size, list):
+        for header, size in packet_size:
+            if not isinstance(header, int) or not isinstance(size, int) or size <= 0:
+                return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
 
     for sigName, sigData in module.sigInfo.items():
         if sigName in ("acq_ts", "trigger"):
