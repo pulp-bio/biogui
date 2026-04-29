@@ -50,7 +50,7 @@ def getConfigWidget(
 
 def getDataSourceWorker(
     dataSourceType: DataSourceType,
-    packetSize: int,
+    packetSize: int | list[tuple[int, int]],
     startSeq: list[bytes],
     stopSeq: list[bytes],
     **kwargs,
@@ -62,8 +62,8 @@ def getDataSourceWorker(
     ----------
     dataSourceType : DataSourceType
         Type of the data source.
-    packetSize : int
-        Number of bytes in the packet.
+    packetSize : int | list[tuple[int, int]]
+        Number of bytes in the packet, or list of (header, size) tuples.
     startSeq : list of bytes
         Sequence of commands to start the source.
     stopSeq : list of bytes
