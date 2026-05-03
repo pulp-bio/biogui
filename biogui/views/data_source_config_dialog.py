@@ -15,6 +15,7 @@ Dialog to add a new data source.
 from __future__ import annotations
 
 import importlib.util
+import traceback
 from pathlib import Path
 from sys import platform
 
@@ -86,8 +87,10 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
 
     try:
         spec.loader.exec_module(module)
-    except ImportError:
-        return None, "Cannot import the selected Python module."
+    except Exception as e:
+        # Print detailed traceback to terminal for debugging
+        traceback.print_exc()
+        return None, f"Failed to import module: {type(e).__name__}: {e}"
 
     if not hasattr(module, "packetSize"):
         return (
