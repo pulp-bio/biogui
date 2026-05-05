@@ -346,6 +346,67 @@
             </property>
            </widget>
           </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="enableEnvDetLabel">
+            <property name="toolTip">
+             <string>Enable envelope detection (WULPUS PRO only)</string>
+            </property>
+            <property name="text">
+             <string>Envelope Detection:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="enableEnvDetComboBox">
+            <property name="toolTip">
+             <string>Enable or disable envelope detection</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>Disabled</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Enabled</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="vgaRcPrechCycLabel">
+            <property name="toolTip">
+             <string>VGA RC precharge time in cycles (WULPUS PRO only)</string>
+            </property>
+            <property name="text">
+             <string>VGA RC Precharge Cycles:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QLineEdit" name="vgaRcPrechCycLineEdit">
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="vgaSlopeCodeLabel">
+            <property name="toolTip">
+             <string>VGA slope wiper code (WULPUS PRO only)</string>
+            </property>
+            <property name="text">
+             <string>VGA Slope Code:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QLineEdit" name="vgaSlopeCodeLineEdit">
+            <property name="text">
+             <string>127</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
         <widget class="QWidget" name="txRxTab">

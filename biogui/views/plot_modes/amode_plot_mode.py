@@ -102,6 +102,7 @@ class AModePlotMode(BasePlotMode):
         self._adc_start_delay = extras["adc_start_delay"]
         self._adc_sampling_freq = extras["adc_sampling_freq"]
         self._meas_period_us = extras.get("meas_period")
+        self._wulpus_config = extras.get("wulpus_config")
 
         # Ultrasound display configuration
         self._show_raw = config.get("showRaw", True)
@@ -134,6 +135,8 @@ class AModePlotMode(BasePlotMode):
         self._raw_plots = []
         self._filtered_plots = []
         self._envelope_plots = []
+        self._gain_curve_plot = None
+        self._gain_view = None
         self._scan_count = 0
         self._graph_widget = None
 
@@ -184,6 +187,10 @@ class AModePlotMode(BasePlotMode):
         self._envelope_plots = []
 
         depth_axis = self._calculate_distance_axis()
+        if self._wulpus_config is not None and hasattr(self._wulpus_config, "calc_gain_curve"):
+            self._wulpus_config.calc_gain_curve()
+            self._setup_gain_axis(plot_item, depth_axis)
+
         latest_samples = self._get_latest_scan_data()
 
         # Precompute filtered and envelope data
@@ -244,6 +251,31 @@ class AModePlotMode(BasePlotMode):
         if sum([self._show_raw, self._show_filtered, self._show_envelope]) > 1:
             plot_item.addLegend()
 
+    def _setup_gain_axis(self, plot_item, depth_axis: np.ndarray) -> None:
+        """Setup a secondary right-side axis for the configured gain curve."""
+        self._gain_view = pg.ViewBox()
+        plot_item.scene().addItem(self._gain_view)
+        plot_item.getAxis("right").linkToView(self._gain_view)
+        plot_item.showAxis("right")
+        plot_item.setLabel("right", "Gain", units="dB")
+
+        self._gain_curve_plot = pg.PlotDataItem(
+            depth_axis,
+            self._wulpus_config.gain_curve_db,
+            pen=pg.mkPen(color="k", width=1, style=pg.QtCore.Qt.PenStyle.DashLine),
+            name="Set gain",
+        )
+        self._gain_view.addItem(self._gain_curve_plot)
+
+        def _update_gain_view() -> None:
+            if self._gain_view is None:
+                return
+            self._gain_view.setGeometry(plot_item.vb.sceneBoundingRect())
+            self._gain_view.linkedViewChanged(plot_item.vb, self._gain_view.XAxis)
+
+        plot_item.vb.sigResized.connect(_update_gain_view)
+        _update_gain_view()
+
     def render(self) -> None:
         """Update the A-mode plots with all display modes."""
         if not self.has_new_data():
@@ -288,6 +320,13 @@ class AModePlotMode(BasePlotMode):
                     envelope_data[:, i] + vertical_offset,
                     skipFiniteCheck=True,
                 )
+
+        if self._gain_curve_plot is not None and self._wulpus_config is not None:
+            self._gain_curve_plot.setData(
+                distance_axis,
+                self._wulpus_config.gain_curve_db,
+                skipFiniteCheck=True,
+            )
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""

@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-WULPUS hardware configuration widget with preset management.
+WULPUS PRO hardware configuration widget with preset management.
 """
 
 from __future__ import annotations
@@ -167,7 +167,7 @@ class TxRxConfigDialog(QDialog):
 
 
 class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
-    """Configuration widget for WULPUS ultrasound hardware parameters."""
+    """Configuration widget for WULPUS PRO ultrasound hardware parameters."""
 
     configChanged = Signal(WulpusUssConfig)
 
@@ -176,9 +176,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.setupUi(self)
         self.configTabWidget.setCurrentIndex(0)
 
-        # Hide WULPUS PRO specific widgets in the base/original WULPUS widget
-        # The UI file contains PRO widgets for the compiled form; hide them here
-        # so they are only visible in the PRO-specific widget.
+        # Ensure PRO-specific widgets are visible for the PRO widget
         for name in (
             "enableEnvDetLabel",
             "enableEnvDetComboBox",
@@ -190,9 +188,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             try:
                 widget = getattr(self, name, None)
                 if widget is not None:
-                    widget.setVisible(False)
+                    widget.setVisible(True)
             except Exception:
-                # Be defensive; absence of widgets is acceptable
                 pass
 
         self._current_config: WulpusUssConfig | None = None
@@ -212,14 +209,16 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _get_presets_directory(self) -> Path:
         biogui_root = Path(__file__).parent.parent.parent.parent
-        presets_dir = biogui_root / "presets" / "wulpus"
+        presets_dir = biogui_root / "presets" / "wulpus_pro"
         presets_dir.mkdir(parents=True, exist_ok=True)
         return presets_dir
 
     def _load_help_content(self) -> dict[str, dict]:
-        help_file = APP_DIR / "resources" / "help" / "wulpus_settings_help.json"
+        help_file = APP_DIR / "resources" / "help" / "wulpus_pro_settings_help.json"
         if not help_file.exists():
-            logger.warning(f"WULPUS help file not found: {help_file}")
+            help_file = APP_DIR / "resources" / "help" / "wulpus_settings_help.json"
+        if not help_file.exists():
+            logger.warning(f"WULPUS PRO help file not found: {help_file}")
             return {}
 
         try:
@@ -228,7 +227,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             if isinstance(data, dict):
                 return data
         except Exception as err:
-            logger.warning(f"Failed to load WULPUS help content: {err}")
+            logger.warning(f"Failed to load WULPUS PRO help content: {err}")
 
         return {}
 
@@ -241,6 +240,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._attach_help_button(self.basicFormLayout, self.samplingFreqLabel, "sampling_freq")
         self._attach_help_button(self.basicFormLayout, self.numSamplesLabel, "num_samples")
         self._attach_help_button(self.basicFormLayout, self.rxGainLabel, "rx_gain")
+        self._attach_help_button(self.basicFormLayout, self.enableEnvDetLabel, "enable_env_det")
         self._attach_help_button(self.advancedFormLayout, self.startHvmuxrxLabel, "start_hvmuxrx")
         self._attach_help_button(self.advancedFormLayout, self.startPpgLabel, "start_ppg")
         self._attach_help_button(self.advancedFormLayout, self.turnonAdcLabel, "turnon_adc")
@@ -256,6 +256,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         )
         self._attach_help_button(self.advancedFormLayout, self.restartCaptLabel, "restart_capt")
         self._attach_help_button(self.advancedFormLayout, self.captTimeoutLabel, "capt_timeout")
+        self._attach_help_button(
+            self.advancedFormLayout, self.vgaRcPrechCycLabel, "vga_rc_prech_cyc"
+        )
+        self._attach_help_button(self.advancedFormLayout, self.vgaSlopeCodeLabel, "vga_slope_code")
         self.txRxInfoLabel.setToolTip(self._help_content.get("tx_rx_configs", {}).get("short", ""))
 
     def _attach_help_button(self, form_layout: QFormLayout, label: QLabel, help_key: str) -> None:
@@ -384,6 +388,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.startAdcsampleLineEdit.setValidator(QIntValidator(0, 1000000))
         self.restartCaptLineEdit.setValidator(QIntValidator(0, 1000000))
         self.captTimeoutLineEdit.setValidator(QIntValidator(0, 1000000))
+        self.vgaRcPrechCycLineEdit.setValidator(QIntValidator(0, 1000000))
+        self.vgaSlopeCodeLineEdit.setValidator(QIntValidator(0, 1000000))
 
     def _populate_combo_boxes(self) -> None:
         self.samplingFreqComboBox.clear()
@@ -420,11 +426,14 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             self.startAdcsampleLineEdit,
             self.restartCaptLineEdit,
             self.captTimeoutLineEdit,
+            self.vgaRcPrechCycLineEdit,
+            self.vgaSlopeCodeLineEdit,
         ]:
             widget.textChanged.connect(self._mark_as_custom)
 
         self.samplingFreqComboBox.currentIndexChanged.connect(self._mark_as_custom)
         self.rxGainComboBox.currentIndexChanged.connect(self._mark_as_custom)
+        self.enableEnvDetComboBox.currentIndexChanged.connect(self._mark_as_custom)
         self.imuActiveCheckBox.stateChanged.connect(self._mark_as_custom)
 
     def _mark_as_custom(self) -> None:
@@ -486,6 +495,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             if idx >= 0:
                 self.rxGainComboBox.setCurrentIndex(idx)
 
+            idx = self.enableEnvDetComboBox.findText(config.enable_env_det)
+            if idx >= 0:
+                self.enableEnvDetComboBox.setCurrentIndex(idx)
+
             self.startHvmuxrxLineEdit.setText(str(config.start_hvmuxrx))
             self.startPpgLineEdit.setText(str(config.start_ppg))
             self.turnonAdcLineEdit.setText(str(config.turnon_adc))
@@ -493,6 +506,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             self.startAdcsampleLineEdit.setText(str(config.start_adcsampl))
             self.restartCaptLineEdit.setText(str(config.restart_capt))
             self.captTimeoutLineEdit.setText(str(config.capt_timeout))
+            self.vgaRcPrechCycLineEdit.setText(str(config.vga_rc_prech_cyc))
+            self.vgaSlopeCodeLineEdit.setText(str(config.vga_slope_code))
 
             self._tx_rx_configs.clear()
             for i in range(config.num_txrx_configs):
@@ -735,6 +750,9 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             start_adcsampl=int(self.startAdcsampleLineEdit.text()),
             restart_capt=int(self.restartCaptLineEdit.text()),
             capt_timeout=int(self.captTimeoutLineEdit.text()),
+            vga_rc_prech_cyc=int(self.vgaRcPrechCycLineEdit.text()),
+            vga_slope_code=int(self.vgaSlopeCodeLineEdit.text()),
+            enable_env_det=self.enableEnvDetComboBox.currentText(),
         )
 
     def _get_config_dict(self) -> dict:
@@ -749,6 +767,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             "sampling_freq": self.samplingFreqComboBox.currentData(),
             "num_samples": int(self.numSamplesLineEdit.text()),
             "rx_gain": self.rxGainComboBox.currentData(),
+            "enable_env_det": self.enableEnvDetComboBox.currentText(),
             "start_hvmuxrx": int(self.startHvmuxrxLineEdit.text()),
             "start_ppg": int(self.startPpgLineEdit.text()),
             "turnon_adc": int(self.turnonAdcLineEdit.text()),
@@ -756,6 +775,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             "start_adcsampl": int(self.startAdcsampleLineEdit.text()),
             "restart_capt": int(self.restartCaptLineEdit.text()),
             "capt_timeout": int(self.captTimeoutLineEdit.text()),
+            "vga_rc_prech_cyc": int(self.vgaRcPrechCycLineEdit.text()),
+            "vga_slope_code": int(self.vgaSlopeCodeLineEdit.text()),
             "tx_rx_configs": self._tx_rx_configs,
         }
 
@@ -775,6 +796,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         if idx >= 0:
             self.rxGainComboBox.setCurrentIndex(idx)
 
+        idx = self.enableEnvDetComboBox.findText(config_dict.get("enable_env_det", "Disabled"))
+        if idx >= 0:
+            self.enableEnvDetComboBox.setCurrentIndex(idx)
+
         self.startHvmuxrxLineEdit.setText(str(config_dict["start_hvmuxrx"]))
         self.startPpgLineEdit.setText(str(config_dict["start_ppg"]))
         self.turnonAdcLineEdit.setText(str(config_dict["turnon_adc"]))
@@ -782,6 +807,8 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.startAdcsampleLineEdit.setText(str(config_dict["start_adcsampl"]))
         self.restartCaptLineEdit.setText(str(config_dict["restart_capt"]))
         self.captTimeoutLineEdit.setText(str(config_dict["capt_timeout"]))
+        self.vgaRcPrechCycLineEdit.setText(str(config_dict.get("vga_rc_prech_cyc", 0)))
+        self.vgaSlopeCodeLineEdit.setText(str(config_dict.get("vga_slope_code", 256)))
 
         if "tx_rx_configs" in config_dict:
             self._tx_rx_configs = config_dict["tx_rx_configs"]

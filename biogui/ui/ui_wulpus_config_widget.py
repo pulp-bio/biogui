@@ -220,6 +220,38 @@ class Ui_WulpusConfigWidget(object):
 
         self.advancedFormLayout.setWidget(6, QFormLayout.ItemRole.FieldRole, self.captTimeoutLineEdit)
 
+        self.enableEnvDetLabel = QLabel(self.advancedTab)
+        self.enableEnvDetLabel.setObjectName(u"enableEnvDetLabel")
+
+        self.advancedFormLayout.setWidget(7, QFormLayout.ItemRole.LabelRole, self.enableEnvDetLabel)
+
+        self.enableEnvDetComboBox = QComboBox(self.advancedTab)
+        self.enableEnvDetComboBox.addItem("")
+        self.enableEnvDetComboBox.addItem("")
+        self.enableEnvDetComboBox.setObjectName(u"enableEnvDetComboBox")
+
+        self.advancedFormLayout.setWidget(7, QFormLayout.ItemRole.FieldRole, self.enableEnvDetComboBox)
+
+        self.vgaRcPrechCycLabel = QLabel(self.advancedTab)
+        self.vgaRcPrechCycLabel.setObjectName(u"vgaRcPrechCycLabel")
+
+        self.advancedFormLayout.setWidget(8, QFormLayout.ItemRole.LabelRole, self.vgaRcPrechCycLabel)
+
+        self.vgaRcPrechCycLineEdit = QLineEdit(self.advancedTab)
+        self.vgaRcPrechCycLineEdit.setObjectName(u"vgaRcPrechCycLineEdit")
+
+        self.advancedFormLayout.setWidget(8, QFormLayout.ItemRole.FieldRole, self.vgaRcPrechCycLineEdit)
+
+        self.vgaSlopeCodeLabel = QLabel(self.advancedTab)
+        self.vgaSlopeCodeLabel.setObjectName(u"vgaSlopeCodeLabel")
+
+        self.advancedFormLayout.setWidget(9, QFormLayout.ItemRole.LabelRole, self.vgaSlopeCodeLabel)
+
+        self.vgaSlopeCodeLineEdit = QLineEdit(self.advancedTab)
+        self.vgaSlopeCodeLineEdit.setObjectName(u"vgaSlopeCodeLineEdit")
+
+        self.advancedFormLayout.setWidget(9, QFormLayout.ItemRole.FieldRole, self.vgaSlopeCodeLineEdit)
+
         self.configTabWidget.addTab(self.advancedTab, "")
         self.txRxTab = QWidget()
         self.txRxTab.setObjectName(u"txRxTab")
@@ -403,6 +435,26 @@ class Ui_WulpusConfigWidget(object):
 #endif // QT_CONFIG(tooltip)
         self.captTimeoutLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Capture Timeout (\u00b5s):", None))
         self.captTimeoutLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"3000", None))
+#if QT_CONFIG(tooltip)
+        self.enableEnvDetLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Enable envelope detection (WULPUS PRO only)", None))
+#endif // QT_CONFIG(tooltip)
+        self.enableEnvDetLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Envelope Detection:", None))
+        self.enableEnvDetComboBox.setItemText(0, QCoreApplication.translate("WulpusConfigWidget", u"Disabled", None))
+        self.enableEnvDetComboBox.setItemText(1, QCoreApplication.translate("WulpusConfigWidget", u"Enabled", None))
+
+#if QT_CONFIG(tooltip)
+        self.enableEnvDetComboBox.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"Enable or disable envelope detection", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.vgaRcPrechCycLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"VGA RC precharge time in cycles (WULPUS PRO only)", None))
+#endif // QT_CONFIG(tooltip)
+        self.vgaRcPrechCycLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"VGA RC Precharge Cycles:", None))
+        self.vgaRcPrechCycLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"0", None))
+#if QT_CONFIG(tooltip)
+        self.vgaSlopeCodeLabel.setToolTip(QCoreApplication.translate("WulpusConfigWidget", u"VGA slope wiper code (WULPUS PRO only)", None))
+#endif // QT_CONFIG(tooltip)
+        self.vgaSlopeCodeLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"VGA Slope Code:", None))
+        self.vgaSlopeCodeLineEdit.setText(QCoreApplication.translate("WulpusConfigWidget", u"127", None))
         self.configTabWidget.setTabText(self.configTabWidget.indexOf(self.advancedTab), QCoreApplication.translate("WulpusConfigWidget", u"Advanced Timing", None))
         self.txRxInfoLabel.setText(QCoreApplication.translate("WulpusConfigWidget", u"Configure transmitter and receiver channels. Use Move Up/Down to change configuration order.", None))
         self.addTxRxConfigButton.setText(QCoreApplication.translate("WulpusConfigWidget", u"Add Config", None))
