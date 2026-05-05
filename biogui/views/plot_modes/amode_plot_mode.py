@@ -85,6 +85,7 @@ class AModePlotMode(BasePlotMode):
     """
 
     SPEED_OF_SOUND = 1540  # m/s in tissue
+    GAIN_CURVE_COLOR = "#00e5ff"
 
     def __init__(
         self,
@@ -255,17 +256,25 @@ class AModePlotMode(BasePlotMode):
         """Setup a secondary right-side axis for the configured gain curve."""
         self._gain_view = pg.ViewBox()
         plot_item.scene().addItem(self._gain_view)
-        plot_item.getAxis("right").linkToView(self._gain_view)
+        right_axis = plot_item.getAxis("right")
+        right_axis.linkToView(self._gain_view)
         plot_item.showAxis("right")
         plot_item.setLabel("right", "Gain", units="dB")
+        right_axis.setPen(pg.mkPen(self.GAIN_CURVE_COLOR))
+        right_axis.setTextPen(pg.mkPen(self.GAIN_CURVE_COLOR))
 
         self._gain_curve_plot = pg.PlotDataItem(
             depth_axis,
             self._wulpus_config.gain_curve_db,
-            pen=pg.mkPen(color="k", width=1, style=pg.QtCore.Qt.PenStyle.DashLine),
+            pen=pg.mkPen(
+                color=self.GAIN_CURVE_COLOR,
+                width=2,
+                style=pg.QtCore.Qt.PenStyle.DashLine,
+            ),
             name="Set gain",
         )
         self._gain_view.addItem(self._gain_curve_plot)
+        self._update_gain_y_range()
 
         def _update_gain_view() -> None:
             if self._gain_view is None:
@@ -275,6 +284,31 @@ class AModePlotMode(BasePlotMode):
 
         plot_item.vb.sigResized.connect(_update_gain_view)
         _update_gain_view()
+
+    def _update_gain_y_range(self) -> None:
+        """Keep the right gain axis readable, including flat fixed-gain curves."""
+        if self._gain_view is None or self._wulpus_config is None:
+            return
+
+        gain_curve = np.asarray(self._wulpus_config.gain_curve_db, dtype=float)
+        if gain_curve.size == 0:
+            return
+
+        gain_min = float(np.nanmin(gain_curve))
+        gain_max = float(np.nanmax(gain_curve))
+        if not np.isfinite(gain_min) or not np.isfinite(gain_max):
+            return
+
+        if np.isclose(gain_min, gain_max):
+            padding = 3.0
+            self._gain_view.setYRange(gain_min - padding, gain_max + padding, padding=0)
+        else:
+            span = gain_max - gain_min
+            self._gain_view.setYRange(
+                gain_min - 0.1 * span,
+                gain_max + 0.1 * span,
+                padding=0,
+            )
 
     def render(self) -> None:
         """Update the A-mode plots with all display modes."""
@@ -327,6 +361,7 @@ class AModePlotMode(BasePlotMode):
                 self._wulpus_config.gain_curve_db,
                 skipFiniteCheck=True,
             )
+            self._update_gain_y_range()
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""

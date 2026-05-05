@@ -39,7 +39,6 @@ from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
 from biogui.views.help_dialog import HelpDialog
 
 from .protocol import (
-    MEAS_MODE_ACCELEROMETER_ENABLED,
     MEAS_MODE_ULTRASOUND_ONLY,
     PGA_GAIN,
     RX_MAP,
@@ -47,29 +46,15 @@ from .protocol import (
     USS_CAPTURE_ACQ_RATES,
     WulpusRxTxConfigGen,
     WulpusUssConfig,
-    is_accelerometer_enabled_from_mode,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def _is_accelerometer_enabled_from_meas_mode(meas_mode: int) -> bool:
-    return is_accelerometer_enabled_from_mode(int(meas_mode))
-
-
-def _meas_mode_from_accelerometer_enabled(accelerometer_enabled: bool) -> int:
-    if accelerometer_enabled:
-        return MEAS_MODE_ACCELEROMETER_ENABLED
-    return MEAS_MODE_ULTRASOUND_ONLY
-
-
 def _get_imu_active_from_config_dict(config_dict: dict) -> bool:
-    """Extract IMU activity from a preset dictionary."""
-    if "imu_active" in config_dict:
-        return bool(config_dict["imu_active"])
-
-    meas_mode = int(config_dict.get("meas_mode", MEAS_MODE_ULTRASOUND_ONLY))
-    return _is_accelerometer_enabled_from_meas_mode(meas_mode)
+    """WULPUS PRO currently exposes no IMU samples on the supported transport."""
+    _ = config_dict
+    return False
 
 
 class TxRxConfigDialog(QDialog):
@@ -176,6 +161,12 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.setupUi(self)
         self.configTabWidget.setCurrentIndex(0)
 
+        # The current WULPUS PRO dongle path exposes only ultrasound samples.
+        self.transFreqLabel.setVisible(False)
+        self.imuActiveCheckBox.setVisible(False)
+        self.imuActiveCheckBox.setChecked(False)
+        self.imuActiveCheckBox.setEnabled(False)
+
         # Ensure PRO-specific widgets are visible for the PRO widget
         for name in (
             "enableEnvDetLabel",
@@ -204,6 +195,11 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._populate_presets()
         self._setup_help_buttons()
         self._connect_signals()
+
+        self.numSamplesLineEdit.setText(str(400))
+        self.numSamplesLineEdit.setReadOnly(True)
+        self.numSamplesLineEdit.setToolTip("WULPUS PRO dongle frames are fixed to 400 samples.")
+        self.vgaSlopeCodeLineEdit.setText("256")
 
         logger.info("WulpusConfigWidget initialized")
 
@@ -376,20 +372,20 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.presetComboBox.blockSignals(False)
 
     def _setup_validators(self) -> None:
-        self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.measPeriodLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.pulseFreqLineEdit.setValidator(QIntValidator(0, 10000000))
-        self.numPulsesLineEdit.setValidator(QIntValidator(0, 100))
-        self.numSamplesLineEdit.setValidator(QIntValidator(0, 10000))
-        self.startHvmuxrxLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.startPpgLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.turnonAdcLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.startPgainbiasLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.startAdcsampleLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.restartCaptLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.captTimeoutLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.vgaRcPrechCycLineEdit.setValidator(QIntValidator(0, 1000000))
-        self.vgaSlopeCodeLineEdit.setValidator(QIntValidator(0, 1000000))
+        self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 65535))
+        self.measPeriodLineEdit.setValidator(QIntValidator(655, 65535))
+        self.pulseFreqLineEdit.setValidator(QIntValidator(0, 5000000))
+        self.numPulsesLineEdit.setValidator(QIntValidator(0, 30))
+        self.numSamplesLineEdit.setValidator(QIntValidator(400, 400))
+        self.startHvmuxrxLineEdit.setValidator(QIntValidator(0, 65535))
+        self.startPpgLineEdit.setValidator(QIntValidator(0, 65535))
+        self.turnonAdcLineEdit.setValidator(QIntValidator(0, 65535))
+        self.startPgainbiasLineEdit.setValidator(QIntValidator(0, 65535))
+        self.startAdcsampleLineEdit.setValidator(QIntValidator(0, 65535))
+        self.restartCaptLineEdit.setValidator(QIntValidator(0, 65535))
+        self.captTimeoutLineEdit.setValidator(QIntValidator(0, 65535))
+        self.vgaRcPrechCycLineEdit.setValidator(QIntValidator(0, 1000))
+        self.vgaSlopeCodeLineEdit.setValidator(QIntValidator(0, 256))
 
     def _populate_combo_boxes(self) -> None:
         self.samplingFreqComboBox.clear()
@@ -480,9 +476,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         try:
             self.dcdcTurnonLineEdit.setText(str(config.dcdc_turnon))
             self.measPeriodLineEdit.setText(str(config.meas_period))
-            self.imuActiveCheckBox.setChecked(
-                _is_accelerometer_enabled_from_meas_mode(config.meas_mode)
-            )
+            self.imuActiveCheckBox.setChecked(False)
             self.pulseFreqLineEdit.setText(str(config.pulse_freq))
             self.numPulsesLineEdit.setText(str(config.num_pulses))
             self.numSamplesLineEdit.setText(str(config.num_samples))
@@ -734,7 +728,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         return WulpusUssConfig(
             dcdc_turnon=int(self.dcdcTurnonLineEdit.text()),
             meas_period=int(self.measPeriodLineEdit.text()),
-            meas_mode=_meas_mode_from_accelerometer_enabled(self.imuActiveCheckBox.isChecked()),
+            meas_mode=MEAS_MODE_ULTRASOUND_ONLY,
             pulse_freq=int(self.pulseFreqLineEdit.text()),
             num_pulses=int(self.numPulsesLineEdit.text()),
             sampling_freq=self.samplingFreqComboBox.currentData(),
@@ -757,11 +751,10 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
 
     def _get_config_dict(self) -> dict:
         self._sync_tx_rx_configs_from_table()
-        accelerometer_enabled = self.imuActiveCheckBox.isChecked()
         return {
             "dcdc_turnon": int(self.dcdcTurnonLineEdit.text()),
             "meas_period": int(self.measPeriodLineEdit.text()),
-            "imu_active": accelerometer_enabled,
+            "imu_active": False,
             "pulse_freq": int(self.pulseFreqLineEdit.text()),
             "num_pulses": int(self.numPulsesLineEdit.text()),
             "sampling_freq": self.samplingFreqComboBox.currentData(),
@@ -783,7 +776,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     def _apply_config_dict(self, config_dict: dict) -> None:
         self.dcdcTurnonLineEdit.setText(str(config_dict["dcdc_turnon"]))
         self.measPeriodLineEdit.setText(str(config_dict["meas_period"]))
-        self.imuActiveCheckBox.setChecked(_get_imu_active_from_config_dict(config_dict))
+        self.imuActiveCheckBox.setChecked(False)
         self.pulseFreqLineEdit.setText(str(config_dict["pulse_freq"]))
         self.numPulsesLineEdit.setText(str(config_dict["num_pulses"]))
         self.numSamplesLineEdit.setText(str(config_dict["num_samples"]))

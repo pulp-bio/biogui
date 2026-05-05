@@ -23,6 +23,9 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources, paths
 from biogui.platforms.wulpus.runtime import isolate_wulpus_interface_module
+from biogui.platforms.wulpus_pro.runtime import (
+    isolate_wulpus_interface_module as isolate_wulpus_pro_interface_module,
+)
 from biogui.ui.ui_data_source_config_dialog import Ui_DataSourceConfigDialog
 from biogui.utils import InterfaceModule, PlatformConfig
 
@@ -157,9 +160,16 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
         decodeFn=module.decodeFn,
         platformConfig=platformConfig,
     )
-    interface_module = isolate_wulpus_interface_module(interface_module)
+    interface_module = _isolate_platform_interface_module(interface_module)
 
     return (interface_module, "")
+
+
+def _isolate_platform_interface_module(interface_module: InterfaceModule) -> InterfaceModule:
+    """Apply platform-specific decoder isolation for bundled mutable interfaces."""
+    interface_module = isolate_wulpus_interface_module(interface_module)
+    interface_module = isolate_wulpus_pro_interface_module(interface_module)
+    return interface_module
 
 
 class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):

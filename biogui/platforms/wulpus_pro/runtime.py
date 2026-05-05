@@ -18,7 +18,6 @@ WULPUS_PLATFORM_ID = "wulpus_pro"
 
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
-    MEAS_MODE_ACCELEROMETER_ENABLED,
     MEAS_MODE_ULTRASOUND_ONLY,
     PGA_GAIN,
     RX_MAP,
@@ -88,7 +87,7 @@ def create_default_config() -> WulpusUssConfig:
     return WulpusUssConfig(
         dcdc_turnon=19530,
         meas_period=33333,
-        meas_mode=MEAS_MODE_ACCELEROMETER_ENABLED,
+        meas_mode=MEAS_MODE_ULTRASOUND_ONLY,
         pulse_freq=2250000,
         num_pulses=2,
         sampling_freq=USS_CAPTURE_ACQ_RATES[0],

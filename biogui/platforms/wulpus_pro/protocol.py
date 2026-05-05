@@ -4,13 +4,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-WULPUS hardware protocol: frame layout, configuration bytes, and USS config.
+WULPUS PRO hardware protocol: frame layout, configuration bytes, and USS config.
 
-Frame structure:
-----------------
-Hardware sends 400 int16 values per acquisition frame:
-    - IMU enabled (meas_mode=101): 397 ultrasound + 3 IMU samples
-    - IMU disabled (meas_mode=0): 400 ultrasound samples
+For the currently supported dongle/serial transport, each acquisition frame contains
+400 int16 ultrasound samples. The firmware repo does not expose a separate IMU data
+path for WULPUS PRO, so Biogui treats the full frame as ultrasound data.
 """
 
 import numpy as np
@@ -19,8 +17,8 @@ import numpy as np
 # WULPUS Frame Structure
 # ============================================================================
 ACQ_LENGTH_SAMPLES = 400
-NUM_US_SAMPLES = 397
-NUM_IMU_SAMPLES = 3
+NUM_US_SAMPLES = ACQ_LENGTH_SAMPLES
+NUM_IMU_SAMPLES = 0
 
 assert (
     ACQ_LENGTH_SAMPLES == NUM_US_SAMPLES + NUM_IMU_SAMPLES
@@ -33,20 +31,21 @@ START_BYTE_RESTART = 251  # stops acquisition loop on WULPUS and waits for a new
 PACKAGE_LEN = 105
 
 
-# Measurement mode values encoded in the firmware transFreq field.
+# Legacy values encoded in the firmware transFreq field. The WULPUS PRO firmware
+# marks this field as reserved / unused, so no IMU mode is currently supported.
 MEAS_MODE_ACCELEROMETER_ENABLED = 101
 MEAS_MODE_ULTRASOUND_ONLY = 0
 
 
 def is_accelerometer_enabled_from_mode(meas_mode: int) -> bool:
-    """Return True if accelerometer bytes are enabled for the given measurement mode."""
-    return int(meas_mode) == MEAS_MODE_ACCELEROMETER_ENABLED
+    """WULPUS PRO currently exposes no IMU samples on the supported data path."""
+    _ = meas_mode
+    return False
 
 
 def get_num_us_samples_from_mode(meas_mode: int) -> int:
-    """Return number of ultrasound samples in each frame for the selected mode."""
-    if is_accelerometer_enabled_from_mode(meas_mode):
-        return ACQ_LENGTH_SAMPLES - NUM_IMU_SAMPLES
+    """Return number of ultrasound samples in each fixed-size dongle frame."""
+    _ = meas_mode
     return ACQ_LENGTH_SAMPLES
 
 
@@ -292,7 +291,7 @@ class WulpusUssConfig:
         self,
         dcdc_turnon=195300,
         meas_period=321965,
-        meas_mode=MEAS_MODE_ACCELEROMETER_ENABLED,
+        meas_mode=MEAS_MODE_ULTRASOUND_ONLY,
         pulse_freq=225e4,
         num_pulses=2,
         sampling_freq=USS_CAPTURE_ACQ_RATES[0],
@@ -318,9 +317,14 @@ class WulpusUssConfig:
         if rx_gain not in PGA_GAIN:
             raise ValueError(f"Invalid RX gain. Must be one of {PGA_GAIN}")
 
+        if int(num_samples) != ACQ_LENGTH_SAMPLES:
+            raise ValueError(
+                f"WULPUS PRO dongle transport expects exactly {ACQ_LENGTH_SAMPLES} samples per frame."
+            )
+
         self.dcdc_turnon = int(dcdc_turnon)
         self.meas_period = int(meas_period)
-        self.meas_mode = int(meas_mode)
+        self.meas_mode = MEAS_MODE_ULTRASOUND_ONLY
         self.pulse_freq = int(pulse_freq)
         self.num_pulses = int(num_pulses)
         self.sampling_freq = int(sampling_freq)

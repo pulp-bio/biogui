@@ -7,7 +7,7 @@
 
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
-    MEAS_MODE_ACCELEROMETER_ENABLED,
+    MEAS_MODE_ULTRASOUND_ONLY,
     WulpusRxTxConfigGen,
     WulpusUssConfig,
 )
@@ -24,7 +24,7 @@ def create_default_biceps_wulpus_uss_config() -> WulpusUssConfig:
     return WulpusUssConfig(
         dcdc_turnon=19530,
         meas_period=33333,
-        meas_mode=MEAS_MODE_ACCELEROMETER_ENABLED,
+        meas_mode=MEAS_MODE_ULTRASOUND_ONLY,
         pulse_freq=2250000,
         num_pulses=2,
         sampling_freq=8000000.0,
