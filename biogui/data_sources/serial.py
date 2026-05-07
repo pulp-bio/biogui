@@ -136,8 +136,8 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     Parameters
     ----------
-    packetSize : int
-        Size of each packet read from the serial port.
+    packetSize : int or list of tuple of int
+        List of (header_byte, packet_size) tuples for different packet types, or a single packet size.
     startSeq : list of bytes or float
         Sequence of commands to start the source.
     stopSeq : list of bytes or float
@@ -149,8 +149,8 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     Attributes
     ----------
-    _packetSize : int
-        Size of each packet read from the serial port.
+    _packetSize : int or list of tuple of int
+        Size of each packet read from the serial port, or list of (header_byte, packet_size) tuples.
     _startSeq : list of bytes or float
         Sequence of commands to start the source.
     _stopSeq : list of bytes or float
@@ -176,7 +176,7 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     def __init__(
         self,
-        packetSize: int,
+        packetSize: int | list[tuple[int, int]],
         startSeq: list[bytes | float],
         stopSeq: list[bytes | float],
         serialPortName: str,
@@ -272,7 +272,27 @@ class SerialDataSourceWorker(DataSourceWorker):
             return
 
         # Emit all data packets in the buffer
-        while self._buffer.size() >= self._packetSize:
-            data = self._buffer.left(self._packetSize).data()
-            self.dataPacketReady.emit(data)
-            self._buffer.remove(0, self._packetSize)
+        if isinstance(self._packetSize, int):
+            min_size = self._packetSize
+        else:
+            packet_sizes = []
+            for header, size in self._packetSize:
+                packet_sizes.append(size)
+            min_size = min(packet_sizes)
+
+        while self._buffer.size() >= min_size:
+            buffer_header = int.from_bytes(self._buffer[0])
+            packet_size = None
+            if isinstance(self._packetSize, list):
+                for header, size in self._packetSize:
+                    if header == buffer_header:
+                        packet_size = size
+                        break
+            else:
+                packet_size = self._packetSize
+            if self._buffer.size() >= packet_size:
+                data = self._buffer.left(packet_size).data()
+                self.dataPacketReady.emit(data)
+                self._buffer.remove(0, packet_size)
+            else:
+                break
