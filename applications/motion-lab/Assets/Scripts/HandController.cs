@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -124,6 +129,11 @@ public class HandController : MonoBehaviour
 
     public Vector3 CurrentPosition => transform.position;
     public Vector3 CurrentRotationEuler => transform.rotation.eulerAngles;
+
+    /// <summary>
+    /// Latest IMU supination from UDP rotation[2] (degrees, 0 = neutral).
+    /// </summary>
+    public float CurrentImuSupinationDegrees { get; private set; }
 
     private Vector3 externalPositionOffset = Vector3.zero;
 
@@ -465,13 +475,14 @@ public class HandController : MonoBehaviour
             float y = 0f; // Unused
 
             // Supination direction depends on handedness
-            float z =
-                -HandednessMultiplier
-                * Mathf.Clamp(
-                    rotationData[2],
-                    HandRotationLimits.PRONATION_MAX,
-                    HandRotationLimits.SUPINATION_MAX
-                );
+            float supination = Mathf.Clamp(
+                rotationData[2],
+                HandRotationLimits.PRONATION_MAX,
+                HandRotationLimits.SUPINATION_MAX
+            );
+            CurrentImuSupinationDegrees = supination;
+
+            float z = -HandednessMultiplier * supination;
 
             targetRot = Quaternion.Euler(x, y, z);
         }

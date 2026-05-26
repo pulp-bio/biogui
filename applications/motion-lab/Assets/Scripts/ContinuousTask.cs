@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -25,6 +30,12 @@ public abstract class ContinuousTask : MonoBehaviour
 
     [HideInInspector]
     public bool isComplete = false;
+
+    [HideInInspector]
+    public bool isFailed = false;
+
+    [HideInInspector]
+    public string failureMessage = "";
 
     [HideInInspector]
     public bool isPrepared = false; // Whether task objects are visible and ready
@@ -105,6 +116,22 @@ public abstract class ContinuousTask : MonoBehaviour
     }
 
     /// <summary>
+    /// Mark task as failed (e.g. object dropped outside allowed zones).
+    /// </summary>
+    public virtual void FailTask(string message)
+    {
+        if (isComplete)
+            return;
+
+        failureMessage = message;
+        isFailed = true;
+        endTime = Time.time;
+        isComplete = true;
+        OnTaskFailed();
+        Debug.Log($"[ContinuousTask] {taskName} failed: {message}");
+    }
+
+    /// <summary>
     /// Reset task to initial state. Called when switching tasks.
     /// </summary>
     public virtual void ResetTask()
@@ -112,6 +139,8 @@ public abstract class ContinuousTask : MonoBehaviour
         startTime = -1f;
         endTime = -1f;
         isComplete = false;
+        isFailed = false;
+        failureMessage = "";
         isPrepared = false;
         isActivated = false;
         OnTaskReset();
@@ -159,6 +188,11 @@ public abstract class ContinuousTask : MonoBehaviour
     /// Override to implement task-specific completion logic.
     /// </summary>
     protected virtual void OnTaskComplete() { }
+
+    /// <summary>
+    /// Override to implement task-specific failure logic.
+    /// </summary>
+    protected virtual void OnTaskFailed() { }
 
     /// <summary>
     /// Override to implement task-specific reset logic.

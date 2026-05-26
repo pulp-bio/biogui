@@ -668,9 +668,9 @@ MonoBehaviour:
   positionMode: 1
   randomSelection: 0
   enableBoxDeliveryTask: 0
-  enableCylinderDeliveryTask: 0
-  enableBottlePouringTask: 0
-  enableMarbleDeliveryTask: 1
+  enableCylinderDeliveryTask: 1
+  enableBottlePouringTask: 1
+  enableMarbleDeliveryTask: 0
   boxDeliveryTask: {fileID: 1951112744}
   cylinderDeliveryTask: {fileID: 876395636}
   bottlePouringTask: {fileID: 1720198786}
@@ -685,6 +685,7 @@ MonoBehaviour:
   taskTimeout: 30
   handStartPosition: {x: 0, y: 0.5, z: -4}
   taskCompletionDelay: 2
+  taskFailureRestartDelay: 2
 --- !u!4 &819970799
 Transform:
   m_ObjectHideFlags: 0
@@ -850,6 +851,8 @@ MonoBehaviour:
   startTime: -1
   endTime: -1
   isComplete: 0
+  isFailed: 0
+  failureMessage:
   isPrepared: 0
   isActivated: 0
   cylinderObject: {fileID: 0}
@@ -860,8 +863,9 @@ MonoBehaviour:
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedY: 0
   requireSupinationToGrab: 1
-  targetSupinationAngle: 75
-  supinationTolerance: 60
+  targetSupinationAngle: 90
+  supinationTolerance: 5
+  pickupZoneRadius: 1.2
   debugLogs: 0
 --- !u!4 &876395637
 Transform:
@@ -1396,6 +1400,8 @@ MonoBehaviour:
   startTime: -1
   endTime: -1
   isComplete: 0
+  isFailed: 0
+  failureMessage:
   isPrepared: 0
   isActivated: 0
   marbleObject: {fileID: 0}
@@ -1405,6 +1411,7 @@ MonoBehaviour:
   marbleSpawnNormalizedY: 0
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedY: 0
+  pickupZoneRadius: 1.2
   debugLogs: 0
 --- !u!4 &1513476367
 Transform:
@@ -1803,6 +1810,8 @@ MonoBehaviour:
   startTime: -1
   endTime: -1
   isComplete: 0
+  isFailed: 0
+  failureMessage:
   isPrepared: 0
   isActivated: 0
   bottleObject: {fileID: 0}
@@ -1815,12 +1824,14 @@ MonoBehaviour:
   bowlNormalizedY: 0
   requireSupinationToGrab: 1
   targetSupinationAngle: 90
-  supinationTolerance: 60
+  supinationTolerance: 15
+  minRotationToPour: 90
   minPouringSpeed: 0.2
   maxPouringSpeed: 1
   handLiftOnGrab: 1
   handLiftSpeed: 1.5
   handController: {fileID: 1467256391}
+  debugLogs: 0
 --- !u!4 &1720198787
 Transform:
   m_ObjectHideFlags: 0
@@ -1962,6 +1973,8 @@ MonoBehaviour:
   startTime: -1
   endTime: -1
   isComplete: 0
+  isFailed: 0
+  failureMessage:
   isPrepared: 0
   isActivated: 0
   boxObject: {fileID: 0}
@@ -1971,6 +1984,7 @@ MonoBehaviour:
   boxSpawnNormalizedY: 0
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedY: 0
+  pickupZoneRadius: 1.2
   requireFlatHandToGrab: 1
   flatHandTolerance: 30
   handController: {fileID: 0}

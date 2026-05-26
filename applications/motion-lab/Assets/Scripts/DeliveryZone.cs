@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -14,6 +19,7 @@ public class DeliveryZone : MonoBehaviour
 
     private readonly HashSet<Rigidbody> _counted = new HashSet<Rigidbody>();
     private Collider _col;
+    private Collider _triggerCollider;
 
     void Awake()
     {
@@ -116,5 +122,48 @@ public class DeliveryZone : MonoBehaviour
     public void ClearCount()
     {
         _counted.Clear();
+    }
+
+    /// <summary>
+    /// Returns the trigger collider used for delivery detection (not the visual mesh collider).
+    /// </summary>
+    public Collider GetTriggerCollider()
+    {
+        if (_triggerCollider == null)
+        {
+            foreach (var col in GetComponents<Collider>())
+            {
+                if (col != null && col.isTrigger)
+                {
+                    _triggerCollider = col;
+                    break;
+                }
+            }
+        }
+
+        return _triggerCollider;
+    }
+
+    /// <summary>
+    /// True when the object's center is inside this zone's trigger bounds.
+    /// </summary>
+    public bool ContainsObject(Rigidbody rb, GameObject obj)
+    {
+        Collider trigger = GetTriggerCollider();
+        if (trigger == null || rb == null)
+            return false;
+
+        Bounds zoneBounds = trigger.bounds;
+        if (zoneBounds.Contains(rb.worldCenterOfMass))
+            return true;
+
+        if (obj != null && zoneBounds.Contains(obj.transform.position))
+            return true;
+
+        Collider objCollider = obj != null ? obj.GetComponent<Collider>() : null;
+        if (objCollider != null && zoneBounds.Intersects(objCollider.bounds))
+            return true;
+
+        return false;
     }
 }

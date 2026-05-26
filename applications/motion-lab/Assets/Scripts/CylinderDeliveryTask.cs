@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -38,6 +43,10 @@ public class CylinderDeliveryTask : ContinuousTask
 
     [Tooltip("Allowed deviation from target angle (degrees) - creates range of ±tolerance")]
     public float supinationTolerance = 5f;
+
+    [Header("Drop Zones")]
+    [Tooltip("Radius around spawn treated as pickup/start — drop here does not fail the task")]
+    public float pickupZoneRadius = 0.5f;
 
     private Grabbable cylinderGrabbable;
     private Rigidbody cylinderRigidbody;
@@ -196,25 +205,12 @@ public class CylinderDeliveryTask : ContinuousTask
     /// </summary>
     protected override void OnTaskActivate()
     {
-        // Make cylinder grabbable
         if (cylinderObject != null)
         {
-            // Set layer to "Grabbable" (Layer 8) so HandGrabber can detect it
-            int grabbableLayer = LayerMask.NameToLayer("Grabbable");
-            if (grabbableLayer != -1)
-            {
-                cylinderObject.layer = grabbableLayer;
-                // Also set layer for all children
-                SetLayerRecursively(cylinderObject.transform, grabbableLayer);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "[CylinderDeliveryTask] 'Grabbable' layer not found! Using Default layer. Make sure 'Grabbable' layer exists in Project Settings > Tags and Layers."
-                );
-            }
-
-            Debug.Log("[CylinderDeliveryTask] Cylinder is now grabbable");
+            GrabbableLayerHelper.ApplyToObject(cylinderObject);
+            Debug.Log(
+                $"[CylinderDeliveryTask] Cylinder is now grabbable (layer {cylinderObject.layer})"
+            );
         }
     }
 
@@ -262,56 +258,61 @@ public class CylinderDeliveryTask : ContinuousTask
             Debug.Log("[CylinderDeliveryTask] Cylinder grabbed");
         }
 
-        // Check if cylinder was delivered (not held and in delivery zone)
         if (cylinderWasGrabbed && !cylinderWasDelivered)
         {
-            // Cylinder must be released (not held) AND in delivery zone
-            bool isReleased = !cylinderGrabbable.IsHeld;
+            bool isReleased = TaskZoneChecker.IsReleased(cylinderGrabbable, cylinderRigidbody);
+            bool isInDeliveryZone = TaskZoneChecker.IsInDeliveryZone(
+                deliveryZone,
+                cylinderRigidbody,
+                cylinderObject
+            );
 
-            // Check if cylinder is in delivery zone using multiple methods for reliability
-            Collider zoneCollider = deliveryZone.GetComponent<Collider>();
-            bool isInZone = false;
-
-            if (zoneCollider != null)
-            {
-                // Method 1: Check if cylinder center is within zone bounds
-                Vector3 cylinderPos = cylinderRigidbody.worldCenterOfMass;
-                Bounds zoneBounds = zoneCollider.bounds;
-                isInZone = zoneBounds.Contains(cylinderPos);
-
-                // Method 2: Also check cylinder transform position (more reliable for trigger colliders)
-                if (!isInZone)
-                {
-                    Vector3 cylinderTransformPos = cylinderObject.transform.position;
-                    isInZone = zoneBounds.Contains(cylinderTransformPos);
-                }
-
-                // Method 3: Check if any part of cylinder collider overlaps with zone
-                if (!isInZone && cylinderObject != null)
-                {
-                    Collider cylinderCollider = cylinderObject.GetComponent<Collider>();
-                    if (cylinderCollider != null)
-                    {
-                        isInZone = zoneBounds.Intersects(cylinderCollider.bounds);
-                    }
-                }
-            }
-
-            if (isReleased && isInZone)
+            if (isReleased && isInDeliveryZone)
             {
                 cylinderWasDelivered = true;
                 CompleteTask();
                 Debug.Log("[CylinderDeliveryTask] Cylinder delivered! (released in delivery zone)");
             }
-            else if (isReleased && !isInZone)
+            else if (isReleased)
             {
-                // Cylinder was released but not in zone - reset grab state so user can try again
-                if (debugLogs)
-                    Debug.Log(
-                        $"[CylinderDeliveryTask] Cylinder released but not in delivery zone. Cylinder pos: {cylinderRigidbody.worldCenterOfMass}, Zone bounds: {zoneCollider.bounds}"
-                    );
+                if (
+                    TaskZoneChecker.IsInPickupZone(
+                        GetCylinderSpawnPosition(),
+                        pickupZoneRadius,
+                        cylinderRigidbody,
+                        cylinderObject
+                    )
+                )
+                {
+                    cylinderWasGrabbed = false;
+                    if (debugLogs)
+                        Debug.Log("[CylinderDeliveryTask] Released at start — retry allowed");
+                }
+                else
+                {
+                    Debug.Log("[CylinderDeliveryTask] Cylinder released outside zones — task failed");
+                    FailTask("Object dropped");
+                }
             }
         }
+    }
+
+    public bool IsSupinationValidForGrab(float supination)
+    {
+        if (!requireSupinationToGrab)
+            return true;
+
+        return HandSupination.IsWithinTarget(
+            supination,
+            targetSupinationAngle,
+            supinationTolerance
+        );
+    }
+
+    void OnValidate()
+    {
+        supinationTolerance = Mathf.Clamp(supinationTolerance, 0f, 15f);
+        pickupZoneRadius = Mathf.Max(0.1f, pickupZoneRadius);
     }
 
     /// <summary>
@@ -319,6 +320,9 @@ public class CylinderDeliveryTask : ContinuousTask
     /// </summary>
     public string GetStatusText()
     {
+        if (isFailed)
+            return failureMessage;
+
         if (isComplete)
             return "Complete!";
 
@@ -336,11 +340,9 @@ public class CylinderDeliveryTask : ContinuousTask
             // Show supination info if required
             if (requireSupinationToGrab)
             {
-                float currentSup = GetCurrentSupination();
-                float minAngle = targetSupinationAngle - supinationTolerance;
-                float maxAngle = targetSupinationAngle + supinationTolerance;
+                float currentSup = HandSupination.GetDegrees(GetHandController());
 
-                if (currentSup >= minAngle && currentSup <= maxAngle)
+                if (IsSupinationValidForGrab(currentSup))
                 {
                     return "Grab the cylinder!";
                 }
@@ -359,27 +361,17 @@ public class CylinderDeliveryTask : ContinuousTask
     }
 
 
-    float GetCurrentSupination()
+    HandController GetHandController()
     {
         if (
-            ContinuousTaskManager.Instance == null
-            || ContinuousTaskManager.Instance.handController == null
+            ContinuousTaskManager.Instance != null
+            && ContinuousTaskManager.Instance.handController != null
         )
-            return 0f;
+        {
+            return ContinuousTaskManager.Instance.handController;
+        }
 
-        HandController handController = ContinuousTaskManager.Instance.handController;
-        Vector3 handRotation = handController.CurrentRotationEuler;
-        float currentSupinationZ = NormalizeAngle(handRotation.z);
-        return -handController.HandednessMultiplier * currentSupinationZ;
-    }
-
-    float NormalizeAngle(float angle)
-    {
-        while (angle > 180f)
-            angle -= 360f;
-        while (angle < -180f)
-            angle += 360f;
-        return angle;
+        return FindFirstObjectByType<HandController>();
     }
 
     [Header("Debug")]

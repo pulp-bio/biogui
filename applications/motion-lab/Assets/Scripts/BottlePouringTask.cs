@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -40,6 +45,9 @@ public class BottlePouringTask : ContinuousTask
     [Tooltip("Allowed deviation from target angle (degrees) - creates range of ±tolerance")]
     public float supinationTolerance = 5f;
 
+    [Tooltip("Degrees of rotation back from grab angle before liquid starts pouring")]
+    public float minRotationToPour = 90f;
+
     public float minPouringSpeed = 0.05f;
     public float maxPouringSpeed = 0.5f;
 
@@ -56,6 +64,7 @@ public class BottlePouringTask : ContinuousTask
     private Grabbable bottleGrabbable;
     private Rigidbody bottleRigidbody;
     private bool bottleWasGrabbed = false;
+    private bool grabbedAtValidSupination = false;
     private bool isPouring = false;
     private float initialSupinationOnGrab = 0f; // Store supination angle when bottle was grabbed
     private LiquidWobble liquidWobble; // Shader-based liquid simulation
@@ -112,6 +121,7 @@ public class BottlePouringTask : ContinuousTask
     {
         // Reset state
         bottleWasGrabbed = false;
+        grabbedAtValidSupination = false;
         isPouring = false;
 
         // Get spawn positions (from grid or legacy)
@@ -184,9 +194,7 @@ public class BottlePouringTask : ContinuousTask
             liquidWobble = SetupLiquidSimulation(bottleObject);
             if (liquidWobble != null)
             {
-                // Enable external pouring control (based on hand rotation, not just tilt)
-                liquidWobble.requireExternalPouring = true;
-                liquidWobble.SetPouringEnabled(false);
+                ConfigureLiquidPouring(liquidWobble);
             }
 
             Debug.Log(
@@ -222,25 +230,12 @@ public class BottlePouringTask : ContinuousTask
     /// </summary>
     protected override void OnTaskActivate()
     {
-        // Make bottle grabbable
         if (bottleObject != null)
         {
-            // Set layer to "Grabbable" (Layer 8) so HandGrabber can detect it
-            int grabbableLayer = LayerMask.NameToLayer("Grabbable");
-            if (grabbableLayer != -1)
-            {
-                bottleObject.layer = grabbableLayer;
-                // Also set layer for all children
-                SetLayerRecursively(bottleObject.transform, grabbableLayer);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "[BottlePouringTask] 'Grabbable' layer not found! Using Default layer. Make sure 'Grabbable' layer exists in Project Settings > Tags and Layers."
-                );
-            }
-
-            Debug.Log("[BottlePouringTask] Bottle is now grabbable");
+            GrabbableLayerHelper.ApplyToObject(bottleObject);
+            Debug.Log(
+                $"[BottlePouringTask] Bottle is now grabbable (layer {bottleObject.layer})"
+            );
         }
     }
 
@@ -274,6 +269,7 @@ public class BottlePouringTask : ContinuousTask
     {
         base.OnTaskReset();
         bottleWasGrabbed = false;
+        grabbedAtValidSupination = false;
         isPouring = false;
 
         // Reset hand lifting
@@ -346,37 +342,43 @@ public class BottlePouringTask : ContinuousTask
             handController.SetPositionOffset(handTargetOffset);
         }
 
-        // Check if bottle was grabbed
+        // Check if bottle was grabbed at valid supination (~90°)
         if (!bottleWasGrabbed && bottleGrabbable.IsHeld)
         {
-            bottleWasGrabbed = true;
-            // Store initial supination when grabbed
-            if (handController != null)
+            float grabSupination = HandSupination.GetDegrees(handController);
+            if (IsSupinationValidForGrab(grabSupination))
             {
-                initialSupinationOnGrab = GetCurrentSupination();
+                bottleWasGrabbed = true;
+                grabbedAtValidSupination = true;
+                initialSupinationOnGrab = grabSupination;
                 Debug.Log(
                     $"[BottlePouringTask] Bottle grabbed at supination: {initialSupinationOnGrab:F1}°"
                 );
             }
+            else if (debugLogs)
+            {
+                Debug.Log(
+                    $"[BottlePouringTask] Ignoring grab at {grabSupination:F1}° — need {targetSupinationAngle:F0}°±{supinationTolerance:F0}°"
+                );
+            }
         }
 
-        // Check pouring state - based on hand rotation from grab angle
+        // Pour only after valid grab at ~90° and rotating back toward neutral
         if (bottleWasGrabbed && bottleGrabbable.IsHeld && bottleObject != null)
         {
             if (handController != null)
             {
-                float currentSupination = GetCurrentSupination();
+                float currentSupination = HandSupination.GetDegrees(handController);
+                float rotationFromGrab = HandSupination.RotationFromGrab(
+                    initialSupinationOnGrab,
+                    currentSupination
+                );
+                bool canPour = CanPourAtSupination(rotationFromGrab);
 
-                // Pouring happens when supination is 0° or less (hand rotated back from grab position)
-                bool canPour = currentSupination <= 0f;
-
-                // Calculate pour rate based on how far below 0° we are
-                // 0° = minPouringSpeed, -45° = maxPouringSpeed
                 float pourRate = minPouringSpeed;
                 if (canPour)
                 {
-                    float pronationAmount = Mathf.Abs(currentSupination); // How far below 0° (0 to 45)
-                    float t = Mathf.Clamp01(pronationAmount / HandRotationLimits.POUR_ANGLE_RANGE); // 0 at 0°, 1 at -45°
+                    float t = Mathf.Clamp01(rotationFromGrab / minRotationToPour);
                     pourRate = Mathf.Lerp(minPouringSpeed, maxPouringSpeed, t);
                 }
 
@@ -426,103 +428,130 @@ public class BottlePouringTask : ContinuousTask
                 }
             }
         }
-        else if (bottleWasGrabbed && !bottleGrabbable.IsHeld)
+        else if (
+            bottleWasGrabbed
+            && TaskZoneChecker.IsReleased(bottleGrabbable, bottleRigidbody)
+        )
         {
-            // Released before completing
             isPouring = false;
+            isHandLifted = false;
+            handTargetOffset = Vector3.zero;
+            if (handController != null)
+                handController.SetPositionOffset(Vector3.zero);
+
             if (liquidWobble != null)
             {
                 liquidWobble.SetPouringEnabled(false);
+                liquidWobble.SetPourRate(0f);
             }
-            initialSupinationOnGrab = 0f;
+
+            Debug.Log("[BottlePouringTask] Bottle released — task failed");
+            FailTask("Bottle dropped");
         }
     }
+
+    /// <summary>
+    /// True when supination is within the configured grab window (default ~90° ± 5°).
+    /// </summary>
+    public bool IsSupinationValidForGrab(float supination)
+    {
+        if (!requireSupinationToGrab)
+            return true;
+
+        return HandSupination.IsWithinTarget(
+            supination,
+            targetSupinationAngle,
+            supinationTolerance
+        );
+    }
+
+    /// <summary>
+    /// True when the hand has rotated back at least minRotationToPour from the grab pose.
+    /// </summary>
+    public bool CanPourAtSupination(float rotationFromGrabDegrees)
+    {
+        if (!grabbedAtValidSupination)
+            return false;
+
+        return rotationFromGrabDegrees >= minRotationToPour;
+    }
+
+    void OnValidate()
+    {
+        supinationTolerance = Mathf.Clamp(supinationTolerance, 0f, 15f);
+        minRotationToPour = Mathf.Max(1f, minRotationToPour);
+    }
+
+    static void ConfigureLiquidPouring(LiquidWobble wobble)
+    {
+        wobble.requireExternalPouring = true;
+        wobble.SetPouringEnabled(false);
+        wobble.SetPourRate(0f);
+    }
+
+    [Header("Debug")]
+    public bool debugLogs = false;
 
     /// <summary>
     /// Get current task status for UI display
     /// </summary>
     public string GetStatusText()
     {
+        if (isFailed)
+            return failureMessage;
+
         if (isComplete)
             return "Complete!";
 
         if (bottleWasGrabbed && bottleGrabbable != null && bottleGrabbable.IsHeld)
         {
-            if (handController != null)
-            {
-                // Show liquid level
-                if (liquidWobble != null)
-                {
-                    float liquidLevel = liquidWobble.GetFillAmount();
-                    if (isPouring)
-                    {
-                        return $"Pouring...\n{liquidLevel * 100f:F0}% remaining";
-                    }
-                    else
-                    {
-                        return $"Rotate hand back to pour\n{liquidLevel * 100f:F0}% remaining";
-                    }
-                }
-                else
-                {
-                    if (isPouring)
-                    {
-                        return "Pouring...";
-                    }
-                    else
-                    {
-                        return "Rotate hand back to pour";
-                    }
-                }
-            }
-            return "Rotate hand back to pour";
-        }
+            float currentSup = HandSupination.GetDegrees(handController);
+            float rotationFromGrab = HandSupination.RotationFromGrab(
+                initialSupinationOnGrab,
+                currentSup
+            );
+            float progressDeg = Mathf.Clamp(rotationFromGrab, 0f, minRotationToPour);
+            int pourProgressPercent = Mathf.RoundToInt(
+                100f * progressDeg / minRotationToPour
+            );
 
-        if (bottleWasGrabbed)
-            return "Grab bottle again";
+            if (liquidWobble != null)
+            {
+                int liquidPercent = Mathf.RoundToInt(liquidWobble.GetFillAmount() * 100f);
+                if (isPouring)
+                    return $"Pouring into bowl\nBottle: {liquidPercent}% full";
+
+                if (pourProgressPercent >= 100)
+                    return $"Tip further to pour faster\nBottle: {liquidPercent}% full";
+
+                return $"Rotate hand down to pour\nPour ready: {pourProgressPercent}%";
+            }
+
+            if (isPouring)
+                return "Pouring into bowl";
+
+            return $"Rotate hand down to pour\nPour ready: {pourProgressPercent}%";
+        }
 
         if (startTime >= 0)
         {
             if (requireSupinationToGrab && handController != null)
             {
-                float currentSup = GetCurrentSupination();
-                float minAngle = targetSupinationAngle - supinationTolerance;
-                float maxAngle = targetSupinationAngle + supinationTolerance;
+                float currentSup = HandSupination.GetDegrees(handController);
 
-                if (currentSup >= minAngle && currentSup <= maxAngle)
-                {
-                    return "Grab the bottle!";
-                }
-                else
-                {
-                    return $"Rotate hand to {targetSupinationAngle:F0}°\nCurrent: {currentSup:F0}°";
-                }
+                if (IsSupinationValidForGrab(currentSup))
+                    return "Grab the bottle";
+
+                return $"Rotate to {targetSupinationAngle:F0}° (sideways)\n"
+                    + $"Your rotation: {currentSup:F0}°";
             }
+
             return "Grab the bottle";
         }
 
         return "Get ready...";
     }
 
-
-    float GetCurrentSupination()
-    {
-        if (handController == null)
-            return 0f;
-
-        Vector3 handRotation = handController.CurrentRotationEuler;
-        float currentSupinationZ = NormalizeAngle(handRotation.z);
-        return -handController.HandednessMultiplier * currentSupinationZ;
-    }
-
-    float NormalizeAngle(float angle)
-    {
-        while (angle > 180f)
-            angle -= 360f;
-        while (angle < -180f)
-            angle += 360f;
-        return angle;
-    }
 
     void SetLayerRecursively(Transform obj, int layer)
     {
@@ -559,14 +588,10 @@ public class BottlePouringTask : ContinuousTask
                 wobble.fillAmount = 1f; // Start full
                 Debug.Log($"[BottlePouringTask] Added LiquidWobble to {fillTransform.name}");
             }
-            else
-            {
-                // Make sure container reference is set
-                if (wobble.containerTransform == null)
-                {
-                    wobble.containerTransform = bottle.transform;
-                }
-            }
+            if (wobble.containerTransform == null)
+                wobble.containerTransform = bottle.transform;
+
+            ConfigureLiquidPouring(wobble);
             return wobble;
         }
         else

@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -66,6 +71,9 @@ public class ContinuousTaskManager : MonoBehaviour
     [Tooltip("Delay in seconds before switching to the next task after completion")]
     public float taskCompletionDelay = 2.0f;
 
+    [Tooltip("Delay in seconds before restarting the same task after a drop failure")]
+    public float taskFailureRestartDelay = 2.0f;
+
     private List<ContinuousTask> activeTasks = new List<ContinuousTask>();
     private ContinuousTask currentTask;
     private int currentTaskIndex = 0;
@@ -82,6 +90,8 @@ public class ContinuousTaskManager : MonoBehaviour
     private float countdownStartTime = -1f;
     private float taskStartTime = -1f;
     private bool hasTimedOut = false;
+    private bool hasFailed = false;
+    private string failureStatusText = "";
 
     public static ContinuousTaskManager Instance { get; private set; }
 
@@ -241,6 +251,18 @@ public class ContinuousTaskManager : MonoBehaviour
         isWaitingForNextTask = false;
     }
 
+    IEnumerator DelayedRestartCurrentTask()
+    {
+        Debug.Log(
+            $"[ContinuousTaskManager] Task failed. Waiting {taskFailureRestartDelay}s before restart..."
+        );
+
+        yield return new WaitForSeconds(taskFailureRestartDelay);
+
+        RestartCurrentTask();
+        isWaitingForNextTask = false;
+    }
+
     void OnDestroy()
     {
         ExportResults();
@@ -349,24 +371,45 @@ public class ContinuousTaskManager : MonoBehaviour
             }
         }
 
-        // Handle task completion
+        // Handle task completion or failure
         if (currentTask.isComplete && !isWaitingForNextTask)
         {
-            // Task completed - log result (only if timing was started)
-            if (currentTask.startTime >= 0 && !hasTimedOut)
+            if (currentTask.isFailed)
             {
-                TaskResult result = LogTaskResult(currentTask, false);
-                // Export single task result to CSV immediately (only if not already exported)
-                if (result != null && !exportedTaskNumbers.Contains(result.taskNumber))
-                {
-                    AppendTaskResultToCsv(result);
-                    exportedTaskNumbers.Add(result.taskNumber);
-                }
-            }
+                hasFailed = true;
+                failureStatusText = string.IsNullOrEmpty(currentTask.failureMessage)
+                    ? "Object dropped"
+                    : currentTask.failureMessage;
 
-            // Wait before selecting next task
-            isWaitingForNextTask = true;
-            StartCoroutine(DelayedSelectNextTask());
+                if (currentTask.startTime >= 0)
+                {
+                    TaskResult result = LogTaskResult(currentTask, false);
+                    if (result != null && !exportedTaskNumbers.Contains(result.taskNumber))
+                    {
+                        AppendTaskResultToCsv(result);
+                        exportedTaskNumbers.Add(result.taskNumber);
+                    }
+                }
+
+                isWaitingForNextTask = true;
+                StartCoroutine(DelayedRestartCurrentTask());
+            }
+            else
+            {
+                // Task completed successfully - log result (only if timing was started)
+                if (currentTask.startTime >= 0 && !hasTimedOut)
+                {
+                    TaskResult result = LogTaskResult(currentTask, false);
+                    if (result != null && !exportedTaskNumbers.Contains(result.taskNumber))
+                    {
+                        AppendTaskResultToCsv(result);
+                        exportedTaskNumbers.Add(result.taskNumber);
+                    }
+                }
+
+                isWaitingForNextTask = true;
+                StartCoroutine(DelayedSelectNextTask());
+            }
         }
     }
 
@@ -408,8 +451,35 @@ public class ContinuousTaskManager : MonoBehaviour
         UpdateUI();
     }
 
+    void RestartCurrentTask()
+    {
+        if (currentTask == null)
+            return;
+
+        currentTask.ResetTask();
+        currentTask.gameObject.SetActive(true);
+        currentTask.PrepareTask();
+
+        isRunning = false;
+        hasTimedOut = false;
+        hasFailed = false;
+        failureStatusText = "";
+
+        isInCountdown = true;
+        countdownStartTime = Time.time;
+        StartCoroutine(ResetHandAndFreezeInput());
+
+        taskCounter++;
+        Debug.Log(
+            $"[ContinuousTaskManager] Restarting task {taskCounter}: {currentTask.taskName} after failure"
+        );
+    }
+
     void SelectNextTask()
     {
+        hasFailed = false;
+        failureStatusText = "";
+
         // Hide current task
         if (currentTask != null)
         {
@@ -538,7 +608,7 @@ public class ContinuousTaskManager : MonoBehaviour
             startTime = task.startTime - sessionStartTime,
             endTime = task.endTime - sessionStartTime,
             duration = task.GetDuration(),
-            success = !timedOut, // Success only if not timed out
+            success = !timedOut && !task.isFailed,
             timedOut = timedOut,
             timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH:mm:ss"),
         };
@@ -578,6 +648,10 @@ public class ContinuousTaskManager : MonoBehaviour
                 else if (hasTimedOut)
                 {
                     statusText = "Timed out!";
+                }
+                else if (hasFailed)
+                {
+                    statusText = failureStatusText;
                 }
                 // Get task-specific status if available
                 else if (currentTask is BoxDeliveryTask boxTask)
@@ -803,5 +877,8 @@ public class ContinuousTaskManager : MonoBehaviour
         // Ensure task completion delay is not negative
         if (taskCompletionDelay < 0f)
             taskCompletionDelay = 0f;
+
+        if (taskFailureRestartDelay < 0f)
+            taskFailureRestartDelay = 0f;
     }
 }

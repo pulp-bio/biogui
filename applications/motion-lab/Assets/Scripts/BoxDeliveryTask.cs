@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -28,6 +33,10 @@ public class BoxDeliveryTask : ContinuousTask
 
     [Tooltip("Normalized Y position (-1 to 1) for delivery zone (maps to Unity Z)")]
     public float deliveryZoneNormalizedY = 0f;
+
+    [Header("Drop Zones")]
+    [Tooltip("Radius around spawn treated as pickup/start — drop here does not fail the task")]
+    public float pickupZoneRadius = 0.5f;
 
     [Header("Grab Requirements")]
     [Tooltip("If enabled, hand must be flat (near 0° supination) to grab the box")]
@@ -200,25 +209,12 @@ public class BoxDeliveryTask : ContinuousTask
     /// </summary>
     protected override void OnTaskActivate()
     {
-        // Make box grabbable
         if (boxObject != null)
         {
-            // Set layer to "Grabbable" (Layer 8) so HandGrabber can detect it
-            int grabbableLayer = LayerMask.NameToLayer("Grabbable");
-            if (grabbableLayer != -1)
-            {
-                boxObject.layer = grabbableLayer;
-                // Also set layer for all children
-                SetLayerRecursively(boxObject.transform, grabbableLayer);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "[BoxDeliveryTask] 'Grabbable' layer not found! Using Default layer. Make sure 'Grabbable' layer exists in Project Settings > Tags and Layers."
-                );
-            }
-
-            Debug.Log("[BoxDeliveryTask] Box is now grabbable");
+            GrabbableLayerHelper.ApplyToObject(boxObject);
+            Debug.Log(
+                $"[BoxDeliveryTask] Box is now grabbable (layer {boxObject.layer})"
+            );
         }
     }
 
@@ -266,54 +262,41 @@ public class BoxDeliveryTask : ContinuousTask
             Debug.Log("[BoxDeliveryTask] Box grabbed");
         }
 
-        // Check if box was delivered (not held and in delivery zone)
         if (boxWasGrabbed && !boxWasDelivered)
         {
-            // Box must be released (not held) AND in delivery zone
-            bool isReleased = !boxGrabbable.IsHeld;
+            bool isReleased = TaskZoneChecker.IsReleased(boxGrabbable, boxRigidbody);
+            bool isInDeliveryZone = TaskZoneChecker.IsInDeliveryZone(
+                deliveryZone,
+                boxRigidbody,
+                boxObject
+            );
 
-            // Check if box is in delivery zone using multiple methods for reliability
-            Collider zoneCollider = deliveryZone.GetComponent<Collider>();
-            bool isInZone = false;
-
-            if (zoneCollider != null)
-            {
-                // Method 1: Check if box center is within zone bounds
-                Vector3 boxPos = boxRigidbody.worldCenterOfMass;
-                Bounds zoneBounds = zoneCollider.bounds;
-                isInZone = zoneBounds.Contains(boxPos);
-
-                // Method 2: Also check box transform position (more reliable for trigger colliders)
-                if (!isInZone)
-                {
-                    Vector3 boxTransformPos = boxObject.transform.position;
-                    isInZone = zoneBounds.Contains(boxTransformPos);
-                }
-
-                // Method 3: Check if any part of box collider overlaps with zone
-                if (!isInZone && boxObject != null)
-                {
-                    Collider boxCollider = boxObject.GetComponent<Collider>();
-                    if (boxCollider != null)
-                    {
-                        isInZone = zoneBounds.Intersects(boxCollider.bounds);
-                    }
-                }
-            }
-
-            if (isReleased && isInZone)
+            if (isReleased && isInDeliveryZone)
             {
                 boxWasDelivered = true;
                 CompleteTask();
                 Debug.Log("[BoxDeliveryTask] Box delivered! (released in delivery zone)");
             }
-            else if (isReleased && !isInZone)
+            else if (isReleased)
             {
-                // Box was released but not in zone - reset grab state so user can try again
-                if (debugLogs)
-                    Debug.Log(
-                        $"[BoxDeliveryTask] Box released but not in delivery zone. Box pos: {boxRigidbody.worldCenterOfMass}, Zone bounds: {zoneCollider.bounds}"
-                    );
+                if (
+                    TaskZoneChecker.IsInPickupZone(
+                        GetBoxSpawnPosition(),
+                        pickupZoneRadius,
+                        boxRigidbody,
+                        boxObject
+                    )
+                )
+                {
+                    boxWasGrabbed = false;
+                    if (debugLogs)
+                        Debug.Log("[BoxDeliveryTask] Released at start — retry allowed");
+                }
+                else
+                {
+                    Debug.Log("[BoxDeliveryTask] Box released outside zones — task failed");
+                    FailTask("Object dropped");
+                }
             }
         }
     }
@@ -326,6 +309,9 @@ public class BoxDeliveryTask : ContinuousTask
     /// </summary>
     public string GetStatusText()
     {
+        if (isFailed)
+            return failureMessage;
+
         if (isComplete)
             return "Complete!";
 
@@ -369,28 +355,8 @@ public class BoxDeliveryTask : ContinuousTask
     /// </summary>
     private float GetCurrentSupination()
     {
-        if (handController == null)
-            return 0f;
-
-        Vector3 handRotation = handController.CurrentRotationEuler;
-        float supinationZ = NormalizeAngle(handRotation.z);
-
-        // Reverse the handedness multiplier to get actual supination
-        return -handController.HandednessMultiplier * supinationZ;
+        return HandSupination.GetDegrees(handController);
     }
-
-    /// <summary>
-    /// Normalize angle to -180 to 180 range.
-    /// </summary>
-    private float NormalizeAngle(float angle)
-    {
-        while (angle > 180f)
-            angle -= 360f;
-        while (angle < -180f)
-            angle += 360f;
-        return angle;
-    }
-
 
     void SetLayerRecursively(Transform obj, int layer)
     {

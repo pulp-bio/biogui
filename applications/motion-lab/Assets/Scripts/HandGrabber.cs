@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -145,13 +150,15 @@ public class HandGrabber : MonoBehaviour
 
     Rigidbody GetGrabbable(Collider col)
     {
-        if (((1 << col.gameObject.layer) & grabbableLayers) == 0)
-            return null;
-
         Rigidbody rb = col.attachedRigidbody;
         if (!rb || col.isTrigger)
             return null;
         if (holdPointRb && rb == holdPointRb)
+            return null;
+
+        bool layerOk = ((1 << col.gameObject.layer) & grabbableLayers) != 0;
+        bool markedGrabbable = rb.GetComponent<Grabbable>() != null;
+        if (!layerOk && !markedGrabbable)
             return null;
 
         return rb;
@@ -226,24 +233,23 @@ public class HandGrabber : MonoBehaviour
                         $"[HandGrabber] Cylinder belongs to CylinderDeliveryTask, requireSupinationToGrab: {cylinderTask.requireSupinationToGrab}"
                     );
 
-                    if (cylinderTask.requireSupinationToGrab)
+                    if (
+                        cylinderTask.requireSupinationToGrab
+                        && !cylinderTask.IsSupinationValidForGrab(GetCurrentSupination())
+                    )
                     {
                         float currentSup = GetCurrentSupination();
-                        float minAngle = cylinderTask.targetSupinationAngle - cylinderTask.supinationTolerance;
-                        float maxAngle = cylinderTask.targetSupinationAngle + cylinderTask.supinationTolerance;
-                        if (currentSup < minAngle || currentSup > maxAngle)
-                        {
-                            Debug.Log(
-                                $"[HandGrabber] ❌ Cannot grab cylinder - need {cylinderTask.targetSupinationAngle}°±{cylinderTask.supinationTolerance}° supination, current: {currentSup:F1}°"
-                            );
-                            continue; // Skip this object if supination requirement not met
-                        }
-                        else
-                        {
-                            Debug.Log(
-                                $"[HandGrabber] ✅ Supination OK for cylinder: {currentSup:F1}°"
-                            );
-                        }
+                        Debug.Log(
+                            $"[HandGrabber] ❌ Cannot grab cylinder - need {cylinderTask.targetSupinationAngle}°±{cylinderTask.supinationTolerance}° supination, current: {currentSup:F1}°"
+                        );
+                        continue;
+                    }
+
+                    if (cylinderTask.requireSupinationToGrab)
+                    {
+                        Debug.Log(
+                            $"[HandGrabber] ✅ Supination OK for cylinder: {GetCurrentSupination():F1}°"
+                        );
                     }
                     else
                     {
@@ -269,41 +275,23 @@ public class HandGrabber : MonoBehaviour
                 }
             }
             // Check if this is a bottle and if supination is required
-            else if (IsBottle(rb))
+            if (IsBottle(rb))
             {
                 Debug.Log($"[HandGrabber] Found bottle: {rb.name}");
 
-                // Check if this bottle belongs to a BottlePouringTask (has specific requirements)
                 BottlePouringTask bottleTask = GetBottlePouringTask(rb);
-                if (bottleTask != null)
+                if (bottleTask != null && bottleTask.requireSupinationToGrab)
                 {
-                    Debug.Log(
-                        $"[HandGrabber] Bottle belongs to BottlePouringTask, requireSupinationToGrab: {bottleTask.requireSupinationToGrab}"
-                    );
+                    float currentSup = GetCurrentSupination();
+                    if (!bottleTask.IsSupinationValidForGrab(currentSup))
+                    {
+                        Debug.Log(
+                            $"[HandGrabber] ❌ Cannot grab bottle - need {bottleTask.targetSupinationAngle}°±{bottleTask.supinationTolerance}° supination, current: {currentSup:F1}°"
+                        );
+                        continue;
+                    }
 
-                    if (bottleTask.requireSupinationToGrab)
-                    {
-                        float currentSup = GetCurrentSupination();
-                        float minAngle = bottleTask.targetSupinationAngle - bottleTask.supinationTolerance;
-                        float maxAngle = bottleTask.targetSupinationAngle + bottleTask.supinationTolerance;
-                        if (currentSup < minAngle || currentSup > maxAngle)
-                        {
-                            Debug.Log(
-                                $"[HandGrabber] ❌ Cannot grab bottle - need {bottleTask.targetSupinationAngle}°±{bottleTask.supinationTolerance}° supination, current: {currentSup:F1}°"
-                            );
-                            continue; // Skip this object if supination requirement not met
-                        }
-                        else
-                        {
-                            Debug.Log(
-                                $"[HandGrabber] ✅ Supination OK for bottle: {currentSup:F1}°"
-                            );
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log($"[HandGrabber] ✅ Supination not required for this bottle");
-                    }
+                    Debug.Log($"[HandGrabber] ✅ Supination OK for bottle: {currentSup:F1}°");
                 }
             }
 
@@ -699,26 +687,16 @@ public class HandGrabber : MonoBehaviour
     bool IsSupinatedEnough()
     {
         if (!hand)
-            return true; // If no hand controller, allow grab
+            return true;
 
-        Vector3 handRotation = hand.CurrentRotationEuler;
-        float currentSupinationZ = NormalizeAngle(handRotation.z);
-
-        // Calculate relative supination
-        // HandController uses: z = -HandednessMultiplier * clampedRotation[2]
-        // So for left hand (multiplier = +1): negative z = supination
-        // For right hand (multiplier = -1): positive z = supination
-        // We need to reverse this to get the actual supination angle
-        float relativeSupination = -hand.HandednessMultiplier * currentSupinationZ;
-
-        // Check if supination is within tolerance
+        float currentSup = HandSupination.GetDegrees(hand);
         float minRequired = minSupinationAngle - supinationTolerance;
-        bool isEnough = relativeSupination >= minRequired;
+        bool isEnough = currentSup >= minRequired;
 
         if (debugLogs && !isEnough)
         {
             Debug.Log(
-                $"[HandGrabber] Supination check: current={relativeSupination:F1}°, required={minRequired:F1}° (min={minSupinationAngle}°, tolerance={supinationTolerance}°)"
+                $"[HandGrabber] Supination check: current={currentSup:F1}°, required={minRequired:F1}° (min={minSupinationAngle}°, tolerance={supinationTolerance}°)"
             );
         }
 
@@ -727,12 +705,7 @@ public class HandGrabber : MonoBehaviour
 
     float GetCurrentSupination()
     {
-        if (!hand)
-            return 0f;
-
-        Vector3 handRotation = hand.CurrentRotationEuler;
-        float currentSupinationZ = NormalizeAngle(handRotation.z);
-        return -hand.HandednessMultiplier * currentSupinationZ;
+        return HandSupination.GetDegrees(hand);
     }
 
     float NormalizeAngle(float angle)

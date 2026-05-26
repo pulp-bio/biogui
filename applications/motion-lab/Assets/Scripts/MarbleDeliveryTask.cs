@@ -1,3 +1,8 @@
+// Copyright University of Bologna - ETH Zurich 2026
+// Licensed under Apache v2.0 see LICENSE for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright ETH Zurich - University of Bologna 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
@@ -29,6 +34,10 @@ public class MarbleDeliveryTask : ContinuousTask
 
     [Tooltip("Normalized Y position (-1 to 1) for delivery zone (maps to Unity Z)")]
     public float deliveryZoneNormalizedY = 0f;
+
+    [Header("Drop Zones")]
+    [Tooltip("Radius around spawn treated as pickup/start — drop here does not fail the task")]
+    public float pickupZoneRadius = 0.5f;
 
     private Grabbable marbleGrabbable;
     private Rigidbody marbleRigidbody;
@@ -195,25 +204,12 @@ public class MarbleDeliveryTask : ContinuousTask
     /// </summary>
     protected override void OnTaskActivate()
     {
-        // Make marble grabbable
         if (marbleObject != null)
         {
-            // Set layer to "Grabbable" (Layer 8) so HandGrabber can detect it
-            int grabbableLayer = LayerMask.NameToLayer("Grabbable");
-            if (grabbableLayer != -1)
-            {
-                marbleObject.layer = grabbableLayer;
-                // Also set layer for all children
-                SetLayerRecursively(marbleObject.transform, grabbableLayer);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "[MarbleDeliveryTask] 'Grabbable' layer not found! Using Default layer. Make sure 'Grabbable' layer exists in Project Settings > Tags and Layers."
-                );
-            }
-
-            Debug.Log("[MarbleDeliveryTask] Marble is now grabbable");
+            GrabbableLayerHelper.ApplyToObject(marbleObject);
+            Debug.Log(
+                $"[MarbleDeliveryTask] Marble is now grabbable (layer {marbleObject.layer})"
+            );
         }
     }
 
@@ -261,54 +257,41 @@ public class MarbleDeliveryTask : ContinuousTask
             Debug.Log("[MarbleDeliveryTask] Marble pinched!");
         }
 
-        // Check if marble was delivered (not held and in delivery zone)
         if (marbleWasGrabbed && !marbleWasDelivered)
         {
-            // Marble must be released (not held) AND in delivery zone
-            bool isReleased = !marbleGrabbable.IsHeld;
+            bool isReleased = TaskZoneChecker.IsReleased(marbleGrabbable, marbleRigidbody);
+            bool isInDeliveryZone = TaskZoneChecker.IsInDeliveryZone(
+                deliveryZone,
+                marbleRigidbody,
+                marbleObject
+            );
 
-            // Check if marble is in delivery zone using multiple methods for reliability
-            Collider zoneCollider = deliveryZone.GetComponent<Collider>();
-            bool isInZone = false;
-
-            if (zoneCollider != null)
-            {
-                // Method 1: Check if marble center is within zone bounds
-                Vector3 marblePos = marbleRigidbody.worldCenterOfMass;
-                Bounds zoneBounds = zoneCollider.bounds;
-                isInZone = zoneBounds.Contains(marblePos);
-
-                // Method 2: Also check marble transform position (more reliable for trigger colliders)
-                if (!isInZone)
-                {
-                    Vector3 marbleTransformPos = marbleObject.transform.position;
-                    isInZone = zoneBounds.Contains(marbleTransformPos);
-                }
-
-                // Method 3: Check if any part of marble collider overlaps with zone
-                if (!isInZone && marbleObject != null)
-                {
-                    Collider marbleCollider = marbleObject.GetComponent<Collider>();
-                    if (marbleCollider != null)
-                    {
-                        isInZone = zoneBounds.Intersects(marbleCollider.bounds);
-                    }
-                }
-            }
-
-            if (isReleased && isInZone)
+            if (isReleased && isInDeliveryZone)
             {
                 marbleWasDelivered = true;
                 CompleteTask();
                 Debug.Log("[MarbleDeliveryTask] Marble delivered! (released in delivery zone)");
             }
-            else if (isReleased && !isInZone)
+            else if (isReleased)
             {
-                // Marble was released but not in zone - log for debugging
-                if (debugLogs)
-                    Debug.Log(
-                        $"[MarbleDeliveryTask] Marble released but not in delivery zone. Marble pos: {marbleRigidbody.worldCenterOfMass}, Zone bounds: {zoneCollider.bounds}"
-                    );
+                if (
+                    TaskZoneChecker.IsInPickupZone(
+                        GetMarbleSpawnPosition(),
+                        pickupZoneRadius,
+                        marbleRigidbody,
+                        marbleObject
+                    )
+                )
+                {
+                    marbleWasGrabbed = false;
+                    if (debugLogs)
+                        Debug.Log("[MarbleDeliveryTask] Released at start — retry allowed");
+                }
+                else
+                {
+                    Debug.Log("[MarbleDeliveryTask] Marble released outside zones — task failed");
+                    FailTask("Object dropped");
+                }
             }
         }
     }
@@ -321,6 +304,9 @@ public class MarbleDeliveryTask : ContinuousTask
     /// </summary>
     public string GetStatusText()
     {
+        if (isFailed)
+            return failureMessage;
+
         if (isComplete)
             return "Complete!";
 
