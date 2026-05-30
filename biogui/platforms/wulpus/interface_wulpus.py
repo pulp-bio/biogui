@@ -35,7 +35,7 @@ packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
 
 startSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),  # Send restart first
-    0.5,
+    0.1,
     wulpus_config.get_conf_package(),  # Send configuration which acts as start command
 ]
 """

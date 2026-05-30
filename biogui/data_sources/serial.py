@@ -12,8 +12,8 @@ from __future__ import annotations
 import logging
 from sys import platform
 
-from PySide6.QtCore import QByteArray, QIODevice, QLocale, QThread
-from PySide6.QtGui import QIcon, QIntValidator
+from PySide6.QtCore import QByteArray, QIODevice, QThread
+from PySide6.QtGui import QIcon
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
@@ -30,6 +30,8 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_SERIAL_BAUD_RATE = 115_200
 
 
 class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget):
@@ -55,9 +57,6 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         self._rescanSerialPorts()
         self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
 
-        baudRateValidator = QIntValidator(bottom=1, top=4_000_000)
-        self.baudRateTextField.setValidator(baudRateValidator)
-
     def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
@@ -75,20 +74,11 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
                 errMessage='The "serial port" field is empty.',
             )
 
-        if not self.baudRateTextField.hasAcceptableInput():
-            return DataSourceConfigResult(
-                dataSourceType=DataSourceType.SERIAL,
-                dataSourceConfig={},
-                isValid=False,
-                errMessage='The "baud rate" field is invalid.',
-            )
-
         serialPortName = self.serialPortsComboBox.currentText()
         return DataSourceConfigResult(
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
                 "serialPortName": serialPortName,
-                "baudRate": QLocale().toInt(self.baudRateTextField.text())[0],
             },
             isValid=True,
             errMessage="",
@@ -104,8 +94,6 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         """
         if "serialPortName" in config:
             self.serialPortsComboBox.setCurrentText(config["serialPortName"])
-        if "baudRate" in config:
-            self.baudRateTextField.setText(QLocale().toString(config["baudRate"]))
 
     def getFieldsInTabOrder(self) -> list[QWidget]:
         """
@@ -119,7 +107,6 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         return [
             self.serialPortsComboBox,
             self.rescanSerialPortsButton,
-            self.baudRateTextField,
         ]
 
     def _rescanSerialPorts(self) -> None:
@@ -144,8 +131,6 @@ class SerialDataSourceWorker(DataSourceWorker):
         Sequence of commands to stop the source.
     serialPortName : str
         String representing the serial port.
-    baudRate : int
-        Baud rate.
 
     Attributes
     ----------
@@ -157,8 +142,6 @@ class SerialDataSourceWorker(DataSourceWorker):
         Sequence of commands to stop the source.
     _serialPortName : str
         String representing the serial port.
-    _baudRate : int
-        Baud rate.
     _serialPort : QSerialPort
         Serial port object.
     _buffer : QByteArray
@@ -180,7 +163,6 @@ class SerialDataSourceWorker(DataSourceWorker):
         startSeq: list[bytes | float],
         stopSeq: list[bytes | float],
         serialPortName: str,
-        baudRate: int,
     ) -> None:
         super().__init__()
 
@@ -188,25 +170,44 @@ class SerialDataSourceWorker(DataSourceWorker):
         self._startSeq = startSeq
         self._stopSeq = stopSeq
         self._serialPortName = serialPortName
-        self._baudRate = baudRate
 
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
-        self._serialPort.setBaudRate(baudRate)
+        self._serialPort.setBaudRate(DEFAULT_SERIAL_BAUD_RATE)
+        if hasattr(self._serialPort, "setSettingsRestoredOnClose"):
+            self._serialPort.setSettingsRestoredOnClose(False)
         self._buffer = QByteArray()
         self._guard = False
 
     def __str__(self):
         return f"Serial port - {self._serialPortName}"
 
+    def _clearInputBuffer(self) -> None:
+        """Drain stale RX bytes to start from a clean serial state."""
+        self._buffer.clear()
+        self._serialPort.clear(QSerialPort.Input)
+        self._serialPort.readAll()
+
+        # Also drain bytes that arrive shortly after the clear call, e.g. from
+        # a device reset or late reply to the previous command.
+        for _ in range(10):
+            if not self._serialPort.waitForReadyRead(100):
+                break
+            self._serialPort.readAll()
+            self._serialPort.clear(QSerialPort.Input)
+
     def _sendSequence(self, seq: list[bytes | float]) -> None:
         """Send a command sequence to the serial port."""
         for c in seq:
             if isinstance(c, (bytes, bytearray)):
                 self._serialPort.write(c)
-                # Make sure the full command is sent before continuing.
+                # Block until Qt hands the whole command to the serial driver.
                 while self._serialPort.bytesToWrite() > 0:
-                    self._serialPort.waitForBytesWritten(100)
+                    if not self._serialPort.waitForBytesWritten(100):
+                        errMsg = "Timed out while writing command to the serial port."
+                        self.errorOccurred.emit(errMsg)
+                        logger.error(errMsg)
+                        return
             elif isinstance(c, float):
                 QThread.msleep(int(c * 1000))
 
@@ -224,9 +225,8 @@ class SerialDataSourceWorker(DataSourceWorker):
             self._serialPort.setDataTerminalReady(True)
             self._serialPort.setRequestToSend(True)
 
-        # Reset serial-port state before starting a new acquisition
-        self._serialPort.clear()
-        self._buffer.clear()
+        # Reset serial-port input state before starting a new acquisition.
+        self._clearInputBuffer()
 
         # Send start sequence, set guard flag, and connect readyRead signal
         self._sendSequence(self._startSeq)
@@ -251,10 +251,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         except Exception:
             pass
         self._sendSequence(self._stopSeq)
-
-        # Reset accumulation buffer and serial port buffer
-        self._buffer.clear()
-        self._serialPort.clear()
+        self._serialPort.flush()
+        self._clearInputBuffer()
 
         # Close port
         self._serialPort.close()
