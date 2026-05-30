@@ -5,7 +5,7 @@ Unity 6.3 LTS environment for hand visualization and gesture-controlled task eva
 ## Requirements
 
 - Unity Hub
-- Unity Editor **6000.3.11f1** (installed via Unity Hub)
+- Unity Editor **6000.3.16f1** (installed via Unity Hub)
 
 ## Setup
 
@@ -17,7 +17,7 @@ Unity 6.3 LTS environment for hand visualization and gesture-controlled task eva
 
 1. Select the `motion-lab/` folder.
 
-1. Unity will prompt you to install editor version **6000.3.11f1** if not present.
+1. Unity will prompt you to install editor version **6000.3.16f1** if not present.
    - Note: The installation may take several minutes depending on your internet connection.
 
 1. Once installed, open the project.
