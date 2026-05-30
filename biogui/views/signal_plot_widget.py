@@ -104,13 +104,23 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         self._plot_mode = self._create_plot_mode(fs, nCh, chSpacing, renderLenMs, **kwargs)
 
         # Setup UI
-        self._setup_graph_widget(sigName)
-
-        # Setup plot
-        self._plot_mode.setup_plot(self.graphWidget)
-
-        # Setup timers
         self._setup_timers()
+
+        # Setup plot (style applied after mode setup because clear() resets the plot item)
+        self._plot_mode.setup_plot(self.graphWidget)
+        self._configure_graph_widget(sigName)
+
+    def _configure_graph_widget(self, sig_name: str) -> None:
+        """Apply compact styling to maximize visible plot area."""
+        plot_item = self.graphWidget.getPlotItem()
+        plot_item.layout.setContentsMargins(2, 2, 2, 2)
+        plot_item.setMenuEnabled(False)
+        self.graphWidget.setTitle(sig_name, size="9pt")
+        plot_item.setMouseEnabled(False, False)
+
+    def setStatsVisible(self, visible: bool) -> None:
+        """Show or hide sampling rate / PRF and elapsed time below the plot."""
+        self.statsBar.setVisible(visible)
 
     def _create_plot_mode(
         self,
@@ -154,11 +164,6 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
 
         # Default: Time-Series mode
         return TimeSeriesPlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
-
-    def _setup_graph_widget(self, sig_name: str) -> None:
-        """Configure the graph widget."""
-        self.graphWidget.setTitle(sig_name)
-        self.graphWidget.getPlotItem().setMouseEnabled(False, False)
 
     def _setup_timers(self) -> None:
         """Configure plot and sampling rate timers."""
