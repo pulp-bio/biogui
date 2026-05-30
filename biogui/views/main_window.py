@@ -7,7 +7,7 @@
 View for the main window.
 """
 
-from PySide6.QtCore import Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow
 
@@ -40,14 +40,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.deleteDataSourceButton.setIcon(
             QIcon.fromTheme("user-trash", QIcon(f":icons/{theme}/trash"))
         )
-        self.editButton.setIcon(
-            QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit"))
-        )
+        self.editButton.setIcon(QIcon.fromTheme("edit-entry", QIcon(f":icons/{theme}/edit")))
 
         # Set default render length to 5 s
         self.renderLenComboBox.setCurrentText("5 s")
         self.renderLenMs = 5000
         self.renderLenComboBox.currentTextChanged.connect(self._onRenderLenChange)
+
+        self._sidebarVisible = True
+        self._setupSidebarToggle()
+
+    def _setupSidebarToggle(self) -> None:
+        """Wire sidebar collapse/expand to button and Ctrl+B shortcut."""
+        self.addAction(self.actionToggleSidebar)
+        self.toggleSidebarButton.clicked.connect(self.toggleSidebar)
+        self.actionToggleSidebar.triggered.connect(self.toggleSidebar)
+        self._updateSidebarToggleIcon()
+
+    @Slot()
+    def toggleSidebar(self) -> None:
+        """Show or hide the left configuration panel."""
+        self._sidebarVisible = not self._sidebarVisible
+        self.sidebarPanel.setVisible(self._sidebarVisible)
+        self._updateSidebarToggleIcon()
+
+    def _updateSidebarToggleIcon(self) -> None:
+        arrow = Qt.ArrowType.LeftArrow if self._sidebarVisible else Qt.ArrowType.RightArrow
+        self.toggleSidebarButton.setArrowType(arrow)
 
     @Slot(str)
     def _onRenderLenChange(self, renderLen: str):
