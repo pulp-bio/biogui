@@ -7,7 +7,7 @@
 View for the main window.
 """
 
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMainWindow, QWidget
 
@@ -15,6 +15,7 @@ from biogui.ui.ui_main_window import Ui_MainWindow
 from biogui.utils import detectTheme
 
 from .plot_layout_manager import PlotLayoutManager
+from .sidebar_splitter import SidebarSplitter
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -51,8 +52,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self._plotLayoutManager = PlotLayoutManager(self.plotsContainer)
         self._plotStatsVisible = True
-        self._sidebarVisible = True
-        self._setupSidebarToggle()
+        self._setupSidebarSplitter()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not getattr(self, "_sidebar_sizes_initialized", False):
+            self._sidebarSplitter.setInitialSizes()
+            self._sidebar_sizes_initialized = True
 
     def setupViewMenu(self) -> None:
         """Add View menu with plot layout options (call after other menus are created)."""
@@ -90,23 +96,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if hasattr(newWidget, "setStatsVisible"):
             newWidget.setStatsVisible(self._plotStatsVisible)
 
-    def _setupSidebarToggle(self) -> None:
-        """Wire sidebar collapse/expand to button and Ctrl+B shortcut."""
+    def _setupSidebarSplitter(self) -> None:
+        """Replace sidebar/plots row with a draggable splitter."""
+        layout = self.horizontalLayout1
+        layout.removeWidget(self.sidebarPanel)
+        layout.removeWidget(self.plotsContainer)
+
+        self.sidebarPanel.setMinimumWidth(SidebarSplitter.MIN_SIDEBAR_WIDTH)
+        self._sidebarSplitter = SidebarSplitter(self.centralWidget)
+        self._sidebarSplitter.addWidget(self.sidebarPanel)
+        self._sidebarSplitter.addWidget(self.plotsContainer)
+        self._sidebarSplitter.finalizeSetup()
+        layout.addWidget(self._sidebarSplitter)
+
         self.addAction(self.actionToggleSidebar)
-        self.toggleSidebarButton.clicked.connect(self.toggleSidebar)
         self.actionToggleSidebar.triggered.connect(self.toggleSidebar)
-        self._updateSidebarToggleIcon()
+        self._sidebarSplitter.arrowClicked.connect(self.toggleSidebar)
 
     @Slot()
     def toggleSidebar(self) -> None:
-        """Show or hide the left configuration panel."""
-        self._sidebarVisible = not self._sidebarVisible
-        self.sidebarPanel.setVisible(self._sidebarVisible)
-        self._updateSidebarToggleIcon()
-
-    def _updateSidebarToggleIcon(self) -> None:
-        arrow = Qt.ArrowType.LeftArrow if self._sidebarVisible else Qt.ArrowType.RightArrow
-        self.toggleSidebarButton.setArrowType(arrow)
+        """Collapse or expand the left configuration panel."""
+        self._sidebarSplitter.toggleSidebar()
 
     @Slot(str)
     def _onRenderLenChange(self, renderLen: str):

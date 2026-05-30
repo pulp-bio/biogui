@@ -19,7 +19,7 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QMainWindow,
     QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QToolButton, QTreeView, QVBoxLayout, QWidget)
+    QTreeView, QVBoxLayout, QWidget)
 from . import biogui_rc
 
 class Ui_MainWindow(object):
@@ -154,20 +154,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout1.addWidget(self.sidebarPanel)
 
-        self.toggleSidebarButton = QToolButton(self.centralWidget)
-        self.toggleSidebarButton.setObjectName(u"toggleSidebarButton")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.toggleSidebarButton.sizePolicy().hasHeightForWidth())
-        self.toggleSidebarButton.setSizePolicy(sizePolicy)
-        self.toggleSidebarButton.setMinimumSize(QSize(16, 0))
-        self.toggleSidebarButton.setMaximumSize(QSize(16, 16777215))
-        self.toggleSidebarButton.setAutoRaise(True)
-        self.toggleSidebarButton.setArrowType(Qt.LeftArrow)
-
-        self.horizontalLayout1.addWidget(self.toggleSidebarButton)
-
         self.plotsContainer = QWidget(self.centralWidget)
         self.plotsContainer.setObjectName(u"plotsContainer")
         self.plotsLayout = QVBoxLayout(self.plotsContainer)
@@ -177,8 +163,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout1.addWidget(self.plotsContainer)
 
-        self.horizontalLayout1.setStretch(0, 3)
-        self.horizontalLayout1.setStretch(2, 10)
         MainWindow.setCentralWidget(self.centralWidget)
         QWidget.setTabOrder(self.startStreamingButton, self.stopStreamingButton)
         QWidget.setTabOrder(self.stopStreamingButton, self.addDataSourceButton)
@@ -221,9 +205,5 @@ class Ui_MainWindow(object):
         self.renderLenComboBox.setItemText(5, QCoreApplication.translate("MainWindow", u"5 s", None))
         self.renderLenComboBox.setItemText(6, QCoreApplication.translate("MainWindow", u"10 s", None))
 
-#if QT_CONFIG(tooltip)
-        self.toggleSidebarButton.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle sidebar (Ctrl+B)", None))
-#endif // QT_CONFIG(tooltip)
-        self.toggleSidebarButton.setText("")
     # retranslateUi
 
