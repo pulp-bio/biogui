@@ -39,9 +39,21 @@ from biogui.ui.ui_wulpus_config_widget import Ui_WulpusConfigWidget
 from biogui.views.help_dialog import HelpDialog
 
 from .protocol import (
+    CAPT_TIMEOUT_US_MAX,
+    DCDC_TURNON_US_MAX,
+    MAX_CH_ID,
     MEAS_MODE_ULTRASOUND_ONLY,
+    MEAS_PERIOD_US_MAX,
+    MEAS_PERIOD_US_MIN,
     PGA_GAIN,
+    PULSE_FREQ_HZ_MAX,
+    RESTART_CAPT_US_MAX,
     RX_MAP,
+    START_ADCSAMPL_US_MAX,
+    START_HVMUXRX_US_MAX,
+    START_PGAINBIAS_US_MAX,
+    START_PPG_US_MAX,
+    TURNON_ADC_US_MAX,
     TX_MAP,
     USS_CAPTURE_ACQ_RATES,
     WulpusRxTxConfigGen,
@@ -60,13 +72,14 @@ def _get_imu_active_from_config_dict(config_dict: dict) -> bool:
 class TxRxConfigDialog(QDialog):
     """Dialog for configuring TX/RX channels."""
 
-    CHANNEL_COUNT = 8
+    CHANNEL_COUNT = MAX_CH_ID + 1
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("TX/RX Configuration")
 
         layout = QFormLayout(self)
+        channel_label_suffix = f"0-{MAX_CH_ID}"
 
         tx_widget = QWidget(self)
         tx_layout = QGridLayout(tx_widget)
@@ -76,7 +89,7 @@ class TxRxConfigDialog(QDialog):
             checkbox = QCheckBox(str(ch), tx_widget)
             self.tx_checkboxes.append(checkbox)
             tx_layout.addWidget(checkbox, ch // 4, ch % 4)
-        layout.addRow("TX Channels (0-7):", tx_widget)
+        layout.addRow(f"TX Channels ({channel_label_suffix}):", tx_widget)
 
         rx_widget = QWidget(self)
         rx_layout = QGridLayout(rx_widget)
@@ -90,13 +103,10 @@ class TxRxConfigDialog(QDialog):
             self.rx_radio_buttons.append(radio)
             rx_layout.addWidget(radio, ch // 4, ch % 4)
         self.rx_radio_buttons[0].setChecked(True)
-        layout.addRow("RX Channel (0-7):", rx_widget)
+        layout.addRow(f"RX Channel ({channel_label_suffix}):", rx_widget)
 
         helper_label = QLabel("TX: multiple channels possible, RX: exactly one channel.", self)
         layout.addRow("", helper_label)
-
-        self.optimized_checkbox = QCheckBox()
-        layout.addRow("Optimized Switching:", self.optimized_checkbox)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
         buttons.accepted.connect(self.accept)
@@ -140,14 +150,11 @@ class TxRxConfigDialog(QDialog):
         else:
             self.rx_radio_buttons[0].setChecked(True)
 
-        self.optimized_checkbox.setChecked(bool(config.get("optimized_switching", False)))
-
     def get_config(self) -> dict:
         tx, rx = self._parse_channels()
         return {
             "tx_channels": tx,
             "rx_channels": rx,
-            "optimized_switching": self.optimized_checkbox.isChecked(),
         }
 
 
@@ -155,6 +162,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
     """Configuration widget for WULPUS PRO ultrasound hardware parameters."""
 
     configChanged = Signal(WulpusUssConfig)
+    CHANNEL_COUNT = MAX_CH_ID + 1
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -195,6 +203,7 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self._populate_presets()
         self._setup_help_buttons()
         self._connect_signals()
+        self.txRxTableWidget.setColumnHidden(2, True)
 
         self.numSamplesLineEdit.setText(str(400))
         self.numSamplesLineEdit.setReadOnly(True)
@@ -338,7 +347,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 {
                     "tx_channels": list(cfg.get("tx_channels", [])),
                     "rx_channels": list(cfg.get("rx_channels", [])),
-                    "optimized_switching": bool(cfg.get("optimized_switching", False)),
                 }
                 for cfg in normalized["tx_rx_configs"]
             ]
@@ -372,18 +380,18 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.presetComboBox.blockSignals(False)
 
     def _setup_validators(self) -> None:
-        self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, 65535))
-        self.measPeriodLineEdit.setValidator(QIntValidator(655, 65535))
-        self.pulseFreqLineEdit.setValidator(QIntValidator(0, 5000000))
+        self.dcdcTurnonLineEdit.setValidator(QIntValidator(0, DCDC_TURNON_US_MAX))
+        self.measPeriodLineEdit.setValidator(QIntValidator(MEAS_PERIOD_US_MIN, MEAS_PERIOD_US_MAX))
+        self.pulseFreqLineEdit.setValidator(QIntValidator(0, PULSE_FREQ_HZ_MAX))
         self.numPulsesLineEdit.setValidator(QIntValidator(0, 30))
         self.numSamplesLineEdit.setValidator(QIntValidator(400, 400))
-        self.startHvmuxrxLineEdit.setValidator(QIntValidator(0, 65535))
-        self.startPpgLineEdit.setValidator(QIntValidator(0, 65535))
-        self.turnonAdcLineEdit.setValidator(QIntValidator(0, 65535))
-        self.startPgainbiasLineEdit.setValidator(QIntValidator(0, 65535))
-        self.startAdcsampleLineEdit.setValidator(QIntValidator(0, 65535))
-        self.restartCaptLineEdit.setValidator(QIntValidator(0, 65535))
-        self.captTimeoutLineEdit.setValidator(QIntValidator(0, 65535))
+        self.startHvmuxrxLineEdit.setValidator(QIntValidator(0, START_HVMUXRX_US_MAX))
+        self.startPpgLineEdit.setValidator(QIntValidator(0, START_PPG_US_MAX))
+        self.turnonAdcLineEdit.setValidator(QIntValidator(0, TURNON_ADC_US_MAX))
+        self.startPgainbiasLineEdit.setValidator(QIntValidator(0, START_PGAINBIAS_US_MAX))
+        self.startAdcsampleLineEdit.setValidator(QIntValidator(0, START_ADCSAMPL_US_MAX))
+        self.restartCaptLineEdit.setValidator(QIntValidator(0, RESTART_CAPT_US_MAX))
+        self.captTimeoutLineEdit.setValidator(QIntValidator(0, CAPT_TIMEOUT_US_MAX))
         self.vgaRcPrechCycLineEdit.setValidator(QIntValidator(0, 1000))
         self.vgaSlopeCodeLineEdit.setValidator(QIntValidator(0, 256))
 
@@ -406,7 +414,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         self.clearTxRxConfigButton.clicked.connect(self._clear_tx_rx_configs)
         self.moveTxRxUpButton.clicked.connect(self._move_tx_rx_config_up)
         self.moveTxRxDownButton.clicked.connect(self._move_tx_rx_config_down)
-        self.txRxTableWidget.itemChanged.connect(self._on_tx_rx_item_changed)
         self.txRxTableWidget.doubleClicked.connect(lambda: self._edit_tx_rx_config())
 
         for widget in [
@@ -508,15 +515,17 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 tx_bits = int(config.tx_configs[i])
                 rx_bits = int(config.rx_configs[i])
 
-                tx_channels = [ch for ch in range(8) if (tx_bits >> TX_MAP[ch]) & 1]
-                rx_channels = [ch for ch in range(8) if (rx_bits >> RX_MAP[ch]) & 1]
-                optimized = any((tx_bits >> RX_MAP[ch]) & 1 for ch in rx_channels)
+                tx_channels = [
+                    ch for ch in range(self.CHANNEL_COUNT) if (tx_bits >> TX_MAP[ch]) & 1
+                ]
+                rx_channels = [
+                    ch for ch in range(self.CHANNEL_COUNT) if (rx_bits >> RX_MAP[ch]) & 1
+                ]
 
                 self._tx_rx_configs.append(
                     {
                         "tx_channels": tx_channels if tx_channels else [0],
                         "rx_channels": rx_channels if rx_channels else [0],
-                        "optimized_switching": optimized,
                     }
                 )
 
@@ -628,17 +637,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             rx_item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             self.txRxTableWidget.setItem(row, 1, rx_item)
 
-            optimized_item = QTableWidgetItem()
-            optimized_item.setFlags(
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsUserCheckable
-            )
-            optimized_item.setCheckState(
-                Qt.CheckState.Checked if config["optimized_switching"] else Qt.CheckState.Unchecked
-            )
-            self.txRxTableWidget.setItem(row, 2, optimized_item)
-
         self.txRxTableWidget.blockSignals(False)
         self._updating_tx_rx_table = False
 
@@ -660,27 +658,14 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             if not tx_channels or not rx_channels:
                 continue
 
-            optimized_item = self.txRxTableWidget.item(row, 2)
-            optimized_switching = (
-                optimized_item is not None and optimized_item.checkState() == Qt.CheckState.Checked
-            )
-
             synced_configs.append(
                 {
                     "tx_channels": tx_channels,
                     "rx_channels": rx_channels,
-                    "optimized_switching": optimized_switching,
                 }
             )
 
         self._tx_rx_configs = synced_configs
-
-    def _on_tx_rx_item_changed(self, item: QTableWidgetItem) -> None:
-        if self._updating_tx_rx_table or item.column() != 2:
-            return
-
-        self._sync_tx_rx_configs_from_table()
-        self._mark_as_custom()
 
     def _save_to_json(self) -> None:
         file_path, _ = QFileDialog.getSaveFileName(
@@ -722,7 +707,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             rx_tx_config.add_config(
                 tx_channels=config["tx_channels"],
                 rx_channels=config["rx_channels"],
-                optimized_switching=config["optimized_switching"],
             )
 
         return WulpusUssConfig(

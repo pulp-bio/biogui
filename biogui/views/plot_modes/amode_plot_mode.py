@@ -356,6 +356,8 @@ class AModePlotMode(BasePlotMode):
                 )
 
         if self._gain_curve_plot is not None and self._wulpus_config is not None:
+            if hasattr(self._wulpus_config, "calc_gain_curve"):
+                self._wulpus_config.calc_gain_curve()
             self._gain_curve_plot.setData(
                 distance_axis,
                 self._wulpus_config.gain_curve_db,
