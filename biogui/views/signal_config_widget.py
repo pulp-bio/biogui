@@ -153,6 +153,7 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             # Initialize state
             self._onUsProcessingModeChange()
             self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
+            self._updateMmodeColormapVisibility(self.ultrasoundModeComboBox.currentText())
 
         else:
             # Time-series signal - hide ultrasound controls entirely
@@ -179,6 +180,10 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         # "to" label between low/high frequency spinboxes in the UI form.
         self.label.setVisible(visible)
         self.label.setEnabled(enabled)
+        self.label16.setVisible(visible)
+        self.label16.setEnabled(enabled)
+        self.mmodeColormapComboBox.setVisible(visible)
+        self.mmodeColormapComboBox.setEnabled(enabled)
 
     def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
         """Format sampling-rate labels with at most {precision} decimal places."""
@@ -224,6 +229,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             # Bandpass settings for plot mode
             config["bandpassLow"] = self.lowFreqSpinBox.value() * 1e6  # MHz to Hz
             config["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6  # MHz to Hz
+
+            if self.ultrasoundModeComboBox.currentText() == "M-Mode":
+                config["mmodeColormap"] = self.mmodeColormapComboBox.currentText()
 
         return config
 
@@ -416,12 +424,23 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
+            if "mmodeColormap" in kwargs:
+                self.mmodeColormapComboBox.setCurrentText(kwargs["mmodeColormap"])
+
             # Re-apply mode configuration after prefilling
             self._configureDisplayOptionsForMode(kwargs["ultrasoundMode"])
+            self._updateMmodeColormapVisibility(kwargs["ultrasoundMode"])
 
     def _onUltrasoundModeChange(self, mode: str) -> None:
         """Detect if ultrasound mode has changed and adjust display options."""
         self._configureDisplayOptionsForMode(mode)
+        self._updateMmodeColormapVisibility(mode)
+
+    def _updateMmodeColormapVisibility(self, mode: str) -> None:
+        """Show colormap selector only for M-mode ultrasound signals."""
+        is_mmode = mode == "M-Mode" and self.ultrasoundModeComboBox.isEnabled()
+        self.label16.setVisible(is_mmode)
+        self.mmodeColormapComboBox.setVisible(is_mmode)
 
     def _configureDisplayOptionsForMode(self, mode: str) -> None:
         """Configure display options based on ultrasound mode (A-mode vs M-mode)."""

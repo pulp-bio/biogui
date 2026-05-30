@@ -280,6 +280,19 @@ class Ui_SignalConfigWidget(object):
 
         self.formLayout.setWidget(8, QFormLayout.ItemRole.FieldRole, self.ultrasoundModeComboBox)
 
+        self.label16 = QLabel(self.plotGroupBox)
+        self.label16.setObjectName(u"label16")
+
+        self.formLayout.setWidget(10, QFormLayout.ItemRole.LabelRole, self.label16)
+
+        self.mmodeColormapComboBox = QComboBox(self.plotGroupBox)
+        self.mmodeColormapComboBox.addItem("")
+        self.mmodeColormapComboBox.addItem("")
+        self.mmodeColormapComboBox.setObjectName(u"mmodeColormapComboBox")
+        self.mmodeColormapComboBox.setEnabled(False)
+
+        self.formLayout.setWidget(10, QFormLayout.ItemRole.FieldRole, self.mmodeColormapComboBox)
+
 
         self.verticalLayout.addWidget(self.plotGroupBox)
 
@@ -374,6 +387,10 @@ class Ui_SignalConfigWidget(object):
 
         self.ultrasoundModeComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"A-mode", None))
         self.ultrasoundModeComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"M-Mode", None))
+
+        self.label16.setText(QCoreApplication.translate("SignalConfigWidget", u"Colormap:", None))
+        self.mmodeColormapComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Grayscale", None))
+        self.mmodeColormapComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Viridis", None))
 
     # retranslateUi
 
