@@ -46,6 +46,7 @@ class MModePlotMode(BasePlotMode):
         - showRaw: Show raw RF data (only one can be True for M-mode)
         - showFiltered: Show filtered data
         - showEnvelope: Show envelope
+        - mmodeColormap: M-mode colormap label ("Grayscale" or "Viridis")
         - enableBandpass: Enable bandpass filter
         - bandpassLow: Low cutoff frequency in Hz
         - bandpassHigh: High cutoff frequency in Hz
@@ -80,6 +81,11 @@ class MModePlotMode(BasePlotMode):
 
     MMODE_TIME_WINDOW = 250  # Number of A-lines to display
     SPEED_OF_SOUND = 1540  # m/s in tissue
+    COLORMAPS = {
+        "Grayscale": "CET-L2",
+        "Viridis": "viridis",
+    }
+    DEFAULT_COLORMAP = "Grayscale"
 
     def __init__(
         self,
@@ -117,6 +123,8 @@ class MModePlotMode(BasePlotMode):
         self._show_raw = config.get("showRaw", True)
         self._show_filtered = config.get("showFiltered", False)
         self._show_envelope = config.get("showEnvelope", False)
+        colormap_label = config.get("mmodeColormap", self.DEFAULT_COLORMAP)
+        self._colormap = self.COLORMAPS.get(colormap_label, self.COLORMAPS[self.DEFAULT_COLORMAP])
 
         # Determine which mode to display (only one should be True for M-mode)
         if self._show_envelope:
@@ -180,14 +188,16 @@ class MModePlotMode(BasePlotMode):
         plot_item.setLabel("bottom", "Time", units="s")
         plot_item.setLabel("left", "Depth", units="mm")
 
+        # Clinical convention
+        plot_item.invertY(True)
+
         # Create image item
         self._image_item = pg.ImageItem()
         # Optimization: automatic downsampling for image
         self._image_item.setAutoDownsample(True)
         graph_widget.addItem(self._image_item)
 
-        # Set colormap
-        colormap = pg.colormap.get("CET-L2")
+        colormap = pg.colormap.get(self._colormap)
         self._image_item.setColorMap(colormap)
 
         # Display initial empty buffer
@@ -239,16 +249,7 @@ class MModePlotMode(BasePlotMode):
             self._setup_image_rect()
             self._needs_rect_setup = False
 
-        # Update the displayed image
-        data_min = self._mmode_buffer.min()
-        data_max = self._mmode_buffer.max()
-        level_range = data_max - data_min if data_max != data_min else 1.0
-
-        self._image_item.setImage(
-            self._mmode_buffer.T,
-            autoLevels=False,
-            levels=[data_min - 0.1 * level_range, data_max + 0.1 * level_range],
-        )
+        self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
 
         # Update counters
         self._pending_scans -= scans_to_process
@@ -256,11 +257,7 @@ class MModePlotMode(BasePlotMode):
 
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""
-        if self._meas_period_us:
-            return self._scan_count * self._meas_period_us / 1e6
-        else:
-            # Fallback to sample-based calculation
-            return (self._scan_count * self._num_samples) / self.fs
+        return self._scan_count * self._get_scan_period_s()
 
     def _setup_image_rect(self) -> None:
         """Setup the image rectangle with proper depth and time scaling."""
@@ -274,27 +271,25 @@ class MModePlotMode(BasePlotMode):
         depth_range_mm = max_depth_mm - min_depth_mm
 
         # Calculate time window
-        time_s = self.MMODE_TIME_WINDOW * (self._num_samples / self._adc_sampling_freq)
+        time_s = self.MMODE_TIME_WINDOW * self._get_scan_period_s()
 
         # Set rect: (x, y, width, height) = (0, min_depth, time, depth_range)
         self._image_item.setRect(pg.QtCore.QRectF(0, min_depth_mm, time_s, depth_range_mm))
 
     def _calculate_distance_axis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display in millimeters."""
-        # Calculate minimum depth based on ADC start delay
-        min_depth = (self.SPEED_OF_SOUND * self._adc_start_delay) / 2  # in meters
+        sample_times_s = self._adc_start_delay + (
+            np.arange(self._num_samples) / self._adc_sampling_freq
+        )
+        return (self.SPEED_OF_SOUND * sample_times_s / 2) * 1e3
 
-        # Calculate maximum acquisition time
-        max_time = self._num_samples / self._adc_sampling_freq  # in seconds
-
-        # Calculate maximum depth
-        max_depth = (self.SPEED_OF_SOUND * max_time) / 2 + min_depth  # in meters
-
-        # Create linearly spaced depth array and convert to millimeters
-        depths_m = np.linspace(min_depth, max_depth, self._num_samples)
-        depths_mm = depths_m * 1e3  # Convert to millimeters
-
-        return depths_mm
+    def _get_scan_period_s(self) -> float:
+        """Return the effective time between two displayed A-lines."""
+        if self.fs > 0:
+            return self._num_samples / self.fs
+        if self._meas_period_us:
+            return self._meas_period_us / 1e6
+        return 0.0
 
     def _process_scan_data(self, scan_data: np.ndarray) -> np.ndarray:
         """
