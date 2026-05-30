@@ -24,6 +24,7 @@ limitations under the License.
 
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
 from types import MappingProxyType
@@ -568,6 +569,8 @@ class MainController(QObject):
         for sigName in sigsConfigs:
             sigsConfigs[sigName]["fs"] = sigInfo[sigName]["fs"]
             sigsConfigs[sigName]["nCh"] = sigInfo[sigName]["nCh"]
+            if "extras" in sigInfo[sigName]:
+                sigsConfigs[sigName]["extras"] = copy.deepcopy(sigInfo[sigName]["extras"])
             if sigsConfigs[sigName]["nCh"] == 1:
                 sigsConfigs[sigName]["chSpacing"] = 0
 

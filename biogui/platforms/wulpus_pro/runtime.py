@@ -18,6 +18,7 @@ WULPUS_PLATFORM_ID = "wulpus_pro"
 
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
+    MAX_CH_ID,
     MEAS_MODE_ULTRASOUND_ONLY,
     PGA_GAIN,
     RX_MAP,
@@ -36,7 +37,7 @@ def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | 
         return None
 
     rx_config_bits = config.rx_configs[config_id]
-    for channel_id in range(8):
+    for channel_id in range(MAX_CH_ID + 1):
         switch_id = RX_MAP[channel_id]
         if (rx_config_bits >> switch_id) & 1:
             return channel_id
