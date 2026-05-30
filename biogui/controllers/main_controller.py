@@ -334,7 +334,7 @@ class MainController(QObject):
                 self.streamingStarted.connect(signalPlotWidget.startTimers)
                 self.streamingStopped.connect(signalPlotWidget.stopTimers)
                 self._mainWin.renderLenChanged.connect(signalPlotWidget.reInitPlot)
-                self._mainWin.plotsLayout.addWidget(signalPlotWidget)
+                self._mainWin.addPlotWidget(signalPlotWidget)
 
                 self._signalPlotWidgets[f"{str(streamingController)}%{iSigName}"] = signalPlotWidget
 
@@ -384,7 +384,7 @@ class MainController(QObject):
             plotId = f"{dataSource}%{sigName}"
             if plotId in self._signalPlotWidgets:
                 plotWidgetToRemove = self._signalPlotWidgets.pop(plotId)
-                self._mainWin.plotsLayout.removeWidget(plotWidgetToRemove)
+                self._mainWin.removePlotWidget(plotWidgetToRemove)
                 plotWidgetToRemove.deleteLater()
 
         # Delete streaming controller and config
@@ -626,7 +626,7 @@ class MainController(QObject):
             self.streamingStarted.connect(newSignalPlotWidget.startTimers)
             self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
             self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
-            self._mainWin.plotsLayout.replaceWidget(oldSignalPlotWidget, newSignalPlotWidget)
+            self._mainWin.replacePlotWidget(oldSignalPlotWidget, newSignalPlotWidget)
             self._signalPlotWidgets[newPlotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
@@ -765,7 +765,7 @@ class MainController(QObject):
                 self.streamingStarted.connect(newSignalPlotWidget.startTimers)
                 self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
                 self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
-                self._mainWin.plotsLayout.replaceWidget(oldSignalPlotWidget, newSignalPlotWidget)
+                self._mainWin.replacePlotWidget(oldSignalPlotWidget, newSignalPlotWidget)
                 self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
             oldSignalPlotWidget.deleteLater()
@@ -779,7 +779,7 @@ class MainController(QObject):
             self.streamingStarted.connect(newSignalPlotWidget.startTimers)
             self.streamingStopped.connect(newSignalPlotWidget.stopTimers)
             self._mainWin.renderLenChanged.connect(newSignalPlotWidget.reInitPlot)
-            self._mainWin.plotsLayout.addWidget(newSignalPlotWidget)
+            self._mainWin.addPlotWidget(newSignalPlotWidget)
             self._signalPlotWidgets[plotId] = newSignalPlotWidget
 
         # Save new settings

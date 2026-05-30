@@ -250,7 +250,9 @@
      </widget>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="plotsLayout"/>
+     <widget class="QWidget" name="plotsContainer">
+      <layout class="QVBoxLayout" name="plotsLayout"/>
+     </widget>
     </item>
    </layout>
   </widget>

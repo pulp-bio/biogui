@@ -168,10 +168,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout1.addWidget(self.toggleSidebarButton)
 
-        self.plotsLayout = QVBoxLayout()
+        self.plotsContainer = QWidget(self.centralWidget)
+        self.plotsContainer.setObjectName(u"plotsContainer")
+        self.plotsLayout = QVBoxLayout(self.plotsContainer)
         self.plotsLayout.setObjectName(u"plotsLayout")
+        self.plotsLayout.setContentsMargins(0, 0, 0, 0)
 
-        self.horizontalLayout1.addLayout(self.plotsLayout)
+        self.horizontalLayout1.addWidget(self.plotsContainer)
 
         self.horizontalLayout1.setStretch(0, 3)
         self.horizontalLayout1.setStretch(2, 10)

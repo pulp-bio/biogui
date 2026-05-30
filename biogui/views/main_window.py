@@ -8,11 +8,13 @@ View for the main window.
 """
 
 from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QMainWindow, QWidget
 
 from biogui.ui.ui_main_window import Ui_MainWindow
 from biogui.utils import detectTheme
+
+from .plot_layout_manager import PlotLayoutManager
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -47,8 +49,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.renderLenMs = 5000
         self.renderLenComboBox.currentTextChanged.connect(self._onRenderLenChange)
 
+        self._plotLayoutManager = PlotLayoutManager(self.plotsContainer)
         self._sidebarVisible = True
         self._setupSidebarToggle()
+
+    def setupViewMenu(self) -> None:
+        """Add View menu with plot layout options (call after other menus are created)."""
+        viewMenu = self.menuBar().addMenu("View")
+        self.actionTwoColumnPlots = QAction("Two-column layout", self)
+        self.actionTwoColumnPlots.setCheckable(True)
+        self.actionTwoColumnPlots.triggered.connect(self._onTwoColumnPlotsToggled)
+        viewMenu.addAction(self.actionTwoColumnPlots)
+
+    @Slot(bool)
+    def _onTwoColumnPlotsToggled(self, enabled: bool) -> None:
+        self._plotLayoutManager.setTwoColumn(enabled)
+
+    def addPlotWidget(self, widget: QWidget) -> None:
+        self._plotLayoutManager.addWidget(widget)
+
+    def removePlotWidget(self, widget: QWidget) -> None:
+        self._plotLayoutManager.removeWidget(widget)
+
+    def replacePlotWidget(self, oldWidget: QWidget, newWidget: QWidget) -> None:
+        self._plotLayoutManager.replaceWidget(oldWidget, newWidget)
 
     def _setupSidebarToggle(self) -> None:
         """Wire sidebar collapse/expand to button and Ctrl+B shortcut."""
