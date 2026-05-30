@@ -47,6 +47,8 @@ class MModePlotMode(BasePlotMode):
         - showFiltered: Show filtered data
         - showEnvelope: Show envelope
         - mmodeColormap: M-mode colormap label ("Grayscale" or "Viridis")
+        - mmodeLogCompression: Apply log compression before display
+        - mmodeDynamicRange: Dynamic range in dB for log compression
         - enableBandpass: Enable bandpass filter
         - bandpassLow: Low cutoff frequency in Hz
         - bandpassHigh: High cutoff frequency in Hz
@@ -86,6 +88,7 @@ class MModePlotMode(BasePlotMode):
         "Viridis": "viridis",
     }
     DEFAULT_COLORMAP = "Grayscale"
+    DEFAULT_DYNAMIC_RANGE_DB = 40.0
 
     def __init__(
         self,
@@ -125,6 +128,8 @@ class MModePlotMode(BasePlotMode):
         self._show_envelope = config.get("showEnvelope", False)
         colormap_label = config.get("mmodeColormap", self.DEFAULT_COLORMAP)
         self._colormap = self.COLORMAPS.get(colormap_label, self.COLORMAPS[self.DEFAULT_COLORMAP])
+        self._log_compression = config.get("mmodeLogCompression", False)
+        self._dynamic_range = float(config.get("mmodeDynamicRange", self.DEFAULT_DYNAMIC_RANGE_DB))
 
         # Determine which mode to display (only one should be True for M-mode)
         if self._show_envelope:
@@ -201,9 +206,17 @@ class MModePlotMode(BasePlotMode):
         self._image_item.setColorMap(colormap)
 
         # Display initial empty buffer
-        self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
+        self._update_image()
 
         self._needs_rect_setup = True
+
+    def _update_image(self) -> None:
+        if self._image_item is None:
+            return
+        if self._log_compression:
+            self._image_item.setImage(self._mmode_buffer.T, autoLevels=False, levels=(0, 255))
+        else:
+            self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
 
     def render(self) -> None:
         """
@@ -237,6 +250,14 @@ class MModePlotMode(BasePlotMode):
             processed_scans.append(processed[:, 0])  # Remove channel dimension
 
         processed_scans = np.array(processed_scans).T  # Shape: (num_samples, scans_to_process)
+        if self._log_compression:
+            compressed = np.zeros_like(processed_scans, dtype=np.float64)
+            for col_idx in range(processed_scans.shape[1]):
+                compressed[:, col_idx] = UltrasoundFilter.apply_log_compression(
+                    processed_scans[:, col_idx],
+                    self._dynamic_range,
+                )
+            processed_scans = compressed
 
         # Scroll the M-mode buffer to the left by scans_to_process columns
         self._mmode_buffer = np.roll(self._mmode_buffer, -scans_to_process, axis=1)
@@ -249,7 +270,7 @@ class MModePlotMode(BasePlotMode):
             self._setup_image_rect()
             self._needs_rect_setup = False
 
-        self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
+        self._update_image()
 
         # Update counters
         self._pending_scans -= scans_to_process
@@ -332,7 +353,7 @@ class MModePlotMode(BasePlotMode):
         self._needs_rect_setup = True
 
         if self._graph_widget and self._image_item:
-            self._image_item.setImage(self._mmode_buffer.T, autoLevels=True)
+            self._update_image()
 
     def get_data_queue(self) -> deque:
         """
