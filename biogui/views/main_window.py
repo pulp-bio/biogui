@@ -50,6 +50,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.renderLenComboBox.currentTextChanged.connect(self._onRenderLenChange)
 
         self._plotLayoutManager = PlotLayoutManager(self.plotsContainer)
+        self._plotStatsVisible = True
         self._sidebarVisible = True
         self._setupSidebarToggle()
 
@@ -61,18 +62,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionTwoColumnPlots.triggered.connect(self._onTwoColumnPlotsToggled)
         viewMenu.addAction(self.actionTwoColumnPlots)
 
+        self.actionShowPlotStats = QAction("Show plot stats", self)
+        self.actionShowPlotStats.setCheckable(True)
+        self.actionShowPlotStats.setChecked(True)
+        self.actionShowPlotStats.triggered.connect(self._onShowPlotStatsToggled)
+        viewMenu.addAction(self.actionShowPlotStats)
+
+    @Slot(bool)
+    def _onShowPlotStatsToggled(self, visible: bool) -> None:
+        self._plotStatsVisible = visible
+        self._plotLayoutManager.setStatsVisible(visible)
+
     @Slot(bool)
     def _onTwoColumnPlotsToggled(self, enabled: bool) -> None:
         self._plotLayoutManager.setTwoColumn(enabled)
 
     def addPlotWidget(self, widget: QWidget) -> None:
         self._plotLayoutManager.addWidget(widget)
+        if hasattr(widget, "setStatsVisible"):
+            widget.setStatsVisible(self._plotStatsVisible)
 
     def removePlotWidget(self, widget: QWidget) -> None:
         self._plotLayoutManager.removeWidget(widget)
 
     def replacePlotWidget(self, oldWidget: QWidget, newWidget: QWidget) -> None:
         self._plotLayoutManager.replaceWidget(oldWidget, newWidget)
+        if hasattr(newWidget, "setStatsVisible"):
+            newWidget.setStatsVisible(self._plotStatsVisible)
 
     def _setupSidebarToggle(self) -> None:
         """Wire sidebar collapse/expand to button and Ctrl+B shortcut."""

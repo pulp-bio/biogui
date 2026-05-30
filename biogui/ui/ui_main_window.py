@@ -171,8 +171,9 @@ class Ui_MainWindow(object):
         self.plotsContainer = QWidget(self.centralWidget)
         self.plotsContainer.setObjectName(u"plotsContainer")
         self.plotsLayout = QVBoxLayout(self.plotsContainer)
+        self.plotsLayout.setSpacing(5)
         self.plotsLayout.setObjectName(u"plotsLayout")
-        self.plotsLayout.setContentsMargins(0, 0, 0, 0)
+        self.plotsLayout.setContentsMargins(4, 4, 4, 4)
 
         self.horizontalLayout1.addWidget(self.plotsContainer)
 

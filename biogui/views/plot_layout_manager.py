@@ -17,13 +17,15 @@ class PlotLayoutManager:
 
     MODE_SINGLE = "single"
     MODE_TWO_COLUMN = "two_column"
+    PLOT_SPACING = 5
+    PLOT_MARGIN = 4
 
     def __init__(self, container: QWidget) -> None:
         self._container = container
         self._outer = container.layout()
         if self._outer is None:
             self._outer = QVBoxLayout(container)
-        self._outer.setContentsMargins(0, 0, 0, 0)
+        self._configureLayout(self._outer)
         self._widgets: list[QWidget] = []
         self._mode = self.MODE_SINGLE
 
@@ -59,17 +61,20 @@ class PlotLayoutManager:
 
         if self._mode == self.MODE_SINGLE:
             column = QVBoxLayout()
+            self._configureLayout(column)
             self._outer.addLayout(column)
             for widget in self._widgets:
                 column.addWidget(widget)
             return
 
         grid = QVBoxLayout()
+        self._configureLayout(grid)
         self._outer.addLayout(grid)
         index = 0
         while index < len(self._widgets):
             remaining = len(self._widgets) - index
             row = QHBoxLayout()
+            self._configureLayout(row, margins=False)
             row.addWidget(self._widgets[index], 1)
             if remaining == 1:
                 grid.addLayout(row)
@@ -77,6 +82,18 @@ class PlotLayoutManager:
             row.addWidget(self._widgets[index + 1], 1)
             grid.addLayout(row)
             index += 2
+
+    def setStatsVisible(self, visible: bool) -> None:
+        for widget in self._widgets:
+            if hasattr(widget, "setStatsVisible"):
+                widget.setStatsVisible(visible)
+
+    @classmethod
+    def _configureLayout(cls, layout: QLayout, *, margins: bool = True) -> None:
+        if isinstance(layout, QVBoxLayout | QHBoxLayout):
+            margin = cls.PLOT_MARGIN if margins else 0
+            layout.setContentsMargins(margin, margin, margin, margin)
+            layout.setSpacing(cls.PLOT_SPACING)
 
     @staticmethod
     def _clearLayout(layout: QLayout) -> None:
