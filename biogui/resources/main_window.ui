@@ -20,7 +20,7 @@
    <string>BioGUI</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="3,0,10">
+   <layout class="QHBoxLayout" name="horizontalLayout1">
     <item>
      <widget class="QWidget" name="sidebarPanel">
       <property name="minimumSize">
@@ -213,40 +213,6 @@
        </widget>
       </item>
      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QToolButton" name="toggleSidebarButton">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>16</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16</width>
-        <height>16777215</height>
-       </size>
-      </property>
-      <property name="toolTip">
-       <string>Toggle sidebar (Ctrl+B)</string>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="autoRaise">
-       <bool>true</bool>
-      </property>
-      <property name="arrowType">
-       <enum>Qt::LeftArrow</enum>
-      </property>
      </widget>
     </item>
     <item>
