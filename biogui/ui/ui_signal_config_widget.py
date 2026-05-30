@@ -293,6 +293,31 @@ class Ui_SignalConfigWidget(object):
 
         self.formLayout.setWidget(10, QFormLayout.ItemRole.FieldRole, self.mmodeColormapComboBox)
 
+        self.label17 = QLabel(self.plotGroupBox)
+        self.label17.setObjectName(u"label17")
+
+        self.formLayout.setWidget(12, QFormLayout.ItemRole.LabelRole, self.label17)
+
+        self.mmodeLogCompressionCheckBox = QCheckBox(self.plotGroupBox)
+        self.mmodeLogCompressionCheckBox.setObjectName(u"mmodeLogCompressionCheckBox")
+        self.mmodeLogCompressionCheckBox.setEnabled(False)
+
+        self.formLayout.setWidget(12, QFormLayout.ItemRole.FieldRole, self.mmodeLogCompressionCheckBox)
+
+        self.label18 = QLabel(self.plotGroupBox)
+        self.label18.setObjectName(u"label18")
+
+        self.formLayout.setWidget(14, QFormLayout.ItemRole.LabelRole, self.label18)
+
+        self.mmodeDynamicRangeSpinBox = QDoubleSpinBox(self.plotGroupBox)
+        self.mmodeDynamicRangeSpinBox.setObjectName(u"mmodeDynamicRangeSpinBox")
+        self.mmodeDynamicRangeSpinBox.setEnabled(False)
+        self.mmodeDynamicRangeSpinBox.setMinimum(10.000000000000000)
+        self.mmodeDynamicRangeSpinBox.setMaximum(80.000000000000000)
+        self.mmodeDynamicRangeSpinBox.setValue(40.000000000000000)
+
+        self.formLayout.setWidget(14, QFormLayout.ItemRole.FieldRole, self.mmodeDynamicRangeSpinBox)
+
 
         self.verticalLayout.addWidget(self.plotGroupBox)
 
@@ -392,5 +417,9 @@ class Ui_SignalConfigWidget(object):
         self.mmodeColormapComboBox.setItemText(0, QCoreApplication.translate("SignalConfigWidget", u"Grayscale", None))
         self.mmodeColormapComboBox.setItemText(1, QCoreApplication.translate("SignalConfigWidget", u"Viridis", None))
 
+        self.label17.setText(QCoreApplication.translate("SignalConfigWidget", u"Log compression:", None))
+        self.mmodeLogCompressionCheckBox.setText(QCoreApplication.translate("SignalConfigWidget", u"Enable", None))
+        self.label18.setText(QCoreApplication.translate("SignalConfigWidget", u"Dynamic range:", None))
+        self.mmodeDynamicRangeSpinBox.setSuffix(QCoreApplication.translate("SignalConfigWidget", u" dB", None))
     # retranslateUi
 

@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright ETH Zurich - University of Bologna 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
@@ -148,6 +153,29 @@ class UltrasoundFilter:
             Envelope data with same shape as input.
         """
         return np.abs(hilbert(data_in, axis=0))
+
+    @staticmethod
+    def apply_log_compression(data: np.ndarray, dynamic_range: float = 40.0) -> np.ndarray:
+        """
+        Apply B-mode style log compression.
+
+        Follows the MUST toolbox convention: 20*log10(amplitude/peak) + DR,
+        scaled to [0, 255].
+        """
+        amplitude = np.abs(data)
+        peak = float(np.max(amplitude))
+        if peak <= 0 or not np.isfinite(peak):
+            return np.zeros_like(data, dtype=np.float64)
+
+        if dynamic_range >= 1:
+            compressed = np.zeros_like(amplitude, dtype=np.float64)
+            positive = amplitude > 0
+            compressed[positive] = 20 * np.log10(amplitude[positive] / peak) + dynamic_range
+            compressed = 255 * compressed / dynamic_range
+        else:
+            compressed = np.power(amplitude / peak, dynamic_range) * 255
+
+        return np.clip(compressed, 0, 255)
 
     @property
     def enabled(self) -> bool:
