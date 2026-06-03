@@ -478,7 +478,7 @@ class StreamingController(QObject):
 
         # Store signal specifications
         self._sigInfo = {
-            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden", "extras")}
             for iSigName, iSigInfo in sigsConfigs.items()
         }
 
@@ -553,7 +553,7 @@ class StreamingController(QObject):
 
         # Keep signal metadata in sync with the active configuration.
         self._sigInfo = {
-            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden", "extras")}
             for iSigName, iSigInfo in dataSourceConfig["sigsConfigs"].items()
         }
 
