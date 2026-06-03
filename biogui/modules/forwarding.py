@@ -17,7 +17,7 @@ from sys import platform
 from types import MappingProxyType
 
 import numpy as np
-from PySide6.QtCore import QLocale, QObject, Qt, QThread, Signal, Slot
+from PySide6.QtCore import QLocale, QMetaObject, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtGui import (
     QDoubleValidator,
     QIntValidator,
@@ -122,6 +122,7 @@ class _ForwardingWorker(QObject):
                     "stepLen": bufferConfig["stepLen"],
                 }
 
+    @Slot()
     def connectToServer(self) -> None:
         """Create the socket and connect to the specified server."""
         if not self._socketConfig:  # empty configuration (should never happen)
@@ -145,6 +146,26 @@ class _ForwardingWorker(QObject):
 
         self._connected = True
 
+    @property
+    def is_connected(self) -> bool:
+        """Whether the TCP/Unix socket is connected."""
+        return self._connected
+
+    @staticmethod
+    def _packet_ready(dataSourceBuffers: dict) -> bool:
+        """Metadata queues full and at least one ultrasound queue ready."""
+        meta_ready = True
+        ultrasound_ready = False
+        for sigBuffers in dataSourceBuffers.values():
+            queue_len = len(sigBuffers["queue"])
+            win_len = sigBuffers["winLen"]
+            if win_len > 1:
+                if queue_len >= win_len:
+                    ultrasound_ready = True
+            elif queue_len < win_len:
+                meta_ready = False
+        return meta_ready and ultrasound_ready
+
     @Slot(list)
     def forward(self, dataPacket: list[SigData]) -> None:
         """
@@ -166,38 +187,38 @@ class _ForwardingWorker(QObject):
         for sigData in dataPacket:
             if sigData.sigName not in self._buffers[curDataSourceId]:
                 continue
-            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
-                sigData.data
-            )
+            if sigData.data.size == 0:
+                continue
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(sigData.data)
 
-        # Exhaustively send data until some buffers are empty
+        # Send packets while buffers are ready
         while True:
-            # Check if all buffers are full
-            bufferFilled = all(
-                len(sigBuffers["queue"]) >= sigBuffers["winLen"]
+            if not all(
+                self._packet_ready(dataSourceBuffers)
                 for dataSourceBuffers in self._buffers.values()
-                for sigBuffers in dataSourceBuffers.values()
-            )
-            if not bufferFilled:
+            ):
                 break
 
-            data = bytearray()
-            for dataSourceId in sorted(
-                self._buffers
-            ):  # iterate over data sources in alphabetical order
+            packet = bytearray()
+            for dataSourceId in sorted(self._buffers):
                 dataSourceBuffers = self._buffers[dataSourceId]
-                for sigName in sorted(
-                    dataSourceBuffers
-                ):  # iterate over signals in alphabetical order
+                ultrasound_sent = False
+                for sigName in sorted(dataSourceBuffers):
                     sigBuffers = dataSourceBuffers[sigName]
                     queue = sigBuffers["queue"]
                     winLen = sigBuffers["winLen"]
                     stepLen = sigBuffers["stepLen"]
-                    # Convert to bytes
-                    data.extend(np.asarray(queue)[:winLen].tobytes())
-                    # Shift by step length
+
+                    if winLen > 1:
+                        if ultrasound_sent or len(queue) < winLen:
+                            continue
+                        ultrasound_sent = True
+
+                    chunk = np.ascontiguousarray(np.asarray(queue)[:winLen])
+                    packet.extend(chunk.tobytes())
                     sigBuffers["queue"] = deque(islice(queue, stepLen, len(queue)))
-            self._socket.sendall(data)
+
+            self._socket.sendall(packet)
 
     def reset(self) -> None:
         """Reset the worker."""
@@ -235,6 +256,8 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         self.socketPathTextField.hide()
 
         self.socketTypeComboBox.currentTextChanged.connect(self._onComboBoxChange)
+        self.windowModeRadioButton.toggled.connect(self._onForwardingModeChanged)
+        self._onForwardingModeChanged(self.windowModeRadioButton.isChecked())
 
         # Disable Unix socket option on Windows
         if platform == "win32":
@@ -284,6 +307,11 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
             return config, ""
 
         return None, "Invalid socket type"  # should never happen
+
+    def _onForwardingModeChanged(self, window_mode: bool) -> None:
+        if window_mode and not self.winLenTextField.text().strip():
+            self.winLenTextField.setText("33.333")
+            self.winStrideTextField.setText("33.333")
 
     def _onComboBoxChange(self, socketType: str):
         if socketType == "TCP":
@@ -336,6 +364,7 @@ class ForwardingController(QObject):
 
         self._streamingControllers = streamingControllers
         self._confWidget = _ForwardingConfigWidget()
+        self._forwarding_stream_connected = False
 
         # Forwarding worker
         self._forwardingWorker = _ForwardingWorker()
@@ -343,7 +372,6 @@ class ForwardingController(QObject):
         self._forwardingWorker.moveToThread(self._forwardingThread)
 
         # Connects signals
-        self._forwardingThread.started.connect(self._forwardingWorker.connectToServer)
         self._forwardingThread.finished.connect(self._forwardingWorker.reset)
         self._forwardingThread.destroyed.connect(self._forwardingWorker.deleteLater)
 
@@ -446,6 +474,7 @@ class ForwardingController(QObject):
         # Compute buffer sizes for the signals of interest
         winLenS = config.pop("winLenS")
         winStrideS = config.pop("winStrideS")
+        eager_mode = winLenS < 0
         buffersConfig = {}
         for dataSourceId, sigNames in sigsToForward.items():
             buffersConfig[dataSourceId] = {}
@@ -453,22 +482,39 @@ class ForwardingController(QObject):
             streamingController = self._streamingControllers[dataSourceId]
             for sigName in sigNames:
                 fs = streamingController.sigInfo[sigName]["fs"]
-                winLen = int(round(winLenS * fs)) if winLenS > 0 else 1
-                stepLen = int(round(winStrideS * fs)) if winStrideS > 0 else 1
+                extras = streamingController.sigInfo[sigName].get("extras", {})
+
+                if eager_mode and extras.get("type") == "ultrasound":
+                    winLen = int(extras.get("num_samples", 1))
+                    stepLen = winLen
+                else:
+                    winLen = int(round(winLenS * fs)) if winLenS > 0 else 1
+                    stepLen = int(round(winStrideS * fs)) if winStrideS > 0 else 1
+
                 buffersConfig[dataSourceId][sigName] = {
                     "winLen": winLen,
                     "stepLen": stepLen,
                 }
 
-            # Connect the forwarding worker to the streaming controller
-            streamingController.signalsReady.connect(self._forwardingWorker.forward)
         self._forwardingWorker.initBuffers(buffersConfig)
-
-        # Set socket configuration
         self._forwardingWorker.socketConfig = config
 
-        # Start thread
+        # Connect before any signals arrive (avoids dropping early packets).
         self._forwardingThread.start()
+        QMetaObject.invokeMethod(
+            self._forwardingWorker,
+            "connectToServer",
+            Qt.ConnectionType.BlockingQueuedConnection,
+        )
+        if not self._forwardingWorker.is_connected:
+            self._stopForwarding()
+            return
+
+        for dataSourceId in sigsToForward:
+            self._streamingControllers[dataSourceId].signalsReady.connect(
+                self._forwardingWorker.forward
+            )
+        self._forwarding_stream_connected = True
 
     def _stopForwarding(self) -> None:
         """Stop forwarding."""
@@ -479,9 +525,10 @@ class ForwardingController(QObject):
         self._forwardingThread.quit()
         self._forwardingThread.wait()
 
-        # Disconnect the forwarding worker from the streaming controller
-        sigsToForward = getCheckedSignals(self.dataSourceModel)
-        for dataSourceId in sigsToForward:
-            self._streamingControllers[dataSourceId].signalsReady.disconnect(
-                self._forwardingWorker.forward
-            )
+        if self._forwarding_stream_connected:
+            sigsToForward = getCheckedSignals(self.dataSourceModel)
+            for dataSourceId in sigsToForward:
+                self._streamingControllers[dataSourceId].signalsReady.disconnect(
+                    self._forwardingWorker.forward
+                )
+            self._forwarding_stream_connected = False
