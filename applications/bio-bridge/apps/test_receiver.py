@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright ETH Zurich - University of Bologna 2026
 # Licensed under Apache v2.0 see LICENSE for details.
 #
@@ -21,6 +26,7 @@ Use Case:
 Usage:
     python -m apps.test_receiver
     python -m apps.test_receiver --port 12345
+    python -m apps.test_receiver --print-every 1
 """
 
 import argparse
@@ -35,7 +41,11 @@ from core import (
 )
 
 
-def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
+def run_receiver(
+    host: str = BIOGUI_HOST,
+    port: int = BIOGUI_PORT,
+    print_every: int = 8,
+):
     """
     Run TCP receiver and print received packets.
 
@@ -45,6 +55,8 @@ def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
         Host address to bind to
     port : int
         TCP port to listen on
+    print_every : int
+        Print a summary line every N packets (1 = every packet).
     """
     # Print configuration
     WULPUS_PACKET_FORMAT.print_info()
@@ -58,6 +70,7 @@ def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
 
     packet_size = WULPUS_PACKET_FORMAT.packet_size
     print(f"Listening on {host}:{port} ({packet_size} bytes/packet)...")
+    print(f"Logging every {print_every} packet(s).")
     print("Waiting for BioGUI to connect...")
     print()
 
@@ -78,8 +91,20 @@ def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
             packet = recv_exact(conn, packet_size)
             packet_count += 1
 
+            if packet_count == 1:
+                print(f"First packet size: {len(packet)} bytes (expected {packet_size})")
+                if len(packet) != packet_size:
+                    print(
+                        "Size mismatch: BioGUI forwarding must send exactly "
+                        f"{packet_size} bytes per packet (397 US samples + IMU + metadata)."
+                    )
+
             # Decode
-            decoded = decode_packet(packet)
+            try:
+                decoded = decode_packet(packet)
+            except ValueError as err:
+                print(f"Decode error on packet #{packet_count}: {err}")
+                continue
 
             # Extract data
             acquisition_number = int(decoded["acquisition_number"][0])
@@ -108,7 +133,7 @@ def run_receiver(host: str = BIOGUI_HOST, port: int = BIOGUI_PORT):
             if loss_str.strip():
                 print(loss_str)
 
-            if packet_count % 8 == 0:
+            if print_every > 0 and packet_count % print_every == 0:
                 prefix = f"Packet #{packet_count:5d}:  "
                 print(
                     f"{prefix}Acquisition: {acquisition_number:5d}  Config: {config_id}  "
@@ -148,7 +173,15 @@ def main():
 Examples:
   python apps/test_receiver.py
   python apps/test_receiver.py --port 12345
+  python apps/test_receiver.py --print-every 1
         """,
+    )
+    parser.add_argument(
+        "--print-every",
+        type=int,
+        default=8,
+        metavar="N",
+        help="Print a summary every N packets (default: 8). Use 1 for every packet.",
     )
     parser.add_argument(
         "--host",
@@ -164,7 +197,9 @@ Examples:
     )
     args = parser.parse_args()
 
-    run_receiver(args.host, args.port)
+    if args.print_every < 1:
+        parser.error("--print-every must be at least 1")
+    run_receiver(args.host, args.port, args.print_every)
 
 
 if __name__ == "__main__":
