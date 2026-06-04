@@ -30,7 +30,9 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, cast
 
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal, Slot
+import logging
+
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QIcon, QMouseEvent, QPainter, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QMessageBox,
@@ -53,6 +55,64 @@ from .streaming_controller import StreamingController
 
 # Suffix from StreamingController.__str__ (unique dict key); strip for tree labels only.
 _DATA_SOURCE_INTERNAL_ID_SUFFIX = re.compile(r" \[0x[0-9a-fA-F]+\]$")
+
+
+def _get_wulpus_runtime_config(interfaceModule: Any) -> Any | None:
+    """Extract the active WULPUS runtime config from an interface module, if present."""
+    decode_globals = getattr(getattr(interfaceModule, "decodeFn", None), "__globals__", {})
+    current_config = decode_globals.get("wulpus_config")
+    if hasattr(current_config, "pulse_freq") and hasattr(current_config, "sampling_freq"):
+        return current_config
+    return None
+
+
+def _build_post_run_plot_config(
+    dataSourceConfig: dict,
+    sigsConfigs: dict | None = None,
+    interfaceModule: Any | None = None,
+) -> dict:
+    """Build a generic post-run plotting config from a data source configuration."""
+    enabled = bool(dataSourceConfig.get("plotAfterRun", False))
+    logging.info(f"Post-run plotting enabled: {enabled}")
+    plotter_key = None
+    plot_options: dict = {}
+
+    if enabled:
+        for sigConfig in (sigsConfigs or dataSourceConfig.get("sigsConfigs", {})).values():
+            extras = sigConfig.get("extras", {})
+            if extras.get("type") == "ultrasound":
+                plotter_key = "ultrasound"
+                break
+
+        if plotter_key == "ultrasound":
+            runtime_config = _get_wulpus_runtime_config(interfaceModule or dataSourceConfig.get("interfaceModule"))
+            ultrasound_signal_names = [
+                sig_name
+                for sig_name, sig_config in (sigsConfigs or dataSourceConfig.get("sigsConfigs", {})).items()
+                if sig_config.get("extras", {}).get("type") == "ultrasound"
+            ]
+
+            plot_options = {
+                "displayMode": dataSourceConfig.get("postRunDisplayMode", "mmode"),
+                "enabledChannels": {
+                    sig_name: True for sig_name in ultrasound_signal_names
+                },
+                "bandwidthFraction": 0.45,
+                "enableBandpass": True,
+                "showEnvelope": True,
+            }
+
+            if runtime_config is not None:
+                plot_options.update(
+                    {
+                        "transmissionFrequencyHz": float(runtime_config.pulse_freq),
+                        "adcSamplingFreqHz": float(runtime_config.sampling_freq),
+                        "numSamples": int(runtime_config.num_samples),
+                        "adcStartDelaySeconds": (runtime_config.start_adcsampl - runtime_config.start_ppg) * 1e-6,
+                    }
+                )
+
+    return {"enabled": enabled, "plotterKey": plotter_key, "plotOptions": plot_options}
 
 
 def _strip_streaming_controller_instance_suffix(data_source_id: str) -> str:
@@ -294,11 +354,39 @@ class MainController(QObject):
         # Emit "stop" Qt Signal (for pluggable modules)
         self.streamingStopped.emit()
 
+        # Trigger post-run plots after the event loop unblocks
+        QTimer.singleShot(0, self._plotLatestCollectedRun)
+
         # Handle UI elements
         self._mainWin.startStreamingButton.setEnabled(True)
         self._mainWin.stopStreamingButton.setEnabled(False)
         self._mainWin.streamConfGroupBox.setEnabled(True)
         self._mainWin.moduleContainer.setEnabled(True)
+
+    def _plotLatestCollectedRun(self) -> None:
+        """Plot the newest collected .bio file for each stopped data source that has post-run plotting enabled."""
+        from biogui.views.post_run_plotters.registry import plot_latest_runtime_file
+
+        checkedDataSources = getCheckedDataSources(self.dataSourceModel)
+        for dataSource in checkedDataSources:
+            controller = self._streamingControllers.get(dataSource)
+            if controller is None:
+                continue
+            plotConfig = getattr(controller, "postRunPlotConfig", None)
+            if not plotConfig or not plotConfig.get("enabled", False):
+                continue
+            runtimeDir = controller.filePath.parent if controller.filePath else None
+            if runtimeDir is None:
+                logging.info("Post-run plotting skipped: no saved runtime file is configured.")
+                continue
+            plotterKey = plotConfig.get("plotterKey")
+            if not plotterKey:
+                logging.info("Post-run plotting skipped: no plotter registered for '%s'.", dataSource)
+                continue
+            try:
+                plot_latest_runtime_file(plotterKey, runtimeDir, plotConfig.get("plotOptions"))
+            except Exception:
+                logging.exception("Post-run plotting failed for '%s'.", dataSource)
 
     def _addDataSource(self, dataSourceConfig: dict, sigsConfigs: dict) -> None:
         """Add a data source, given its configuration."""
@@ -306,7 +394,7 @@ class MainController(QObject):
         dataSourceWorkerArgs = {
             k: v
             for k, v in dataSourceConfig.items()
-            if k not in ("interfacePath", "interfaceModule", "filePath")
+            if k not in ("interfacePath", "interfaceModule", "filePath", "plotAfterRun")
         }
         interfaceModule = dataSourceConfig["interfaceModule"]
         filePath = dataSourceConfig.get("filePath", None)
@@ -318,6 +406,7 @@ class MainController(QObject):
             interfaceModule.decodeFn,
             filePath,
             sigsConfigs,
+            postRunPlotConfig=_build_post_run_plot_config(dataSourceConfig, sigsConfigs, interfaceModule),
             parent=self,
         )
         self._streamingControllers[str(streamingController)] = streamingController
@@ -340,6 +429,11 @@ class MainController(QObject):
 
         # Save configuration
         dataSourceConfig["sigsConfigs"] = sigsConfigs
+        dataSourceConfig["postRunPlotConfig"] = _build_post_run_plot_config(
+            dataSourceConfig,
+            sigsConfigs,
+            interfaceModule,
+        )
         self._config[str(streamingController)] = dataSourceConfig
 
         # Configure Qt Signals
@@ -589,12 +683,16 @@ class MainController(QObject):
                 del sigsConfigs[sigName]["freqs"]
                 del sigsConfigs[sigName]["filtOrder"]
         newDataSourceConfig["sigsConfigs"] = sigsConfigs
+        newDataSourceConfig["postRunPlotConfig"] = _build_post_run_plot_config(newDataSourceConfig, sigsConfigs)
 
         # Update streaming controller and store new settings
         streamingController = self._streamingControllers.pop(dataSourceToEdit)
         oldDataSourceId = str(streamingController)
         del self._config[oldDataSourceId]
         streamingController.editDataSourceConfig(newDataSourceConfig)
+        streamingController.setPostRunPlotConfig(
+            _build_post_run_plot_config(newDataSourceConfig, sigsConfigs, newDataSourceConfig["interfaceModule"])
+        )
         newDataSourceId = str(streamingController)
         self._streamingControllers[newDataSourceId] = streamingController
         self._config[newDataSourceId] = newDataSourceConfig
