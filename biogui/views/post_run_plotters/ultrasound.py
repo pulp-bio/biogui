@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 import numpy as np
 import pandas as pd
 
@@ -134,54 +132,6 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
     return df_session
 
 
-def _plot_trigger_row(axis, dataframe: pd.DataFrame, time_axis: np.ndarray) -> None:
-    x_axis = time_axis
-
-    if "Label" in dataframe.columns:
-        axis.plot(
-            x_axis,
-            dataframe["Label"].to_numpy(dtype=float, copy=False),
-            label="trigger",
-        )
-        axis.legend(loc="best")
-
-    axis.set_ylabel("Trigger")
-    axis.set_xlim(x_axis[0], x_axis[-1])
-
-
-def _plot_trigger_string_row(axis, dataframe: pd.DataFrame, time_axis: np.ndarray) -> None:
-    x_axis = time_axis
-    codes, labels = pd.factorize(dataframe["Label_str"], sort=True)
-
-    axis.plot(x_axis, codes.astype(float), label="trigger_str")
-    axis.legend(loc="best")
-    axis.set_yticks(np.arange(len(labels)))
-    axis.set_yticklabels([str(label) for label in labels])
-    axis.set_ylabel("Trigger str")
-    axis.set_xlim(x_axis[0], x_axis[-1])
-
-
-def _plot_imu_row(axis, dataframe: pd.DataFrame, time_axis: np.ndarray) -> None:
-    x_axis = time_axis
-    plotted = False
-
-    for imu_column in ("imu_x", "imu_y", "imu_z"):
-        if imu_column in dataframe.columns:
-            axis.plot(
-                x_axis,
-                dataframe[imu_column].to_numpy(dtype=float, copy=False),
-                label=imu_column,
-            )
-            plotted = True
-
-    if plotted:
-        axis.set_title("IMU Data")
-        axis.legend(loc="best")
-        axis.set_xlim(x_axis[0], x_axis[-1])
-    else:
-        axis.set_title("IMU Data (missing)")
-
-    axis.set_ylabel("IMU")
 
 
 _NON_CHANNEL_COLUMNS = {
@@ -320,91 +270,6 @@ def _process_waveforms(
     return processed
 
 
-def _plot_amode(
-    dataframe: pd.DataFrame,
-    channel_columns: list[str],
-    plot_options: dict | None,
-) -> pd.DataFrame:
-    n_frames = len(dataframe)
-
-    if n_frames == 0 or not channel_columns:
-        plt.figure(figsize=(10, 4))
-        plt.title("A-mode (no data)")
-        plt.show()
-        return dataframe
-
-    figure, axes = plt.subplots(
-        nrows=len(channel_columns),
-        sharex=False,
-        figsize=(18, max(1, len(channel_columns)) * 4),
-        layout="constrained",
-    )
-
-    if not isinstance(axes, np.ndarray):
-        axes = np.array([axes])
-
-    waveform_matrices: list[np.ndarray] = []
-    lines = []
-
-    for axis, channel_name in zip(axes, channel_columns):
-        waveforms = dataframe[channel_name].dropna()
-
-        if waveforms.empty:
-            axis.set_title(f"{channel_name} empty")
-            axis.axis("off")
-            waveform_matrices.append(np.empty((0, 0)))
-            lines.append(None)
-            continue
-
-        values = waveforms.to_numpy()
-        matrix = np.vstack(values)  # shape: (n_frames, n_depth_samples)
-
-        processed = _process_waveforms(matrix, plot_options)
-        waveform_matrices.append(processed)
-
-        line, = axis.plot(
-            np.arange(processed.shape[1]),
-            processed[0, :],
-            label=f"{channel_name} @ t=0",
-        )
-
-        axis.set_title(channel_name)
-        axis.set_ylabel("Amplitude")
-        axis.legend(loc="best")
-        lines.append(line)
-
-    slider_axis = figure.add_axes([0.15, 0.03, 0.7, 0.03])
-    slider = Slider(
-        slider_axis,
-        "Time",
-        0,
-        max(0, n_frames - 1),
-        valinit=0,
-        valstep=1,
-    )
-
-    def _update(selected_index: float) -> None:
-        index = int(selected_index)
-
-        for line, matrix in zip(lines, waveform_matrices):
-            if line is None or matrix.size == 0:
-                continue
-
-            row = min(index, matrix.shape[0] - 1)
-            line.set_ydata(matrix[row, :])
-            line.set_label(f"{line.get_label().split(' @ t=')[0]} @ t={row}")
-
-        for axis in axes:
-            axis.relim()
-            axis.autoscale_view()
-            axis.legend(loc="best")
-
-        figure.canvas.draw_idle()
-
-    slider.on_changed(_update)
-    plt.show()
-
-    return dataframe
 
 
 def plot_latest_ultrasound_run(
@@ -421,125 +286,63 @@ def plot_latest_ultrasound_run(
     return bio_file
 
 
+# Module-level list that keeps PostRunPlotWindow instances alive after plot_file returns.
+_active_windows: list = []
+
+
 def plot_file(
     file_path: Path,
     plot_options: dict | None = None,
 ) -> pd.DataFrame:
+    """Load, process and display a .bio file in the Qt post-run window."""
+    from .post_run_dialog import PostRunPlotWindow
+
     loaded = load_bio_file(file_path)
     dataframe = _build_runtime_dataframe(loaded)
 
     print("Built dataframe with len", len(dataframe), "and columns", list(dataframe.columns))
 
-    display_mode = (plot_options or {}).get("displayMode", "mmode").lower()
-    print("Plotting in display mode:", display_mode)
-
     channel_columns = _resolve_enabled_channels(dataframe, plot_options)
-    print("Resolved channel columns for plotting:", channel_columns)
+    print("Resolved channel columns:", channel_columns)
 
-    has_imu = any(column in dataframe.columns for column in ("imu_x", "imu_y", "imu_z"))
-
-    if display_mode == "amode":
-        _plot_amode(dataframe, channel_columns, plot_options)
-        return dataframe
-
-    processed_columns: list[str] = []
-    processed_matrices: dict[str, np.ndarray] = {}
-
+    # ── collect raw matrices (no processing — dialog handles it) ────
+    raw_matrices: dict[str, np.ndarray] = {}
     for col in channel_columns:
-
-        ## TO-DO:add option for MISSING values check!
         us_curr = dataframe[col].dropna()
-
         if us_curr.empty:
             continue
+        raw_matrices[col] = np.vstack(us_curr.to_numpy())  # (n_frames, n_depth)
 
-        values = us_curr.to_numpy()
-        values_stacked = np.vstack(values)  # shape: (n_frames, n_depth_samples)
+    if not raw_matrices:
+        print(f"No ultrasound data to display for {file_path.name}")
+        return dataframe
 
-        processed = _process_waveforms(values_stacked, plot_options)
+    # ── compute physical axes ────────────────────────────────────────
+    _, adc_sampling_freq, _, _, _, meas_period_ms, adc_start_delay_s = _get_processing_config(plot_options)
 
-        processed_columns.append(col)
-        processed_matrices[col] = processed.T  # shape: (n_depth_samples, n_frames)
+    n_depth = next(iter(raw_matrices.values())).shape[1]
+    depth_start_mm, depth_stop_mm = _depth_axis_mm(adc_start_delay_s, n_depth, adc_sampling_freq)
+    print("Depth axis (mm):", depth_start_mm, "→", depth_stop_mm)
 
-    extra_rows = int(has_imu)
-    extra_rows += int("Label" in dataframe.columns)
-    extra_rows += int("Label_str" in dataframe.columns)
+    num_us_channels = len(raw_matrices)
+    meas_period_ms_per_channel = meas_period_ms * num_us_channels
 
-    num_us_channels = len(processed_columns)
-    n_rows = max(1, len(processed_columns) + extra_rows)
-
-    #for the time axis
-    _, adc_sampling_freq, _, _, _, meas_period, adc_start_delay_s = _get_processing_config(plot_options)
-    # adc_start_delay_s already in seconds; n_samples is constant across channels
-    n_samples = next(
-        (dataframe[col].dropna().iloc[0].size for col in channel_columns if not dataframe[col].dropna().empty),
-        400,
+    # ── launch Qt window ─────────────────────────────────────────────
+    window = PostRunPlotWindow(
+        file_path=file_path,
+        raw_matrices=raw_matrices,
+        depth_start_mm=depth_start_mm,
+        depth_stop_mm=depth_stop_mm,
+        meas_period_ms_per_channel=meas_period_ms_per_channel,
+        meas_period_ms_global=meas_period_ms,
+        dataframe=dataframe,
+        plot_options=plot_options,
     )
-    depth_axis_start, depth_axis_stop = _depth_axis_mm(adc_start_delay_s, n_samples, adc_sampling_freq)
-    print("Depth axis (mm) for US", depth_axis_start, depth_axis_stop)
-    meas_period_base = meas_period
-    meas_period_us = meas_period_base * num_us_channels  # global period → per-channel period
-
-    figure, axes = plt.subplots(
-        nrows=n_rows,
-        sharex=True,
-        figsize=(18, n_rows * 4),
-        layout="constrained",
+    _active_windows.append(window)
+    window.destroyed.connect(
+        lambda: _active_windows.remove(window) if window in _active_windows else None
     )
-
-    if not isinstance(axes, np.ndarray):
-        axes = np.array([axes])
-
-    axis_index = 0
-    time_axis_us_max = 0
-    for channel_name in processed_columns:
-        processed = processed_matrices[channel_name]
-
-
-        # build time axis
-        time_axis = np.arange(processed.shape[1]) * meas_period_us
-        if(time_axis[-1]< time_axis_us_max):
-            time_axis_us_max = time_axis[-1]
-
-        axes[axis_index].imshow(
-            processed,
-            extent=[time_axis[0], time_axis[-1], depth_axis_start, depth_axis_stop],
-            aspect="auto",
-            origin="lower",
-            interpolation="nearest",
-            cmap="viridis",
-        )
-        axes[axis_index].invert_yaxis()  # shallow (small mm) at top, deep at bottom
-        axes[axis_index].set_xlim(time_axis[0], time_axis[-1])
-        axes[axis_index].set_title(f"{channel_name} M-mode")
-        axes[axis_index].set_ylabel("Depth (mm)")
-        axis_index += 1
-
-    min_stop_time = time_axis_us_max
-    if has_imu:
-        time_axis_imu = np.arange(len(dataframe)) * meas_period_base
-        _plot_imu_row(axes[axis_index], dataframe,time_axis_imu)
-        axis_index += 1
-        min_stop_time = np.min([time_axis_imu[-1], min_stop_time])
-
-    if "Label" in dataframe.columns:
-        time_axis_trigger = np.arange(len(dataframe)) * meas_period_base
-        _plot_trigger_row(axes[axis_index], dataframe, time_axis_trigger)
-        axis_index += 1
-
-        min_stop_time = np.min([time_axis_trigger[-1], min_stop_time])
-
-    if "Label_str" in dataframe.columns:
-        time_axis_trigger_str = np.arange(len(dataframe)) * meas_period_base
-        _plot_trigger_string_row(axes[axis_index], dataframe, time_axis_trigger_str)
-        min_stop_time = np.min([time_axis_trigger_str[-1], min_stop_time])
-
-    axes[-1].set_xlabel("Frame index")
-    for ax in axes:
-        ax.set_xlim(0, min_stop_time)
-
-    figure.suptitle(file_path.name)
-    plt.show()
+    window.show()
 
     return dataframe
 
