@@ -30,7 +30,6 @@ from biogui.ui.ui_trigger_config_widget import Ui_TriggerConfigWidget
 from biogui.utils import detectTheme
 from biogui.views import MainWindow
 
-
 def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
     """
     Load and validate a JSON file representing the trigger configuration.

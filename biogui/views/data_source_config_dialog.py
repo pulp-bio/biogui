@@ -19,7 +19,7 @@ import traceback
 from pathlib import Path
 from sys import platform
 
-from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QWidget
 
 from biogui import data_sources, paths
 from biogui.platforms.wulpus.runtime import isolate_wulpus_interface_module
@@ -240,10 +240,13 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
         self._dataSourceConfig = {}
-        # Set default output directory to ./data/
-        self._outDirPath = Path.cwd() / "data"
-        self._outDirPath.mkdir(exist_ok=True)  # create it if it doesn't exist
+        # Set default output directory to the runtime data folder.
+        self._outDirPath = paths.DATARUNTIME_DIR
         self.outDirPathLabel.setText(str(self._outDirPath))
+        self.fileSavingGroupBox.setChecked(True)
+        self.fileNameTextField.setText("run")
+        self.plotAfterRunCheckBox = QCheckBox("Enable post-run plotting", self.fileSavingGroupBox)
+        self.formLayout_2.addRow(self.plotAfterRunCheckBox)
 
         # Pre-fill with provided configuration
         if kwargs:
@@ -406,6 +409,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
                 return
             self._dataSourceConfig["filePath"] = self._outDirPath / outFileName
 
+        self._dataSourceConfig["plotAfterRun"] = self.plotAfterRunCheckBox.isChecked()
+
         self.accept()
 
     def _prefill(self, dataSourceConfig: dict):
@@ -445,3 +450,6 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.fileNameTextField.setText(fileName)
         else:
             self.fileSavingGroupBox.setChecked(False)
+
+        if "plotAfterRun" in dataSourceConfig:
+            self.plotAfterRunCheckBox.setChecked(bool(dataSourceConfig["plotAfterRun"]))
