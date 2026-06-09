@@ -125,9 +125,7 @@ class SignalConfigWizard(QWizard):
                     "nCh": sigInfo[sigName]["nCh"],
                 }
                 continue
-            self.addPage(
-                SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self)
-            )
+            self.addPage(SignalConfigWizardPage(sigName, **sigInfo[sigName], parent=self))
 
         finishButton = self.button(QWizard.FinishButton)  # type: ignore
         finishButton.clicked.connect(self.onFinishedClicked)

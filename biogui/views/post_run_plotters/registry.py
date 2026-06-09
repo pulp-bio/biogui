@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Registry for post-run plotters.
 """
@@ -27,6 +32,7 @@ def get_plotter(plotter_key: str) -> PlotterFn | None:
 
     if plotter_key == "ultrasound":
         from . import ultrasound  # noqa: F401
+
         logging.info("Loaded built-in ultrasound plotter.")
         return _PLOTTERS.get(plotter_key)
 

@@ -183,7 +183,6 @@ Before merging, verify the following:
 5. Add trigger-aligned visualization and export.
 6. Expand the interface to other signal families after ultrasound is stable.
 
-
-
 These are my answers to your queston:
+
 1. RunTime save path should be saved within biogui/dataruntime folder if user didn't specify a saing directory in the configured moduler. Otherwise, fetch from the directory choosen by the user. the file is always a .bio file (the current biogui workflow should stay intact)

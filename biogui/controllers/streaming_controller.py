@@ -533,9 +533,14 @@ class StreamingController(QObject):
         dataSourceWorkerArgs = {
             k: v
             for k, v in dataSourceConfig.items()
-            if k not in (
-                "interfacePath", "interfaceModule", "filePath", "sigsConfigs",
-                "plotAfterRun", "postRunPlotConfig",
+            if k
+            not in (
+                "interfacePath",
+                "interfaceModule",
+                "filePath",
+                "sigsConfigs",
+                "plotAfterRun",
+                "postRunPlotConfig",
             )
         }
         interfaceModule: InterfaceModule = dataSourceConfig["interfaceModule"]

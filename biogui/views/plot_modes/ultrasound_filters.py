@@ -172,9 +172,7 @@ class UltrasoundFilter:
         if dynamic_range >= 1.0:
             compressed = np.zeros_like(amplitude, dtype=np.float64)
             positive = amplitude > 0.0
-            compressed[positive] = (
-                20.0 * np.log10(amplitude[positive] / peak) + dynamic_range
-            )
+            compressed[positive] = 20.0 * np.log10(amplitude[positive] / peak) + dynamic_range
             compressed = 255.0 * compressed / dynamic_range
         else:
             compressed = np.power(amplitude / peak, dynamic_range) * 255.0
@@ -254,9 +252,7 @@ class UltrasoundFilter:
             compressed = np.zeros_like(amplitude, dtype=np.float64)
             positive = ratio > 0.0
 
-            compressed[positive] = (
-                20.0 * np.log10(ratio[positive]) + dynamic_range
-            )
+            compressed[positive] = 20.0 * np.log10(ratio[positive]) + dynamic_range
             compressed = 255.0 * compressed / dynamic_range
         else:
             compressed = np.power(ratio, dynamic_range) * 255.0

@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Shared helpers for locating and reading collected .bio files.
 """
@@ -59,7 +64,9 @@ def load_bio_file(file_path: Path) -> LoadedBioFile:
         signals: dict[str, dict] = {}
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", file_handle.read(4))[0]
-            sig_name = struct.unpack(f"<{sig_name_len}s", file_handle.read(sig_name_len))[0].decode()
+            sig_name = struct.unpack(f"<{sig_name_len}s", file_handle.read(sig_name_len))[
+                0
+            ].decode()
             fs, n_samp, n_ch, dtype_code = struct.unpack("<f2Ic", file_handle.read(13))
 
             signals[sig_name] = {
@@ -78,7 +85,9 @@ def load_bio_file(file_path: Path) -> LoadedBioFile:
             "has_trigger_str": has_trigger_str,
         }
 
-        timestamp = np.frombuffer(file_handle.read(8 * n_samp_base), dtype=np.float64).reshape(n_samp_base, 1)
+        timestamp = np.frombuffer(file_handle.read(8 * n_samp_base), dtype=np.float64).reshape(
+            n_samp_base, 1
+        )
         signals["timestamp"] = {"data": timestamp, "fs": fs_base}
 
         for sig_name, sig_data in signals.items():
@@ -94,7 +103,9 @@ def load_bio_file(file_path: Path) -> LoadedBioFile:
             sig_data["data"] = data
 
         if has_trigger:
-            trigger = np.frombuffer(file_handle.read(4 * n_samp_base), dtype=np.uint32).reshape(n_samp_base, 1)
+            trigger = np.frombuffer(file_handle.read(4 * n_samp_base), dtype=np.uint32).reshape(
+                n_samp_base, 1
+            )
             signals["trigger"] = {"data": trigger, "fs": fs_base}
 
         if has_trigger_str:
@@ -110,5 +121,7 @@ def load_bio_file(file_path: Path) -> LoadedBioFile:
                 "data": np.array(trigger_str, dtype=object).reshape(n_samp_base, 1),
                 "fs": fs_base,
             }
-    print(f"Loaded .bio file from {file_path} with signals: {list(signals.keys())} and metadata: {metadata}")
+    print(
+        f"Loaded .bio file from {file_path} with signals: {list(signals.keys())} and metadata: {metadata}"
+    )
     return LoadedBioFile(path=file_path, signals=signals, metadata=metadata)

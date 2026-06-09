@@ -36,9 +36,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 
-class MicrophoneConfigWidget(
-    DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget
-):
+class MicrophoneConfigWidget(DataSourceConfigWidget, Ui_MicrophoneDataSourceConfigWidget):
     """
     Widget to configure the system microphone audio source.
 
@@ -186,9 +184,7 @@ class MicrophoneDataSourceWorker(DataSourceWorker):
         try:
             self._audioSource.setBufferSize(self._packetSize)
         except AttributeError:
-            logger.warning(
-                'The "setBufferSize" method is not available on this Qt version.'
-            )
+            logger.warning('The "setBufferSize" method is not available on this Qt version.')
         # Clean up any previous I/O device
         if self._ioDevice is not None:
             try:
