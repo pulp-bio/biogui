@@ -85,18 +85,20 @@ def _build_post_run_plot_config(
                 break
 
         if plotter_key == "ultrasound":
-            runtime_config = _get_wulpus_runtime_config(interfaceModule or dataSourceConfig.get("interfaceModule"))
+            runtime_config = _get_wulpus_runtime_config(
+                interfaceModule or dataSourceConfig.get("interfaceModule")
+            )
             ultrasound_signal_names = [
                 sig_name
-                for sig_name, sig_config in (sigsConfigs or dataSourceConfig.get("sigsConfigs", {})).items()
+                for sig_name, sig_config in (
+                    sigsConfigs or dataSourceConfig.get("sigsConfigs", {})
+                ).items()
                 if sig_config.get("extras", {}).get("type") == "ultrasound"
             ]
 
             plot_options = {
                 "displayMode": dataSourceConfig.get("postRunDisplayMode", "mmode"),
-                "enabledChannels": {
-                    sig_name: True for sig_name in ultrasound_signal_names
-                },
+                "enabledChannels": {sig_name: True for sig_name in ultrasound_signal_names},
                 "bandwidthFraction": 0.45,
                 "enableBandpass": True,
                 "showEnvelope": True,
@@ -108,7 +110,10 @@ def _build_post_run_plot_config(
                         "transmissionFrequencyHz": float(runtime_config.pulse_freq),
                         "adcSamplingFreqHz": float(runtime_config.sampling_freq),
                         "numSamples": int(runtime_config.num_samples),
-                        "adcStartDelaySeconds": (runtime_config.start_adcsampl - runtime_config.start_ppg) * 1e-6,
+                        "adcStartDelaySeconds": (
+                            runtime_config.start_adcsampl - runtime_config.start_ppg
+                        )
+                        * 1e-6,
                     }
                 )
 
@@ -381,7 +386,9 @@ class MainController(QObject):
                 continue
             plotterKey = plotConfig.get("plotterKey")
             if not plotterKey:
-                logging.info("Post-run plotting skipped: no plotter registered for '%s'.", dataSource)
+                logging.info(
+                    "Post-run plotting skipped: no plotter registered for '%s'.", dataSource
+                )
                 continue
             try:
                 plot_latest_runtime_file(plotterKey, runtimeDir, plotConfig.get("plotOptions"))
@@ -394,7 +401,14 @@ class MainController(QObject):
         dataSourceWorkerArgs = {
             k: v
             for k, v in dataSourceConfig.items()
-            if k not in ("interfacePath", "interfaceModule", "filePath", "plotAfterRun")
+            if k
+            not in (
+                "interfacePath",
+                "interfaceModule",
+                "filePath",
+                "plotAfterRun",
+                "postRunPlotConfig",
+            )
         }
         interfaceModule = dataSourceConfig["interfaceModule"]
         filePath = dataSourceConfig.get("filePath", None)
@@ -406,7 +420,9 @@ class MainController(QObject):
             interfaceModule.decodeFn,
             filePath,
             sigsConfigs,
-            postRunPlotConfig=_build_post_run_plot_config(dataSourceConfig, sigsConfigs, interfaceModule),
+            postRunPlotConfig=_build_post_run_plot_config(
+                dataSourceConfig, sigsConfigs, interfaceModule
+            ),
             parent=self,
         )
         self._streamingControllers[str(streamingController)] = streamingController
@@ -683,7 +699,9 @@ class MainController(QObject):
                 del sigsConfigs[sigName]["freqs"]
                 del sigsConfigs[sigName]["filtOrder"]
         newDataSourceConfig["sigsConfigs"] = sigsConfigs
-        newDataSourceConfig["postRunPlotConfig"] = _build_post_run_plot_config(newDataSourceConfig, sigsConfigs)
+        newDataSourceConfig["postRunPlotConfig"] = _build_post_run_plot_config(
+            newDataSourceConfig, sigsConfigs
+        )
 
         # Update streaming controller and store new settings
         streamingController = self._streamingControllers.pop(dataSourceToEdit)
@@ -691,7 +709,9 @@ class MainController(QObject):
         del self._config[oldDataSourceId]
         streamingController.editDataSourceConfig(newDataSourceConfig)
         streamingController.setPostRunPlotConfig(
-            _build_post_run_plot_config(newDataSourceConfig, sigsConfigs, newDataSourceConfig["interfaceModule"])
+            _build_post_run_plot_config(
+                newDataSourceConfig, sigsConfigs, newDataSourceConfig["interfaceModule"]
+            )
         )
         newDataSourceId = str(streamingController)
         self._streamingControllers[newDataSourceId] = streamingController
