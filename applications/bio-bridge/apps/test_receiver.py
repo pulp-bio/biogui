@@ -155,7 +155,7 @@ def run_receiver(
         print(f"Config IDs seen: {sorted(config_ids_seen)}")
 
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
 
         traceback.print_exc()
