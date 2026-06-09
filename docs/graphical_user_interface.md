@@ -18,7 +18,7 @@ The main window consists of mainly three sub-components:
 
 ## Modules
 
-Modules are additional components that can be added to the BioGUI to extend its functionalities. To see the available modules, click on the `Modules` button located at the top-left corner of the main window. 
+Modules are additional components that can be added to the BioGUI to extend its functionalities. To see the available modules, click on the `Modules` button located at the top-left corner of the main window.
 
 ![Modules Button](images/modules.png)
 
@@ -30,4 +30,4 @@ The currently available modules are:
 
 - **Forwarding**: Forwards acquired signals to external servers via TCP or Unix sockets. Allows selecting specific signals with configurable window length and stride. [Learn more](modules/forwarding.md)
 
-- **Teleprompter**: Loads sentences from a JSON file and displays them with word highlighting. Supports both voiced and silent reading modes with configurable rest periods. [Learn more](modules/teleprompter.md) 
+- **Teleprompter**: Loads sentences from a JSON file and displays them with word highlighting. Supports both voiced and silent reading modes with configurable rest periods. [Learn more](modules/teleprompter.md)

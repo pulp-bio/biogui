@@ -21,9 +21,7 @@ from .unix_socket import (
 )
 
 
-def getConfigWidget(
-    dataSourceType: DataSourceType, parent: QWidget
-) -> DataSourceConfigWidget:
+def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> DataSourceConfigWidget:
     """
     Factory function for producing DataSourceConfigWidget objects.
 

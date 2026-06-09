@@ -3,12 +3,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Task: Marble delivery task.
@@ -22,18 +18,32 @@ public class MarbleDeliveryTask : ContinuousTask
     public GameObject marblePrefab; // Prefab to spawn if marbleObject is null
     public DeliveryZone deliveryZone;
 
-    [Header("Spawn Settings (Normalized Grid Coordinates)")]
+    [Header("Spawn Settings")]
     [Tooltip("Normalized X position (-1 to 1) for marble spawn")]
     public float marbleSpawnNormalizedX = 0f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for marble spawn (maps to Unity Z)")]
-    public float marbleSpawnNormalizedY = 0f;
+    [FormerlySerializedAs("marbleSpawnNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for marble spawn")]
+    public float marbleSpawnNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid objectHeight for marble spawn Y")]
+    public bool useWorkspaceGridObjectHeight = true;
+
+    [Tooltip("Unity Y position for marble spawn")]
+    public float marbleSpawnY = 0.5f;
 
     [Tooltip("Normalized X position (-1 to 1) for delivery zone")]
     public float deliveryZoneNormalizedX = 0.8f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for delivery zone (maps to Unity Z)")]
-    public float deliveryZoneNormalizedY = 0f;
+    [FormerlySerializedAs("deliveryZoneNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for delivery zone")]
+    public float deliveryZoneNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid deliveryZoneHeight for delivery zone Y")]
+    public bool useWorkspaceGridDeliveryZoneHeight = true;
+
+    [Tooltip("Unity Y position for delivery zone")]
+    public float deliveryZoneY = 0.0f;
 
     [Header("Drop Zones")]
     [Tooltip("Radius around spawn treated as pickup/start — drop here does not fail the task")]
@@ -66,35 +76,45 @@ public class MarbleDeliveryTask : ContinuousTask
     /// <summary>
     /// Get the actual spawn position for the marble (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveMarbleSpawnY()
+    {
+        if (useWorkspaceGridObjectHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.objectHeight;
+        }
+
+        return marbleSpawnY;
+    }
+
     private Vector3 GetMarbleSpawnPosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                marbleSpawnNormalizedX,
-                marbleSpawnNormalizedY,
-                WorkspaceGrid.Instance.objectHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(marbleSpawnNormalizedX, marbleSpawnNormalizedY, 0.5f);
+        return WorkspaceGrid.ToWorld(
+            marbleSpawnNormalizedX,
+            marbleSpawnNormalizedZ,
+            ResolveMarbleSpawnY()
+        );
     }
 
     /// <summary>
     /// Get the actual delivery zone position (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveDeliveryZoneY()
+    {
+        if (useWorkspaceGridDeliveryZoneHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.deliveryZoneHeight;
+        }
+
+        return deliveryZoneY;
+    }
+
     private Vector3 GetDeliveryZonePosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                deliveryZoneNormalizedX,
-                deliveryZoneNormalizedY,
-                WorkspaceGrid.Instance.deliveryZoneHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(deliveryZoneNormalizedX, deliveryZoneNormalizedY, 0.0f);
+        return WorkspaceGrid.ToWorld(
+            deliveryZoneNormalizedX,
+            deliveryZoneNormalizedZ,
+            ResolveDeliveryZoneY()
+        );
     }
 
     /// <summary>
@@ -126,7 +146,7 @@ public class MarbleDeliveryTask : ContinuousTask
             marbleObject.name = "Marble_" + System.DateTime.Now.Ticks;
 
             Debug.Log(
-                $"[MarbleDeliveryTask] Spawned marble at {spawnPos} (normalized: {marbleSpawnNormalizedX}, {marbleSpawnNormalizedY})"
+                $"[MarbleDeliveryTask] Spawned marble at {spawnPos} (normalized X/Z: {marbleSpawnNormalizedX}, {marbleSpawnNormalizedZ}; Y: {marbleSpawnY})"
             );
         }
 
@@ -194,7 +214,7 @@ public class MarbleDeliveryTask : ContinuousTask
             deliveryZone.gameObject.SetActive(true); // Visible during countdown
             deliveryZone.ClearCount();
             Debug.Log(
-                $"[MarbleDeliveryTask] Delivery zone prepared at {zonePos} (normalized: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedY})"
+                $"[MarbleDeliveryTask] Delivery zone prepared at {zonePos} (normalized X/Z: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedZ}; Y: {deliveryZoneY})"
             );
         }
     }

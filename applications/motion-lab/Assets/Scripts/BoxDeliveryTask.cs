@@ -3,12 +3,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Task 1: Box delivery task.
@@ -21,18 +17,32 @@ public class BoxDeliveryTask : ContinuousTask
     public GameObject boxPrefab; // Prefab to spawn if boxObject is null
     public DeliveryZone deliveryZone;
 
-    [Header("Spawn Settings (Normalized Grid Coordinates)")]
+    [Header("Spawn Settings")]
     [Tooltip("Normalized X position (-1 to 1) for box spawn")]
     public float boxSpawnNormalizedX = 0f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for box spawn (maps to Unity Z)")]
-    public float boxSpawnNormalizedY = 0f;
+    [FormerlySerializedAs("boxSpawnNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for box spawn")]
+    public float boxSpawnNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid objectHeight for box spawn Y")]
+    public bool useWorkspaceGridObjectHeight = true;
+
+    [Tooltip("Unity Y position for box spawn")]
+    public float boxSpawnY = 0.5f;
 
     [Tooltip("Normalized X position (-1 to 1) for delivery zone")]
     public float deliveryZoneNormalizedX = 0.8f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for delivery zone (maps to Unity Z)")]
-    public float deliveryZoneNormalizedY = 0f;
+    [FormerlySerializedAs("deliveryZoneNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for delivery zone")]
+    public float deliveryZoneNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid deliveryZoneHeight for delivery zone Y")]
+    public bool useWorkspaceGridDeliveryZoneHeight = true;
+
+    [Tooltip("Unity Y position for delivery zone")]
+    public float deliveryZoneY = 0.0f;
 
     [Header("Drop Zones")]
     [Tooltip("Radius around spawn treated as pickup/start — drop here does not fail the task")]
@@ -82,35 +92,45 @@ public class BoxDeliveryTask : ContinuousTask
     /// <summary>
     /// Get the actual spawn position for the box (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveBoxSpawnY()
+    {
+        if (useWorkspaceGridObjectHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.objectHeight;
+        }
+
+        return boxSpawnY;
+    }
+
     private Vector3 GetBoxSpawnPosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                boxSpawnNormalizedX,
-                boxSpawnNormalizedY,
-                WorkspaceGrid.Instance.objectHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(boxSpawnNormalizedX, boxSpawnNormalizedY, 0.5f);
+        return WorkspaceGrid.ToWorld(
+            boxSpawnNormalizedX,
+            boxSpawnNormalizedZ,
+            ResolveBoxSpawnY()
+        );
     }
 
     /// <summary>
     /// Get the actual delivery zone position (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveDeliveryZoneY()
+    {
+        if (useWorkspaceGridDeliveryZoneHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.deliveryZoneHeight;
+        }
+
+        return deliveryZoneY;
+    }
+
     private Vector3 GetDeliveryZonePosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                deliveryZoneNormalizedX,
-                deliveryZoneNormalizedY,
-                WorkspaceGrid.Instance.deliveryZoneHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(deliveryZoneNormalizedX, deliveryZoneNormalizedY, 0.0f);
+        return WorkspaceGrid.ToWorld(
+            deliveryZoneNormalizedX,
+            deliveryZoneNormalizedZ,
+            ResolveDeliveryZoneY()
+        );
     }
 
     /// <summary>
@@ -142,7 +162,7 @@ public class BoxDeliveryTask : ContinuousTask
             boxObject.name = "Box_" + System.DateTime.Now.Ticks;
 
             Debug.Log(
-                $"[BoxDeliveryTask] Spawned box at {spawnPos} (normalized: {boxSpawnNormalizedX}, {boxSpawnNormalizedY})"
+                $"[BoxDeliveryTask] Spawned box at {spawnPos} (normalized X/Z: {boxSpawnNormalizedX}, {boxSpawnNormalizedZ}; Y: {boxSpawnY})"
             );
         }
 
@@ -199,7 +219,7 @@ public class BoxDeliveryTask : ContinuousTask
             deliveryZone.gameObject.SetActive(true); // Visible during countdown
             deliveryZone.ClearCount();
             Debug.Log(
-                $"[BoxDeliveryTask] Delivery zone prepared at {zonePos} (normalized: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedY})"
+                $"[BoxDeliveryTask] Delivery zone prepared at {zonePos} (normalized X/Z: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedZ}; Y: {deliveryZoneY})"
             );
         }
     }

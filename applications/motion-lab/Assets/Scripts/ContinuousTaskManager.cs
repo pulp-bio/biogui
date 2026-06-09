@@ -3,11 +3,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -64,7 +59,10 @@ public class ContinuousTaskManager : MonoBehaviour
     public float taskTimeout = 60.0f;
 
     [Header("Hand Reset")]
-    [Tooltip("Hand position to reset to at the beginning of each task (during countdown)")]
+    [Tooltip("If enabled, reset the hand from WorkspaceGrid hand start instead of the fallback vector below")]
+    public bool useWorkspaceGridHandStart = true;
+
+    [Tooltip("Fallback hand position used when WorkspaceGrid hand start is disabled or unavailable")]
     public Vector3 handStartPosition = new Vector3(0f, 0.5f, -4f);
 
     [Header("Task Completion")]
@@ -549,6 +547,25 @@ public class ContinuousTaskManager : MonoBehaviour
     /// Uses freeze mechanism instead of disabling controller to prevent hand from
     /// getting stuck mid-movement when new messages arrive during reset.
     /// </summary>
+    Vector3 ResolveHandStartPosition()
+    {
+        if (useWorkspaceGridHandStart)
+        {
+            WorkspaceGrid grid = handController != null ? handController.workspaceGrid : null;
+            if (grid == null)
+            {
+                grid = FindFirstObjectByType<WorkspaceGrid>();
+            }
+
+            if (grid != null)
+            {
+                return grid.GetHandStartPosition();
+            }
+        }
+
+        return handStartPosition;
+    }
+
     IEnumerator ResetHandAndFreezeInput()
     {
         // First, freeze input to prevent any incoming messages from affecting the hand
@@ -563,7 +580,7 @@ public class ContinuousTaskManager : MonoBehaviour
         // Reset hand to start position (instant teleport)
         if (handController != null)
         {
-            handController.ResetToStartPosition(handStartPosition);
+            handController.ResetToStartPosition(ResolveHandStartPosition());
         }
 
         // Wait a few frames for Update() to apply curl values through normal ApplyFingers() cycle

@@ -149,9 +149,7 @@ def _listen_for_stop(client_socket, stop_event):
 
 def main():
     # Input arguments
-    mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port = (
-        _parse_input()
-    )
+    mvc, p_mvc, slope, fs, gap_width, recv_port, server_addr, server_port = _parse_input()
 
     emg_buffer = np.zeros(shape=(BUFFER_SIZE, 64), dtype=np.float32)
     aux_buffer = np.zeros(shape=(BUFFER_SIZE, 2), dtype=np.float32)

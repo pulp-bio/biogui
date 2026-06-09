@@ -3,12 +3,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Task 3: Bottle pouring task.
@@ -22,18 +18,32 @@ public class BottlePouringTask : ContinuousTask
     public GameObject bowlObject;
     public GameObject bowlPrefab; // Prefab to spawn if bowlObject is null
 
-    [Header("Spawn Settings (Normalized Grid Coordinates)")]
+    [Header("Spawn Settings")]
     [Tooltip("Normalized X position (-1 to 1) for bottle spawn")]
     public float bottleSpawnNormalizedX = 0f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for bottle spawn (maps to Unity Z)")]
-    public float bottleSpawnNormalizedY = 0f;
+    [FormerlySerializedAs("bottleSpawnNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for bottle spawn")]
+    public float bottleSpawnNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid objectHeight for bottle spawn Y")]
+    public bool useWorkspaceGridBottleHeight = true;
+
+    [Tooltip("Unity Y position for bottle spawn")]
+    public float bottleSpawnY = 0.5f;
 
     [Tooltip("Normalized X position (-1 to 1) for bowl position")]
     public float bowlNormalizedX = 0.5f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for bowl position (maps to Unity Z)")]
-    public float bowlNormalizedY = 0f;
+    [FormerlySerializedAs("bowlNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for bowl position")]
+    public float bowlNormalizedZ = 0f;
+
+    [Tooltip("If enabled, derive bowl Y from WorkspaceGrid objectHeight with the legacy -0.2 offset")]
+    public bool useWorkspaceGridBowlHeight = true;
+
+    [Tooltip("Unity Y position for bowl position")]
+    public float bowlY = 0.3f;
 
     [Header("Grab Requirements")]
     [Tooltip("Requires hand to be at ~90° supination to grab the bottle")]
@@ -85,33 +95,41 @@ public class BottlePouringTask : ContinuousTask
     /// <summary>
     /// Get the actual spawn position for the bottle (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveBottleSpawnY()
+    {
+        if (useWorkspaceGridBottleHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.objectHeight;
+        }
+
+        return bottleSpawnY;
+    }
+
     private Vector3 GetBottleSpawnPosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                bottleSpawnNormalizedX,
-                bottleSpawnNormalizedY,
-                WorkspaceGrid.Instance.objectHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(bottleSpawnNormalizedX, bottleSpawnNormalizedY, 0.5f);
+        return WorkspaceGrid.ToWorld(
+            bottleSpawnNormalizedX,
+            bottleSpawnNormalizedZ,
+            ResolveBottleSpawnY()
+        );
     }
 
     /// <summary>
     /// Get the actual bowl position (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveBowlY()
+    {
+        if (useWorkspaceGridBowlHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.objectHeight - 0.2f;
+        }
+
+        return bowlY;
+    }
+
     private Vector3 GetBowlPosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            // Bowl is slightly lower than object height
-            float bowlHeight = WorkspaceGrid.Instance.objectHeight - 0.2f;
-            return WorkspaceGrid.ToWorld(bowlNormalizedX, bowlNormalizedY, bowlHeight);
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(bowlNormalizedX, bowlNormalizedY, 0.3f);
+        return WorkspaceGrid.ToWorld(bowlNormalizedX, bowlNormalizedZ, ResolveBowlY());
     }
 
     /// <summary>
@@ -144,7 +162,7 @@ public class BottlePouringTask : ContinuousTask
             bottleObject.name = "Bottle_" + System.DateTime.Now.Ticks;
 
             Debug.Log(
-                $"[BottlePouringTask] Spawned bottle at {bottlePos} (normalized: {bottleSpawnNormalizedX}, {bottleSpawnNormalizedY})"
+                $"[BottlePouringTask] Spawned bottle at {bottlePos} (normalized X/Z: {bottleSpawnNormalizedX}, {bottleSpawnNormalizedZ}; Y: {bottleSpawnY})"
             );
         }
 
@@ -154,7 +172,7 @@ public class BottlePouringTask : ContinuousTask
             bowlObject = Instantiate(bowlPrefab, bowlPos, Quaternion.identity);
             bowlObject.name = "Bowl_" + System.DateTime.Now.Ticks;
             Debug.Log(
-                $"[BottlePouringTask] Spawned bowl at {bowlPos} (normalized: {bowlNormalizedX}, {bowlNormalizedY})"
+                $"[BottlePouringTask] Spawned bowl at {bowlPos} (normalized X/Z: {bowlNormalizedX}, {bowlNormalizedZ}; Y: {bowlY})"
             );
         }
 
@@ -220,7 +238,7 @@ public class BottlePouringTask : ContinuousTask
             bowlObject.transform.position = bowlPos;
             bowlObject.SetActive(true); // Visible during countdown
             Debug.Log(
-                $"[BottlePouringTask] Bowl prepared at {bowlPos} (normalized: {bowlNormalizedX}, {bowlNormalizedY})"
+                $"[BottlePouringTask] Bowl prepared at {bowlPos} (normalized X/Z: {bowlNormalizedX}, {bowlNormalizedZ}; Y: {bowlY})"
             );
         }
     }

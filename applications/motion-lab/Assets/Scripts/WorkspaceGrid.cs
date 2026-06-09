@@ -1,4 +1,4 @@
-// Copyright ETH Zurich - University of Bologna 2026
+// Copyright University of Bologna - ETH Zurich 2026
 // Licensed under Apache v2.0 see LICENSE for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -28,12 +28,12 @@ public enum GestureLabel
 
 /// <summary>
 /// Central workspace grid configuration.
-/// Maps normalized grid coordinates [-1, 1] to Unity world coordinates.
+/// Maps normalized X/Z grid coordinates [-1, 1] to Unity world coordinates.
 /// Also maps discrete position states (0, 1, 2) from bio-bridge to grid coordinates.
 ///
 /// Grid Layout (from PDF):
 ///   - Grid X → Unity X
-///   - Grid Y → Unity Z (forward/back in Unity)
+///   - Grid Z → Unity Z (forward/back in Unity)
 ///   - Unity Y is fixed (height)
 ///
 /// Position States (discrete, from bio-bridge):
@@ -73,7 +73,7 @@ public class WorkspaceGrid : MonoBehaviour
     public Vector2 positionStateRight = new Vector2(0.8f, 0f);
 
     [Header("Default Normalized Positions")]
-    [Tooltip("Hand start position in normalized grid coords (x, y where y→Unity Z)")]
+    [Tooltip("Hand start position in normalized grid coords (x, z)")]
     public Vector2 handStartNormalized = new Vector2(0f, -1f);
 
     [Tooltip("Object spawn position in normalized grid coords")]
@@ -104,15 +104,15 @@ public class WorkspaceGrid : MonoBehaviour
 
     /// <summary>
     /// Convert normalized grid position (x, y) to Unity world position.
-    /// Grid Y maps to Unity Z.
+    /// Normalized Z maps to Unity Z.
     /// </summary>
     /// <param name="normalizedX">X in range [-1, 1]</param>
-    /// <param name="normalizedY">Y in range [-1, 1] (maps to Unity Z)</param>
+    /// <param name="normalizedZ">Z in range [-1, 1] (maps to Unity Z)</param>
     /// <param name="unityY">Fixed Unity Y coordinate (height)</param>
     /// <returns>Unity world position</returns>
-    public Vector3 NormalizedToWorld(float normalizedX, float normalizedY, float unityY)
+    public Vector3 NormalizedToWorld(float normalizedX, float normalizedZ, float unityY)
     {
-        return new Vector3(normalizedX * gridScale, unityY, normalizedY * gridScale);
+        return new Vector3(normalizedX * gridScale, unityY, normalizedZ * gridScale);
     }
 
     /// <summary>
@@ -159,14 +159,14 @@ public class WorkspaceGrid : MonoBehaviour
     /// Static helper: Convert normalized position to world using Instance settings.
     /// Falls back to default scale if no instance exists.
     /// </summary>
-    public static Vector3 ToWorld(float normalizedX, float normalizedY, float unityY)
+    public static Vector3 ToWorld(float normalizedX, float normalizedZ, float unityY)
     {
         if (Instance != null)
-            return Instance.NormalizedToWorld(normalizedX, normalizedY, unityY);
+            return Instance.NormalizedToWorld(normalizedX, normalizedZ, unityY);
 
         // Fallback with default scale
         float defaultScale = 2.0f;
-        return new Vector3(normalizedX * defaultScale, unityY, normalizedY * defaultScale);
+        return new Vector3(normalizedX * defaultScale, unityY, normalizedZ * defaultScale);
     }
 
     /// <summary>

@@ -3,11 +3,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -743,8 +738,9 @@ public class HandGrabber : MonoBehaviour
             g = heldObject.gameObject.AddComponent<Grabbable>();
         g.SetHeld(true);
 
-        // Check if this is a cylinder - cylinders should keep their rotation
+        // Check special grab cases where we want to preserve the current object orientation
         bool isCyl = IsCylinder(heldObject);
+        bool isBottle = IsBottle(heldObject);
 
         // Physics setup
         heldObject.useGravity = false;
@@ -772,13 +768,23 @@ public class HandGrabber : MonoBehaviour
         joint.breakForce = breakForce;
         joint.breakTorque = breakTorque;
 
-        heldObject.MovePosition(holdPoint.position);
+        // Preserve bottle pose on grab to avoid a visible snap when the hand first attaches.
+        // Bottles still follow the hand afterwards through the fixed joint and hand motion.
+        if (!isBottle)
+        {
+            heldObject.MovePosition(holdPoint.position);
+        }
 
-        // For non-cylinders, rotate to match hand rotation
-        // For cylinders, keep original rotation (already frozen above)
-        if (!isCyl)
+        // Preserve bottle/cylinder orientation on grab to avoid a visible rotation snap.
+        // Bottles still rotate naturally afterwards through the grab joint and hand motion.
+        if (!isCyl && !isBottle)
         {
             heldObject.MoveRotation(holdPoint.rotation);
+        }
+        else
+        {
+            heldObject.linearVelocity = Vector3.zero;
+            heldObject.angularVelocity = Vector3.zero;
         }
 
         if (debugLogs)

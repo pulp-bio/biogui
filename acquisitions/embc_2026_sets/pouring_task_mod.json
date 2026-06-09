@@ -1,7 +1,7 @@
 {
   "triggers": {
     "start": "start.png",
-    "front_open": "front_open.png", 
+    "front_open": "front_open.png",
     "front_rotclosed": "front_rotclose_pour.png",
     "pour": "pour.png"
   },

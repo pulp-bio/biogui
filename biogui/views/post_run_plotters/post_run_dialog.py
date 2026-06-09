@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Qt-based post-run ultrasound visualization window.
 """
@@ -227,9 +232,7 @@ class PostRunPlotWindow(QWidget):
         for name in self._channel_names:
             cb = QCheckBox(name)
             cb.setChecked(True)
-            cb.stateChanged.connect(
-                lambda state, n=name: self._on_channel_toggled(n, bool(state))
-            )
+            cb.stateChanged.connect(lambda state, n=name: self._on_channel_toggled(n, bool(state)))
             row1.addWidget(cb)
             self._channel_checkboxes[name] = cb
 
@@ -251,8 +254,12 @@ class PostRunPlotWindow(QWidget):
         self._proc_log_btn = QPushButton("Log")
         self._proc_env_btn.setChecked(True)
         proc_group = QButtonGroup(self)
-        for btn in (self._proc_raw_btn, self._proc_filt_btn,
-                    self._proc_env_btn, self._proc_log_btn):
+        for btn in (
+            self._proc_raw_btn,
+            self._proc_filt_btn,
+            self._proc_env_btn,
+            self._proc_log_btn,
+        ):
             btn.setCheckable(True)
             proc_group.addButton(btn)
             row2.addWidget(btn)
@@ -366,8 +373,9 @@ class PostRunPlotWindow(QWidget):
             p.showGrid(x=True, y=True, alpha=0.25)
             if first_vb:
                 p.vb.setXLink(first_vb)
-            p.plot(t_global, self._dataframe["Label"].to_numpy(dtype=float),
-                   pen=pg.mkPen("y", width=1))
+            p.plot(
+                t_global, self._dataframe["Label"].to_numpy(dtype=float), pen=pg.mkPen("y", width=1)
+            )
             self._all_mmode_plots.append(p)
             last_plot = p
             row += 1
@@ -397,8 +405,12 @@ class PostRunPlotWindow(QWidget):
                 p.vb.setXLink(first_vb)
             for col, color in zip(("imu_x", "imu_y", "imu_z"), ("r", "g", "b")):
                 if col in self._dataframe.columns:
-                    p.plot(t_global, self._dataframe[col].to_numpy(dtype=float),
-                           pen=pg.mkPen(color, width=1), name=col)
+                    p.plot(
+                        t_global,
+                        self._dataframe[col].to_numpy(dtype=float),
+                        pen=pg.mkPen(color, width=1),
+                        name=col,
+                    )
             self._all_mmode_plots.append(p)
             last_plot = p
 
@@ -470,9 +482,7 @@ class PostRunPlotWindow(QWidget):
     def _reset_view(self) -> None:
         """Restore all plots in the active view to fit their full data range."""
         plots = (
-            self._all_mmode_plots
-            if self._stacked.currentIndex() == 0
-            else self._all_amode_plots
+            self._all_mmode_plots if self._stacked.currentIndex() == 0 else self._all_amode_plots
         )
         for p in plots:
             p.autoRange()

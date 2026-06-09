@@ -3,12 +3,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright ETH Zurich - University of Bologna 2026
-// Licensed under Apache v2.0 see LICENSE for details.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Task 2: Cylinder delivery task.
@@ -21,18 +17,32 @@ public class CylinderDeliveryTask : ContinuousTask
     public GameObject cylinderPrefab; // Prefab to spawn if cylinderObject is null
     public DeliveryZone deliveryZone;
 
-    [Header("Spawn Settings (Normalized Grid Coordinates)")]
+    [Header("Spawn Settings")]
     [Tooltip("Normalized X position (-1 to 1) for cylinder spawn")]
     public float cylinderSpawnNormalizedX = -0.1f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for cylinder spawn (maps to Unity Z)")]
-    public float cylinderSpawnNormalizedY = 0f;
+    [FormerlySerializedAs("cylinderSpawnNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for cylinder spawn")]
+    public float cylinderSpawnNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid objectHeight for cylinder spawn Y")]
+    public bool useWorkspaceGridObjectHeight = true;
+
+    [Tooltip("Unity Y position for cylinder spawn")]
+    public float cylinderSpawnY = 0.5f;
 
     [Tooltip("Normalized X position (-1 to 1) for delivery zone")]
     public float deliveryZoneNormalizedX = 0.8f;
 
-    [Tooltip("Normalized Y position (-1 to 1) for delivery zone (maps to Unity Z)")]
-    public float deliveryZoneNormalizedY = 0f;
+    [FormerlySerializedAs("deliveryZoneNormalizedY")]
+    [Tooltip("Normalized Z position (-1 to 1) for delivery zone")]
+    public float deliveryZoneNormalizedZ = 0f;
+
+    [Tooltip("If enabled, use WorkspaceGrid deliveryZoneHeight for delivery zone Y")]
+    public bool useWorkspaceGridDeliveryZoneHeight = true;
+
+    [Tooltip("Unity Y position for delivery zone")]
+    public float deliveryZoneY = 0.0f;
 
     [Header("Grab Requirements")]
     [Tooltip("Requires hand to be at ~90° supination to grab the cylinder")]
@@ -75,35 +85,45 @@ public class CylinderDeliveryTask : ContinuousTask
     /// <summary>
     /// Get the actual spawn position for the cylinder (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveCylinderSpawnY()
+    {
+        if (useWorkspaceGridObjectHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.objectHeight;
+        }
+
+        return cylinderSpawnY;
+    }
+
     private Vector3 GetCylinderSpawnPosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                cylinderSpawnNormalizedX,
-                cylinderSpawnNormalizedY,
-                WorkspaceGrid.Instance.objectHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(cylinderSpawnNormalizedX, cylinderSpawnNormalizedY, 0.5f);
+        return WorkspaceGrid.ToWorld(
+            cylinderSpawnNormalizedX,
+            cylinderSpawnNormalizedZ,
+            ResolveCylinderSpawnY()
+        );
     }
 
     /// <summary>
     /// Get the actual delivery zone position (converts from normalized grid coordinates).
     /// </summary>
+    private float ResolveDeliveryZoneY()
+    {
+        if (useWorkspaceGridDeliveryZoneHeight && WorkspaceGrid.Instance != null)
+        {
+            return WorkspaceGrid.Instance.deliveryZoneHeight;
+        }
+
+        return deliveryZoneY;
+    }
+
     private Vector3 GetDeliveryZonePosition()
     {
-        if (WorkspaceGrid.Instance != null)
-        {
-            return WorkspaceGrid.ToWorld(
-                deliveryZoneNormalizedX,
-                deliveryZoneNormalizedY,
-                WorkspaceGrid.Instance.deliveryZoneHeight
-            );
-        }
-        // Fallback if no WorkspaceGrid instance
-        return WorkspaceGrid.ToWorld(deliveryZoneNormalizedX, deliveryZoneNormalizedY, 0.0f);
+        return WorkspaceGrid.ToWorld(
+            deliveryZoneNormalizedX,
+            deliveryZoneNormalizedZ,
+            ResolveDeliveryZoneY()
+        );
     }
 
     /// <summary>
@@ -135,7 +155,7 @@ public class CylinderDeliveryTask : ContinuousTask
             cylinderObject.name = "Cylinder_" + System.DateTime.Now.Ticks;
 
             Debug.Log(
-                $"[CylinderDeliveryTask] Spawned cylinder at {spawnPos} (normalized: {cylinderSpawnNormalizedX}, {cylinderSpawnNormalizedY})"
+                $"[CylinderDeliveryTask] Spawned cylinder at {spawnPos} (normalized X/Z: {cylinderSpawnNormalizedX}, {cylinderSpawnNormalizedZ}; Y: {cylinderSpawnY})"
             );
         }
 
@@ -195,7 +215,7 @@ public class CylinderDeliveryTask : ContinuousTask
             deliveryZone.gameObject.SetActive(true); // Visible during countdown
             deliveryZone.ClearCount();
             Debug.Log(
-                $"[CylinderDeliveryTask] Delivery zone prepared at {zonePos} (normalized: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedY})"
+                $"[CylinderDeliveryTask] Delivery zone prepared at {zonePos} (normalized X/Z: {deliveryZoneNormalizedX}, {deliveryZoneNormalizedZ}; Y: {deliveryZoneY})"
             );
         }
     }
