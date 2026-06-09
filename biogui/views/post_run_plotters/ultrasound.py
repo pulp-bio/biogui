@@ -1,3 +1,8 @@
+# Copyright University of Bologna - ETH Zurich 2026
+# Licensed under Apache v2.0 see LICENSE for details.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Ultrasound post-run plotting for collected .bio files.
 """
@@ -5,6 +10,7 @@ Ultrasound post-run plotting for collected .bio files.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import numpy as np
 import pandas as pd
@@ -15,6 +21,29 @@ from biogui.views.plot_modes.ultrasound_filters import UltrasoundFilter
 
 
 SPEED_OF_SOUND = 1540.0  # in m/s, typical for soft tissue
+
+
+def _resolve_signal_config_id(sig_name: str, ultrasound_signal_names: list[str]) -> int | None:
+    """Infer the WULPUS config id from a stored ultrasound signal name.
+
+    Newer single-config runs store the ultrasound channel simply as ``ultrasound`` and
+    rely on ``tx_rx_id`` metadata for routing. Older or multi-config runs may encode a
+    config id directly in the signal name.
+    """
+    cfg_match = re.search(r"_cfg(\d+)(?:_|$)", sig_name)
+    if cfg_match:
+        return int(cfg_match.group(1))
+
+    trailing_digits_match = re.search(r"(\d+)$", sig_name)
+    if trailing_digits_match:
+        return int(trailing_digits_match.group(1))
+
+    if len(ultrasound_signal_names) == 1:
+        return None
+
+    return None
+
+
 def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
     signals = loaded.signals
 
@@ -58,6 +87,19 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
         print("Data losses detected.")
 
     df_session = pd.DataFrame()
+    ultrasound_signal_names = [
+        sig_name
+        for sig_name in signals
+        if sig_name
+        not in {
+            "timestamp",
+            "trigger",
+            "trigger_str",
+            "imu",
+            "acquisition_number",
+            "tx_rx_id",
+        }
+    ]
 
     for sig_name, sig_data in signals.items():
         if sig_name in {
@@ -81,8 +123,17 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
         trunc = n_acq * samples_per_acquisition
         data_reshaped = rx_data[:trunc, :].reshape(n_acq, samples_per_acquisition)
 
-        us_id = int(sig_name[-1])
-        counter_curr = counter_values[rx_ids == us_id]
+        config_id = _resolve_signal_config_id(sig_name, ultrasound_signal_names)
+        if config_id is None:
+            if len(ultrasound_signal_names) == 1:
+                counter_curr = counter_values
+                channel_label_id = int(rx_ids[0]) if len(rx_ids) else 0
+            else:
+                print(f"Warning: signal '{sig_name}' skipped, config id could not be resolved.")
+                continue
+        else:
+            counter_curr = counter_values[rx_ids == config_id]
+            channel_label_id = config_id
 
         n = min(len(counter_curr), len(data_reshaped))
         counter_curr = counter_curr[:n]
@@ -103,7 +154,7 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
         series = pd.Series(
             list(data_reshaped),
             index=counter_curr,
-            name=f"tx_{us_id}",
+            name=f"tx_{channel_label_id}",
         )
         series = series[~series.index.duplicated(keep="first")]
 
@@ -132,8 +183,6 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
     return df_session
 
 
-
-
 _NON_CHANNEL_COLUMNS = {
     "Label",
     "Label_str",
@@ -151,9 +200,7 @@ def _resolve_enabled_channels(
     dataframe: pd.DataFrame,
     plot_options: dict | None,
 ) -> list[str]:
-    channel_columns = [
-        column for column in dataframe.columns if column not in _NON_CHANNEL_COLUMNS
-    ]
+    channel_columns = [column for column in dataframe.columns if column not in _NON_CHANNEL_COLUMNS]
 
     if not plot_options:
         return channel_columns
@@ -161,9 +208,7 @@ def _resolve_enabled_channels(
     enabled_channels = plot_options.get("enabledChannels")
 
     if isinstance(enabled_channels, dict):
-        filtered = [
-            column for column in channel_columns if enabled_channels.get(column, True)
-        ]
+        filtered = [column for column in channel_columns if enabled_channels.get(column, True)]
         return filtered or channel_columns
 
     if isinstance(enabled_channels, (list, tuple, set)):
@@ -173,28 +218,34 @@ def _resolve_enabled_channels(
     return channel_columns
 
 
-
-def _depth_axis_mm(adc_start_delay_s: float, num_samples: int, adc_sampling_freq: float) -> tuple[float, float]:
+def _depth_axis_mm(
+    adc_start_delay_s: float, num_samples: int, adc_sampling_freq: float
+) -> tuple[float, float]:
     """Calculate depth axis limits in mm.
 
     adc_start_delay_s : delay from pulse to first ADC sample, in seconds.
     """
+    if adc_sampling_freq <= 0.0:
+        # Fall back to sample-index spacing when physical timing metadata is unavailable.
+        return 0.0, float(max(num_samples - 1, 0))
+
     axis_start = (SPEED_OF_SOUND * adc_start_delay_s / 2) * 1e3
     axis_stop = (SPEED_OF_SOUND * (adc_start_delay_s + num_samples / adc_sampling_freq) / 2) * 1e3
     return axis_start, axis_stop
 
+
 def _get_processing_config(
     plot_options: dict | None,
-    ) -> tuple[float, float, bool, bool, float,float,float]:
+) -> tuple[float, float, bool, bool, float, float, float]:
     if not plot_options:
-        return 0.0, 0.0, False, True, 0.45, 33.33, 5.0/1e6
+        return 0.0, 0.0, False, True, 0.45, 33.33, 5.0 / 1e6
 
     transmission_freq = float(plot_options.get("transmissionFrequencyHz", 0.0) or 0.0)
     adc_sampling_freq = float(plot_options.get("adcSamplingFreqHz", 0.0) or 0.0)
     bandwidth_fraction = float(plot_options.get("bandwidthFraction", 0.45) or 0.45)
     apply_bandpass = bool(plot_options.get("enableBandpass", True))
     apply_envelope = bool(plot_options.get("showEnvelope", True))
-    meas_period = int(plot_options.get("meas_period", 33.33))           # in microseconds
+    meas_period = int(plot_options.get("meas_period", 33.33))  # in microseconds
     start_pgg = int(plot_options.get("start_ppg", 500))
     adc_start_delay = int(plot_options.get("start_adcsampl", 505))
     adc_delay = adc_start_delay - start_pgg
@@ -205,8 +256,8 @@ def _get_processing_config(
         apply_bandpass,
         apply_envelope,
         bandwidth_fraction,
-        meas_period/1000,               # meas period in ms
-        adc_delay/1e6,     # adc delay in seconds
+        meas_period / 1000,  # meas period in ms
+        adc_delay / 1e6,  # adc delay in seconds
     )
 
 
@@ -217,7 +268,7 @@ def _build_filter(plot_options: dict | None) -> UltrasoundFilter | None:
         apply_bandpass,
         _,
         bandwidth_fraction,
-        meas_period, 
+        meas_period,
         adc_start_delay,
     ) = _get_processing_config(plot_options)
 
@@ -257,7 +308,7 @@ def _process_waveforms(
     print("Processing waveforms with shape", waveforms.shape)
 
     filter_instance = _build_filter(plot_options)
-    _, _, _, apply_envelope, _, _,_ = _get_processing_config(plot_options)
+    _, _, _, apply_envelope, _, _, _ = _get_processing_config(plot_options)
 
     processed = np.asarray(waveforms, dtype=float)
 
@@ -268,8 +319,6 @@ def _process_waveforms(
         processed = UltrasoundFilter.get_envelope_postacq(processed)
 
     return processed
-
-
 
 
 def plot_latest_ultrasound_run(
@@ -318,7 +367,9 @@ def plot_file(
         return dataframe
 
     # ── compute physical axes ────────────────────────────────────────
-    _, adc_sampling_freq, _, _, _, meas_period_ms, adc_start_delay_s = _get_processing_config(plot_options)
+    _, adc_sampling_freq, _, _, _, meas_period_ms, adc_start_delay_s = _get_processing_config(
+        plot_options
+    )
 
     n_depth = next(iter(raw_matrices.values())).shape[1]
     depth_start_mm, depth_stop_mm = _depth_axis_mm(adc_start_delay_s, n_depth, adc_sampling_freq)
@@ -366,4 +417,3 @@ class UltrasoundPostRunPlotter:
 
 
 register_plotter("ultrasound", plot_latest_ultrasound_run)
-
