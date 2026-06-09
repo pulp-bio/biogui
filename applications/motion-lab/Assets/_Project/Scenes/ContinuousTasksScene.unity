@@ -154,9 +154,9 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::WorkspaceGrid
   gridScale: 4
-  objectHeight: 0.5
+  objectHeight: 1.4
   handHeight: 1.5
-  deliveryZoneHeight: 0.1
+  deliveryZoneHeight: 0.94
   positionStateStart: {x: 0, y: -1}
   positionStateForward: {x: 0, y: 0}
   positionStateRight: {x: 0.8, y: 0}
@@ -643,9 +643,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ContinuousTaskManager
   positionMode: 1
   randomSelection: 0
-  enableBoxDeliveryTask: 1
+  enableBoxDeliveryTask: 0
   enableCylinderDeliveryTask: 0
-  enableBottlePouringTask: 0
+  enableBottlePouringTask: 1
   enableMarbleDeliveryTask: 0
   boxDeliveryTask: {fileID: 1951112744}
   cylinderDeliveryTask: {fileID: 876395636}
@@ -725,9 +725,11 @@ MonoBehaviour:
   deliveryZone: {fileID: 315061578291013255, guid: 8425c5ba1f815f7528e60bf87a565e3b, type: 3}
   cylinderSpawnNormalizedX: -0.1
   cylinderSpawnNormalizedZ: 0
+  useWorkspaceGridObjectHeight: 1
   cylinderSpawnY: 0.5
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedZ: 0
+  useWorkspaceGridDeliveryZoneHeight: 1
   deliveryZoneY: 0
   requireSupinationToGrab: 1
   targetSupinationAngle: 90
@@ -1291,9 +1293,11 @@ MonoBehaviour:
   deliveryZone: {fileID: 315061578291013255, guid: 8425c5ba1f815f7528e60bf87a565e3b, type: 3}
   marbleSpawnNormalizedX: -0.08
   marbleSpawnNormalizedZ: 0
+  useWorkspaceGridObjectHeight: 1
   marbleSpawnY: 0.5
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedZ: 0
+  useWorkspaceGridDeliveryZoneHeight: 1
   deliveryZoneY: 0
   pickupZoneRadius: 1.2
   debugLogs: 0
@@ -1831,13 +1835,15 @@ MonoBehaviour:
   bowlPrefab: {fileID: 266179233457921921, guid: 153562623ff055bee93b689a06449302, type: 3}
   bottleSpawnNormalizedX: -0.05
   bottleSpawnNormalizedZ: 0
+  useWorkspaceGridBottleHeight: 1
   bottleSpawnY: 0.5
   bowlNormalizedX: -0.25
   bowlNormalizedZ: 0
+  useWorkspaceGridBowlHeight: 1
   bowlY: 0.3
   requireSupinationToGrab: 1
   targetSupinationAngle: 90
-  supinationTolerance: 15
+  supinationTolerance: 6
   minRotationToPour: 90
   minPouringSpeed: 0.2
   maxPouringSpeed: 1
@@ -1995,9 +2001,11 @@ MonoBehaviour:
   deliveryZone: {fileID: 315061578291013255, guid: 8425c5ba1f815f7528e60bf87a565e3b, type: 3}
   boxSpawnNormalizedX: 0
   boxSpawnNormalizedZ: 0
+  useWorkspaceGridObjectHeight: 1
   boxSpawnY: 0.5
   deliveryZoneNormalizedX: 0.8
   deliveryZoneNormalizedZ: 0
+  useWorkspaceGridDeliveryZoneHeight: 1
   deliveryZoneY: 0
   pickupZoneRadius: 1.2
   requireFlatHandToGrab: 1
@@ -2114,13 +2122,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1989450253}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.1414204, y: 0.1985488, z: -0.02896513, w: 0.9694018}
+  m_LocalRotation: {x: 0.44303623, y: 0.30092555, z: -0.1608143, w: 0.8290365}
   m_LocalPosition: {x: -2.44, y: 5.07, z: -5.68}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 16.6, y: 23.15, z: 0}
+  m_LocalEulerAnglesHint: {x: 56.24, y: 39.9, z: 0}
 --- !u!1 &1997899201
 GameObject:
   m_ObjectHideFlags: 0
@@ -2226,7 +2234,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7869954279056782661, guid: 2a4a7f4204975ac49a2f0310e57265da, type: 3}
       propertyPath: m_LocalScale.x
-      value: 3
+      value: 3.5
       objectReference: {fileID: 0}
     - target: {fileID: 7869954279056782661, guid: 2a4a7f4204975ac49a2f0310e57265da, type: 3}
       propertyPath: m_LocalScale.z
@@ -2234,7 +2242,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7869954279056782661, guid: 2a4a7f4204975ac49a2f0310e57265da, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.5
+      value: 1.25
       objectReference: {fileID: 0}
     - target: {fileID: 7869954279056782661, guid: 2a4a7f4204975ac49a2f0310e57265da, type: 3}
       propertyPath: m_LocalPosition.y
