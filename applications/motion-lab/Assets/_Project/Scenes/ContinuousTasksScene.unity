@@ -2289,6 +2289,7 @@ GameObject:
   - component: {fileID: 1951105165}
   - component: {fileID: 1951105164}
   - component: {fileID: 1951105163}
+  - component: {fileID: 1951105166}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2337,7 +2338,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 76.65512
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -2364,12 +2365,34 @@ Transform:
   m_GameObject: {fileID: 1951105162}
   serializedVersion: 2
   m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 4, z: -6}
+  m_LocalPosition: {x: 0, y: 4.590762, z: -5.747082}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
+--- !u!114 &1951105166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1951105162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4866b6f38683b90e1a94002782c88697, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ResponsiveCameraFraming
+  referenceAspect: 2.5
+  narrowAspect: 1
+  referenceLocalPosition: {x: 0, y: 4, z: -6.2}
+  referenceFieldOfView: 54.6
+  referenceOrthographicSize: 5.48
+  narrowLocalPosition: {x: 0, y: 4.6, z: -5.74}
+  narrowFieldOfView: 77
+  narrowOrthographicSize: 6
+  captureCurrentAsReference: 0
+  captureCurrentAsNarrow: 0
 --- !u!1 &1951112743
 GameObject:
   m_ObjectHideFlags: 0
