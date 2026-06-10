@@ -150,6 +150,8 @@ public class HandGrabber : MonoBehaviour
             return null;
         if (holdPointRb && rb == holdPointRb)
             return null;
+        if (col.GetComponent<IgnoreGrabCollider>() != null)
+            return null;
 
         bool layerOk = ((1 << col.gameObject.layer) & grabbableLayers) != 0;
         bool markedGrabbable = rb.GetComponent<Grabbable>() != null;
@@ -679,6 +681,47 @@ public class HandGrabber : MonoBehaviour
         return null;
     }
 
+    WristExtensionLiftTask GetWristExtensionLiftTask(Rigidbody rb)
+    {
+        if (rb == null)
+            return null;
+
+        WristExtensionLiftTask task = rb.GetComponent<WristExtensionLiftTask>();
+        if (task != null)
+            return task;
+
+        if (rb.transform.parent != null)
+        {
+            task = rb.transform.parent.GetComponent<WristExtensionLiftTask>();
+            if (task != null)
+                return task;
+        }
+
+        Transform current = rb.transform.parent;
+        while (current != null)
+        {
+            task = current.GetComponent<WristExtensionLiftTask>();
+            if (task != null)
+                return task;
+            current = current.parent;
+        }
+
+        if (ContinuousTaskManager.Instance != null)
+        {
+            WristExtensionLiftTask managerTask = ContinuousTaskManager.Instance.wristExtensionLiftTask;
+            if (managerTask != null)
+            {
+                if (managerTask.liftObject == rb.gameObject)
+                    return managerTask;
+
+                if (rb.name.StartsWith("WristLiftObject_"))
+                    return managerTask;
+            }
+        }
+
+        return null;
+    }
+
     bool IsSupinatedEnough()
     {
         if (!hand)
@@ -741,6 +784,7 @@ public class HandGrabber : MonoBehaviour
         // Check special grab cases where we want to preserve the current object orientation
         bool isCyl = IsCylinder(heldObject);
         bool isBottle = IsBottle(heldObject);
+        bool isWristLiftObject = GetWristExtensionLiftTask(heldObject) != null;
 
         // Physics setup
         heldObject.useGravity = false;
@@ -768,16 +812,17 @@ public class HandGrabber : MonoBehaviour
         joint.breakForce = breakForce;
         joint.breakTorque = breakTorque;
 
-        // Preserve bottle pose on grab to avoid a visible snap when the hand first attaches.
-        // Bottles still follow the hand afterwards through the fixed joint and hand motion.
-        if (!isBottle)
+        // Preserve bottle and wrist-lift object pose on grab to avoid a visible snap when the
+        // hand first attaches. They still follow the hand afterwards through the fixed joint
+        // and hand motion.
+        if (!isBottle && !isWristLiftObject)
         {
             heldObject.MovePosition(holdPoint.position);
         }
 
-        // Preserve bottle/cylinder orientation on grab to avoid a visible rotation snap.
-        // Bottles still rotate naturally afterwards through the grab joint and hand motion.
-        if (!isCyl && !isBottle)
+        // Preserve orientation on grab for objects where snapping to holdPoint rotation looks bad.
+        // They still rotate naturally afterwards through the fixed joint and hand motion.
+        if (!isCyl && !isBottle && !isWristLiftObject)
         {
             heldObject.MoveRotation(holdPoint.rotation);
         }

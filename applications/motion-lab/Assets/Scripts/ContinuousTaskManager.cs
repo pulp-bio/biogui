@@ -32,12 +32,14 @@ public class ContinuousTaskManager : MonoBehaviour
     public bool enableCylinderDeliveryTask = false;
     public bool enableBottlePouringTask = false;
     public bool enableMarbleDeliveryTask = false;
+    public bool enableWristExtensionLiftTask = false;
 
     [Header("Task References")]
     public BoxDeliveryTask boxDeliveryTask;
     public CylinderDeliveryTask cylinderDeliveryTask;
     public BottlePouringTask bottlePouringTask;
     public MarbleDeliveryTask marbleDeliveryTask;
+    public WristExtensionLiftTask wristExtensionLiftTask;
 
     [Header("Delivery Zone")]
     public DeliveryZone deliveryZone;
@@ -294,6 +296,12 @@ public class ContinuousTaskManager : MonoBehaviour
             Debug.Log("[ContinuousTaskManager] Marble Delivery task enabled");
         }
 
+        if (enableWristExtensionLiftTask && wristExtensionLiftTask != null)
+        {
+            activeTasks.Add(wristExtensionLiftTask);
+            Debug.Log("[ContinuousTaskManager] Wrist Extension Lift task enabled");
+        }
+
         Debug.Log($"[ContinuousTaskManager] Built active tasks list: {activeTasks.Count} tasks");
     }
 
@@ -308,6 +316,8 @@ public class ContinuousTaskManager : MonoBehaviour
             allTasks.Add(bottlePouringTask);
         if (marbleDeliveryTask != null)
             allTasks.Add(marbleDeliveryTask);
+        if (wristExtensionLiftTask != null)
+            allTasks.Add(wristExtensionLiftTask);
         return allTasks;
     }
 
@@ -686,6 +696,10 @@ public class ContinuousTaskManager : MonoBehaviour
                 else if (currentTask is MarbleDeliveryTask marbleTask)
                 {
                     statusText = marbleTask.GetStatusText();
+                }
+                else if (currentTask is WristExtensionLiftTask wristExtensionLiftTask)
+                {
+                    statusText = wristExtensionLiftTask.GetStatusText();
                 }
                 else if (currentTask.isComplete)
                 {

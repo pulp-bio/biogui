@@ -32,6 +32,9 @@ public class BottlePouringTask : ContinuousTask
     [Tooltip("Unity Y position for bottle spawn")]
     public float bottleSpawnY = 0.5f;
 
+    [Tooltip("Additional upward spawn offset for the bottle to avoid starting slightly inside the table")]
+    public float bottleSpawnLift = 0.5f;
+
     [Tooltip("Normalized X position (-1 to 1) for bowl position")]
     public float bowlNormalizedX = 0.5f;
 
@@ -97,12 +100,17 @@ public class BottlePouringTask : ContinuousTask
     /// </summary>
     private float ResolveBottleSpawnY()
     {
+        float baseY;
         if (useWorkspaceGridBottleHeight && WorkspaceGrid.Instance != null)
         {
-            return WorkspaceGrid.Instance.objectHeight;
+            baseY = WorkspaceGrid.Instance.objectHeight;
+        }
+        else
+        {
+            baseY = bottleSpawnY;
         }
 
-        return bottleSpawnY;
+        return baseY + bottleSpawnLift;
     }
 
     private Vector3 GetBottleSpawnPosition()

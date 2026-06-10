@@ -220,4 +220,5 @@ public enum ContinuousTaskType
     CylinderDelivery,
     BottlePouring,
     MarbleDelivery,
+    WristExtensionLift,
 }
