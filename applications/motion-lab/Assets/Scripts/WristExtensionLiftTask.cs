@@ -255,7 +255,7 @@ public class WristExtensionLiftTask : ContinuousTask
 
         if (objectWasGrabbed && isHeld && !extensionReached)
         {
-            if (GetCurrentExtensionAngle() >= requiredExtensionAngle)
+            if (IsAtRequiredExtension())
             {
                 extensionReached = true;
                 if (debugLogs)
@@ -371,7 +371,18 @@ public class WristExtensionLiftTask : ContinuousTask
     {
         if (handController == null)
             return true;
+        if (handController.currentRotationMode == RotationMode.State)
+            return handController.CurrentRotationState == "neutral";
         return GetCurrentExtensionAngle() <= neutralTolerance;
+    }
+
+    private bool IsAtRequiredExtension()
+    {
+        if (handController == null)
+            return true;
+        if (handController.currentRotationMode == RotationMode.State)
+            return handController.CurrentRotationState == "extended";
+        return GetCurrentExtensionAngle() >= requiredExtensionAngle;
     }
 
     private bool IsHandFlatForGrab()

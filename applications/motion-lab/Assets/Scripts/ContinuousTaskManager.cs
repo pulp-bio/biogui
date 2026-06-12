@@ -22,6 +22,12 @@ public class ContinuousTaskManager : MonoBehaviour
     )]
     public PositionMode positionMode = PositionMode.State;
 
+    [Header("Rotation Control")]
+    [Tooltip(
+        "Flexion/extension mode for continuous tasks: Continuous uses incoming IMU angles, State uses discrete wrist states such as neutral/extended"
+    )]
+    public RotationMode rotationMode = RotationMode.Continuous;
+
     [Header("Task Selection")]
     [Tooltip("If enabled, tasks are selected randomly. If disabled, tasks run in order.")]
     public bool randomSelection = false;
@@ -130,12 +136,16 @@ public class ContinuousTaskManager : MonoBehaviour
             handController = FindFirstObjectByType<HandController>();
         }
 
-        // Set position mode on HandController
+        // Set global control modes on HandController
         if (handController != null)
         {
             handController.currentPositionMode = positionMode;
+            handController.currentRotationMode = rotationMode;
             Debug.Log(
                 $"[ContinuousTaskManager] Set HandController position mode to: {positionMode}"
+            );
+            Debug.Log(
+                $"[ContinuousTaskManager] Set HandController rotation mode to: {rotationMode}"
             );
         }
 

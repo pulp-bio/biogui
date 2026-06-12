@@ -76,6 +76,7 @@ def main(stdscr):
         "  POSITION:  W = forward   D = right   S = start   ↑/↓ = Y ±",
         "  GESTURE:   Space = toggle   B = rest   F = close   G = open   H = pinch",
         "  ROTATION (IMU):   I/K = Flexion ±   O/U = Supination ±   R = Reset",
+        "  WRIST STATE: N = neutral   E = extended",
         "  QUIT:      Q / Esc",
         "",
         "═══════════════════════════════════════════════════════════════════",
@@ -174,6 +175,12 @@ def main(stdscr):
             if ch in (ord("r"), ord("R")):
                 unity.reset_rotation()
 
+            # Discrete wrist state
+            if ch in (ord("n"), ord("N")):
+                unity.set_rotation_state("neutral")
+            if ch in (ord("e"), ord("E")):
+                unity.set_rotation_state("extended")
+
         # ─────────────────────────────────────────────────────────────────
         # Display State
         # ─────────────────────────────────────────────────────────────────
@@ -192,16 +199,21 @@ def main(stdscr):
                 f"  Rotation (IMU):   flex={state['rotation'][0]:6.1f}°  "
                 f"supin={state['rotation'][2]:6.1f}°        ",
             )
-            curls = state["curls"]
             stdscr.addstr(
                 status_row + 2,
+                0,
+                f"  Wrist State: {state['rotation_state']:8s}   ",
+            )
+            curls = state["curls"]
+            stdscr.addstr(
+                status_row + 3,
                 0,
                 f"  Curls:    T={curls[0]:.1f} I={curls[1]:.1f} M={curls[2]:.1f} "
                 f"R={curls[3]:.1f} P={curls[4]:.1f}   ",
             )
             delta = state["position_delta"]
             stdscr.addstr(
-                status_row + 3,
+                status_row + 4,
                 0,
                 f"  Delta:    dx={delta[0]:.2f} dy={delta[1]:.2f} dz={delta[2]:.2f}   ",
             )

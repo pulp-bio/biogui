@@ -34,6 +34,16 @@ public enum PositionMode
     State,
 }
 
+/// <summary>
+/// Defines how flexion/extension should be interpreted from incoming messages.
+/// Supination remains continuous/IMU-based.
+/// </summary>
+public enum RotationMode
+{
+    Continuous,
+    State,
+}
+
 public class HandController : MonoBehaviour
 {
     [Header("Hand Settings")]
@@ -46,6 +56,16 @@ public class HandController : MonoBehaviour
     [Header("Position Mode")]
     [Tooltip("Current position mode - set by active task to control position interpretation")]
     public PositionMode currentPositionMode = PositionMode.State;
+
+    [Header("Rotation Mode")]
+    [Tooltip("Current rotation mode for flexion/extension - continuous IMU angle or discrete state")]
+    public RotationMode currentRotationMode = RotationMode.Continuous;
+
+    [Tooltip("Flexion/extension angle used when a discrete 'neutral' wrist state is received")]
+    public float rotationStateNeutralAngle = 0f;
+
+    [Tooltip("Flexion/extension angle used when a discrete 'extended' wrist state is received")]
+    public float rotationStateExtendedAngle = -35f;
 
     [Header("Workspace Grid")]
     [Tooltip("Reference to WorkspaceGrid for position state mapping (auto-found if null)")]
@@ -129,6 +149,7 @@ public class HandController : MonoBehaviour
     /// Latest IMU supination from UDP rotation[2] (degrees, 0 = neutral).
     /// </summary>
     public float CurrentImuSupinationDegrees { get; private set; }
+    public string CurrentRotationState { get; private set; } = "neutral";
 
     private Vector3 externalPositionOffset = Vector3.zero;
 
@@ -173,6 +194,8 @@ public class HandController : MonoBehaviour
     // Current state from bio-bridge (text labels)
     public string CurrentPositionState { get; private set; } = "start";
     public string CurrentGesture { get; private set; } = "rest";
+    private float targetFlexionDegrees;
+    private float targetSupinationDegrees;
 
     // Returns a defensive copy of the current curls (length=5, 0..1)
     public float[] GetCurrentCurlsCopy()
@@ -217,6 +240,9 @@ public class HandController : MonoBehaviour
         // Rotation (IMU-based)
         public float[] rotation; // [flexion, unused, supination]
 
+        // Discrete wrist rotation state (optional)
+        public string rotationState; // "neutral", "extended"
+
         // Finger curls (absolute) - this controls grabbing/pinching
         public float[] curls; // [thumb, index, middle, ring, pinky]
     }
@@ -253,6 +279,8 @@ public class HandController : MonoBehaviour
 
         targetPos = transform.position;
         targetRot = transform.rotation;
+        targetFlexionDegrees = 0f;
+        targetSupinationDegrees = 0f;
 
         try
         {
@@ -342,6 +370,10 @@ public class HandController : MonoBehaviour
         targetRot = Quaternion.Euler(0f, 0f, 0f);
         transform.rotation = Quaternion.Euler(0f, 0f, 0f);
         rotationVelocity = Vector3.zero;
+        targetFlexionDegrees = 0f;
+        targetSupinationDegrees = 0f;
+        CurrentRotationState = "neutral";
+        CurrentImuSupinationDegrees = 0f;
 
         // INSTANT: Set finger curls to [0, 0, 0, 0, 0] (open hand)
         // Only set the curl VALUES - do NOT call ApplyFingers() to avoid touching joints directly
@@ -462,25 +494,36 @@ public class HandController : MonoBehaviour
 
         if (rotationData != null && rotationData.Length == 3)
         {
-            float x = Mathf.Clamp(
-                rotationData[0],
-                HandRotationLimits.FLEXION_MAX,
-                HandRotationLimits.EXTENSION_MAX
-            ); // Flexion/Extension
-            float y = 0f; // Unused
+            if (currentRotationMode == RotationMode.Continuous)
+            {
+                targetFlexionDegrees = Mathf.Clamp(
+                    rotationData[0],
+                    HandRotationLimits.FLEXION_MAX,
+                    HandRotationLimits.EXTENSION_MAX
+                );
+            }
 
             // Supination direction depends on handedness
-            float supination = Mathf.Clamp(
+            targetSupinationDegrees = Mathf.Clamp(
                 rotationData[2],
                 HandRotationLimits.PRONATION_MAX,
                 HandRotationLimits.SUPINATION_MAX
             );
-            CurrentImuSupinationDegrees = supination;
-
-            float z = -HandednessMultiplier * supination;
-
-            targetRot = Quaternion.Euler(x, y, z);
+            CurrentImuSupinationDegrees = targetSupinationDegrees;
         }
+
+        if (currentRotationMode == RotationMode.State && !string.IsNullOrEmpty(msg.rotationState))
+        {
+            CurrentRotationState = msg.rotationState.ToLower();
+            targetFlexionDegrees = CurrentRotationState switch
+            {
+                "extended" => rotationStateExtendedAngle,
+                _ => rotationStateNeutralAngle,
+            };
+        }
+
+        float z = -HandednessMultiplier * targetSupinationDegrees;
+        targetRot = Quaternion.Euler(targetFlexionDegrees, 0f, z);
 
         // ─────────────────────────────────────────────────────────────────
         // Curls (absolute: [thumb, index, middle, ring, pinky])

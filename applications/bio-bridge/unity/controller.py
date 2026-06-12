@@ -20,6 +20,7 @@ Protocol (JSON over UDP):
     "positionState": "forward",          // Label: "start", "forward", "right"
     "gesture": "close",                  // Label: "rest", "open", "close", "pinch"
     "rotation": [0, 0, 90],              // Absolute: [flexion, unused, supination] (IMU-based)
+    "rotationState": "neutral",          // Optional discrete wrist state: "neutral" | "extended"
     "curls": [1, 1, 1, 1, 1]             // Absolute: [thumb, index, middle, ring, pinky]
 }
 
@@ -79,6 +80,7 @@ class UnityController:
 
     # Valid gestures (4 classes sent to Unity)
     GESTURES = ("rest", "open", "close", "pinch")
+    ROTATION_STATES = ("neutral", "extended")
 
     def __init__(
         self,
@@ -99,6 +101,7 @@ class UnityController:
         self.position_state = "start"  # "start", "forward", "right"
         self.gesture = "rest"  # "rest", "open", "close", "pinch"
         self.rotation = list(DEFAULT_HAND_ROTATION)  # [flex, unused, supin] (IMU-based)
+        self.rotation_state = "neutral"  # optional discrete wrist state
         self.curls = [0.0, 0.0, 0.0, 0.0, 0.0]  # [thumb, index, middle, ring, pinky]
 
         self.mode = Mode.CLASSIFICATION
@@ -213,6 +216,16 @@ class UnityController:
         with self._lock:
             self.rotation = [flexion, unused, supination]
 
+    def set_rotation_state(self, state: str):
+        """Set discrete wrist state for tasks that use model-based extension commands."""
+        state = state.lower()
+        if state not in self.ROTATION_STATES:
+            raise ValueError(
+                f"Invalid rotation state: {state}. Must be one of: {self.ROTATION_STATES}"
+            )
+        with self._lock:
+            self.rotation_state = state
+
     def set_supination(self, degrees: float):
         """Set supination angle in degrees (IMU-based)."""
         with self._lock:
@@ -294,6 +307,7 @@ class UnityController:
                 "positionState": self.position_state,
                 "gesture": self.gesture,
                 "rotation": self.rotation,
+                "rotationState": self.rotation_state,
                 "curls": self.curls,
             }
         json_data = json.dumps(msg).encode("utf-8")
@@ -307,6 +321,7 @@ class UnityController:
                 "position_state": self.position_state,
                 "gesture": self.gesture,
                 "rotation": self.rotation.copy(),
+                "rotation_state": self.rotation_state,
                 "curls": self.curls.copy(),
                 "mode": self.mode,
                 "confidence": self.last_confidence,
@@ -328,6 +343,7 @@ class UnityController:
             self.position_state = "start"
             self.gesture = "rest"
             self.rotation = list(DEFAULT_HAND_ROTATION)
+            self.rotation_state = "neutral"
             self.curls = [0.0, 0.0, 0.0, 0.0, 0.0]
             self.mode = Mode.CLASSIFICATION
             self.prediction_history.clear()

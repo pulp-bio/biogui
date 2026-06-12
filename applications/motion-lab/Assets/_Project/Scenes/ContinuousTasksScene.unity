@@ -856,8 +856,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 46
+  m_fontSizeBase: 46
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -939,6 +939,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::ContinuousTaskManager
   positionMode: 1
+  rotationMode: 1
   randomSelection: 0
   enableBoxDeliveryTask: 0
   enableCylinderDeliveryTask: 0
@@ -1428,6 +1429,9 @@ MonoBehaviour:
   handedness: 1
   listenPort: 5055
   currentPositionMode: 1
+  currentRotationMode: 0
+  rotationStateNeutralAngle: 0
+  rotationStateExtendedAngle: -35
   workspaceGrid: {fileID: 244260010}
   positionSmoothTime: 0.2
   rotationSmoothTime: 0.2
@@ -2080,8 +2084,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 46
+  m_fontSizeBase: 46
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2338,7 +2342,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 76.65512
+  field of view: 77
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -2365,7 +2369,7 @@ Transform:
   m_GameObject: {fileID: 1951105162}
   serializedVersion: 2
   m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 4.590762, z: -5.747082}
+  m_LocalPosition: {x: 0, y: 4.6, z: -5.74}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
