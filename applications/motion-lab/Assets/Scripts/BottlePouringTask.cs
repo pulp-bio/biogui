@@ -280,15 +280,6 @@ public class BottlePouringTask : ContinuousTask
     protected override void OnTaskComplete()
     {
         base.OnTaskComplete();
-
-        // Reset hand lifting when task completes
-        isHandLifted = false;
-        handTargetOffset = Vector3.zero;
-        if (handController != null)
-        {
-            handController.SetPositionOffset(Vector3.zero);
-            Debug.Log("[BottlePouringTask] Hand lifting reset on task completion");
-        }
     }
 
     protected override void OnTaskReset()
