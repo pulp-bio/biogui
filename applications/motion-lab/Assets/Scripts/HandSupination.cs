@@ -21,9 +21,7 @@ public static class HandSupination
 
     public static bool IsWithinTarget(float current, float target, float tolerance)
     {
-        float minAngle = target - tolerance;
-        float maxAngle = target + tolerance;
-        return current >= minAngle && current <= maxAngle;
+        return Mathf.Abs(Mathf.DeltaAngle(current, target)) <= tolerance;
     }
 
     public static float RotationFromGrab(float grabAngle, float currentAngle)

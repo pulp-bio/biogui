@@ -31,10 +31,6 @@ class GravityRotationTracker:
     # Conversion from raw IMU units to m/s²
     RAW_TO_MS2 = 9.81 / 17327.0
 
-    # Rotation limits (matching Unity's HandRotationLimits.cs)
-    PRONATION_MAX = -35.0  # Maximum pronation (negative)
-    SUPINATION_MAX = 149.0  # Maximum supination (positive)
-
     def __init__(
         self,
         dt: float = MEAS_PERIOD,
@@ -54,10 +50,6 @@ class GravityRotationTracker:
         self.raw_angle = 0.0
         self.current_angle = 0.0
         self.last_raw_angle = 0.0
-
-        # Set rotation limits based on orientation
-        self.pronation_limit = self.PRONATION_MAX
-        self.supination_limit = self.SUPINATION_MAX
 
     def start_calibration(self):
         """
@@ -106,6 +98,7 @@ class GravityRotationTracker:
         # Reset angle state
         self.raw_angle = 0.0
         self.current_angle = 0.0
+        self.last_raw_angle = 0.0
         self.calibrated = True
 
         return True
@@ -142,11 +135,8 @@ class GravityRotationTracker:
         # Rotation difference
         angle_diff = neutral_angle - current_angle
 
-        # Normalize to [-π, π]
-        while angle_diff > np.pi:
-            angle_diff -= 2 * np.pi
-        while angle_diff < -np.pi:
-            angle_diff += 2 * np.pi
+        # Normalize to [-π, π) before unwrapping across full turns.
+        angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
 
         # Convert to degrees and flip if necessary
         new_raw_angle = np.degrees(angle_diff)
@@ -166,32 +156,31 @@ class GravityRotationTracker:
         self.raw_angle = new_raw_angle
         self.last_raw_angle = new_raw_angle
 
-        # Smoothing and clipping to Unity limits
-        self.current_angle = np.clip(
-            self.smoothing * self.current_angle + (1 - self.smoothing) * self.raw_angle,
-            self.pronation_limit,
-            self.supination_limit,
+        # Smooth the unwrapped angle directly so full rotations stay continuous.
+        self.current_angle = (
+            self.smoothing * self.current_angle + (1 - self.smoothing) * self.raw_angle
         )
 
     def get_angle(self) -> float:
         """
-        Get current smoothed rotation angle in degrees.
+        Get current smoothed, unwrapped rotation angle in degrees.
 
         Returns
         -------
         float
             Rotation angle. Positive = supination, negative = pronation.
+            May exceed 360° after multiple turns.
         """
         return self.current_angle
 
     def get_raw_angle(self) -> float:
         """
-        Get unsmoothed rotation angle.
+        Get unsmoothed, unwrapped rotation angle.
 
         Returns
         -------
         float
-            Raw rotation angle in degrees
+            Raw rotation angle in degrees. May exceed 360° after multiple turns.
         """
         return self.raw_angle
 
@@ -199,6 +188,7 @@ class GravityRotationTracker:
         """Reset angle to zero without losing calibration."""
         self.raw_angle = 0.0
         self.current_angle = 0.0
+        self.last_raw_angle = 0.0
 
     @property
     def is_calibrated(self) -> bool:

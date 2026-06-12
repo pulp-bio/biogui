@@ -46,7 +46,6 @@ from core import (
     UNITY_HOST,
     UNITY_PORT,
     clamp_flexion,
-    clamp_supination,
 )
 from unity import UnityController
 
@@ -167,9 +166,9 @@ def main(stdscr):
 
             # Supination: O = increase, U = decrease
             if ch in (ord("o"), ord("O")):
-                unity.rotation[2] = clamp_supination(unity.rotation[2] + ROT_STEP)
+                unity.rotation[2] += ROT_STEP
             if ch in (ord("u"), ord("U")):
-                unity.rotation[2] = clamp_supination(unity.rotation[2] - ROT_STEP)
+                unity.rotation[2] -= ROT_STEP
 
             # Reset rotation
             if ch in (ord("r"), ord("R")):

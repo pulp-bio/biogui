@@ -503,12 +503,8 @@ public class HandController : MonoBehaviour
                 );
             }
 
-            // Supination direction depends on handedness
-            targetSupinationDegrees = Mathf.Clamp(
-                rotationData[2],
-                HandRotationLimits.PRONATION_MAX,
-                HandRotationLimits.SUPINATION_MAX
-            );
+            // Keep the IMU supination angle unwrapped so full turns stay continuous.
+            targetSupinationDegrees = rotationData[2];
             CurrentImuSupinationDegrees = targetSupinationDegrees;
         }
 

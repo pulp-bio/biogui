@@ -277,12 +277,12 @@ def main_curses(stdscr, args):
                 curses.A_BOLD,
             )
         else:
-            cal_str = "YES" if rt.is_calibrated() else "NO (press C)"
+            cal_str = "YES" if rt.is_calibrated else "NO (press C)"
             stdscr.addstr(4, 0, f"Calibrated: {cal_str}")
 
         # === Rotation ===
         stdscr.addstr(6, 0, "--- ROTATION ---")
-        if rt.is_calibrated():
+        if rt.is_calibrated:
             angle = rt.get_angle()
             abs_angle = abs(angle)
 
