@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a5f3265eb027f0e41af7b62f064343df
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/BrushedIron_URPShader.mat
+  uploadId: 559121

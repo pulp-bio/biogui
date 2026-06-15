@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1fe720c95284ff24d8a9a2d5ef1b7c8c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Built-In_RPMaterials/RuinStoneBricks_StandardShader.mat
+  uploadId: 559121

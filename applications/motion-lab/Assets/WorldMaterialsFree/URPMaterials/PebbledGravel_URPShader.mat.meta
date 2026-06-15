@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cfd22c3f14ed7cd43ae1d0bdde543ae4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/PebbledGravel_URPShader.mat
+  uploadId: 559121

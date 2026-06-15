@@ -1063,7 +1063,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4c153ef15f8660e299c416474fc682e0, type: 2}
+  - {fileID: 2100000, guid: 3973f32e9c22f8a989165383626421ba, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1579,7 +1579,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4c153ef15f8660e299c416474fc682e0, type: 2}
+  - {fileID: 2100000, guid: 3973f32e9c22f8a989165383626421ba, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1855,7 +1855,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4c153ef15f8660e299c416474fc682e0, type: 2}
+  - {fileID: 2100000, guid: 3973f32e9c22f8a989165383626421ba, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1953,7 +1953,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 20b22b7b9f81490338746c64a7902d07, type: 2}
+  - {fileID: 2100000, guid: d73e8b68b1f0154bd8642bdd5e3a63ce, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2268,7 +2268,7 @@ MonoBehaviour:
   isActivated: 0
   liftObject: {fileID: 0}
   liftObjectPrefab: {fileID: 7540409576388812264, guid: 08569c5c02da86f598fbe1bd9976038c, type: 3}
-  objectSpawnNormalizedX: 0
+  objectSpawnNormalizedX: -0.01
   objectSpawnNormalizedZ: 0
   useWorkspaceGridObjectHeight: 1
   objectSpawnY: 1.5
@@ -2342,7 +2342,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 77
+  field of view: 57.73975
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -2369,7 +2369,7 @@ Transform:
   m_GameObject: {fileID: 1951105162}
   serializedVersion: 2
   m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 4.6, z: -5.74}
+  m_LocalPosition: {x: 0, y: 4.0841002, z: -6.135523}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

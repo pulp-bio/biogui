@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1a0c4d18584a3f14087077d1dafa042e
+timeCreated: 1558489900
+licenseType: Store
+NativeFormatImporter:
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Built-In_RPMaterials/DryRockyDirt_WMShader.mat
+  uploadId: 559121

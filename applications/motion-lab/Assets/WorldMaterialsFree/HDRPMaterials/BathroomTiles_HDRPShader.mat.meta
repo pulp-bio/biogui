@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5d9b515fee1e9d74d9b10c870f910131
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/HDRPMaterials/BathroomTiles_HDRPShader.mat
+  uploadId: 559121

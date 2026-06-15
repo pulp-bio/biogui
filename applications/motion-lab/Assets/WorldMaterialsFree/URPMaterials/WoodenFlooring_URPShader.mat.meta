@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 74c7b8e3ed8d60740ad629198f468a2e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/WoodenFlooring_URPShader.mat
+  uploadId: 559121

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0a500038f3e2c174cbb531f186d58aba
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URP_FreeDemoSceneSettings.lighting
+  uploadId: 559121

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4c98c5ad59bf55649be5e3d1990a2bd8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/HDRPMaterials/BrushedIron_HDRPShader.mat
+  uploadId: 559121

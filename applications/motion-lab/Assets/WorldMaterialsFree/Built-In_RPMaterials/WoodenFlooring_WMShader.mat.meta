@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2d376d668dcec9045a4b0e642a7239d9
+timeCreated: 1562101044
+licenseType: Store
+NativeFormatImporter:
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Built-In_RPMaterials/WoodenFlooring_WMShader.mat
+  uploadId: 559121

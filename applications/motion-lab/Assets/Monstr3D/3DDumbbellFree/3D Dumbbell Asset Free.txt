@@ -1,0 +1,33 @@
+3D Dumbbell Asset Free
+
+Overview
+
+Welcome to the 3D Hexagonal Dumbbells Free! This pack provides a highly detailed and optimized hexagonal dumbbell model, of 10kg. Perfect for use in gym environments, fitness simulations, and other related projects, this documentation will guide you through the contents of the pack, how to use the assets, and best practices.
+
+Contents
+
+	3D Models: 1 hexagonal dumbbell models, with weights ranging from 6kg to 50kg.
+	Textures: Provided in 4K resolutions.
+	Formats: Available in FBX
+	Material: Dumbbell use single material.
+
+Render Pipelines:
+
+	The Project has a URP and HDRP conversor, to use just double click on URP_ExtractMe or HDRP_ExtractMe
+
+
+If you need look for the paid version, that has 16 dumbbells :D
+
+
+License
+
+These assets are licensed for use in personal and commercial projects. Redistribution or reselling of the assets in their original or modified form is not permitted.
+Support
+
+If you encounter any issues or have questions, please contact us at thomasnalevaiko@gmail.com.
+
+Feedback
+
+We appreciate your feedback! If you enjoy using these assets, please consider leaving a review on the marketplace.
+
+Thank you for your purchase and happy creating!

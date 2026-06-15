@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f90d452210f589b48b152b19c8c4f5ee
+timeCreated: 1559693018
+licenseType: Store
+NativeFormatImporter:
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Built-In_RPMaterials/BathroomTiles_WMShader.mat
+  uploadId: 559121

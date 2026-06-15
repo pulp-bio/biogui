@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 883c439e5d0a9884f860bfb8a5a7d769
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/HexBricks_URPShader.mat
+  uploadId: 559121

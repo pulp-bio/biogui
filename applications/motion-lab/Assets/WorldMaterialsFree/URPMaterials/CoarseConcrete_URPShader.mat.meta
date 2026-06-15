@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a159f432676796c4cba4fdd02834e8df
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/CoarseConcrete_URPShader.mat
+  uploadId: 559121

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5099774cca9871c44b1a74846d7b5d11
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/BasketWeaveBricks_URPShader.mat
+  uploadId: 559121

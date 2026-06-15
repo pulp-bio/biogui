@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a293034410ea13649bd3df957b15f3ab
+timeCreated: 1556232122
+licenseType: Store
+NativeFormatImporter:
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Built-In_RPMaterials/BrushedIron_WMShader.mat
+  uploadId: 559121

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 503e66f9762e80e4d8d98b15f7e632f8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/HDRPMaterials/ClumpMud_HDRPShader.mat
+  uploadId: 559121

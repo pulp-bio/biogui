@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d14161b60c60ce24aaa08e9ae1e2d2ad
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247739
+  packageName: Outdoor Wall Tile Texture Pack (LR)
+  packageVersion: 1.0
+  assetPath: Assets/Phoenix3D/Demo/Scripts/MaterialSwithcer.cs
+  uploadId: 570291

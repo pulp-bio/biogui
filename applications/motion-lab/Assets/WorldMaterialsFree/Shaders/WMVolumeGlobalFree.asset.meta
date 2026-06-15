@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3606d8f6510a45444851ab00901a07c2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Shaders/WMVolumeGlobalFree.asset
+  uploadId: 559121

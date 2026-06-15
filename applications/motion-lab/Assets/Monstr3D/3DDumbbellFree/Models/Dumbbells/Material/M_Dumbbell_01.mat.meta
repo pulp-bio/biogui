@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 60ae5f31892ae8f49a521cfa673d4420
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 294391
+  packageName: 3D Dumbbell Free
+  packageVersion: 1.0
+  assetPath: Assets/Monstr3D/3DDumbbellFree/Models/Dumbbells/Material/M_Dumbbell_01.mat
+  uploadId: 687455

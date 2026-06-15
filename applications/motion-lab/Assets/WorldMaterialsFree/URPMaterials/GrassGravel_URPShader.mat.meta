@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 39961ee0aa5ac2d41ac462b57c29b50f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/GrassGravel_URPShader.mat
+  uploadId: 559121

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 2004d85ea61f31741abc45140aed38da
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Shaders/WorldMatHDRPFree.shader
+  uploadId: 559121

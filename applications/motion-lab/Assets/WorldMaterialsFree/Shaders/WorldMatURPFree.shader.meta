@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 6d118ceaa1d482544b8ec92406f6bcde
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/Shaders/WorldMatURPFree.shader
+  uploadId: 559121

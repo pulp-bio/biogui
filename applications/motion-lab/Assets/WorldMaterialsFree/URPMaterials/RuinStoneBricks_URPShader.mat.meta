@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d7808e852e08b934aa5b9fdcae5d0ecd
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+AssetOrigin:
+  serializedVersion: 1
+  productId: 150182
+  packageName: World Materials Free
+  packageVersion: 3
+  assetPath: Assets/WorldMaterialsFree/URPMaterials/RuinStoneBricks_URPShader.mat
+  uploadId: 559121
