@@ -7,9 +7,22 @@
 View for the main window.
 """
 
+from pathlib import Path
+
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMainWindow, QWidget
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from biogui.ui.ui_main_window import Ui_MainWindow
 from biogui.utils import detectTheme
@@ -53,6 +66,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._plotLayoutManager = PlotLayoutManager(self.plotsContainer)
         self._plotStatsVisible = True
         self._setupSidebarSplitter()
+        self._setupPlaybackTab()
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -133,3 +147,94 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.renderLenMs = renderLenMap[renderLen]
         self.renderLenChanged.emit(renderLenMap[renderLen])
+
+    def _setupPlaybackTab(self) -> None:
+        """Wrap sidebar content in a QTabWidget and add a Playback tab for .bio files."""
+        # Detach existing widgets from confLayout
+        self.confLayout.removeWidget(self.streamConfGroupBox)
+        self.confLayout.removeWidget(self.scrollArea)
+
+        self._sidebarTabs = QTabWidget(self.sidebarPanel)
+
+        # Tab 0 — Acquisition (original configuration content)
+        acqWidget = QWidget()
+        acqLayout = QVBoxLayout(acqWidget)
+        acqLayout.setContentsMargins(0, 0, 0, 0)
+        acqLayout.addWidget(self.streamConfGroupBox, 1)
+        acqLayout.addWidget(self.scrollArea, 2)
+        self._sidebarTabs.addTab(acqWidget, "Acquisition")
+
+        # Tab 1 — Playback
+        playWidget = QWidget()
+        playLayout = QVBoxLayout(playWidget)
+        playLayout.setContentsMargins(4, 8, 4, 4)
+        playLayout.setSpacing(8)
+
+        self._playbackFileLabel = QLabel("No file selected")
+        self._playbackFileLabel.setWordWrap(True)
+        self._playbackFileLabel.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        playLayout.addWidget(self._playbackFileLabel)
+
+        fileRow = QHBoxLayout()
+        browseBtn = QPushButton("Browse…")
+        browseBtn.clicked.connect(self._onBrowseFile)
+        latestBtn = QPushButton("Load latest")
+        latestBtn.clicked.connect(self._onLoadLatest)
+        fileRow.addWidget(browseBtn)
+        fileRow.addWidget(latestBtn)
+        playLayout.addLayout(fileRow)
+
+        self.openVisualizationButton = QPushButton("Open visualization")
+        self.openVisualizationButton.setEnabled(False)
+        self.openVisualizationButton.clicked.connect(self._onOpenVisualization)
+        playLayout.addWidget(self.openVisualizationButton)
+
+        playLayout.addStretch()
+        self._sidebarTabs.addTab(playWidget, "Playback")
+
+        self.confLayout.addWidget(self._sidebarTabs, 3)
+        self._playbackFilePath: Path | None = None
+
+    @Slot()
+    def _onBrowseFile(self) -> None:
+        from biogui import paths
+
+        start_dir = str(paths.DATARUNTIME_DIR) if paths.DATARUNTIME_DIR.exists() else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open .bio file",
+            start_dir,
+            "BioGUI files (*.bio);;All files (*)",
+        )
+        if file_path:
+            self._setPlaybackFile(Path(file_path))
+
+    @Slot()
+    def _onLoadLatest(self) -> None:
+        from biogui.views.post_run_plotters.bio_file_utils import find_latest_bio_file
+
+        latest = find_latest_bio_file()
+        if latest is None:
+            QMessageBox.information(
+                self, "No file found", "No .bio file found in the runtime directory."
+            )
+            return
+        self._setPlaybackFile(latest)
+
+    def _setPlaybackFile(self, file_path: Path) -> None:
+        self._playbackFilePath = file_path
+        self._playbackFileLabel.setText(str(file_path))
+        self.openVisualizationButton.setEnabled(True)
+
+    @Slot()
+    def _onOpenVisualization(self) -> None:
+        if self._playbackFilePath is None:
+            return
+        try:
+            from biogui.views.post_run_plotters.ultrasound import plot_file
+
+            plot_file(self._playbackFilePath)
+        except Exception as exc:
+            QMessageBox.critical(self, "Visualization error", str(exc))
