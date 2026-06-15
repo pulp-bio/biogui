@@ -15,7 +15,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -99,10 +99,16 @@ class PostRunPlotWindow(QWidget):
         # ── initial filter config from plot_options ──────────────────
         opts = plot_options or {}
         self._enable_bandpass: bool = bool(opts.get("enableBandpass", True))
-        self._center_freq_hz: float = float(opts.get("transmissionFrequencyHz", 0.0) or 0.0)
-        self._bandwidth_fraction: float = float(opts.get("bandwidthFraction", 0.45) or 0.45)
-        self._adc_fs: float = float(opts.get("adcSamplingFreqHz", 0.0) or 0.0)
+        self._center_freq_hz: float = float(opts.get("transmissionFrequencyHz", 2.25e6) or 2.25e6)
+        self._bandwidth_fraction: float = float(opts.get("bandwidthFraction", 0.30) or 0.30)
+        self._adc_fs: float = float(opts.get("adcSamplingFreqHz", 33.33e6) or 33.33e6)
         self._dynamic_range: float = 40.0
+
+        # Debounce timer for spinbox valueChanged → avoids reprocessing on every step
+        self._filter_timer = QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.setInterval(300)
+        self._filter_timer.timeout.connect(self._on_filter_params_changed)
         self._proc_mode: ProcessingMode = "envelope"
 
         # ── physical dimensions ──────────────────────────────────────
@@ -158,7 +164,14 @@ class PostRunPlotWindow(QWidget):
 
     def _build_current_filter(self) -> UltrasoundFilter | None:
         """Build a bandpass filter from the current UI settings, or None."""
+        print(
+            f"[VIS] _build_current_filter: bp={self._enable_bandpass}  "
+            f"f0={self._center_freq_hz/1e6:.3f} MHz  "
+            f"bw={self._bandwidth_fraction*100:.0f}%  "
+            f"adc_fs={self._adc_fs/1e6:.2f} MHz"
+        )
         if not self._enable_bandpass or self._center_freq_hz <= 0.0 or self._adc_fs <= 0.0:
+            print("[VIS]  → no filter (bandpass disabled or missing f0/adc_fs)")
             return None
         half = self._center_freq_hz * self._bandwidth_fraction / 2.0
         low = max(0.0, self._center_freq_hz - half)
@@ -302,10 +315,10 @@ class PostRunPlotWindow(QWidget):
         self._center_spin.setRange(0.0, 100.0)
         self._center_spin.setDecimals(2)
         self._center_spin.setSuffix(" MHz")
-        self._center_spin.setSingleStep(0.5)
+        self._center_spin.setSingleStep(0.25)
         self._center_spin.setMinimumWidth(110)
         self._center_spin.setValue(self._center_freq_hz / 1e6)
-        self._center_spin.editingFinished.connect(self._on_filter_params_changed)
+        self._center_spin.valueChanged.connect(self._filter_timer.start)
         row2.addWidget(self._center_spin)
 
         # Bandwidth
@@ -317,8 +330,20 @@ class PostRunPlotWindow(QWidget):
         self._bw_spin.setSingleStep(5.0)
         self._bw_spin.setMinimumWidth(90)
         self._bw_spin.setValue(self._bandwidth_fraction * 100.0)
-        self._bw_spin.editingFinished.connect(self._on_filter_params_changed)
+        self._bw_spin.valueChanged.connect(self._filter_timer.start)
         row2.addWidget(self._bw_spin)
+
+        # ADC sampling frequency
+        row2.addWidget(QLabel("ADC fs:"))
+        self._adc_spin = QDoubleSpinBox()
+        self._adc_spin.setRange(1.0, 1000.0)
+        self._adc_spin.setDecimals(2)
+        self._adc_spin.setSuffix(" MHz")
+        self._adc_spin.setSingleStep(1.0)
+        self._adc_spin.setMinimumWidth(110)
+        self._adc_spin.setValue(self._adc_fs / 1e6)
+        self._adc_spin.valueChanged.connect(self._filter_timer.start)
+        row2.addWidget(self._adc_spin)
 
         row2.addSpacing(16)
 
@@ -331,7 +356,7 @@ class PostRunPlotWindow(QWidget):
         self._log_spin.setSingleStep(5.0)
         self._log_spin.setMinimumWidth(90)
         self._log_spin.setValue(self._dynamic_range)
-        self._log_spin.editingFinished.connect(self._on_filter_params_changed)
+        self._log_spin.valueChanged.connect(self._filter_timer.start)
         self._log_label.setEnabled(False)
         self._log_spin.setEnabled(False)
         row2.addWidget(self._log_label)
@@ -437,9 +462,12 @@ class PostRunPlotWindow(QWidget):
             self._all_mmode_plots.append(p)
             last_plot = p
 
-        if last_plot is not None:
-            last_plot.setLabel("bottom", "Time (ms)")
-            last_plot.getAxis("bottom").enableAutoSIPrefix(False)
+        # Shared time axis: only the bottom-most plot shows tick labels
+        for _p in self._all_mmode_plots[:-1]:
+            _p.hideAxis("bottom")
+        if self._all_mmode_plots:
+            self._all_mmode_plots[-1].setLabel("bottom", "Time (ms)")
+            self._all_mmode_plots[-1].getAxis("bottom").enableAutoSIPrefix(False)
 
         self._stacked.addWidget(self._mmode_widget)
 
@@ -472,7 +500,9 @@ class PostRunPlotWindow(QWidget):
             else:
                 p.vb.setXLink(first_vb)
 
-            if i == n_ch - 1:
+            if i < n_ch - 1:
+                p.hideAxis("bottom")
+            else:
                 p.setLabel("bottom", "Depth (mm)")
 
             initial = mat[:, 0] if mat.shape[1] > 0 else np.zeros(self._n_depth)
@@ -536,7 +566,13 @@ class PostRunPlotWindow(QWidget):
         self._enable_bandpass = self._bp_cb.isChecked()
         self._center_freq_hz = self._center_spin.value() * 1e6
         self._bandwidth_fraction = self._bw_spin.value() / 100.0
+        self._adc_fs = self._adc_spin.value() * 1e6
         self._dynamic_range = self._log_spin.value()
+        print(
+            f"[VIS] _on_filter_params_changed: bp={self._enable_bandpass}  "
+            f"f0={self._center_freq_hz/1e6:.3f} MHz  bw={self._bandwidth_fraction*100:.0f}%  "
+            f"adc_fs={self._adc_fs/1e6:.2f} MHz  dyn={self._dynamic_range} dB"
+        )
         self._reprocess_and_refresh()
 
     def _on_frame_changed(self, frame: int) -> None:
