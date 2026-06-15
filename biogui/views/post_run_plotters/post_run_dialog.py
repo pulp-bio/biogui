@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QStackedWidget,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -124,10 +125,32 @@ class PostRunPlotWindow(QWidget):
         self._all_mmode_plots: list[pg.PlotItem] = []
         self._all_amode_plots: list[pg.PlotItem] = []
 
+        # Container for the Visualization tab (keeps _setup_ui's layout separate)
+        self._vis_container = QWidget()
         self._setup_ui()
         self._build_mmode_view()
         self._build_amode_view()
         self._stacked.setCurrentIndex(0)
+
+        # ── Feature Analysis tab ─────────────────────────────────────
+        from .feature_analysis_widget import FeatureAnalysisWidget
+
+        feature_widget = FeatureAnalysisWidget(
+            dataframe=self._dataframe,
+            channel_names=self._channel_names,
+            num_samples=self._n_depth if self._n_depth > 0 else 400,
+            meas_period_ms=self._period_per_ch,
+            plot_options=plot_options,
+            parent=self,
+        )
+
+        outer_tabs = QTabWidget()
+        outer_tabs.addTab(self._vis_container, "Visualization")
+        outer_tabs.addTab(feature_widget, "Feature Analysis")
+
+        top = QVBoxLayout(self)
+        top.setContentsMargins(0, 0, 0, 0)
+        top.addWidget(outer_tabs)
 
     # ------------------------------------------------------------------
     # Processing
@@ -205,7 +228,7 @@ class PostRunPlotWindow(QWidget):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        root = QVBoxLayout(self)
+        root = QVBoxLayout(self._vis_container)
         root.setSpacing(4)
         root.setContentsMargins(6, 6, 6, 6)
 
