@@ -59,6 +59,22 @@ NUM_IMU_CHANNELS = 3
 
 
 MODELS = {
+    "ceeus": {
+        "pose_path": MODEL_DIR / "ceeus" /  "gesture_model.pth",
+        "pose_meta_path": MODEL_DIR / "ceeus" / "additional_info_gesture_model.json",
+        "pose_num_classes": 6,
+        "pose_classes": {
+            0: "rest",
+            1: "open",
+            2: "rotclosed",
+            3: "pour",
+            4: "close",
+            5: "extend",
+        },
+        "position_path": MODEL_DIR  / "ceeus" /  "position_model.pth",
+        "position_meta_path": MODEL_DIR / "ceeus" / "additional_info_position_model.json",
+        "position_classes": {0: "start", 1: "forward"},
+    },
     "6class": {
         "pose_path": MODEL_DIR / "ft_1" / "pose_model_final_ft_1_1rep.pth",
         "pose_meta_path": MODEL_DIR / "ft_1" / "additional_info_pose_ft.json",
@@ -128,6 +144,7 @@ POSE_TO_UNITY = {
     "rotclosed": "close",  # rotclosed → close
     "pinch": "pinch",
     "pour": "close",  # pour → close
+    "extend": "extend",  # extend → open
 }
 
 
@@ -414,6 +431,10 @@ def main_curses(stdscr, args, config):
                     unity.set_gesture(unity_gesture)
                     unity.set_position_state(state.position)
                     unity.set_rotation(0.0, 0.0, state.imu_angle)
+                    if unity_gesture == "extend": #for ceeus demo, when wrist is extended, fingers are closed (grabbing the object)
+                        unity.set_rotation_state("extended")
+                    else:
+                        unity.set_rotation_state("neutral")
                     unity.send()
 
             # UI

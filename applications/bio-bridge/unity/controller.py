@@ -78,8 +78,8 @@ class UnityController:
     # Valid position states
     POSITION_STATES = ("start", "forward", "right")
 
-    # Valid gestures (4 classes sent to Unity)
-    GESTURES = ("rest", "open", "close", "pinch")
+    # Valid gestures (5 classes sent to Unity)
+    GESTURES = ("rest", "open", "close", "pinch", "extend")
     ROTATION_STATES = ("neutral", "extended")
 
     def __init__(
@@ -191,6 +191,9 @@ class UnityController:
                 self.curls = [0.0, 0.0, 0.0, 0.0, 0.0]
             elif gesture == "close":
                 self.curls = [1.0, 1.0, 1.0, 1.0, 1.0]
+            elif gesture == "extend": #for ceeus demo, when wrist is extended, fingers are closed (grabbing the object)    
+                self.curls = [1.0, 1.0, 1.0, 1.0, 1.0]
+                
             elif gesture == "pinch":
                 self.curls = [0.8, 0.8, 0.14, 0.12, 0.10]
             elif gesture == "rest":
