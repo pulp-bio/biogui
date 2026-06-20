@@ -12,7 +12,9 @@ dependencies = [
   "pyside6>=6.9.3",
   "pyside6-addons>=6.9.3",
   "pyside6-essentials>=6.9.3",
+  "scikit-learn>=1.9.0",
   "scipy>=1.15.3",
+  "umap-learn>=0.5",
 ]
 
 [dependency-groups]
