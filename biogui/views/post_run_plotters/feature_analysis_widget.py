@@ -368,60 +368,46 @@ class FeatureAnalysisWidget(QWidget):
         # ══════════════════════════════════════════════════════════════
         # Main visualization area
         # ══════════════════════════════════════════════════════════════
-        if self._has_labels:
-            splitter = QSplitter(Qt.Orientation.Horizontal)
-            root.addWidget(splitter, stretch=1)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        root.addWidget(splitter, stretch=1)
 
-            self._feat_pane = QGroupBox("Features over time")
-            self._feat_pane.setStyleSheet(_GB_BOLD)
-            feat_layout = QVBoxLayout(self._feat_pane)
-            feat_layout.setContentsMargins(4, 8, 4, 4)
-            self._feat_gw = pg.GraphicsLayoutWidget()
-            feat_layout.addWidget(self._feat_gw)
-            self._feat_pane.setVisible(False)
-            splitter.addWidget(self._feat_pane)
+        self._feat_pane = QGroupBox("Features over time")
+        self._feat_pane.setStyleSheet(_GB_BOLD)
+        feat_layout = QVBoxLayout(self._feat_pane)
+        feat_layout.setContentsMargins(4, 8, 4, 4)
+        self._feat_gw = pg.GraphicsLayoutWidget()
+        feat_layout.addWidget(self._feat_gw)
+        self._feat_pane.setVisible(False)
+        splitter.addWidget(self._feat_pane)
 
-            emb_box = QGroupBox("Embedding Visualization")
-            emb_box.setStyleSheet(_GB_BOLD)
-            el = QVBoxLayout(emb_box)
+        emb_box = QGroupBox("Embedding Visualization")
+        emb_box.setStyleSheet(_GB_BOLD)
+        el = QVBoxLayout(emb_box)
 
-            emb_ctrl = QHBoxLayout()
-            emb_ctrl.addWidget(QLabel("Method:"))
-            self._emb_bg = QButtonGroup(self)
-            for i, method in enumerate(["PCA", "t-SNE", "UMAP"]):
-                rb = QRadioButton(method)
-                if i == 0:
-                    rb.setChecked(True)
-                self._emb_bg.addButton(rb, i)
-                emb_ctrl.addWidget(rb)
-            self._emb_bg.buttonToggled.connect(
-                lambda _, checked: self._on_compute_embeddings() if checked else None
-            )
-            emb_ctrl.addStretch()
-            el.addLayout(emb_ctrl)
+        emb_ctrl = QHBoxLayout()
+        emb_ctrl.addWidget(QLabel("Method:"))
+        self._emb_bg = QButtonGroup(self)
+        for i, method in enumerate(["PCA", "t-SNE", "UMAP"]):
+            rb = QRadioButton(method)
+            if i == 0:
+                rb.setChecked(True)
+            self._emb_bg.addButton(rb, i)
+            emb_ctrl.addWidget(rb)
+        self._emb_bg.buttonToggled.connect(
+            lambda _, checked: self._on_compute_embeddings() if checked else None
+        )
+        emb_ctrl.addStretch()
+        el.addLayout(emb_ctrl)
 
-            self._emb_gw = pg.GraphicsLayoutWidget()
-            el.addWidget(self._emb_gw)
+        self._emb_gw = pg.GraphicsLayoutWidget()
+        el.addWidget(self._emb_gw)
 
-            splitter.addWidget(emb_box)
-            splitter.setSizes([600, 400])
+        splitter.addWidget(emb_box)
+        splitter.setSizes([600, 400])
 
-            self._show_features_cb.stateChanged.connect(
-                lambda state: self._feat_pane.setVisible(bool(state))
-            )
-
-        else:
-            self._feat_pane = QGroupBox("Features over time")
-            self._feat_pane.setStyleSheet(_GB_BOLD)
-            feat_layout = QVBoxLayout(self._feat_pane)
-            feat_layout.setContentsMargins(4, 8, 4, 4)
-            self._feat_gw = pg.GraphicsLayoutWidget()
-            feat_layout.addWidget(self._feat_gw)
-            self._feat_pane.setVisible(False)
-            root.addWidget(self._feat_pane, stretch=1)
-            self._show_features_cb.stateChanged.connect(
-                lambda state: self._feat_pane.setVisible(bool(state))
-            )
+        self._show_features_cb.stateChanged.connect(
+            lambda state: self._feat_pane.setVisible(bool(state))
+        )
 
     # ------------------------------------------------------------------ #
     # Processing combo handler                                             #
@@ -510,7 +496,7 @@ class FeatureAnalysisWidget(QWidget):
             self._last_channels = channels
             self._last_features = features
             self._refresh_feature_plots()
-            if self._has_labels and hasattr(self, "_emb_bg"):
+            if hasattr(self, "_emb_bg"):
                 self._on_compute_embeddings()
         except Exception:
             logging.exception("Feature computation failed")
@@ -807,7 +793,8 @@ class FeatureAnalysisWidget(QWidget):
         p: pg.PlotItem = self._emb_gw.addPlot()
         p.setLabel("bottom", f"{method} dim 1")
         p.setLabel("left",   f"{method} dim 2")
-        p.setTitle(f"{method}  —  coloured by label")
+        title_suffix = "  —  coloured by label" if self._has_labels else ""
+        p.setTitle(f"{method}{title_suffix}")
         p.showGrid(x=True, y=True, alpha=0.25)
         p.setAspectLocked(True)
         p.addLegend(labelTextSize="11pt")
