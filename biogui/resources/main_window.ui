@@ -20,9 +20,16 @@
    <string>BioGUI</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout1" stretch="3,10">
+   <layout class="QHBoxLayout" name="horizontalLayout1">
     <item>
-     <layout class="QVBoxLayout" name="confLayout" stretch="0,1,2">
+     <widget class="QWidget" name="sidebarPanel">
+      <property name="minimumSize">
+       <size>
+        <width>280</width>
+        <height>0</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="confLayout" stretch="0,1,2">
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout2">
         <item>
@@ -206,12 +213,39 @@
        </widget>
       </item>
      </layout>
+     </widget>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="plotsLayout"/>
+     <widget class="QWidget" name="plotsContainer">
+      <layout class="QVBoxLayout" name="plotsLayout">
+       <property name="spacing">
+        <number>5</number>
+       </property>
+       <property name="leftMargin">
+        <number>4</number>
+       </property>
+       <property name="topMargin">
+        <number>4</number>
+       </property>
+       <property name="rightMargin">
+        <number>4</number>
+       </property>
+       <property name="bottomMargin">
+        <number>4</number>
+       </property>
+      </layout>
+     </widget>
     </item>
    </layout>
   </widget>
+  <action name="actionToggleSidebar">
+   <property name="text">
+    <string>Toggle sidebar</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
+   </property>
+  </action>
   <action name="actionConfigureAcq">
    <property name="checkable">
     <bool>true</bool>

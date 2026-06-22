@@ -12,4 +12,4 @@ BioGUI is designed to be a flexible and extensible platform for real-time monito
 
 To understand the structure of the repository, please refer to the [Repository Structure](structure.md) guide.
 
-To get started, see the [Getting Started](getting_started.md) guide. 
+To get started, see the [Getting Started](getting_started.md) guide.

@@ -64,9 +64,9 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             num_samples = extras.get("num_samples", 397)  # default value for wulpus
             prf = fs / num_samples if num_samples > 0 else fs
-            self.freqLabel.setText(f"{prf:.2f} Hz")
+            self.freqLabel.setText(f"{self._formatRateForDisplay(prf)} Hz")
         else:
-            self.freqLabel.setText(str(fs))
+            self.freqLabel.setText(self._formatRateForDisplay(fs))
 
         if nCh == 1:
             self.label10.setEnabled(False)
@@ -149,10 +149,13 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
             # Connect ultrasound mode change
             self.ultrasoundModeComboBox.currentTextChanged.connect(self._onUltrasoundModeChange)
+            self.mmodeLogCompressionCheckBox.toggled.connect(self._onMmodeLogCompressionToggled)
 
             # Initialize state
             self._onUsProcessingModeChange()
             self._configureDisplayOptionsForMode(self.ultrasoundModeComboBox.currentText())
+            self._updateMmodeOptionsVisibility(self.ultrasoundModeComboBox.currentText())
+            self._onMmodeLogCompressionToggled(self.mmodeLogCompressionCheckBox.isChecked())
 
         else:
             # Time-series signal - hide ultrasound controls entirely
@@ -179,6 +182,22 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
         # "to" label between low/high frequency spinboxes in the UI form.
         self.label.setVisible(visible)
         self.label.setEnabled(enabled)
+        self.label16.setVisible(visible)
+        self.label16.setEnabled(enabled)
+        self.mmodeColormapComboBox.setVisible(visible)
+        self.mmodeColormapComboBox.setEnabled(enabled)
+        self.label17.setVisible(visible)
+        self.label17.setEnabled(enabled)
+        self.mmodeLogCompressionCheckBox.setVisible(visible)
+        self.mmodeLogCompressionCheckBox.setEnabled(enabled)
+        self.label18.setVisible(visible)
+        self.label18.setEnabled(enabled)
+        self.mmodeDynamicRangeSpinBox.setVisible(visible)
+        self.mmodeDynamicRangeSpinBox.setEnabled(enabled)
+
+    def _formatRateForDisplay(self, value: float, precision: int = 2) -> str:
+        """Format sampling-rate labels with at most {precision} decimal places."""
+        return f"{round(value, precision):g}"
 
     def _onUsProcessingModeChange(self) -> None:
         """Enable/disable frequency controls based on ultrasound processing mode."""
@@ -220,6 +239,11 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             # Bandpass settings for plot mode
             config["bandpassLow"] = self.lowFreqSpinBox.value() * 1e6  # MHz to Hz
             config["bandpassHigh"] = self.highFreqSpinBox.value() * 1e6  # MHz to Hz
+
+            if self.ultrasoundModeComboBox.currentText() == "M-Mode":
+                config["mmodeColormap"] = self.mmodeColormapComboBox.currentText()
+                config["mmodeLogCompression"] = self.mmodeLogCompressionCheckBox.isChecked()
+                config["mmodeDynamicRange"] = self.mmodeDynamicRangeSpinBox.value()
 
         return config
 
@@ -412,12 +436,42 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
                 self.lowFreqSpinBox.setValue(kwargs["bandpassLow"] / 1e6)  # Convert from Hz to MHz
                 self.highFreqSpinBox.setValue(kwargs["bandpassHigh"] / 1e6)
 
+            if "mmodeColormap" in kwargs:
+                self.mmodeColormapComboBox.setCurrentText(kwargs["mmodeColormap"])
+            if "mmodeLogCompression" in kwargs:
+                self.mmodeLogCompressionCheckBox.setChecked(kwargs["mmodeLogCompression"])
+            if "mmodeDynamicRange" in kwargs:
+                self.mmodeDynamicRangeSpinBox.setValue(kwargs["mmodeDynamicRange"])
+
             # Re-apply mode configuration after prefilling
             self._configureDisplayOptionsForMode(kwargs["ultrasoundMode"])
+            self._updateMmodeOptionsVisibility(kwargs["ultrasoundMode"])
+            self._onMmodeLogCompressionToggled(self.mmodeLogCompressionCheckBox.isChecked())
 
     def _onUltrasoundModeChange(self, mode: str) -> None:
         """Detect if ultrasound mode has changed and adjust display options."""
         self._configureDisplayOptionsForMode(mode)
+        self._updateMmodeOptionsVisibility(mode)
+
+    def _onMmodeLogCompressionToggled(self, enabled: bool) -> None:
+        """Enable dynamic range control only when log compression is active."""
+        is_mmode = (
+            self.ultrasoundModeComboBox.isEnabled()
+            and self.ultrasoundModeComboBox.currentText() == "M-Mode"
+        )
+        self.mmodeDynamicRangeSpinBox.setEnabled(is_mmode and enabled)
+
+    def _updateMmodeOptionsVisibility(self, mode: str) -> None:
+        """Show M-mode display options only for M-mode ultrasound signals."""
+        is_mmode = mode == "M-Mode" and self.ultrasoundModeComboBox.isEnabled()
+        self.label16.setVisible(is_mmode)
+        self.mmodeColormapComboBox.setVisible(is_mmode)
+        self.label17.setVisible(is_mmode)
+        self.mmodeLogCompressionCheckBox.setVisible(is_mmode)
+        self.label18.setVisible(is_mmode)
+        self.mmodeDynamicRangeSpinBox.setVisible(is_mmode)
+        if is_mmode:
+            self._onMmodeLogCompressionToggled(self.mmodeLogCompressionCheckBox.isChecked())
 
     def _configureDisplayOptionsForMode(self, mode: str) -> None:
         """Configure display options based on ultrasound mode (A-mode vs M-mode)."""

@@ -1,25 +1,30 @@
 # Board Interface Development
-BioGUI is designed to be easily extensible. You can support new acquisition boards by creating a new interface file in the `interfaces/` directory.
+
+BioGUI is designed to be easily extensible. Add a new interface\_<name>.py under biogui/platforms/<name>/ (one subfolder per device family, or colocate with an existing platform package such as WULPUS).
 
 ## Interface File Structure
+
 An interface file is a Python module that must define specific variables and functions.
 
 ### Required Variables
+
 - `packetSize`: `int`
-    - The size in bytes of a single data packet received from the board.
+  - The size in bytes of a single data packet received from the board.
 - `startSeq`: `list[bytes | float]`
-    - A sequence of bytes to send to the board to start acquisition. Floats are interpreted as delays in seconds between commands.
+  - A sequence of bytes to send to the board to start acquisition. Floats are interpreted as delays in seconds between commands.
 - `stopSeq`: `list[bytes | float]`
-    - A sequence of bytes to send to stop acquisition.
+  - A sequence of bytes to send to stop acquisition.
 - `sigInfo`: `dict`
-    - A dictionary defining the signals. Keys are signal names, and values are dictionaries with `fs` (sampling rate) and `nCh` (number of channels).
-    - Example: `{"emg": {"fs": 1000, "nCh": 8}, "acc": {"fs": 50, "nCh": 3}}`
+  - A dictionary defining the signals. Keys are signal names, and values are dictionaries with `fs` (sampling rate) and `nCh` (number of channels).
+  - Example: `{"emg": {"fs": 1000, "nCh": 8}, "acc": {"fs": 50, "nCh": 3}}`
 
 ### Required Functions
+
 - `decodeFn(data: bytes) -> dict[str, np.ndarray]`
-    - Takes a raw packet of bytes and returns a dictionary where keys match `sigInfo` and values are NumPy arrays of shape `(nSamples, nChannels)`.
+  - Takes a raw packet of bytes and returns a dictionary where keys match `sigInfo` and values are NumPy arrays of shape `(nSamples, nChannels)`.
 
 ## Example: Dummy Interface
+
 Here is a simplified example of an interface:
 
 ```python
@@ -38,5 +43,6 @@ def decodeFn(data):
 ```
 
 ## Tips for Development
-- Look at existing files in `interfaces/` (e.g., `interface_dummy.py`) for reference.
+
+- Look at existing files (e.g. biogui/platforms/dummy/interface_dummy.py) for reference.
 - Ensure the sampling rates (`fs`) in `sigInfo` accurately reflect the board's output for correct visualization.

@@ -29,9 +29,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 
-class UnixSocketConfigWidget(
-    DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget
-):
+class UnixSocketConfigWidget(DataSourceConfigWidget, Ui_UnixSocketDataSourceConfigWidget):
     """
     Widget to configure the local socket source.
 

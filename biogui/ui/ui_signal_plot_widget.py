@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'signal_plot_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -26,38 +26,44 @@ class Ui_SignalPlotWidget(object):
             SignalPlotWidget.setObjectName(u"SignalPlotWidget")
         SignalPlotWidget.resize(400, 300)
         self.verticalLayout = QVBoxLayout(SignalPlotWidget)
+        self.verticalLayout.setSpacing(4)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(4, 4, 4, 4)
         self.graphWidget = PlotWidget(SignalPlotWidget)
         self.graphWidget.setObjectName(u"graphWidget")
 
         self.verticalLayout.addWidget(self.graphWidget)
 
-        self.horizontalLayout = QHBoxLayout()
+        self.statsBar = QWidget(SignalPlotWidget)
+        self.statsBar.setObjectName(u"statsBar")
+        self.horizontalLayout = QHBoxLayout(self.statsBar)
+        self.horizontalLayout.setSpacing(8)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.label1 = QLabel(SignalPlotWidget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.label1 = QLabel(self.statsBar)
         self.label1.setObjectName(u"label1")
         self.label1.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.horizontalLayout.addWidget(self.label1)
 
-        self.spsLabel = QLabel(SignalPlotWidget)
+        self.spsLabel = QLabel(self.statsBar)
         self.spsLabel.setObjectName(u"spsLabel")
 
         self.horizontalLayout.addWidget(self.spsLabel)
 
-        self.label2 = QLabel(SignalPlotWidget)
+        self.label2 = QLabel(self.statsBar)
         self.label2.setObjectName(u"label2")
         self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
         self.horizontalLayout.addWidget(self.label2)
 
-        self.timeLabel = QLabel(SignalPlotWidget)
+        self.timeLabel = QLabel(self.statsBar)
         self.timeLabel.setObjectName(u"timeLabel")
 
         self.horizontalLayout.addWidget(self.timeLabel)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.verticalLayout.addWidget(self.statsBar)
 
 
         self.retranslateUi(SignalPlotWidget)

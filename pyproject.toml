@@ -5,17 +5,23 @@ description = "Modular PySide6 GUI for acquiring and visualizing bio-signals"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "matplotlib>=3.10.7",
+  "matplotlib>=3.10.9",
   "numpy>=2.2.6",
+  "pandas>=3.0.3",
   "pyqtgraph>=0.13.7",
-  "pyside6>=6.9.2",
-  "pyside6-addons>=6.9.2",
-  "pyside6-essentials>=6.9.2",
+  "pyside6>=6.9.3",
+  "pyside6-addons>=6.9.3",
+  "pyside6-essentials>=6.9.3",
+  "scikit-learn>=1.9.0",
   "scipy>=1.15.3",
+  "umap-learn>=0.5",
 ]
 
 [dependency-groups]
 dev = ["pre-commit>=4.5.1", "ruff>=0.14.6"]
 
 [tool.ruff]
+line-length = 100
+fix = true
+lint.ignore = ["E402", "F401", "F841", "E712", "F403", "F405"]
 exclude = ["*ui.py"]

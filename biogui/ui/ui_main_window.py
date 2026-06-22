@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,6 +28,8 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1920, 1080)
         MainWindow.setMinimumSize(QSize(1080, 720))
+        self.actionToggleSidebar = QAction(MainWindow)
+        self.actionToggleSidebar.setObjectName(u"actionToggleSidebar")
         self.actionConfigureAcq = QAction(MainWindow)
         self.actionConfigureAcq.setObjectName(u"actionConfigureAcq")
         self.actionConfigureAcq.setCheckable(True)
@@ -35,17 +37,21 @@ class Ui_MainWindow(object):
         self.centralWidget.setObjectName(u"centralWidget")
         self.horizontalLayout1 = QHBoxLayout(self.centralWidget)
         self.horizontalLayout1.setObjectName(u"horizontalLayout1")
-        self.confLayout = QVBoxLayout()
+        self.sidebarPanel = QWidget(self.centralWidget)
+        self.sidebarPanel.setObjectName(u"sidebarPanel")
+        self.sidebarPanel.setMinimumSize(QSize(280, 0))
+        self.confLayout = QVBoxLayout(self.sidebarPanel)
         self.confLayout.setObjectName(u"confLayout")
+        self.confLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout2 = QHBoxLayout()
         self.horizontalLayout2.setObjectName(u"horizontalLayout2")
-        self.startStreamingButton = QPushButton(self.centralWidget)
+        self.startStreamingButton = QPushButton(self.sidebarPanel)
         self.startStreamingButton.setObjectName(u"startStreamingButton")
         self.startStreamingButton.setEnabled(False)
 
         self.horizontalLayout2.addWidget(self.startStreamingButton)
 
-        self.stopStreamingButton = QPushButton(self.centralWidget)
+        self.stopStreamingButton = QPushButton(self.sidebarPanel)
         self.stopStreamingButton.setObjectName(u"stopStreamingButton")
         self.stopStreamingButton.setEnabled(False)
 
@@ -54,7 +60,7 @@ class Ui_MainWindow(object):
 
         self.confLayout.addLayout(self.horizontalLayout2)
 
-        self.streamConfGroupBox = QGroupBox(self.centralWidget)
+        self.streamConfGroupBox = QGroupBox(self.sidebarPanel)
         self.streamConfGroupBox.setObjectName(u"streamConfGroupBox")
         self.streamConfGroupBox.setAlignment(Qt.AlignCenter)
         self.verticalLayout1 = QVBoxLayout(self.streamConfGroupBox)
@@ -127,7 +133,7 @@ class Ui_MainWindow(object):
 
         self.confLayout.addWidget(self.streamConfGroupBox)
 
-        self.scrollArea = QScrollArea(self.centralWidget)
+        self.scrollArea = QScrollArea(self.sidebarPanel)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.moduleContainer = QWidget()
@@ -146,15 +152,17 @@ class Ui_MainWindow(object):
         self.confLayout.setStretch(1, 1)
         self.confLayout.setStretch(2, 2)
 
-        self.horizontalLayout1.addLayout(self.confLayout)
+        self.horizontalLayout1.addWidget(self.sidebarPanel)
 
-        self.plotsLayout = QVBoxLayout()
+        self.plotsContainer = QWidget(self.centralWidget)
+        self.plotsContainer.setObjectName(u"plotsContainer")
+        self.plotsLayout = QVBoxLayout(self.plotsContainer)
+        self.plotsLayout.setSpacing(5)
         self.plotsLayout.setObjectName(u"plotsLayout")
+        self.plotsLayout.setContentsMargins(4, 4, 4, 4)
 
-        self.horizontalLayout1.addLayout(self.plotsLayout)
+        self.horizontalLayout1.addWidget(self.plotsContainer)
 
-        self.horizontalLayout1.setStretch(0, 3)
-        self.horizontalLayout1.setStretch(1, 10)
         MainWindow.setCentralWidget(self.centralWidget)
         QWidget.setTabOrder(self.startStreamingButton, self.stopStreamingButton)
         QWidget.setTabOrder(self.stopStreamingButton, self.addDataSourceButton)
@@ -171,6 +179,10 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"BioGUI", None))
+        self.actionToggleSidebar.setText(QCoreApplication.translate("MainWindow", u"Toggle sidebar", None))
+#if QT_CONFIG(shortcut)
+        self.actionToggleSidebar.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+B", None))
+#endif // QT_CONFIG(shortcut)
         self.actionConfigureAcq.setText(QCoreApplication.translate("MainWindow", u"Configure acquisition", None))
         self.startStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Start streaming", None))
         self.stopStreamingButton.setText(QCoreApplication.translate("MainWindow", u"Stop streaming", None))

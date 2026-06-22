@@ -1,0 +1,59 @@
+{
+  "dcdc_turnon": 19530,
+  "meas_period": 33333,
+  "imu_active": true,
+  "pulse_freq": 2100000,      // 2.1 MHz pulse frequency for armband config
+  "num_pulses": 2,
+  "sampling_freq": 8000000.0,
+  "num_samples": 400,
+  "rx_gain": 20.5,
+  "start_hvmuxrx": 492,
+  "start_ppg": 500,
+  "turnon_adc": 5,
+  "start_pgainbias": 5,
+  "start_adcsampl": 505,
+  "restart_capt": 3000,
+  "capt_timeout": 3000,
+  "tx_rx_configs": [
+    {
+      "tx_channels": [0],
+      "rx_channels": [0],
+      "optimized_switching": false
+    },
+    {
+      "tx_channels": [1],
+      "rx_channels": [1],
+      "optimized_switching": false
+    },
+    {
+      "tx_channels": [2],
+      "rx_channels": [2],
+      "optimized_switching": false
+    },
+    {
+      "tx_channels": [3],
+      "rx_channels": [3],
+      "optimized_switching": false
+    },
+    {
+      "tx_channels": [4],
+      "rx_channels": [4],
+      "optimized_switching": false
+    },
+    {
+      "tx_channels": [5],
+      "rx_channels": [5],
+      "optimized_switching": false
+    }, 
+    {
+      "tx_channels": [6],
+      "rx_channels": [6],
+      "optimized_switching": false
+    }, 
+    {
+      "tx_channels": [7],
+      "rx_channels": [7],
+      "optimized_switching": false
+    }
+  ]
+}
