@@ -25,15 +25,21 @@ class Ui_TCPDataSourceConfigWidget(object):
         TCPDataSourceConfigWidget.resize(400, 44)
         self.formLayout = QFormLayout(TCPDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
+        self.label_host = QLabel(TCPDataSourceConfigWidget)
+        self.label_host.setObjectName(u"label_host")
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_host)
+
+        self.hostTextField = QLineEdit(TCPDataSourceConfigWidget)
+        self.hostTextField.setObjectName(u"hostTextField")
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.hostTextField)
+
         self.label = QLabel(TCPDataSourceConfigWidget)
         self.label.setObjectName(u"label")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label)
 
         self.socketPortTextField = QLineEdit(TCPDataSourceConfigWidget)
         self.socketPortTextField.setObjectName(u"socketPortTextField")
-
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.socketPortTextField)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.socketPortTextField)
 
 
         self.retranslateUi(TCPDataSourceConfigWidget)
@@ -43,6 +49,7 @@ class Ui_TCPDataSourceConfigWidget(object):
 
     def retranslateUi(self, TCPDataSourceConfigWidget):
         TCPDataSourceConfigWidget.setWindowTitle(QCoreApplication.translate("TCPDataSourceConfigWidget", u"TCP Data Source Configuration", None))
+        self.label_host.setText(QCoreApplication.translate("TCPDataSourceConfigWidget", u"Host:", None))
         self.label.setText(QCoreApplication.translate("TCPDataSourceConfigWidget", u"Socket port:", None))
     # retranslateUi
 
