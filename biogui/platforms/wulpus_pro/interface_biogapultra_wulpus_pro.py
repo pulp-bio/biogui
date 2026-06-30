@@ -30,8 +30,20 @@ logger = logging.getLogger(__name__)
 
 wulpus_config = create_default_biceps_wulpus_uss_config()
 
-packetSize: int = wulpus_config.num_samples * 2 + 7 + 6
-"""Number of bytes in each package."""
+_BLE_PACKET_SIZE = 211
+_BLE_NUM_PACKETS = 4
+_BLE_HEADERS = (0x10, 0x11, 0x12, 0x13)
+# Real SPI payload per BLE notification (firmware WULPUS_BYTES_PER_XFER).
+# The 9 trailing zero-padding bytes must be stripped before concatenating the
+# 4 chunks, otherwise they fall in the middle of the reassembled frame and
+# corrupt the int16 parsing of the RF data.
+_WULPUS_SPI_BYTES = 201
+
+packetSize: int = _BLE_PACKET_SIZE
+"""Number of bytes in each BLE packet; four packets make one US frame."""
+
+_ble_buffer: list[bytes] = []
+"""Accumulates BLE payload chunks until a complete 4-packet frame is ready."""
 
 startSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),  # Send restart first
@@ -136,19 +148,50 @@ if len(sigInfo) == 0:
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Decode binary data received from WULPUS into signals.
+    Decode one 202-byte BLE packet. Accumulates 4 packets into one US frame.
+    Returns empty arrays until a complete frame is assembled.
+    Resyncs automatically on unexpected headers.
     """
-    if data[:6] != b"START\n":
-        raise ValueError(
-            "WULPUS INTERFACE ERROR: Data packet does not start with expected "
-            "b'START\\n' sequence. Data alignment error."
-        )
+    global _ble_buffer
 
-    data = data[6:]
+    header = data[0]
 
-    tx_rx_id = data[4]
-    acq_nr = np.frombuffer(data[5:7], dtype="<u2")[0]
-    rf_arr = np.frombuffer(data[7:], dtype="<i2")
+    if header == 0x10:
+        if _ble_buffer:
+            logger.warning("WULPUS: 0x10 received before previous frame completed, resyncing")
+        _ble_buffer = [bytes(data[1:1 + _WULPUS_SPI_BYTES])]
+    elif _ble_buffer and header == _BLE_HEADERS[len(_ble_buffer)]:
+        _ble_buffer.append(bytes(data[1:1 + _WULPUS_SPI_BYTES]))
+    else:
+        logger.warning(f"WULPUS: Unexpected BLE header 0x{header:02X}, resyncing")
+        _ble_buffer = []
+
+    if len(_ble_buffer) < 4:
+        empty: dict[str, np.ndarray] = {}
+        for signal_name in sigInfo.keys():
+            if signal_name == "acquisition_number":
+                empty[signal_name] = np.empty((0, 1), dtype=np.uint16)
+            elif signal_name == "tx_rx_id":
+                empty[signal_name] = np.empty((0, 1), dtype=np.uint8)
+            elif signal_name == "imu":
+                empty[signal_name] = np.empty((0, 3), dtype=np.int16)
+            else:
+                empty[signal_name] = np.empty((0, 1), dtype=np.int16)
+        return empty
+
+    payload = b"".join(_ble_buffer)
+    _ble_buffer = []
+
+    # Payload layout: [SOF_MASK, tx_rx_id, frame_nr_lo, frame_nr_hi, US data...]
+    sof_mask = payload[0]
+    tx_rx_id = payload[1]
+    acq_nr = np.frombuffer(payload[2:4], dtype="<u2")[0]
+    rf_arr = np.frombuffer(payload[4:], dtype="<i2")
+
+    print(
+        f"[WULPUS] SOF=0x{sof_mask:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
+        f"rf_samples={len(rf_arr)} raw_header_bytes={payload[:8].hex()}"
+    )
 
     accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
     num_us_samples = get_num_us_samples_from_config(wulpus_config)

@@ -128,28 +128,6 @@ us_to_ticks = {
     "capt_timeout": 5 / 4,
 }
 
-U32_MAX = (1 << 32) - 1
-PULSE_FREQ_HZ_MAX = 12_000_000
-TRANS_FREQ_HZ_MAX = 5_000_000
-
-
-def _friendly_us_limit(param: str, reg_limit: int) -> int:
-    """Convert a register limit back to the user-facing microsecond value."""
-    scale = us_to_ticks[param]
-    return int(reg_limit / scale)
-
-
-DCDC_TURNON_US_MAX = _friendly_us_limit("dcdc_turnon", 65535)
-MEAS_PERIOD_US_MIN = 0
-MEAS_PERIOD_US_MAX = _friendly_us_limit("meas_period", 65535)
-START_HVMUXRX_US_MAX = _friendly_us_limit("start_hvmuxrx", 65535)
-START_PPG_US_MAX = _friendly_us_limit("start_ppg", 65535)
-TURNON_ADC_US_MAX = _friendly_us_limit("turnon_adc", 65535)
-START_PGAINBIAS_US_MAX = _friendly_us_limit("start_pgainbias", 65535)
-START_ADCSAMPL_US_MAX = _friendly_us_limit("start_adcsampl", 65535)
-RESTART_CAPT_US_MAX = _friendly_us_limit("restart_capt", 65535)
-CAPT_TIMEOUT_US_MAX = _friendly_us_limit("capt_timeout", 65535)
-
 VGA_RC_SER_RES = 2.7e3
 VGA_RC_CAP_VAL = 3.3e-9
 DIGIPOT_TOT_RES = 100e3
@@ -207,9 +185,9 @@ class _ConfigBytes:
 configuration_package = [
     [
         _ConfigBytes("dcdc_turnon", "DC-DC turn on time [us]", "limit", 0, 65535, "<u2"),
-        _ConfigBytes("meas_period", "Acquisition Period [us]", "limit", 0, 65535, "<u2"),
-        _ConfigBytes("meas_mode", "Measurement mode", "limit", 0, TRANS_FREQ_HZ_MAX, "<u4"),
-        _ConfigBytes("pulse_freq", "Pulse frequency [Hz]", "limit", 0, PULSE_FREQ_HZ_MAX, "<u4"),
+        _ConfigBytes("meas_period", "Acquisition Period [us]", "limit", 200, 65535, "<u2"),
+        _ConfigBytes("meas_mode", "Measurement mode", "limit", 0, 5000000, "<u4"),
+        _ConfigBytes("pulse_freq", "Pulse frequency [Hz]", "limit", 0, 5000000, "<u4"),
         _ConfigBytes("num_pulses", "Number of pulses", "limit", 0, 30, "<u1"),
         _ConfigBytes(
             "sampling_freq",
@@ -241,10 +219,10 @@ configuration_package = [
 
 
 TX_RX_MAX_NUM_OF_CONFIGS = 16
-MAX_CH_ID = 15
+MAX_CH_ID = 7
 
-RX_MAP = np.arange(16, dtype=int)
-TX_MAP = np.arange(16, dtype=int)
+RX_MAP = np.array([0, 2, 4, 6, 8, 10, 12, 14])
+TX_MAP = np.array([1, 3, 5, 7, 9, 11, 13, 15])
 
 
 class WulpusRxTxConfigGen:
@@ -255,7 +233,6 @@ class WulpusRxTxConfigGen:
 
     def add_config(self, tx_channels, rx_channels, optimized_switching=False):
         """Add a new configuration to the list of configurations."""
-        _ = optimized_switching  # Not used on WULPUS PRO hardware.
         if self.tx_rx_len >= TX_RX_MAX_NUM_OF_CONFIGS:
             raise ValueError(f"Maximum number of configs is {TX_RX_MAX_NUM_OF_CONFIGS}")
 
@@ -282,6 +259,23 @@ class WulpusRxTxConfigGen:
             self.rx_configs[self.tx_rx_len] = np.bitwise_or.reduce(
                 np.left_shift(1, RX_MAP[rx_channels])
             )
+
+        if optimized_switching:
+            rx_tx_intersect_ch = list(set(tx_channels) & set(rx_channels))
+            rx_only_ch = list(set(rx_tx_intersect_ch) ^ set(rx_channels))
+
+            if len(rx_tx_intersect_ch) > len(rx_only_ch):
+                temp_switch_config = np.bitwise_or.reduce(
+                    np.left_shift(1, RX_MAP[rx_tx_intersect_ch])
+                )
+                self.tx_configs[self.tx_rx_len] = np.bitwise_or(
+                    self.tx_configs[self.tx_rx_len], temp_switch_config
+                )
+            elif len(rx_only_ch) > 0:
+                temp_switch_config = np.bitwise_or.reduce(np.left_shift(1, RX_MAP[rx_only_ch]))
+                self.tx_configs[self.tx_rx_len] = np.bitwise_or(
+                    self.tx_configs[self.tx_rx_len], temp_switch_config
+                )
 
         self.tx_rx_len += 1
 
