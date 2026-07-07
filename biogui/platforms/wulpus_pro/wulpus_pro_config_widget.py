@@ -60,7 +60,7 @@ def _get_imu_active_from_config_dict(config_dict: dict) -> bool:
 class TxRxConfigDialog(QDialog):
     """Dialog for configuring TX/RX channels."""
 
-    CHANNEL_COUNT = 8
+    CHANNEL_COUNT = 16
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -76,7 +76,7 @@ class TxRxConfigDialog(QDialog):
             checkbox = QCheckBox(str(ch), tx_widget)
             self.tx_checkboxes.append(checkbox)
             tx_layout.addWidget(checkbox, ch // 4, ch % 4)
-        layout.addRow("TX Channels (0-7):", tx_widget)
+        layout.addRow("TX Channels (0-15):", tx_widget)
 
         rx_widget = QWidget(self)
         rx_layout = QGridLayout(rx_widget)
@@ -90,13 +90,10 @@ class TxRxConfigDialog(QDialog):
             self.rx_radio_buttons.append(radio)
             rx_layout.addWidget(radio, ch // 4, ch % 4)
         self.rx_radio_buttons[0].setChecked(True)
-        layout.addRow("RX Channel (0-7):", rx_widget)
+        layout.addRow("RX Channel (0-15):", rx_widget)
 
         helper_label = QLabel("TX: multiple channels possible, RX: exactly one channel.", self)
         layout.addRow("", helper_label)
-
-        self.optimized_checkbox = QCheckBox()
-        layout.addRow("Optimized Switching:", self.optimized_checkbox)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
         buttons.accepted.connect(self.accept)
@@ -140,14 +137,11 @@ class TxRxConfigDialog(QDialog):
         else:
             self.rx_radio_buttons[0].setChecked(True)
 
-        self.optimized_checkbox.setChecked(bool(config.get("optimized_switching", False)))
-
     def get_config(self) -> dict:
         tx, rx = self._parse_channels()
         return {
             "tx_channels": tx,
             "rx_channels": rx,
-            "optimized_switching": self.optimized_checkbox.isChecked(),
         }
 
 
@@ -160,6 +154,11 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
         super().__init__(parent)
         self.setupUi(self)
         self.configTabWidget.setCurrentIndex(0)
+
+        # WULPUS PRO has independent TX/RX switches per channel, so the
+        # "optimized switching" artifact-reduction trick (shared with the
+        # legacy 8-channel WULPUS UI) does not apply here.
+        self.txRxTableWidget.hideColumn(2)
 
         # The current WULPUS PRO dongle path exposes only ultrasound samples.
         self.transFreqLabel.setVisible(False)
@@ -338,7 +337,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 {
                     "tx_channels": list(cfg.get("tx_channels", [])),
                     "rx_channels": list(cfg.get("rx_channels", [])),
-                    "optimized_switching": bool(cfg.get("optimized_switching", False)),
                 }
                 for cfg in normalized["tx_rx_configs"]
             ]
@@ -508,15 +506,13 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
                 tx_bits = int(config.tx_configs[i])
                 rx_bits = int(config.rx_configs[i])
 
-                tx_channels = [ch for ch in range(8) if (tx_bits >> TX_MAP[ch]) & 1]
-                rx_channels = [ch for ch in range(8) if (rx_bits >> RX_MAP[ch]) & 1]
-                optimized = any((tx_bits >> RX_MAP[ch]) & 1 for ch in rx_channels)
+                tx_channels = [ch for ch in range(16) if (tx_bits >> TX_MAP[ch]) & 1]
+                rx_channels = [ch for ch in range(16) if (rx_bits >> RX_MAP[ch]) & 1]
 
                 self._tx_rx_configs.append(
                     {
                         "tx_channels": tx_channels if tx_channels else [0],
                         "rx_channels": rx_channels if rx_channels else [0],
-                        "optimized_switching": optimized,
                     }
                 )
 
@@ -628,17 +624,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             rx_item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             self.txRxTableWidget.setItem(row, 1, rx_item)
 
-            optimized_item = QTableWidgetItem()
-            optimized_item.setFlags(
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsUserCheckable
-            )
-            optimized_item.setCheckState(
-                Qt.CheckState.Checked if config["optimized_switching"] else Qt.CheckState.Unchecked
-            )
-            self.txRxTableWidget.setItem(row, 2, optimized_item)
-
         self.txRxTableWidget.blockSignals(False)
         self._updating_tx_rx_table = False
 
@@ -660,23 +645,17 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             if not tx_channels or not rx_channels:
                 continue
 
-            optimized_item = self.txRxTableWidget.item(row, 2)
-            optimized_switching = (
-                optimized_item is not None and optimized_item.checkState() == Qt.CheckState.Checked
-            )
-
             synced_configs.append(
                 {
                     "tx_channels": tx_channels,
                     "rx_channels": rx_channels,
-                    "optimized_switching": optimized_switching,
                 }
             )
 
         self._tx_rx_configs = synced_configs
 
     def _on_tx_rx_item_changed(self, item: QTableWidgetItem) -> None:
-        if self._updating_tx_rx_table or item.column() != 2:
+        if self._updating_tx_rx_table:
             return
 
         self._sync_tx_rx_configs_from_table()
@@ -722,7 +701,6 @@ class WulpusConfigWidget(QWidget, Ui_WulpusConfigWidget):
             rx_tx_config.add_config(
                 tx_channels=config["tx_channels"],
                 rx_channels=config["rx_channels"],
-                optimized_switching=config["optimized_switching"],
             )
 
         return WulpusUssConfig(

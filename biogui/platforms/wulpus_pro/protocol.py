@@ -219,10 +219,14 @@ configuration_package = [
 
 
 TX_RX_MAX_NUM_OF_CONFIGS = 16
-MAX_CH_ID = 7
+MAX_CH_ID = 15
 
-RX_MAP = np.array([0, 2, 4, 6, 8, 10, 12, 14])
-TX_MAP = np.array([1, 3, 5, 7, 9, 11, 13, 15])
+# WULPUS PRO has 16 independent TX switches and 16 independent RX switches
+# (separate tx_configs/rx_configs registers per config slot), so channel IDs
+# map 1:1 onto switch IDs -- unlike the original 8-channel WULPUS, which shares
+# one 16-bit switch ID space between interleaved RX/TX bits.
+RX_MAP = np.arange(16)
+TX_MAP = np.arange(16)
 
 
 class WulpusRxTxConfigGen:
@@ -231,7 +235,7 @@ class WulpusRxTxConfigGen:
         self.tx_configs = np.zeros(TX_RX_MAX_NUM_OF_CONFIGS, dtype="<u2")
         self.tx_rx_len = 0
 
-    def add_config(self, tx_channels, rx_channels, optimized_switching=False):
+    def add_config(self, tx_channels, rx_channels):
         """Add a new configuration to the list of configurations."""
         if self.tx_rx_len >= TX_RX_MAX_NUM_OF_CONFIGS:
             raise ValueError(f"Maximum number of configs is {TX_RX_MAX_NUM_OF_CONFIGS}")
@@ -259,23 +263,6 @@ class WulpusRxTxConfigGen:
             self.rx_configs[self.tx_rx_len] = np.bitwise_or.reduce(
                 np.left_shift(1, RX_MAP[rx_channels])
             )
-
-        if optimized_switching:
-            rx_tx_intersect_ch = list(set(tx_channels) & set(rx_channels))
-            rx_only_ch = list(set(rx_tx_intersect_ch) ^ set(rx_channels))
-
-            if len(rx_tx_intersect_ch) > len(rx_only_ch):
-                temp_switch_config = np.bitwise_or.reduce(
-                    np.left_shift(1, RX_MAP[rx_tx_intersect_ch])
-                )
-                self.tx_configs[self.tx_rx_len] = np.bitwise_or(
-                    self.tx_configs[self.tx_rx_len], temp_switch_config
-                )
-            elif len(rx_only_ch) > 0:
-                temp_switch_config = np.bitwise_or.reduce(np.left_shift(1, RX_MAP[rx_only_ch]))
-                self.tx_configs[self.tx_rx_len] = np.bitwise_or(
-                    self.tx_configs[self.tx_rx_len], temp_switch_config
-                )
 
         self.tx_rx_len += 1
 

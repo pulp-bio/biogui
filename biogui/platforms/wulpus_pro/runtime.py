@@ -36,7 +36,7 @@ def get_rx_channel_for_config(config: WulpusUssConfig, config_id: int) -> int | 
         return None
 
     rx_config_bits = config.rx_configs[config_id]
-    for channel_id in range(8):
+    for channel_id in range(len(RX_MAP)):
         switch_id = RX_MAP[channel_id]
         if (rx_config_bits >> switch_id) & 1:
             return channel_id
@@ -81,7 +81,6 @@ def create_default_config() -> WulpusUssConfig:
     rx_tx_config.add_config(
         tx_channels=[3],
         rx_channels=[3],
-        optimized_switching=False,
     )
 
     return WulpusUssConfig(

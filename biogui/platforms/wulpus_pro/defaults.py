@@ -19,7 +19,6 @@ def create_default_biceps_wulpus_uss_config() -> WulpusUssConfig:
     rx_tx_config.add_config(
         tx_channels=[3],
         rx_channels=[3],
-        optimized_switching=False,
     )
     return WulpusUssConfig(
         dcdc_turnon=19530,
