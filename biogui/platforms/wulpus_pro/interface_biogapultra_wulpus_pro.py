@@ -33,11 +33,18 @@ wulpus_config = create_default_biceps_wulpus_uss_config()
 _BLE_PACKET_SIZE = 211
 _BLE_NUM_PACKETS = 4
 _BLE_HEADERS = (0x10, 0x11, 0x12, 0x13)
-# Real SPI payload per BLE notification (firmware WULPUS_BYTES_PER_XFER).
-# The 9 trailing zero-padding bytes must be stripped before concatenating the
-# 4 chunks, otherwise they fall in the middle of the reassembled frame and
-# corrupt the int16 parsing of the RF data.
+# Each chunk carries the header/counter/timestamp prefix (harmonized with the
+# ExG/MIC/PPG packets); the 201-byte SPI payload follows at byte 7 and must be
+# extracted from there before concatenating the 4 chunks into one US frame.
+# Per-frame metadata is mirrored into every chunk (see firmware WULPUS_META_*):
+#   [0]      chunk header (0x10..0x13)
+#   [1:3]    frame counter (uint16 LE)
+#   [3:7]    timestamp us  (uint32 LE)
+#   [7:208]  201-byte SPI payload chunk
 _WULPUS_SPI_BYTES = 201
+_WULPUS_SPI_OFF = 7          # SPI payload starts here in each chunk
+_WULPUS_META_CNT_OFF = 1     # frame counter (uint16 LE)
+_WULPUS_META_TS_OFF = 3      # microsecond timestamp (uint32 LE)
 
 packetSize: int = _BLE_PACKET_SIZE
 """Number of bytes in each BLE packet; four packets make one US frame."""
@@ -148,7 +155,7 @@ if len(sigInfo) == 0:
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Decode one 202-byte BLE packet. Accumulates 4 packets into one US frame.
+    Decode one 211-byte BLE packet. Accumulates 4 packets into one US frame.
     Returns empty arrays until a complete frame is assembled.
     Resyncs automatically on unexpected headers.
     """
@@ -159,9 +166,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     if header == 0x10:
         if _ble_buffer:
             logger.warning("WULPUS: 0x10 received before previous frame completed, resyncing")
-        _ble_buffer = [bytes(data[1:1 + _WULPUS_SPI_BYTES])]
+        _ble_buffer = [bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES])]
     elif _ble_buffer and header == _BLE_HEADERS[len(_ble_buffer)]:
-        _ble_buffer.append(bytes(data[1:1 + _WULPUS_SPI_BYTES]))
+        _ble_buffer.append(bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES]))
     else:
         logger.warning(f"WULPUS: Unexpected BLE header 0x{header:02X}, resyncing")
         _ble_buffer = []
@@ -169,8 +176,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     if len(_ble_buffer) < 4:
         empty: dict[str, np.ndarray] = {}
         for signal_name in sigInfo.keys():
-            if signal_name == "acquisition_number":
+            if signal_name in ("acquisition_number", "wulpus_counter"):
                 empty[signal_name] = np.empty((0, 1), dtype=np.uint16)
+            elif signal_name == "wulpus_timestamp":
+                empty[signal_name] = np.empty((0, 1), dtype=np.uint32)
             elif signal_name == "tx_rx_id":
                 empty[signal_name] = np.empty((0, 1), dtype=np.uint8)
             elif signal_name == "imu":
@@ -181,6 +190,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
 
     payload = b"".join(_ble_buffer)
     _ble_buffer = []
+
+    # Per-frame metadata lives in the padding tail of each chunk (mirrored);
+    # `data` here is the 4th chunk (0x13), so read counter/timestamp from it.
+    wulpus_counter = int.from_bytes(data[_WULPUS_META_CNT_OFF:_WULPUS_META_CNT_OFF + 2], "little")
+    wulpus_timestamp = int.from_bytes(data[_WULPUS_META_TS_OFF:_WULPUS_META_TS_OFF + 4], "little")
 
     # Payload layout: [SOF_MASK, tx_rx_id, frame_nr_lo, frame_nr_hi, US data...]
     sof_mask = payload[0]
@@ -206,6 +220,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     for signal_name in sigInfo.keys():
         if signal_name == "acquisition_number":
             result[signal_name] = np.array([[acq_nr]], dtype=np.uint16)
+
+        elif signal_name == "wulpus_counter":
+            result[signal_name] = np.array([[wulpus_counter]], dtype=np.uint16)
+
+        elif signal_name == "wulpus_timestamp":
+            result[signal_name] = np.array([[wulpus_timestamp]], dtype=np.uint32)
 
         elif signal_name == "tx_rx_id":
             result[signal_name] = np.array([[tx_rx_id]], dtype=np.uint8)

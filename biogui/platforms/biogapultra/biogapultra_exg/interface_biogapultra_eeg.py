@@ -52,11 +52,16 @@ stopSeq: list[bytes | float] = [
 """Commands to stop EEG streaming."""
 
 sigInfo: dict = {
-    "eeg_A": {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "eeg_B": {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "counter": {"fs": 62.5, "nCh": 1, "hidden": True},
+    "eeg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
+    "eeg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
+    # Packet counter and µs timestamp: one value per BLE packet (500 Hz / 4
+    # samples = 125 Hz). Selectable in the signal wizard like eeg_A/eeg_B, but
+    # "plotByDefault": False leaves the "Show plot" box unchecked so they are
+    # recorded without cluttering the plots unless explicitly enabled.
+    "counter": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+    "timestamp": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
 }
-"""Signal definitions: two 8-channel EEG streams at 250 Hz."""
+"""Signal definitions: two 8-channel EEG streams at 500 Hz, plus packet counter and timestamp."""
 
 
 def _unpack_ads_block(data: bytes, offset: int) -> np.ndarray:
@@ -81,9 +86,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
 
     counter = int.from_bytes(data[1:3], "little")
+    timestamp = int.from_bytes(data[3:7], "little")
 
     return {
-        "eeg_A":   rows_A,
-        "eeg_B":   rows_B,
-        "counter": np.array([[counter]], dtype=np.uint16),
+        "eeg_A":     rows_A,
+        "eeg_B":     rows_B,
+        "counter":   np.array([[counter]], dtype=np.uint16),
+        "timestamp": np.array([[timestamp]], dtype=np.uint32),
     }

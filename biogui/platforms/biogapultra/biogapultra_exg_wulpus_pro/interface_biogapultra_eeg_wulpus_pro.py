@@ -64,7 +64,12 @@ wulpus_config = create_default_biceps_wulpus_uss_config()
 _BLE_PACKET_SIZE    = 211
 _BLE_WULPUS_HEADERS = (0x10, 0x11, 0x12, 0x13)
 _EEG_HEADER         = 0x55
-_WULPUS_SPI_BYTES   = 201  # real bytes per BLE chunk; strip 9-byte zero-padding tail
+_WULPUS_SPI_BYTES   = 201  # SPI payload bytes per chunk; starts at byte 7
+# Each WULPUS chunk carries the header/counter/timestamp prefix (harmonized with
+# ExG/MIC/PPG); metadata is mirrored into every chunk (see firmware WULPUS_META_*):
+_WULPUS_SPI_OFF      = 7    # SPI payload starts here in each chunk
+_WULPUS_META_CNT_OFF = 1    # frame counter (uint16 LE)
+_WULPUS_META_TS_OFF  = 3    # microsecond timestamp (uint32 LE)
 
 # ── Module-level interface contract ───────────────────────────────────────
 packetSize: int = _BLE_PACKET_SIZE
@@ -119,9 +124,12 @@ for _cfg_id in range(wulpus_config.num_txrx_configs):
     }
 
 sigInfo.update(get_standard_signal_definitions_for_mode(_meas_period_s, _accel_enabled))
-sigInfo["eeg_A"]       = {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-sigInfo["eeg_B"]       = {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-sigInfo["eeg_counter"] = {"fs": 62.5, "nCh": 1, "hidden": True}
+sigInfo["eeg_A"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
+sigInfo["eeg_B"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
+# ExG packet counter + µs timestamp: selectable in the wizard like eeg_A/eeg_B,
+# but off by default (mirrors the standalone ExG interface).
+sigInfo["eeg_counter"]   = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
+sigInfo["eeg_timestamp"] = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
 
 if not sigInfo:
     raise ValueError("No active RX configurations in WULPUS setup.")
@@ -156,13 +164,18 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     # Build empty result from current sigInfo so it stays correct after reconfiguration.
     result: dict[str, np.ndarray] = {}
     for _n in sigInfo:
-        if _n == "acquisition_number":
+        # Empty placeholders MUST share the dtype of the filled arrays below —
+        # the file writer captures each signal's dtype from the first array it
+        # sees (often an empty one), so a mismatch corrupts recordings.
+        if _n in ("acquisition_number", "eeg_counter", "wulpus_counter"):
             result[_n] = np.empty((0, 1), dtype=np.uint16)
-        elif _n in ("tx_rx_id", "eeg_counter"):
+        elif _n in ("eeg_timestamp", "wulpus_timestamp"):
+            result[_n] = np.empty((0, 1), dtype=np.uint32)
+        elif _n == "tx_rx_id":
             result[_n] = np.empty((0, 1), dtype=np.uint8)
         elif _n == "imu":
             result[_n] = np.empty((0, 3), dtype=np.int16)
-        elif _n.startswith("eeg_"):
+        elif _n in ("eeg_A", "eeg_B"):
             result[_n] = np.empty((0, _N_CH), dtype=np.float32)
         else:
             result[_n] = np.empty((0, 1), dtype=np.int16)
@@ -175,20 +188,22 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
             rows_A[s] = _unpack_ads_block(data, base)
             rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
         counter = int.from_bytes(data[1:3], "little")
-        result["eeg_A"]       = rows_A
-        result["eeg_B"]       = rows_B
-        result["eeg_counter"] = np.array([[counter]], dtype=np.uint16)
+        timestamp = int.from_bytes(data[3:7], "little")
+        result["eeg_A"]         = rows_A
+        result["eeg_B"]         = rows_B
+        result["eeg_counter"]   = np.array([[counter]], dtype=np.uint16)
+        result["eeg_timestamp"] = np.array([[timestamp]], dtype=np.uint32)
         return result
 
     # ── WULPUS packets ────────────────────────────────────────────────────
     if header == 0x10:
         if _wulpus_buf:
             logger.warning("EEG+WULPUS: 0x10 before previous frame completed — resyncing")
-        _wulpus_buf = [bytes(data[1:1 + _WULPUS_SPI_BYTES])]
+        _wulpus_buf = [bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES])]
         return result
 
     if _wulpus_buf and header == _BLE_WULPUS_HEADERS[len(_wulpus_buf)]:
-        _wulpus_buf.append(bytes(data[1:1 + _WULPUS_SPI_BYTES]))
+        _wulpus_buf.append(bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES]))
     else:
         logger.warning("EEG+WULPUS: unexpected header 0x%02X — resyncing", header)
         _wulpus_buf = []
@@ -204,6 +219,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     tx_rx_id = payload[1]
     acq_nr   = int.from_bytes(payload[2:4], "little")
     rf_arr   = np.frombuffer(payload[4:], dtype="<i2")
+    # Per-frame metadata from the padding tail of the 4th chunk (`data`).
+    wulpus_counter   = int.from_bytes(data[_WULPUS_META_CNT_OFF:_WULPUS_META_CNT_OFF + 2], "little")
+    wulpus_timestamp = int.from_bytes(data[_WULPUS_META_TS_OFF:_WULPUS_META_TS_OFF + 4], "little")
 
     print(
         f"[WULPUS] SOF=0x{payload[0]:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
@@ -220,6 +238,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
 
     result["acquisition_number"] = np.array([[acq_nr]], dtype=np.uint16)
     result["tx_rx_id"]           = np.array([[tx_rx_id]], dtype=np.uint8)
+    result["wulpus_counter"]     = np.array([[wulpus_counter]], dtype=np.uint16)
+    result["wulpus_timestamp"]   = np.array([[wulpus_timestamp]], dtype=np.uint32)
     if _acc and imu_data is not None:
         result["imu"] = imu_data.reshape(1, 3)
     for sig_name in config_to_signal_name.values():
@@ -286,9 +306,10 @@ def _configure_eeg_wulpus_module(
                     },
                 }
             new_sig.update(get_standard_signal_definitions_for_mode(mp_s, acc))
-            new_sig["eeg_A"]       = {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-            new_sig["eeg_B"]       = {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-            new_sig["eeg_counter"] = {"fs": 62.5, "nCh": 1, "hidden": True}
+            new_sig["eeg_A"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
+            new_sig["eeg_B"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
+            new_sig["eeg_counter"]   = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
+            new_sig["eeg_timestamp"] = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
 
             if not new_sig:
                 raise ValueError("No active RX configurations found.")

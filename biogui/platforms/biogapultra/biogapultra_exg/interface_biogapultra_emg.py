@@ -48,9 +48,14 @@ stopSeq: list[bytes | float] = [
 ]
 
 sigInfo: dict = {
-    "emg_A": {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "emg_B": {"fs": 250.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "counter": {"fs": 62.5, "nCh": 1, "hidden": True},
+    "emg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
+    "emg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
+    # Packet counter and µs timestamp: one value per BLE packet (500 Hz / 4
+    # samples = 125 Hz). Selectable in the signal wizard like emg_A/emg_B, but
+    # "plotByDefault": False leaves the "Show plot" box unchecked so they are
+    # recorded without cluttering the plots unless explicitly enabled.
+    "counter": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+    "timestamp": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
 }
 
 
@@ -75,9 +80,11 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
 
     counter = int.from_bytes(data[1:3], "little")
+    timestamp = int.from_bytes(data[3:7], "little")
 
     return {
-        "emg_A":   rows_A,
-        "emg_B":   rows_B,
-        "counter": np.array([[counter]], dtype=np.uint16),
+        "emg_A":     rows_A,
+        "emg_B":     rows_B,
+        "counter":   np.array([[counter]], dtype=np.uint16),
+        "timestamp": np.array([[timestamp]], dtype=np.uint32),
     }
