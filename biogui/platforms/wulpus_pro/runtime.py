@@ -63,6 +63,21 @@ def get_standard_signal_definitions_for_mode(
             "hidden": True,
             "extras": {"type": "time-series"},
         },
+        # Per-frame BLE counter + microsecond timestamp added by the nRF5340 in
+        # each WULPUS chunk's padding tail (see firmware WULPUS_META_* / decodeFn).
+        # One value per ultrasound frame, so fs = frame rate = acquisition rate.
+        # Exposed like the ExG counter/timestamp: selectable in the wizard but
+        # "plotByDefault": False, so recorded without cluttering the plots.
+        "wulpus_counter": {
+            "fs": fs,
+            "nCh": 1,
+            "extras": {"type": "time-series", "plotByDefault": False},
+        },
+        "wulpus_timestamp": {
+            "fs": fs,
+            "nCh": 1,
+            "extras": {"type": "time-series", "plotByDefault": False},
+        },
     }
 
     if accelerometer_enabled:
