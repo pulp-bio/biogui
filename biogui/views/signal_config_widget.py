@@ -53,6 +53,13 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
 
         self.setupUi(self)
 
+        # Signals may opt out of being plotted by default via extras["plotByDefault"]
+        # (e.g. diagnostic counter/timestamp channels). They stay fully selectable —
+        # the user just ticks "Show plot" to enable them. Only applies to fresh pages;
+        # in edit mode the saved configuration decides the checkbox state.
+        if not edit and not extras.get("plotByDefault", True):
+            self.plotGroupBox.setChecked(False)
+
         # Track if M-mode display handlers are connected (to avoid disconnect warnings)
         self._mmode_handlers_connected = False
 
