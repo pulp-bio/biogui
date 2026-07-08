@@ -97,16 +97,60 @@ class DataSourceWorker(ABC, QObject, metaclass=DataSourceWorkerMeta):
     """
     Abstract base class for data source workers.
 
+    Parameters
+    ----------
+    packetSize : int | list[tuple[int, int]]
+        List of (header_byte, packet_size) tuples for different packet types, or a single packet size.
+    startSeq : list[bytes | float]
+        Sequence of commands to start the source.
+    stopSeq : list[bytes | float]
+        Sequence of commands to stop the source.
+
+    Attributes
+    ----------
+    _packetSize : int | list[tuple[int, int]]
+        Size of each packet read from the serial port, or list of (header_byte, packet_size) tuples.
+    _startSeq : list[bytes | float]
+        Sequence of commands to start the source.
+    _stopSeq : list[bytes | float]
+        Sequence of commands to stop the source.
+    _trigger : int | None
+        Optional trigger value for the data source.
+
     Class attributes
     ----------------
     dataPacketReady : Signal
-        Qt Signal emitted when new data is collected.
+        Qt Signal emitted when new data is collected; it's a tuple of data (ndarray), timestamp (float),
+        and optional trigger (tuple with integer id and string label, or None).
     errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
 
-    dataPacketReady = Signal(bytes)
+    dataPacketReady = Signal(bytes, float, object)
     errorOccurred = Signal(str)
+
+    def __init__(
+        self,
+        packetSize: int | list[tuple[int, int]],
+        startSeq: list[bytes | float],
+        stopSeq: list[bytes | float],
+        parent: QObject | None = None,
+    ) -> None:
+        super().__init__(parent)
+
+        self._packetSize = packetSize
+        self._startSeq = startSeq
+        self._stopSeq = stopSeq
+        self._trigger: tuple[int, str] | None = None
+
+    @property
+    def trigger(self) -> tuple[int, str] | None:
+        """tuple[int, str] or None: Property representing the (optional) trigger."""
+        return self._trigger
+
+    @trigger.setter
+    def trigger(self, trigger: tuple[int, str] | None) -> None:
+        self._trigger = trigger
 
     @abstractmethod
     def startCollecting(self) -> None:

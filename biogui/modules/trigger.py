@@ -103,9 +103,12 @@ def _loadConfigFromJson(filePath: str) -> tuple[dict | None, str]:
         return config, "The specified path does not exist."
     msg = ""
     for triggerLabel in config["triggers"]:
-        imagePath = os.path.join(config["imageFolder"], config["triggers"][triggerLabel])
+        imagePath = os.path.join(
+            config["imageFolder"], config["triggers"][triggerLabel]
+        )
         if not (
-            os.path.isfile(imagePath) and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
+            os.path.isfile(imagePath)
+            and (imagePath.endswith(".png") or imagePath.endswith(".jpg"))
         ):
             config["triggers"][triggerLabel] = ""
             msg = "Some images do not exist; the name of the trigger will be displayed."
@@ -394,12 +397,9 @@ class TriggerController(QObject):
                 )
                 # Force triggers to zero during rest
                 for streamingController in self._streamingControllers.values():
-                    streamingController.setTrigger(0)
-                    streamingController.setTriggerStr("rest")
-                logging.info(
-                    f"Rest started: upcoming='{self._upcomingLabel}' \
-                    countdown={self._restCounter:.1f}s (durationRest={restMs}ms)."
-                )
+                    streamingController.setTrigger((0, "rest"))
+                logging.info(f"Rest started: upcoming='{self._upcomingLabel}' \
+                    countdown={self._restCounter:.1f}s (durationRest={restMs}ms).")
                 # Use one timer source for countdown and rest end to avoid race conditions.
                 self._countdownTimer.start()
                 return  # ← Exit here for rest phase
@@ -420,8 +420,7 @@ class TriggerController(QObject):
             # Show either the image or label for the stimulus
             self._triggerWidget.renderImage(triggerLabel, imagePath)
             for streamingController in self._streamingControllers.values():
-                streamingController.setTrigger(newTrigger)
-                streamingController.setTriggerStr(triggerLabel)
+                streamingController.setTrigger((newTrigger, triggerLabel))
             logging.info(f"Trigger updated: {newTrigger} (label: {triggerLabel}).")
 
             self._triggerCounter += 1
@@ -484,8 +483,7 @@ class TriggerController(QObject):
             return
 
         for streamingController in self._streamingControllers.values():
-            streamingController.setTrigger(0)
-            streamingController.setTriggerStr("init")
+            streamingController.setTrigger((0, "init"))
 
         self._triggerIds = {}
         self._triggerLabels = []
@@ -553,4 +551,3 @@ class TriggerController(QObject):
         # Reset triggers for all streaming controllers
         for streamingController in self._streamingControllers.values():
             streamingController.setTrigger(None)
-            streamingController.setTriggerStr(None)

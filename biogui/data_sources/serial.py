@@ -10,6 +10,7 @@ Classes for the serial data source.
 from __future__ import annotations
 
 import logging
+import time
 from sys import platform
 
 from PySide6.QtCore import QByteArray, QIODevice, QThread
@@ -123,22 +124,22 @@ class SerialDataSourceWorker(DataSourceWorker):
 
     Parameters
     ----------
-    packetSize : int or list of tuple of int
+    packetSize : int | list[tuple[int, int]]
         List of (header_byte, packet_size) tuples for different packet types, or a single packet size.
-    startSeq : list of bytes or float
+    startSeq : list[bytes | float]
         Sequence of commands to start the source.
-    stopSeq : list of bytes or float
+    stopSeq : list[bytes | float]
         Sequence of commands to stop the source.
     serialPortName : str
         String representing the serial port.
 
     Attributes
     ----------
-    _packetSize : int or list of tuple of int
+    _packetSize : int | list[tuple[int, int]]
         Size of each packet read from the serial port, or list of (header_byte, packet_size) tuples.
-    _startSeq : list of bytes or float
+    _startSeq : list[bytes | float]
         Sequence of commands to start the source.
-    _stopSeq : list of bytes or float
+    _stopSeq : list[bytes | float]
         Sequence of commands to stop the source.
     _serialPortName : str
         String representing the serial port.
@@ -152,7 +153,8 @@ class SerialDataSourceWorker(DataSourceWorker):
     Class attributes
     ----------------
     dataPacketReady : Signal
-        Qt Signal emitted when new data is collected.
+        Qt Signal emitted when new data is collected; it's a tuple of data (ndarray), timestamp (float),
+        and optional trigger (tuple with integer id and string label, or None).
     errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
@@ -164,11 +166,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         stopSeq: list[bytes | float],
         serialPortName: str,
     ) -> None:
-        super().__init__()
+        super().__init__(packetSize, startSeq, stopSeq)
 
-        self._packetSize = packetSize
-        self._startSeq = startSeq
-        self._stopSeq = stopSeq
         self._serialPortName = serialPortName
 
         self._serialPort = QSerialPort(self)
@@ -290,8 +289,12 @@ class SerialDataSourceWorker(DataSourceWorker):
             else:
                 packet_size = self._packetSize
             if self._buffer.size() >= packet_size:
+                # Generate timestamp
+                ts = time.time()
+
+                # Emit data packet together with timestamp and trigger
                 data = self._buffer.left(packet_size).data()
-                self.dataPacketReady.emit(data)
+                self.dataPacketReady.emit(data, ts, self._trigger)
                 self._buffer.remove(0, packet_size)
             else:
                 break

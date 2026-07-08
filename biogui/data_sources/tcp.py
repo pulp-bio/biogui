@@ -10,6 +10,7 @@ Classes for the TCP socket data source.
 from __future__ import annotations
 
 import logging
+import time
 
 from PySide6.QtCore import QByteArray, QLocale, QThread
 from PySide6.QtGui import QIntValidator
@@ -138,7 +139,8 @@ class TCPDataSourceWorker(DataSourceWorker):
     Class attributes
     ----------------
     dataPacketReady : Signal
-        Qt Signal emitted when new data is collected.
+        Qt Signal emitted when new data is collected; it's a tuple of data (ndarray), timestamp (float),
+        and optional trigger (tuple with integer id and string label, or None).
     errorOccurred : Signal
         Qt Signal emitted when a communication error occurs.
     """
@@ -150,11 +152,8 @@ class TCPDataSourceWorker(DataSourceWorker):
         stopSeq: list[bytes | float],
         socketPort: int,
     ) -> None:
-        super().__init__()
+        super().__init__(packetSize, startSeq, stopSeq)
 
-        self._packetSize = packetSize
-        self._startSeq = startSeq
-        self._stopSeq = stopSeq
         self._socketPort = socketPort
 
         self._tcpServer = QTcpServer(self)
@@ -271,8 +270,12 @@ class TCPDataSourceWorker(DataSourceWorker):
             else:
                 packet_size = self._packetSize
             if self._buffer.size() >= packet_size:
+                # Generate timestamp
+                ts = time.time()
+
+                # Emit data packet together with timestamp and trigger
                 data = self._buffer.left(packet_size).data()
-                self.dataPacketReady.emit(data)
+                self.dataPacketReady.emit(data, ts, self._trigger)
                 self._buffer.remove(0, packet_size)
             else:
                 break

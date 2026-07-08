@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 
 def read_bio_file(file_path: str) -> dict:
     """
-    Read a .bio file and extract all signals, acq_tss, and triggers.
+    Read a .bio file and extract all signals, timestamps, and triggers.
     """
     dtypeMap = {
         "?": np.dtype("bool"),
@@ -34,71 +34,74 @@ def read_bio_file(file_path: str) -> dict:
     }
 
     with open(file_path, "rb") as f:
-        n_signals = struct.unpack("<I", f.read(4))[0]
-        fs_base, n_samp_base = struct.unpack("<fI", f.read(8))
-
         signals = {}
+
+        # 1. Metadata
+        n_signals = struct.unpack("<I", f.read(4))[0]
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", f.read(4))[0]
-            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[0].decode()
+            sig_name = struct.unpack(f"<{sig_name_len}s", f.read(sig_name_len))[
+                0
+            ].decode()
             fs, n_samp, n_ch, dtype = struct.unpack("<f2Ic", f.read(13))
+            n_samp_ts, n_samp_trigger = struct.unpack("<2I", f.read(8))
 
             signals[sig_name] = {
                 "fs": fs,
                 "n_samp": n_samp,
                 "n_ch": n_ch,
                 "dtype": dtypeMap[dtype.decode("ascii")],
+                "n_samp_ts": n_samp_ts,
+                "n_samp_trigger": n_samp_trigger,
             }
-
-        is_trigger = struct.unpack("<?", f.read(1))[0]
-        is_trigger_str = struct.unpack("<?", f.read(1))[0]
-
-        # 1. Acquisition timestamp
-        ts = np.frombuffer(f.read(8 * n_samp_base), dtype=np.float64).reshape(n_samp_base, 1)
-        signals["acq_ts"] = {"data": ts, "fs": fs_base}
 
         # 2. Signals data
         for sig_name, sig_data in signals.items():
-            if sig_name == "acq_ts":
-                continue
-
             n_samp = sig_data.pop("n_samp")
             n_ch = sig_data.pop("n_ch")
             dtype = sig_data.pop("dtype")
+            n_samp_ts = sig_data.pop("n_samp_ts")
+            n_samp_trigger = sig_data.pop("n_samp_trigger")
 
-            data = np.frombuffer(f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype).reshape(
-                n_samp, n_ch
-            )
+            # Data
+            data = np.frombuffer(
+                f.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
+            ).reshape(n_samp, n_ch)
             sig_data["data"] = data
 
-        # 3. Trigger
-        if is_trigger:
-            itemsize = 4  # saving as uint32_t
-            trigger = np.frombuffer(f.read(itemsize * n_samp_base), dtype=np.uint32).reshape(
-                n_samp_base, 1
+            # Timestamp
+            ts = np.frombuffer(f.read(8 * n_samp_ts), dtype=np.float64).reshape(
+                n_samp_ts, 1
             )
-            signals["trigger"] = {"data": trigger, "fs": fs_base}
-            # 4. Trigger string (len-prefixed UTF-8 per sample)
-            if is_trigger_str:
-                trigger_str = []
-                for _ in range(n_samp_base):
-                    (L,) = struct.unpack("<I", f.read(4))
-                    if L == 0:
-                        trigger_str.append("")
-                    else:
-                        b = f.read(L)
-                        trigger_str.append(b.decode("utf-8", errors="replace"))
+            sig_data["ts"] = ts
 
-            # store as (n_samp_base, 1) like other signals
-            signals["trigger_str"] = {
-                "data": np.array(trigger_str, dtype=object).reshape(n_samp_base, 1),
-                "fs": fs_base,
-            }
+            # Trigger
+            if n_samp_trigger > 0:
+                trigger_id, trigger_str = [], []
+                for _ in range(n_samp_trigger):
+                    trigger_id.append(struct.unpack("<I", f.read(4))[0])
+                    str_len = struct.unpack("<I", f.read(4))[0]
+                    if str_len > 0:
+                        trigger_str.append(
+                            f.read(str_len).decode("utf-8", errors="replace")
+                        )
+                    else:
+                        trigger_str.append("")
+                sig_data["trigger"] = {
+                    "id": np.array(trigger_id, dtype=np.uint32).reshape(
+                        n_samp_trigger, 1
+                    ),
+                    "str": np.array(trigger_str, dtype=object).reshape(
+                        n_samp_trigger, 1
+                    ),
+                }
 
     return signals
 
 
-def plot_signal_mmode(sig_name: str, sig_data: dict, samples_per_acquisition: int = 397):
+def plot_signal_mmode(
+    sig_name: str, sig_data: dict, samples_per_acquisition: int = 397
+):
     """
     Plot a single signal in M-mode (time vs depth).
     Removed colorbar/intensity scale.
@@ -124,7 +127,9 @@ def plot_signal_mmode(sig_name: str, sig_data: dict, samples_per_acquisition: in
     time_axis = np.arange(n_acquisitions) * acquisition_duration
     depth_axis = np.arange(samples_per_acquisition)
 
-    fig, axes = plt.subplots(nrows=n_ch, sharex=True, figsize=(16, n_ch * 4), layout="constrained")
+    fig, axes = plt.subplots(
+        nrows=n_ch, sharex=True, figsize=(16, n_ch * 4), layout="constrained"
+    )
     if n_ch == 1:
         axes = [axes]
 
@@ -159,8 +164,12 @@ def plot_signal_standard(sig_name: str, sig_data: dict):
     n_samp, n_ch = sig_data["data"].shape
     t = np.arange(n_samp) / sig_data["fs"]
 
+    ts = sig_data["ts"]
+    ts = ts - ts[0]
+    has_trigger = "trigger" in sig_data
+
     fig, axes = plt.subplots(
-        nrows=n_ch,
+        nrows=n_ch + (1 if has_trigger else 0),
         sharex="all",
         squeeze=False,
         figsize=(16, n_ch),
@@ -170,14 +179,16 @@ def plot_signal_standard(sig_name: str, sig_data: dict):
     for i in range(n_ch):
         axes[i][0].plot(t, sig_data["data"][:, i])
 
+    if has_trigger:
+        axes[-1][0].plot(ts, sig_data["trigger"]["id"], color="green")
+        axes[-1][0].set_ylabel("Trigger ID")
+
 
 def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
     """Orchestrator for M-mode plotting."""
     data_signal_count = 0
     for sig_name, sig_data in signals.items():
         if sig_name not in [
-            "acq_ts",
-            "trigger",
             "imu",
             "acquisition_number",
             "tx_rx_id",
@@ -190,8 +201,6 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
 
     for sig_name, sig_data in signals.items():
         if sig_name in [
-            "acq_ts",
-            "trigger",
             "imu",
             "acquisition_number",
             "tx_rx_id",
@@ -203,7 +212,7 @@ def plot_ultrasound_mmode(signals: dict, samples_per_acquisition: int = 397):
 
 def main():
     parser = argparse.ArgumentParser(description="Plot signals from .bio files")
-    parser.add_argument("file_path", type=str, help="Path to the .bio file")
+    parser.add_argument("--file_path", type=str, help="Path to the .bio file")
     parser.add_argument(
         "--ultrasound", action="store_true", help="Display ultrasound data in M-mode"
     )

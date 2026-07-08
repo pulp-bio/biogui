@@ -59,13 +59,16 @@ class SigData:
         Signal name.
     data : ndarray
         Data with shape (nSamp, nCh).
-    acq_ts : float
+    ts : float
         Timestamp denoting the time of acquisition.
+    trigger : tuple[int, str] | None
+        Optional trigger value for the data packet (integer id and string label).
     """
 
     sigName: str
     data: np.ndarray
-    acq_ts: float
+    ts: float
+    trigger: tuple[int, str] | None = None
 
 
 def detectTheme():
