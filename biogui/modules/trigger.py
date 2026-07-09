@@ -318,6 +318,13 @@ class TriggerController(QObject):
 
     _STOP_SENTINEL = "__internal_stop_sentinel__"
 
+    # Sentinel trigger id for the "init"/"finished" padding around the labeled
+    # sequence (before `durationStart` elapses, and after the sequence ends but
+    # before the user stops streaming). Encoded as unsigned since trigger ids are
+    # stored as uint32 in the .bio file; represents "-1" and is distinct from
+    # real gesture ids (1..N) and from 0 ("rest"/"stop").
+    _EDGE_TRIGGER_ID = 0xFFFFFFFF
+
     def __init__(
         self, streamingControllers: MappingProxyType, parent: QObject | None = None
     ) -> None:
@@ -344,6 +351,7 @@ class TriggerController(QObject):
         self._restCounter = 0.0
         self._restEndsAt = 0.0
         self._upcomingLabel = ""
+        self._sequenceActive = False
 
     def subscribe(self, mainController: MainController, mainWin: MainWindow) -> None:
         # Add configuration widget to main window
@@ -482,8 +490,9 @@ class TriggerController(QObject):
         if not self._confWidget.config:
             return
 
+        self._sequenceActive = True
         for streamingController in self._streamingControllers.values():
-            streamingController.setTrigger((0, "init"))
+            streamingController.setTrigger((self._EDGE_TRIGGER_ID, "init"))
 
         self._triggerIds = {}
         self._triggerLabels = []
@@ -548,6 +557,14 @@ class TriggerController(QObject):
         self._restEndsAt = 0.0
         self._upcomingLabel = ""
 
-        # Reset triggers for all streaming controllers
+        # If a labeled sequence was running, mark the remainder of the recording
+        # (from now until the user manually stops streaming) as "finished"
+        # instead of clearing the trigger to None, so trigger records keep
+        # covering the same span as the data/timestamps. If no sequence was
+        # ever started (e.g. trigger module unused this session), leave it None.
+        finishedTrigger = (
+            (self._EDGE_TRIGGER_ID, "finished") if self._sequenceActive else None
+        )
+        self._sequenceActive = False
         for streamingController in self._streamingControllers.values():
-            streamingController.setTrigger(None)
+            streamingController.setTrigger(finishedTrigger)
