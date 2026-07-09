@@ -356,7 +356,7 @@ class _Preprocessor(QObject):
         # Process each signal
         for sigName, sigData in dataDec.items():
             # If current signal has no data, skip
-            if sigData is None:
+            if sigData is None or sigData.shape[0] == 0:
                 continue
 
             # Store raw data (always unprocessed for file saving)
