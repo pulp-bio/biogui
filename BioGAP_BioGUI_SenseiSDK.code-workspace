@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../biogap_public/BioGAP/Firmware/src_NRF"
+		},
+		{
+			"path": "../sensei-sdk/NRF"
+		}
+	],
+	"settings": {}
+}
