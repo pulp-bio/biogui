@@ -215,3 +215,6 @@ __marimo__/
 *.skops
 *.npz
 *.bio
+
+
+biogui/dataruntime/
