@@ -55,22 +55,29 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
     counter_values = np.hstack(signals["acquisition_number"]["data"]).astype(int)
     rx_ids = np.hstack(signals["tx_rx_id"]["data"]).astype(int)
 
+    # Trigger (and timestamp) are recorded per-signal now, not as a shared/global entry.
+    # "wulpus_counter" (WULPUS PRO) or "acquisition_number" (plain WULPUS) are emitted on
+    # every completed frame, so whichever is present reliably carries the trigger.
+    trigger_source = signals.get("wulpus_counter", signals.get("acquisition_number", {}))
+    has_trigger = "trigger" in trigger_source
+    has_trigger_str = "trigger_str" in trigger_source
+
     if "imu" in signals:
         imu_data = signals["imu"]["data"]
-    if "trigger" in signals:
-        trigger_data = np.hstack(signals["trigger"]["data"])
-    if "trigger_str" in signals:
-        trigger_data_str = np.hstack(signals["trigger_str"]["data"])
+    if has_trigger:
+        trigger_data = np.hstack(trigger_source["trigger"])
+    if has_trigger_str:
+        trigger_data_str = np.hstack(trigger_source["trigger_str"])
 
     n_total = int(counter_values[-1] + 1)
     full_tx_rx_id = np.full(n_total, np.nan)
     full_tx_rx_id[counter_values] = rx_ids
 
-    if "trigger" in signals:
+    if has_trigger:
         trigger_data_full = np.full(n_total, np.nan)
         trigger_data_full[counter_values] = trigger_data
 
-    if "trigger_str" in signals:
+    if has_trigger_str:
         trigger_str_full = np.full(n_total, "", dtype=object)
         trigger_str_full[counter_values] = trigger_data_str
 
@@ -87,29 +94,19 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
         print("Data losses detected.")
 
     df_session = pd.DataFrame()
+    _NON_ULTRASOUND_SIGNALS = {
+        "imu",
+        "acquisition_number",
+        "tx_rx_id",
+        "wulpus_counter",
+        "wulpus_timestamp",
+    }
     ultrasound_signal_names = [
-        sig_name
-        for sig_name in signals
-        if sig_name
-        not in {
-            "timestamp",
-            "trigger",
-            "trigger_str",
-            "imu",
-            "acquisition_number",
-            "tx_rx_id",
-        }
+        sig_name for sig_name in signals if sig_name not in _NON_ULTRASOUND_SIGNALS
     ]
 
     for sig_name, sig_data in signals.items():
-        if sig_name in {
-            "timestamp",
-            "trigger",
-            "trigger_str",
-            "imu",
-            "acquisition_number",
-            "tx_rx_id",
-        }:
+        if sig_name in _NON_ULTRASOUND_SIGNALS:
             continue
 
         rx_data = sig_data["data"]
@@ -169,9 +166,9 @@ def _build_runtime_dataframe(loaded: LoadedBioFile) -> pd.DataFrame:
 
     df_session = df_session.sort_index()
 
-    if "trigger" in signals:
+    if has_trigger:
         df_session["Label"] = trigger_data_full[: len(df_session)]
-    if "trigger_str" in signals:
+    if has_trigger_str:
         df_session["Label_str"] = trigger_str_full[: len(df_session)]
     if "imu" in signals:
         df_session["imu_x"] = imu_x_full[: len(df_session)]

@@ -56,71 +56,76 @@ def find_latest_bio_file(runtime_dir: Path | None = None) -> Path | None:
 
 
 def load_bio_file(file_path: Path) -> LoadedBioFile:
-    """Read a .bio file produced by the streaming controller."""
+    """
+    Read a .bio file produced by the streaming controller.
+
+    Each signal is self-contained: its own data block, immediately followed by its own
+    timestamp block (one float64 biogui-arrival timestamp per received packet for that
+    signal) and, only if that signal actually recorded a trigger, its own trigger /
+    trigger_str blocks. There is no shared/global timestamp or trigger anymore - different
+    signals can arrive at different rates (e.g. multi-modal acquisitions), so each carries
+    its own.
+    """
     with open(file_path, "rb") as file_handle:
         n_signals = struct.unpack("<I", file_handle.read(4))[0]
-        fs_base, n_samp_base = struct.unpack("<fI", file_handle.read(8))
 
-        signals: dict[str, dict] = {}
+        headers = []
         for _ in range(n_signals):
             sig_name_len = struct.unpack("<I", file_handle.read(4))[0]
             sig_name = struct.unpack(f"<{sig_name_len}s", file_handle.read(sig_name_len))[
                 0
             ].decode()
-            fs, n_samp, n_ch, dtype_code = struct.unpack("<f2Ic", file_handle.read(13))
+            fs, n_samp, n_ch, dtype_code, n_samp_ts, n_samp_trigger = struct.unpack(
+                "<f2Ic2I", file_handle.read(21)
+            )
+            headers.append(
+                {
+                    "name": sig_name,
+                    "fs": fs,
+                    "n_samp": n_samp,
+                    "n_ch": n_ch,
+                    "dtype": _DTYPE_MAP[dtype_code.decode("ascii")],
+                    "n_samp_ts": n_samp_ts,
+                    "n_samp_trigger": n_samp_trigger,
+                }
+            )
 
-            signals[sig_name] = {
-                "fs": fs,
-                "n_samp": n_samp,
-                "n_ch": n_ch,
-                "dtype": _DTYPE_MAP[dtype_code.decode("ascii")],
-            }
+        signals: dict[str, dict] = {}
+        has_trigger = False
+        for header in headers:
+            dtype = header["dtype"]
+            data = np.frombuffer(
+                file_handle.read(dtype.itemsize * header["n_samp"] * header["n_ch"]),
+                dtype=dtype,
+            ).reshape(header["n_samp"], header["n_ch"])
 
-        has_trigger = struct.unpack("<?", file_handle.read(1))[0]
-        has_trigger_str = struct.unpack("<?", file_handle.read(1))[0]
+            timestamp = np.frombuffer(
+                file_handle.read(8 * header["n_samp_ts"]), dtype=np.float64
+            ).reshape(header["n_samp_ts"], 1)
+
+            sig_data: dict[str, object] = {"data": data, "fs": header["fs"], "timestamp": timestamp}
+
+            if header["n_samp_trigger"]:
+                has_trigger = True
+                trigger_ids = np.empty(header["n_samp_trigger"], dtype=np.uint32)
+                trigger_strs: list[str] = []
+                for i in range(header["n_samp_trigger"]):
+                    (trigger_ids[i],) = struct.unpack("<I", file_handle.read(4))
+                    (length,) = struct.unpack("<I", file_handle.read(4))
+                    trigger_strs.append(
+                        file_handle.read(length).decode("utf-8", errors="replace")
+                        if length
+                        else ""
+                    )
+                sig_data["trigger"] = trigger_ids.reshape(-1, 1)
+                sig_data["trigger_str"] = np.array(trigger_strs, dtype=object).reshape(-1, 1)
+
+            signals[header["name"]] = sig_data
 
         metadata: dict[str, object] = {
-            "fs_base": fs_base,
+            "n_signals": n_signals,
             "has_trigger": has_trigger,
-            "has_trigger_str": has_trigger_str,
         }
-
-        timestamp = np.frombuffer(file_handle.read(8 * n_samp_base), dtype=np.float64).reshape(
-            n_samp_base, 1
-        )
-        signals["timestamp"] = {"data": timestamp, "fs": fs_base}
-
-        for sig_name, sig_data in signals.items():
-            if sig_name == "timestamp":
-                continue
-
-            n_samp = int(sig_data.pop("n_samp"))
-            n_ch = int(sig_data.pop("n_ch"))
-            dtype = sig_data.pop("dtype")
-            data = np.frombuffer(
-                file_handle.read(dtype.itemsize * n_samp * n_ch), dtype=dtype
-            ).reshape(n_samp, n_ch)
-            sig_data["data"] = data
-
-        if has_trigger:
-            trigger = np.frombuffer(file_handle.read(4 * n_samp_base), dtype=np.uint32).reshape(
-                n_samp_base, 1
-            )
-            signals["trigger"] = {"data": trigger, "fs": fs_base}
-
-        if has_trigger_str:
-            trigger_str: list[str] = []
-            for _ in range(n_samp_base):
-                (length,) = struct.unpack("<I", file_handle.read(4))
-                if length == 0:
-                    trigger_str.append("")
-                else:
-                    trigger_str.append(file_handle.read(length).decode("utf-8", errors="replace"))
-
-            signals["trigger_str"] = {
-                "data": np.array(trigger_str, dtype=object).reshape(n_samp_base, 1),
-                "fs": fs_base,
-            }
     print(
         f"Loaded .bio file from {file_path} with signals: {list(signals.keys())} and metadata: {metadata}"
     )
