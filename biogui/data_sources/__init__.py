@@ -15,6 +15,7 @@ from .base import DataSourceConfigWidget, DataSourceType, DataSourceWorker
 from .microphone import MicrophoneConfigWidget, MicrophoneDataSourceWorker
 from .serial import SerialConfigWidget, SerialDataSourceWorker
 from .tcp import TCPConfigWidget, TCPDataSourceWorker
+from .tcp_client import TCPClientConfigWidget, TCPClientDataSourceWorker
 from .unix_socket import (
     UnixSocketConfigWidget,
     UnixSocketDataSourceWorker,
@@ -39,6 +40,7 @@ def getConfigWidget(dataSourceType: DataSourceType, parent: QWidget) -> DataSour
     """
     configWidgetDict = {
         DataSourceType.TCP: TCPConfigWidget,
+        DataSourceType.TCPCLIENT: TCPClientConfigWidget,
         DataSourceType.SERIAL: SerialConfigWidget,
         DataSourceType.UNIX_SOCK: UnixSocketConfigWidget,
         DataSourceType.MIC: MicrophoneConfigWidget,
@@ -77,6 +79,7 @@ def getDataSourceWorker(
     dataSourceDict = {
         DataSourceType.SERIAL: SerialDataSourceWorker,
         DataSourceType.TCP: TCPDataSourceWorker,
+        DataSourceType.TCPCLIENT: TCPClientDataSourceWorker,
         DataSourceType.UNIX_SOCK: UnixSocketDataSourceWorker,
         DataSourceType.MIC: MicrophoneDataSourceWorker,
     }

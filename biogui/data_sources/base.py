@@ -20,7 +20,8 @@ from PySide6.QtWidgets import QWidget
 class DataSourceType(Enum):
     """Enum representing the data source type."""
 
-    TCP = "TCP socket"
+    TCP = "TCP server"
+    TCPCLIENT = "TCP client"
     SERIAL = "Serial port"
     UNIX_SOCK = "Unix socket"
     MIC = "Microphone"
