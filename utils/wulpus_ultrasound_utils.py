@@ -4,6 +4,7 @@ Ultrasound (WULPUS / WULPUS PRO) reconstruction and post-run plotting from a .bi
 
 from __future__ import annotations
 
+import argparse
 import re
 from pathlib import Path
 
@@ -80,7 +81,6 @@ def _cfg_num(name: str) -> int:
 
 def process_ultrasound(
     signals: dict,
-    emg_df: pd.DataFrame | None = None,
     us_samples_per_frame: int = 400,
 ) -> pd.DataFrame:
     """
@@ -93,12 +93,6 @@ def process_ultrasound(
       "acquisition_number" (also emitted every frame) plus that signal's own biogui
       (host-arrival) timestamp is used instead; "nrf_wulpus_timestamp" is left NaN in this
       case since no such hardware field exists.
-
-    If `emg_df` is given (the un-finalized dataframe returned by emg_utils.process_emg, i.e.
-    still carrying its own "biogui_timestamp" column), each frame's own biogui timestamp is
-    additionally matched against the nearest EMG packet timestamp - both streams are stamped
-    by the same onboard BioGAP clock, so this alignment is sub-ms accurate. This is optional:
-    a WULPUS-only recording has no separate EMG stream to align against.
     """
     is_pro = "wulpus_counter" in signals
     counter_sig = "wulpus_counter" if is_pro else "acquisition_number"
@@ -191,23 +185,11 @@ def process_ultrasound(
         for col in ("imu_x", "imu_y", "imu_z"):
             us_df[col] = us_df[col].astype(float)
 
-    us_df["own_biogui_timestamp"] = us_df["biogui_timestamp"]
-
-    if emg_df is not None:
-        # Nearest-neighbor match against EMG's own (hardware-synced) biogui timestamps.
-        emg_ts = np.sort(emg_df["biogui_timestamp"].to_numpy(dtype=float))
-        frame_ts = us_df["biogui_timestamp"].to_numpy(dtype=float)
-        nearest_idx = np.clip(np.searchsorted(emg_ts, frame_ts), 1, len(emg_ts) - 1)
-        left, right = emg_ts[nearest_idx - 1], emg_ts[nearest_idx]
-        matched = np.where(np.abs(frame_ts - left) < np.abs(frame_ts - right), left, right)
-        us_df["biogui_timestamp"] = matched
-
     us_df["time_ms"] = (us_df["biogui_timestamp"] - us_df["biogui_timestamp"].min()) * 1000.0
 
     return us_df
 
 
-# ── Filtering / envelope (exactly as in pipeline_datasynch.ipynb, "Load Saved Data" section) ─
 
 ADC_FS = 8e6
 SPEED_SOUND_TISSUE = 1540
@@ -356,7 +338,6 @@ def save_ultrasound_dataframe(us_df: pd.DataFrame, save_path: str | Path) -> Pat
 
 def load_and_plot_ultrasound(
     bio_path: str | Path,
-    emg_df: pd.DataFrame | None = None,
     us_samples_per_frame: int = 400,
     save_plot_path: str | Path | None = None,
     save_df_path: str | Path | None = None,
@@ -370,13 +351,11 @@ def load_and_plot_ultrasound(
     ----------
     bio_path : str or Path
         Path to the .bio file to load.
-    emg_df : pd.DataFrame or None, default=None
-        Optional EMG dataframe (see `process_ultrasound`) to align ultrasound frame
-        timestamps against. Leave as None for an ultrasound-only recording.
     us_samples_per_frame : int, default=400
         Number of ADC samples per ultrasound A-line.
     save_plot_path : str or Path or None
-        If given, the M-mode/IMU/trigger figure is also saved there.
+        If given, the M-mode/IMU/trigger figure is also saved there; otherwise it is shown
+        interactively.
     save_df_path : str or Path or None
         If given, the reconstructed per-frame dataframe is also saved there (see
         `save_ultrasound_dataframe` for the supported extensions).
@@ -391,11 +370,61 @@ def load_and_plot_ultrasound(
     bio_path = Path(bio_path)
     bio_file = load_bio_file(bio_path)
 
-    us_df = process_ultrasound(bio_file.signals, emg_df=emg_df, us_samples_per_frame=us_samples_per_frame)
+    us_df = process_ultrasound(bio_file.signals, us_samples_per_frame=us_samples_per_frame)
 
     plot_ultrasound(us_df, save_path=save_plot_path, title=title or bio_path.name)
+    if save_plot_path is None:
+        plt.show()
 
     if save_df_path is not None:
         save_ultrasound_dataframe(us_df, save_df_path)
 
     return us_df
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Reconstruct and plot ultrasound (WULPUS / WULPUS PRO) data from a .bio file."
+    )
+    parser.add_argument("bio_path", type=Path, help="Path to the .bio file to load.")
+    parser.add_argument(
+        "--us-samples-per-frame",
+        type=int,
+        default=400,
+        help="Number of ADC samples per ultrasound A-line (default: 400).",
+    )
+    parser.add_argument(
+        "--save-plot-path",
+        type=Path,
+        default=None,
+        help="Save the M-mode/IMU/trigger figure here instead of showing it interactively.",
+    )
+    parser.add_argument(
+        "--save-df-path",
+        type=Path,
+        default=None,
+        help="Save the reconstructed dataframe here (.pkl/.parquet/.csv).",
+    )
+    parser.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="Plot title (default: the .bio file's name).",
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    cli_args = _build_arg_parser().parse_args()
+    load_and_plot_ultrasound(
+        bio_path=cli_args.bio_path,
+        us_samples_per_frame=cli_args.us_samples_per_frame,
+        save_plot_path=cli_args.save_plot_path,
+        save_df_path=cli_args.save_df_path,
+        title=cli_args.title,
+    )
+
+
+
+# Example usage from the command line:
+#python wulpus_ultrasound_utils.py "...\biogui\biogui\dataruntime\run_2026-07-13_09-05-44.bio" --us-samples-per-frame 397
