@@ -20,13 +20,12 @@ theme:
       bug: octicons/bug-16
       example: octicons/beaker-16
       quote: octicons/quote-16
-  icon:
     repo: fontawesome/brands/github
-  palette: 
+  palette:
     # Palette toggle for light mode
     - scheme: default
       toggle:
-        icon: material/brightness-7 
+        icon: material/brightness-7
         name: Switch to dark mode
     # Palette toggle for dark mode
     - scheme: slate
@@ -46,16 +45,15 @@ markdown_extensions:
 
 plugins:
   - glightbox
-  
+
 nav:
   - Overview: index.md
   - Structure: structure.md
   - Getting Started: getting_started.md
   - Graphical User Interface: graphical_user_interface.md
   - Modules:
-    - Trigger: modules/trigger.md
-    - Forwarding: modules/forwarding.md
-    - Teleprompter: modules/teleprompter.md
+      - Trigger: modules/trigger.md
+      - Forwarding: modules/forwarding.md
+      - Teleprompter: modules/teleprompter.md
   - Development:
-    - Custom Interfaces: interfaces.md
-
+      - Custom Interfaces: interfaces.md

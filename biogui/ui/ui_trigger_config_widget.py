@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'trigger_config_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.0
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -22,7 +22,7 @@ class Ui_TriggerConfigWidget(object):
     def setupUi(self, TriggerConfigWidget):
         if not TriggerConfigWidget.objectName():
             TriggerConfigWidget.setObjectName(u"TriggerConfigWidget")
-        TriggerConfigWidget.resize(400, 108)
+        TriggerConfigWidget.resize(400, 123)
         self.verticalLayout = QVBoxLayout(TriggerConfigWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.triggerGroupBox = QGroupBox(TriggerConfigWidget)

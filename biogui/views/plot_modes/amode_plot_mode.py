@@ -85,6 +85,7 @@ class AModePlotMode(BasePlotMode):
     """
 
     SPEED_OF_SOUND = 1540  # m/s in tissue
+    GAIN_CURVE_COLOR = "#00e5ff"
 
     def __init__(
         self,
@@ -102,6 +103,7 @@ class AModePlotMode(BasePlotMode):
         self._adc_start_delay = extras["adc_start_delay"]
         self._adc_sampling_freq = extras["adc_sampling_freq"]
         self._meas_period_us = extras.get("meas_period")
+        self._wulpus_config = extras.get("wulpus_config")
 
         # Ultrasound display configuration
         self._show_raw = config.get("showRaw", True)
@@ -134,6 +136,8 @@ class AModePlotMode(BasePlotMode):
         self._raw_plots = []
         self._filtered_plots = []
         self._envelope_plots = []
+        self._gain_curve_plot = None
+        self._gain_view = None
         self._scan_count = 0
         self._graph_widget = None
 
@@ -184,6 +188,10 @@ class AModePlotMode(BasePlotMode):
         self._envelope_plots = []
 
         depth_axis = self._calculate_distance_axis()
+        if self._wulpus_config is not None and hasattr(self._wulpus_config, "calc_gain_curve"):
+            self._wulpus_config.calc_gain_curve()
+            self._setup_gain_axis(plot_item, depth_axis)
+
         latest_samples = self._get_latest_scan_data()
 
         # Precompute filtered and envelope data
@@ -244,6 +252,64 @@ class AModePlotMode(BasePlotMode):
         if sum([self._show_raw, self._show_filtered, self._show_envelope]) > 1:
             plot_item.addLegend()
 
+    def _setup_gain_axis(self, plot_item, depth_axis: np.ndarray) -> None:
+        """Setup a secondary right-side axis for the configured gain curve."""
+        self._gain_view = pg.ViewBox()
+        plot_item.scene().addItem(self._gain_view)
+        right_axis = plot_item.getAxis("right")
+        right_axis.linkToView(self._gain_view)
+        plot_item.showAxis("right")
+        plot_item.setLabel("right", "Gain", units="dB")
+        right_axis.setPen(pg.mkPen(self.GAIN_CURVE_COLOR))
+        right_axis.setTextPen(pg.mkPen(self.GAIN_CURVE_COLOR))
+
+        self._gain_curve_plot = pg.PlotDataItem(
+            depth_axis,
+            self._wulpus_config.gain_curve_db,
+            pen=pg.mkPen(
+                color=self.GAIN_CURVE_COLOR,
+                width=2,
+                style=pg.QtCore.Qt.PenStyle.DashLine,
+            ),
+            name="Set gain",
+        )
+        self._gain_view.addItem(self._gain_curve_plot)
+        self._update_gain_y_range()
+
+        def _update_gain_view() -> None:
+            if self._gain_view is None:
+                return
+            self._gain_view.setGeometry(plot_item.vb.sceneBoundingRect())
+            self._gain_view.linkedViewChanged(plot_item.vb, self._gain_view.XAxis)
+
+        plot_item.vb.sigResized.connect(_update_gain_view)
+        _update_gain_view()
+
+    def _update_gain_y_range(self) -> None:
+        """Keep the right gain axis readable, including flat fixed-gain curves."""
+        if self._gain_view is None or self._wulpus_config is None:
+            return
+
+        gain_curve = np.asarray(self._wulpus_config.gain_curve_db, dtype=float)
+        if gain_curve.size == 0:
+            return
+
+        gain_min = float(np.nanmin(gain_curve))
+        gain_max = float(np.nanmax(gain_curve))
+        if not np.isfinite(gain_min) or not np.isfinite(gain_max):
+            return
+
+        if np.isclose(gain_min, gain_max):
+            padding = 3.0
+            self._gain_view.setYRange(gain_min - padding, gain_max + padding, padding=0)
+        else:
+            span = gain_max - gain_min
+            self._gain_view.setYRange(
+                gain_min - 0.1 * span,
+                gain_max + 0.1 * span,
+                padding=0,
+            )
+
     def render(self) -> None:
         """Update the A-mode plots with all display modes."""
         if not self.has_new_data():
@@ -289,13 +355,19 @@ class AModePlotMode(BasePlotMode):
                     skipFiniteCheck=True,
                 )
 
+        if self._gain_curve_plot is not None and self._wulpus_config is not None:
+            if hasattr(self._wulpus_config, "calc_gain_curve"):
+                self._wulpus_config.calc_gain_curve()
+            self._gain_curve_plot.setData(
+                distance_axis,
+                self._wulpus_config.gain_curve_db,
+                skipFiniteCheck=True,
+            )
+            self._update_gain_y_range()
+
     def get_elapsed_time(self) -> float:
         """Calculate elapsed time based on scan count and measurement period."""
-        if self._meas_period_us:
-            return self._scan_count * self._meas_period_us / 1e6
-        else:
-            # Fallback to sample-based calculation
-            return (self._scan_count * self._num_samples) / self.fs
+        return self._scan_count * self._get_scan_period_s()
 
     def _get_latest_scan_data(self) -> np.ndarray:
         """Extract the latest complete scan from the data queue."""
@@ -307,20 +379,18 @@ class AModePlotMode(BasePlotMode):
 
     def _calculate_distance_axis(self) -> np.ndarray:
         """Calculate distance axis for ultrasound display in millimeters."""
-        # Calculate minimum depth based on ADC start delay
-        min_depth = (self.SPEED_OF_SOUND * self._adc_start_delay) / 2  # in meters
+        sample_times_s = self._adc_start_delay + (
+            np.arange(self._num_samples) / self._adc_sampling_freq
+        )
+        return (self.SPEED_OF_SOUND * sample_times_s / 2) * 1e3
 
-        # Calculate maximum acquisition time
-        max_time = self._num_samples / self._adc_sampling_freq  # in seconds
-
-        # Calculate maximum depth
-        max_depth = (self.SPEED_OF_SOUND * max_time) / 2 + min_depth  # in meters
-
-        # Create linearly spaced depth array and convert to millimeters
-        depths_m = np.linspace(min_depth, max_depth, self._num_samples)
-        depths_mm = depths_m * 1e3  # Convert to millimeters
-
-        return depths_mm
+    def _get_scan_period_s(self) -> float:
+        """Return the effective time between two displayed A-lines."""
+        if self.fs > 0:
+            return self._num_samples / self.fs
+        if self._meas_period_us:
+            return self._meas_period_us / 1e6
+        return 0.0
 
     def reinitialize(self, render_len_ms: int) -> None:
         """Re-initialize with new render length."""

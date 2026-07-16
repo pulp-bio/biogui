@@ -3,25 +3,49 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from __future__ import annotations
+
 """
 Utility functions.
 """
 
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import Callable, TypeAlias
+from typing import Any, Callable, TypeAlias
 
 import numpy as np
 from PySide6.QtGui import QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 
 DecodeFn: TypeAlias = Callable[[bytes], dict[str, np.ndarray]]
 """Type representing the decode function that translates the binary data received from the device into signals."""
 
-InterfaceModule = namedtuple(
-    "InterfaceModule", "packetSize, startSeq, stopSeq, sigInfo, decodeFn"
-)
-"""Type representing the interface module to communicate with the data source."""
+ConfigureInterfaceModuleFn: TypeAlias = Callable[
+    [QWidget, "InterfaceModule"], "InterfaceModule | None"
+]
+
+
+@dataclass(frozen=True)
+class PlatformConfig:
+    """Optional curated-platform metadata attached to an interface module."""
+
+    id: str
+    configureInterfaceModule: ConfigureInterfaceModuleFn
+    configWidgetClass: type[QWidget] | None = None
+    hasInlineConfigAction: bool = True
+    inlineActionIconName: str = "preferences-system"
+    inlineActionToolTip: str = "Configure platform"
+
+
+@dataclass(frozen=True)
+class InterfaceModule:
+    """Interface module used to communicate with the data source."""
+
+    packetSize: int
+    startSeq: list[bytes | float]
+    stopSeq: list[bytes | float]
+    sigInfo: dict[str, dict[str, Any]]
+    decodeFn: DecodeFn
+    platformConfig: PlatformConfig | None = None
 
 
 @dataclass

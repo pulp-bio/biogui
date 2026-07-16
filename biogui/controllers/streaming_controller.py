@@ -461,6 +461,7 @@ class StreamingController(QObject):
         decodeFn: DecodeFn,
         filePath: Path | None,
         sigsConfigs: dict,
+        postRunPlotConfig: dict | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -472,13 +473,15 @@ class StreamingController(QObject):
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
         self._dataSourceThread.destroyed.connect(self._dataSourceWorker.deleteLater)
+        self._filePath = filePath
+        self._postRunPlotConfig = postRunPlotConfig or {"enabled": False, "plotterKey": None}
 
         # Create pre-processor
         self._preprocessor = _Preprocessor(decodeFn, sigsConfigs, parent=self)
 
         # Store signal specifications
         self._sigInfo = {
-            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden", "extras")}
             for iSigName, iSigInfo in sigsConfigs.items()
         }
 
@@ -493,7 +496,7 @@ class StreamingController(QObject):
             self._fileWriterThread.destroyed.connect(self._fileWriterWorker.deleteLater)
 
     def __str__(self) -> str:
-        return str(self._dataSourceWorker)
+        return f"{self._dataSourceWorker} [0x{id(self):x}]"
 
     @property
     def sigInfo(self) -> MappingProxyType:
@@ -530,10 +533,19 @@ class StreamingController(QObject):
         dataSourceWorkerArgs = {
             k: v
             for k, v in dataSourceConfig.items()
-            if k not in ("interfacePath", "interfaceModule", "filePath", "sigsConfigs")
+            if k
+            not in (
+                "interfacePath",
+                "interfaceModule",
+                "filePath",
+                "sigsConfigs",
+                "plotAfterRun",
+                "postRunPlotConfig",
+            )
         }
         interfaceModule: InterfaceModule = dataSourceConfig["interfaceModule"]
         filePath: Path | None = dataSourceConfig.get("filePath", None)
+        postRunPlotConfig = dataSourceConfig.get("postRunPlotConfig", None)
         dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
@@ -545,6 +557,7 @@ class StreamingController(QObject):
         self._dataSourceThread.started.connect(self._dataSourceWorker.startCollecting)
         self._dataSourceThread.finished.connect(self._dataSourceWorker.stopCollecting)
         self._dataSourceThread.destroyed.connect(self._dataSourceWorker.deleteLater)
+        self._postRunPlotConfig = postRunPlotConfig or {"enabled": False, "plotterKey": None}
 
         # 2. Pre-processing settings
         self._preprocessor = _Preprocessor(
@@ -553,24 +566,40 @@ class StreamingController(QObject):
 
         # Keep signal metadata in sync with the active configuration.
         self._sigInfo = {
-            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden")}
+            iSigName: {k: v for k, v in iSigInfo.items() if k in ("fs", "nCh", "hidden", "extras")}
             for iSigName, iSigInfo in dataSourceConfig["sigsConfigs"].items()
         }
 
         # 3. File writer settings:
         # 3.1. If configuration is empty, remove previous worker and thread (if present)
         if filePath is None:
+            self._filePath = None
             self._fileWriterWorker = None
             self._fileWriterThread = None
             return
 
         # 3.2. Otherwise, initialize file writer
+        self._filePath = filePath
         self._fileWriterWorker = _FileWriterWorker(filePath, self._sigInfo)
         self._fileWriterThread = QThread(self)
         self._fileWriterWorker.moveToThread(self._fileWriterThread)
         self._fileWriterThread.started.connect(self._fileWriterWorker.openFile)
         self._fileWriterThread.finished.connect(self._fileWriterWorker.closeFile)
         self._fileWriterThread.destroyed.connect(self._fileWriterWorker.deleteLater)
+
+    @property
+    def postRunPlotConfig(self) -> dict:
+        """dict: Read-only configuration for post-run plotting."""
+        return self._postRunPlotConfig
+
+    def setPostRunPlotConfig(self, postRunPlotConfig: dict | None) -> None:
+        """Update post-run plotting configuration."""
+        self._postRunPlotConfig = postRunPlotConfig or {"enabled": False, "plotterKey": None}
+
+    @property
+    def filePath(self) -> Path | None:
+        """Path or None: Base file path selected for runtime saving."""
+        return self._filePath
 
     def editSigConfig(self, sigName: str, sigConfig: dict) -> None:
         """
