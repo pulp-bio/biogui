@@ -1,0 +1,6 @@
+[submodule "applications/bio-bridge"]
+	path = applications/bio-bridge
+	url = git@github.com:pulp-bio/bio-bridge.git
+[submodule "applications/motion-lab"]
+	path = applications/motion-lab
+	url = git@github.com:pulp-bio/motion-lab.git
