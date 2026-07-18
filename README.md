@@ -1,5 +1,7 @@
 # BioGUI
 
+[![Documentation](https://img.shields.io/badge/docs-github%20pages-blue)](https://pulp-bio.github.io/biogui/)
+
 Modular PySide6 GUI for acquiring and visualizing bio-signals from different sources.
 
 ## BioGUI Requirements
