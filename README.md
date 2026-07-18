@@ -63,7 +63,7 @@ The BioGUI provides additional functionalities via the [`modules`](biogui/module
 
 - [trigger](biogui/modules/trigger.py) — Given a gesture configuration (in JSON), it shows gesture cues to the user and generates a corresponding trigger signal that is appended to the incoming data; useful for screen-guided training
 - [forwarding](biogui/modules/forwarding.py) — It forwards the incoming data from selected signals to other processes via TCP or Unix sockets; useful to integrate the BioGUI within control applications
-- WULPUS: configure the probe via the per–data source action when using a WULPUS `interface_*.py`; presets live under `presets/wulpus/`
+- [teleprompter](biogui/modules/teleprompter.py) — Given a JSON configuration, it shows on-screen sentences, that are stored alongside the acquired signals; useful for speech recognition applications
 
 ### Utilities
 
@@ -71,8 +71,18 @@ In the [`utils`](https://github.com/pulp-bio/biogui/blob/main/utils) folder, the
 
 ## Applications
 
-As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications`](applications) folder:
+As mentioned above, the BioGUI can be integrated within more complex applications via the forwarding module. The components for said applications are contained in the [`applications`](applications) folder as `git submodules`: to download them, refer to the following commands:
 
+```
+# Full clone, pulling submodule contents too
+git clone --recurse-submodules git@github.com:pulp-bio/biogui.git
+
+# Without re-cloning
+git submodule update --init applications/bio-bridge  # just one
+git submodule update --init --recursive              # all of them
+```
+
+The two main applications are the following:
 - [`bio-bridge`](applications/bio-bridge/README.md) — BioBridge: real-time ML inference middleware
 - [`motion-lab`](applications/motion-lab/README.md) — MotionLab: Unity environment for hand control and task evaluation
 
@@ -96,12 +106,15 @@ https://github.com/user-attachments/assets/95f8e462-f49c-4d70-b516-1d78edc6c5a5
 
 ## Authors
 
-This work was realized mainly at the [Energy-Efficient Embedded Systems Laboratory (EEES Lab)](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/eees)
+This work was realized mainly at the [MICREL lab](https://dei.unibo.it/it/ricerca/laboratori-di-ricerca/micrel)
 of University of Bologna (Italy), and at the [Digital Circuits and Systems (IIS)](https://iis.ee.ethz.ch/research/research-groups/Digital%20Circuits%20and%20Systems.html) of ETH Zurich by:
 
 - [Mattia Orlandi](https://www.unibo.it/sitoweb/mattia.orlandi/en) (University of Bologna)
 - [Pierangelo Maria Rapa](https://www.unibo.it/sitoweb/pierangelomaria.rapa/en) (University of Bologna)
 - Enzo Baraldi (ETH Zurich)
+- Giusy Spacone (ETH Zurich)
+- Sebastian Frey (ETH Zurich)
+- Giovanni Pollo (Polytechnic University of Turin)
 
 ## Citation
 
