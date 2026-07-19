@@ -210,11 +210,8 @@ __marimo__/
 .zed/
 
 # Data
-*.bin
-*.pkl
-*.skops
-*.npz
 *.bio
-
-
 biogui/dataruntime/
+
+# CLAUDE
+CLAUDE.md

@@ -233,7 +233,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._playbackFilePath is None:
             return
         try:
-            from biogui.views.post_run_plotters.ultrasound import plot_file
+            from biogui.views.post_run_plotters.bio_file_utils import (
+                load_bio_file,
+                resolve_plotter_key,
+            )
+
+            loaded = load_bio_file(self._playbackFilePath)
+            plotter_key = resolve_plotter_key(loaded)
+
+            if plotter_key == "ultrasound":
+                from biogui.views.post_run_plotters.ultrasound import plot_file
+            else:
+                from biogui.views.post_run_plotters.time_series import plot_file
 
             plot_file(self._playbackFilePath)
         except Exception as exc:

@@ -116,6 +116,29 @@ def _build_post_run_plot_config(
                         * 1e-6,
                     }
                 )
+        else:
+            configs = sigsConfigs or dataSourceConfig.get("sigsConfigs", {})
+            time_series_signal_names = [
+                sig_name
+                for sig_name, sig_config in configs.items()
+                if sig_config.get("extras", {}).get("type", "time-series") == "time-series"
+            ]
+            if time_series_signal_names:
+                plotter_key = "time-series"
+                plot_options = {
+                    "enabledChannels": {name: True for name in time_series_signal_names},
+                }
+                signal_filters = {
+                    sig_name: {
+                        key: configs[sig_name][key]
+                        for key in ("filtType", "freqs", "filtOrder")
+                        if key in configs[sig_name]
+                    }
+                    for sig_name in time_series_signal_names
+                    if "filtType" in configs[sig_name]
+                }
+                if signal_filters:
+                    plot_options["signalFilters"] = signal_filters
 
     return {"enabled": enabled, "plotterKey": plotter_key, "plotOptions": plot_options}
 

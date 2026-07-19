@@ -4,13 +4,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Post-acquisition feature extraction and embedding visualization.
+Post-acquisition feature extraction and embedding visualization for time-series signals.
 
 Feature Extraction controls are arranged in four side-by-side columns:
   Channels | Features | Processing | Display
 
 All controls auto-trigger recomputation via a debounce timer.
-Features over time is disabled by default so the embedding fills the screen.
+
+Unlike the ultrasound variant (each channel is a fixed-length waveform repeated
+once per acquisition, giving a natural "scan" axis), a time-series channel is
+one continuous sample stream. Windows are therefore defined in *time* (ms) —
+not samples — and slid directly across the whole recording, independently per
+channel (channels may have different native sampling rates); the window count
+is then trimmed to the shortest channel so per-channel feature columns line up
+for the embedding.
 """
 
 from __future__ import annotations
@@ -22,7 +29,6 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -32,34 +38,30 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QRadioButton,
-    QSpinBox,
+    QButtonGroup,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
-from biogui.views.plot_modes.ultrasound_filters import UltrasoundFilter
+from biogui.controllers.signal_filters import TimeSeriesFilter
 
+from .bio_file_utils import group_channels_by_signal
 from .embedding_utils import BASE_EXCLUDED_LABELS, LABEL_PALETTE, refresh_embedding_plot, run_embedding
 
-_NON_CHANNEL_COLUMNS = {
-    "Label", "Label_str", "imu_x", "imu_y", "imu_z", "rx_id",
-    "timestamp", "trigger", "trigger_str",
+_FEATURE_PENS: dict[str, tuple[int, int, int]] = {
+    "mean": (220, 60, 60),
+    "max": (60, 200, 60),
+    "std": (60, 130, 230),
+    "min": (230, 210, 50),
 }
 
-_FEATURE_PENS: dict[str, tuple[int, int, int]] = {
-    "mean": (220, 60,  60),
-    "max":  (60,  200, 60),
-    "std":  (60,  130, 230),
-    "min":  (230, 210, 50),
-}
+_FILTER_TYPES = ["highpass", "lowpass", "bandpass", "bandstop"]
 
 # Mapping from user-facing combo text to internal processing key
 _PROC_DISPLAY_TO_KEY: dict[str, str] = {
-    "Raw data":          "raw",
-    "Filtered":          "filtered",
-    "Hilbert Envelope":  "env",
-    "Log Compression":   "log",
+    "Raw data": "raw",
+    "Filtered": "filtered",
 }
 
 _GB_BOLD = "QGroupBox { font-weight: bold; }"
@@ -82,34 +84,31 @@ def _col_header(text: str) -> QLabel:
     return lbl
 
 
-class FeatureAnalysisWidget(QWidget):
+class TimeSeriesFeatureAnalysisWidget(QWidget):
     """
-    Feature extraction and embedding visualization tab.
+    Feature extraction and embedding visualization tab for time-series recordings.
 
     Parameters
     ----------
-    dataframe : pd.DataFrame
-        Session dataframe from ``_build_runtime_dataframe``.
-    channel_names : list[str]
-        Enabled channel column names.
-    num_samples : int
-        Depth samples per waveform.
-    meas_period_ms : float
-        Time between consecutive full-round scans (ms).  0 → scan-index axis.
+    channels : dict[str, dict]
+        Flattened per-channel data: {chName: {"data": 1D ndarray, "fs": float,
+        "sigName": str, "chIdx": int}}.
+    trigger_str : ndarray or None
+        Trigger label strings, one per recorded packet (not one per sample).
+    trigger_t : ndarray or None
+        Relative time (seconds, since recording start) for each trigger_str entry.
     plot_options : dict or None
-        Initial filter config (transmissionFrequencyHz, adcSamplingFreqHz, …).
+        Initial filter config ("signalFilters": {sigName: {filtType, freqs, filtOrder}}).
     parent : QWidget or None
     """
 
     ALL_FEATURES = ["mean", "max", "std", "min"]
-    FIRST_DISCARD = 10
 
     def __init__(
         self,
-        dataframe: pd.DataFrame,
-        channel_names: list[str],
-        num_samples: int,
-        meas_period_ms: float = 0.0,
+        channels: dict[str, dict],
+        trigger_str: np.ndarray | None,
+        trigger_t: np.ndarray | None,
         plot_options: dict | None = None,
         parent: QWidget | None = None,
     ) -> None:
@@ -118,12 +117,20 @@ class FeatureAnalysisWidget(QWidget):
         _f.setPointSize(max(10, _f.pointSize()))
         self.setFont(_f)
 
-        self._df = dataframe
-        self._channel_names = channel_names
-        self._num_samples = num_samples
-        self._period_ms = meas_period_ms
-        self._opts: dict = dict(plot_options or {})
-        self._has_labels = "Label_str" in dataframe.columns
+        self._channels = channels
+        self._channel_names = list(channels.keys())
+        self._signal_groups = group_channels_by_signal(channels)
+        self._trigger_str = trigger_str
+        self._trigger_t = trigger_t
+        self._has_labels = trigger_str is not None and trigger_t is not None
+
+        opts = plot_options or {}
+        signal_filters_cfg: dict = opts.get("signalFilters") or {}
+        default_cfg: dict = next(iter(signal_filters_cfg.values()), {}) or {}
+        self._filt_type: str = default_cfg.get("filtType", "bandpass")
+        self._freqs: list[float] = [float(f) for f in default_cfg.get("freqs", [20.0, 450.0])]
+        self._filt_order: int = int(default_cfg.get("filtOrder", 4))
+        self._default_proc = "Filtered" if signal_filters_cfg else "Raw data"
 
         # Computed state
         self._features_data: dict = {}
@@ -160,9 +167,6 @@ class FeatureAnalysisWidget(QWidget):
         root.setContentsMargins(4, 4, 4, 4)
         root.setSpacing(4)
 
-        # ══════════════════════════════════════════════════════════════
-        # Feature Extraction group — compact 4-column layout
-        # ══════════════════════════════════════════════════════════════
         ctrl_box = QGroupBox("Feature Extraction")
         ctrl_box.setStyleSheet(_GB_BOLD)
         cl = QHBoxLayout(ctrl_box)
@@ -197,7 +201,7 @@ class FeatureAnalysisWidget(QWidget):
         feat_row.setSpacing(8)
         for feat in self.ALL_FEATURES:
             cb = QCheckBox(feat)
-            cb.setChecked(feat == "max")
+            cb.setChecked(feat == "mean")
             self._feat_cbs[feat] = cb
             cb.stateChanged.connect(self._schedule_recompute)
             feat_row.addWidget(cb)
@@ -215,50 +219,53 @@ class FeatureAnalysisWidget(QWidget):
 
         self._proc_combo = QComboBox()
         self._proc_combo.addItems(list(_PROC_DISPLAY_TO_KEY.keys()))
-        # Default: Hilbert Envelope (index 2)
-        self._proc_combo.setCurrentIndex(2)
-        self._proc_combo.currentTextChanged.connect(self._on_proc_combo_changed)
+        self._proc_combo.setCurrentText(self._default_proc)
+        self._proc_combo.currentTextChanged.connect(self._schedule_recompute)
         c3.addWidget(self._proc_combo)
 
-        # ── 2×2 parameter grid ───────────────────────────────────────
-        _spin_w = 72   # numbers-only spinbox, no suffix
-        _lbl_w  = 44   # parameter label width
+        _spin_w = 78
+        _lbl_w = 44
 
-        self._win_spin = QSpinBox()
-        self._win_spin.setRange(5, 200)
-        self._win_spin.setValue(25)
+        self._filt_type_combo = QComboBox()
+        self._filt_type_combo.addItems(_FILTER_TYPES)
+        self._filt_type_combo.setCurrentText(self._filt_type)
+        self._filt_type_combo.currentTextChanged.connect(self._on_filt_type_changed)
+        c3.addWidget(self._filt_type_combo)
+
+        self._freq1_spin = QDoubleSpinBox()
+        self._freq1_spin.setRange(0.01, 100000.0)
+        self._freq1_spin.setDecimals(2)
+        self._freq1_spin.setMinimumWidth(_spin_w)
+        self._freq1_spin.setValue(self._freqs[0] if self._freqs else 20.0)
+        self._freq1_spin.valueChanged.connect(self._schedule_recompute)
+
+        self._freq2_spin = QDoubleSpinBox()
+        self._freq2_spin.setRange(0.01, 100000.0)
+        self._freq2_spin.setDecimals(2)
+        self._freq2_spin.setMinimumWidth(_spin_w)
+        self._freq2_spin.setValue(self._freqs[1] if len(self._freqs) > 1 else 450.0)
+        self._freq2_spin.setEnabled(self._filt_type in ("bandpass", "bandstop"))
+        self._freq2_spin.valueChanged.connect(self._schedule_recompute)
+
+        self._order_spin = QDoubleSpinBox()
+        self._order_spin.setDecimals(0)
+        self._order_spin.setRange(1, 10)
+        self._order_spin.setValue(self._filt_order)
+        self._order_spin.valueChanged.connect(self._schedule_recompute)
+
+        self._win_spin = QDoubleSpinBox()
+        self._win_spin.setRange(1.0, 60000.0)
+        self._win_spin.setDecimals(0)
+        self._win_spin.setValue(200.0)
         self._win_spin.setMinimumWidth(_spin_w)
         self._win_spin.editingFinished.connect(self._schedule_recompute)
 
-        self._fa_f0_spin = QDoubleSpinBox()
-        self._fa_f0_spin.setRange(0.0, 100.0)
-        self._fa_f0_spin.setDecimals(2)
-        self._fa_f0_spin.setSingleStep(0.25)
-        self._fa_f0_spin.setMinimumWidth(_spin_w)
-        self._fa_f0_spin.setValue(
-            float(self._opts.get("transmissionFrequencyHz", 2.25e6) or 2.25e6) / 1e6
-        )
-        self._fa_f0_spin.valueChanged.connect(self._on_filter_ui_changed)
-
-        self._fa_bw_spin = QDoubleSpinBox()
-        self._fa_bw_spin.setRange(1.0, 100.0)
-        self._fa_bw_spin.setDecimals(0)
-        self._fa_bw_spin.setSingleStep(5.0)
-        self._fa_bw_spin.setMinimumWidth(_spin_w)
-        self._fa_bw_spin.setValue(
-            float(self._opts.get("bandwidthFraction", 0.30) or 0.30) * 100.0
-        )
-        self._fa_bw_spin.valueChanged.connect(self._on_filter_ui_changed)
-
-        self._fa_adc_spin = QDoubleSpinBox()
-        self._fa_adc_spin.setRange(1.0, 1000.0)
-        self._fa_adc_spin.setDecimals(2)
-        self._fa_adc_spin.setSingleStep(1.0)
-        self._fa_adc_spin.setMinimumWidth(_spin_w)
-        self._fa_adc_spin.setValue(
-            float(self._opts.get("adcSamplingFreqHz", 8.0e6) or 8.0e6) / 1e6
-        )
-        self._fa_adc_spin.valueChanged.connect(self._on_filter_ui_changed)
+        self._stride_spin = QDoubleSpinBox()
+        self._stride_spin.setRange(1.0, 60000.0)
+        self._stride_spin.setDecimals(0)
+        self._stride_spin.setValue(100.0)
+        self._stride_spin.setMinimumWidth(_spin_w)
+        self._stride_spin.editingFinished.connect(self._schedule_recompute)
 
         def _param_cell(label: str, spin: QWidget, unit: str) -> QHBoxLayout:
             row = QHBoxLayout()
@@ -274,33 +281,12 @@ class FeatureAnalysisWidget(QWidget):
         pgrid = QGridLayout()
         pgrid.setHorizontalSpacing(12)
         pgrid.setVerticalSpacing(4)
-        pgrid.addLayout(_param_cell("Window", self._win_spin,    "samp"), 0, 0)
-        pgrid.addLayout(_param_cell("f₀",  self._fa_f0_spin,  "MHz"),  0, 1)
-        pgrid.addLayout(_param_cell("BW",     self._fa_bw_spin,  "%"),    1, 0)
-        pgrid.addLayout(_param_cell("ADC fs", self._fa_adc_spin, "MHz"),  1, 1)
+        pgrid.addLayout(_param_cell("Freq 1", self._freq1_spin, "Hz"), 0, 0)
+        pgrid.addLayout(_param_cell("Freq 2", self._freq2_spin, "Hz"), 0, 1)
+        pgrid.addLayout(_param_cell("Order", self._order_spin, ""), 1, 0)
+        pgrid.addLayout(_param_cell("Window", self._win_spin, "ms"), 2, 0)
+        pgrid.addLayout(_param_cell("Stride", self._stride_spin, "ms"), 2, 1)
         c3.addLayout(pgrid)
-
-        # Dynamic range row — only visible for Log Compression
-        self._dyn_spin = QDoubleSpinBox()
-        self._dyn_spin.setRange(1.0, 100.0)
-        self._dyn_spin.setDecimals(0)
-        self._dyn_spin.setSingleStep(5.0)
-        self._dyn_spin.setValue(40.0)
-        self._dyn_spin.setMinimumWidth(_spin_w)
-        self._dyn_spin.valueChanged.connect(self._schedule_recompute)
-        self._dyn_row = QWidget()
-        dyn_layout = QHBoxLayout(self._dyn_row)
-        dyn_layout.setContentsMargins(0, 0, 0, 0)
-        dyn_layout.setSpacing(3)
-        dyn_lbl = QLabel("Dyn. range")
-        dyn_lbl.setMinimumWidth(_lbl_w)
-        dyn_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        dyn_layout.addWidget(dyn_lbl)
-        dyn_layout.addWidget(self._dyn_spin)
-        dyn_layout.addWidget(QLabel("dB"))
-        dyn_layout.addStretch()
-        self._dyn_row.setVisible(False)
-        c3.addWidget(self._dyn_row)
 
         if self._has_labels:
             self._exclude_rest_cb = QCheckBox("Exclude 'rest'")
@@ -324,33 +310,9 @@ class FeatureAnalysisWidget(QWidget):
             self._show_labels_cb.stateChanged.connect(self._refresh_feature_plots)
             c4.addWidget(self._show_labels_cb)
 
-        # "Features over time" toggle + indented sub-options
         self._show_features_cb = QCheckBox("Features over time")
         self._show_features_cb.setChecked(False)
         c4.addWidget(self._show_features_cb)
-
-        # Sub-options — indented, disabled when features are hidden
-        sub_w = QWidget()
-        sub_layout = QVBoxLayout(sub_w)
-        sub_layout.setContentsMargins(18, 0, 0, 0)
-        sub_layout.setSpacing(2)
-        self._plot_mode_bg = QButtonGroup(self)
-        rb_mean = QRadioButton("Mean")
-        rb_mean.setChecked(True)
-        rb_all = QRadioButton("All windows")
-        self._plot_mode_bg.addButton(rb_mean, 0)
-        self._plot_mode_bg.addButton(rb_all, 1)
-        sub_layout.addWidget(rb_mean)
-        sub_layout.addWidget(rb_all)
-        self._plot_mode_bg.buttonToggled.connect(
-            lambda _, checked: self._refresh_feature_plots() if checked else None
-        )
-        sub_w.setEnabled(False)  # grayed out while features-over-time is off
-        c4.addWidget(sub_w)
-
-        self._show_features_cb.stateChanged.connect(
-            lambda state: sub_w.setEnabled(bool(state))
-        )
 
         c4.addStretch()
         cl.addLayout(c4)
@@ -401,73 +363,49 @@ class FeatureAnalysisWidget(QWidget):
             lambda state: self._feat_pane.setVisible(bool(state))
         )
 
-    # ------------------------------------------------------------------ #
-    # Processing combo handler                                             #
-    # ------------------------------------------------------------------ #
-
-    @Slot(str)
-    def _on_proc_combo_changed(self, text: str) -> None:
-        self._dyn_row.setVisible(text == "Log Compression")
-        self._schedule_recompute()
-
-    # ------------------------------------------------------------------ #
-    # Filter UI handler                                                    #
-    # ------------------------------------------------------------------ #
-
-    def _on_filter_ui_changed(self) -> None:
-        self._opts["transmissionFrequencyHz"] = self._fa_f0_spin.value() * 1e6
-        self._opts["bandwidthFraction"]       = self._fa_bw_spin.value() / 100.0
-        self._opts["adcSamplingFreqHz"]       = self._fa_adc_spin.value() * 1e6
-        self._opts["enableBandpass"]          = True
+    def _on_filt_type_changed(self, filt_type: str) -> None:
+        self._freq2_spin.setEnabled(filt_type in ("bandpass", "bandstop"))
         self._schedule_recompute()
 
     # ------------------------------------------------------------------ #
     # Processing helpers                                                   #
     # ------------------------------------------------------------------ #
 
-    def _build_filter(self) -> UltrasoundFilter | None:
-        opts    = self._opts
-        if not opts.get("enableBandpass", True):
-            return None
-        center  = float(opts.get("transmissionFrequencyHz", 2.25e6) or 2.25e6)
-        bw_frac = float(opts.get("bandwidthFraction", 0.30) or 0.30)
-        adc_fs  = float(opts.get("adcSamplingFreqHz",  8.0e6) or 8.0e6)
-        if center <= 0.0 or adc_fs <= 0.0:
-            return None
-        half = center * bw_frac / 2.0
-        low  = max(0.0, center - half)
-        high = min(adc_fs / 2.0, center + half)
-        if low >= high:
-            return None
-        return UltrasoundFilter(
-            sampling_freq=adc_fs, low_cutoff=low, high_cutoff=high, enabled=True
+    def _build_filter(self, sig_name: str) -> TimeSeriesFilter | None:
+        group = self._signal_groups[sig_name]
+        filt_type = self._filt_type_combo.currentText()
+        freqs = (
+            [self._freq1_spin.value(), self._freq2_spin.value()]
+            if filt_type in ("bandpass", "bandstop")
+            else [self._freq1_spin.value()]
         )
+        filt_order = int(self._order_spin.value())
 
-    def _apply_processing(self, raw: np.ndarray, step: str) -> np.ndarray:
-        """
-        Apply the selected processing chain.  `step` may be either the display
-        name (e.g. "Hilbert Envelope") or the internal key ("env").
-        """
+        if any(f >= group["fs"] / 2 for f in freqs):
+            return None
+
+        filt = TimeSeriesFilter(group["fs"], group["data"].shape[1])
+        filt.configure({"filtType": filt_type, "freqs": freqs, "filtOrder": filt_order})
+        return filt
+
+    def _apply_processing(self, ch: str, raw: np.ndarray, step: str) -> np.ndarray:
         internal = _PROC_DISPLAY_TO_KEY.get(step, step)
-        data = raw.astype(float)
-        filt = self._build_filter()
-
         if internal == "raw":
-            return data
+            return raw
 
-        if filt is not None:
-            data = filt.filter_data_postacq(data)
+        sig_name = self._channels[ch]["sigName"]
+        group = self._signal_groups[sig_name]
+        try:
+            filt = self._build_filter(sig_name)
+        except Exception:
+            logging.exception("Failed to build filter for '%s'", sig_name)
+            return raw
+        if filt is None:
+            return raw
 
-        if internal == "filtered":
-            return data
-
-        data = UltrasoundFilter.get_envelope_postacq(data)
-
-        if internal == "env":
-            return data
-
-        dyn_range = self._dyn_spin.value() if hasattr(self, "_dyn_spin") else 40.0
-        return UltrasoundFilter.apply_log_compression_postacq(data, dynamic_range=dyn_range)
+        ch_idx = group["chNames"].index(ch)
+        filtered_full = filt.process(np.asarray(group["data"], dtype=float))
+        return filtered_full[:, ch_idx]
 
     # ------------------------------------------------------------------ #
     # Feature computation                                                  #
@@ -476,131 +414,122 @@ class FeatureAnalysisWidget(QWidget):
     @Slot()
     def _on_compute(self) -> None:
         channels = [ch for ch, cb in self._ch_cbs.items() if cb.isChecked()]
-        features = [f  for f,  cb in self._feat_cbs.items() if cb.isChecked()]
-        proc     = self._proc_combo.currentText()
-        win_size = self._win_spin.value()
+        features = [f for f, cb in self._feat_cbs.items() if cb.isChecked()]
+        proc = self._proc_combo.currentText()
+        win_ms = self._win_spin.value()
+        stride_ms = self._stride_spin.value()
 
         if not channels or not features:
             return
 
         try:
-            self._run_feature_extraction(channels, features, proc, win_size)
-            self._last_channels = channels
-            self._last_features = features
+            self._run_feature_extraction(channels, features, proc, win_ms, stride_ms)
             self._refresh_feature_plots()
             if hasattr(self, "_emb_bg"):
                 self._on_compute_embeddings()
         except Exception:
             logging.exception("Feature computation failed")
 
+    def _labels_for_windows(self, t_start_ms: np.ndarray, win_ms: float) -> list[str]:
+        """Majority-vote trigger_str label for each window's time span.
+
+        Trigger entries are timestamped events (one per packet), not a uniform-rate
+        signal, so windows are matched against them via binary search on the
+        (monotonic) relative-time axis rather than a fixed-fs sample grid.
+        """
+        trig = self._trigger_str
+        trig_t = self._trigger_t
+        n_trig = len(trig)
+        labels: list[str] = []
+        for t0 in t_start_ms:
+            start_idx = np.searchsorted(trig_t, t0 / 1000.0, side="left")
+            end_idx = np.searchsorted(trig_t, (t0 + win_ms) / 1000.0, side="left")
+            if end_idx <= start_idx:
+                end_idx = min(start_idx + 1, n_trig)
+            segment = trig[start_idx:end_idx]
+            if len(segment) == 0:
+                labels.append("")
+                continue
+            values, counts = np.unique(segment, return_counts=True)
+            labels.append(str(values[np.argmax(counts)]))
+        return labels
+
     def _run_feature_extraction(
         self,
         channels: list[str],
         features: list[str],
         proc: str,
-        win_size: int,
+        win_ms: float,
+        stride_ms: float,
     ) -> None:
-        df   = self._df
-        excl = self._get_excluded_labels()
+        per_channel: dict[str, dict] = {}
+        common_n: int | None = None
 
-        n_ch_total = len([c for c in df.columns if c not in _NON_CHANNEL_COLUMNS])
-        if n_ch_total == 0:
-            n_ch_total = len(self._channel_names)
-
-        proc_series: dict[str, pd.Series] = {}
         for ch in channels:
-            if ch not in df.columns:
+            if ch not in self._channels:
                 continue
-            raw_s = df[ch].dropna()
-            if raw_s.empty:
-                continue
-            raw_mat   = np.vstack(raw_s.to_numpy())
-            processed = self._apply_processing(raw_mat, proc)
-            proc_series[ch] = pd.Series(list(processed), index=raw_s.index)
+            fs = self._channels[ch]["fs"]
+            raw = np.asarray(self._channels[ch]["data"], dtype=float)
+            data = self._apply_processing(ch, raw, proc)
 
-        if not proc_series:
-            self._features_data = {}
+            win_size = max(1, int(round(win_ms / 1000.0 * fs)))
+            stride = max(1, int(round(stride_ms / 1000.0 * fs)))
+            n_samp = len(data)
+            if n_samp < win_size:
+                continue
+            n_windows = 1 + (n_samp - win_size) // stride
+            starts = np.arange(n_windows) * stride
+            windowed = np.stack([data[s : s + win_size] for s in starts], axis=0)
+
+            feat_arrs: dict[str, np.ndarray] = {}
+            for feat in features:
+                if feat == "mean":
+                    feat_arrs[feat] = np.mean(windowed, axis=1)
+                elif feat == "max":
+                    feat_arrs[feat] = np.max(windowed, axis=1)
+                elif feat == "std":
+                    feat_arrs[feat] = np.std(windowed, axis=1)
+                elif feat == "min":
+                    feat_arrs[feat] = np.min(windowed, axis=1)
+
+            t_ms = starts / fs * 1000.0
+            per_channel[ch] = {"t": t_ms, "feat": feat_arrs, "win_ms": win_ms}
+            common_n = n_windows if common_n is None else min(common_n, n_windows)
+
+        self._features_data = per_channel
+        self._last_channels = channels
+        self._last_features = features
+
+        if common_n is None or common_n == 0 or not per_channel:
             self._scan_labels_plot = []
             self._embed_matrix = None
             self._embed_labels = []
             return
 
-        tmp = pd.DataFrame(proc_series, index=df.index).ffill()
-        if self._has_labels and "Label_str" in df.columns:
-            tmp["Label_str"] = df["Label_str"]
+        excl = self._get_excluded_labels()
+        ref_ch = next(iter(per_channel))
+        t_ref_ms = per_channel[ref_ch]["t"][:common_n]
 
-        scan_rows = tmp.iloc[list(range(n_ch_total - 1, len(tmp), n_ch_total))].copy()
-
-        self._features_data = {}
-        all_feat_mats: dict[str, dict[str, np.ndarray]] = {}
-        common_n: int | None = None
-
-        for ch in channels:
-            if ch not in proc_series:
-                continue
-            ch_col = scan_rows[ch].dropna()
-            if ch_col.empty:
-                continue
-
-            waveforms = np.vstack(
-                [np.asarray(w, dtype=float).ravel() for w in ch_col.to_numpy()]
-            )
-            n_scans, n_depth = waveforms.shape
-
-            start    = self.FIRST_DISCARD
-            usable   = n_depth - start
-            if usable < win_size:
-                continue
-            n_windows = usable // win_size
-            windowed  = waveforms[:, start : start + n_windows * win_size].reshape(
-                n_scans, n_windows, win_size
-            )
-
-            feat_mats: dict[str, np.ndarray] = {}
-            for feat in features:
-                if   feat == "mean": feat_mats[feat] = np.mean(windowed, axis=2)
-                elif feat == "max":  feat_mats[feat] = np.max (windowed, axis=2)
-                elif feat == "std":  feat_mats[feat] = np.std (windowed, axis=2)
-                elif feat == "min":  feat_mats[feat] = np.min (windowed, axis=2)
-
-            all_feat_mats[ch] = feat_mats
-
-            t = (
-                np.arange(n_scans, dtype=float) * self._period_ms
-                if self._period_ms > 0
-                else np.arange(n_scans, dtype=float)
-            )
-            self._features_data[ch] = {
-                "t":         t,
-                "feat_mats": {feat: feat_mats[feat] for feat in features},
-            }
-            common_n = n_scans if common_n is None else min(common_n, n_scans)
-
-        if common_n is not None and self._has_labels and "Label_str" in scan_rows.columns:
-            self._scan_labels_plot = scan_rows["Label_str"].iloc[:common_n].tolist()
+        if self._has_labels:
+            window_labels = self._labels_for_windows(t_ref_ms, win_ms)
         else:
-            self._scan_labels_plot = []
+            window_labels = ["unknown"] * common_n
+        self._scan_labels_plot = window_labels
 
-        if common_n is not None and common_n > 0 and all_feat_mats:
-            parts = [
-                all_feat_mats[ch][feat][:common_n]
-                for ch in channels if ch in all_feat_mats
-                for feat in features
-            ]
-            embed_mat = np.hstack(parts)
+        parts = [
+            per_channel[ch]["feat"][feat][:common_n]
+            for ch in channels
+            if ch in per_channel
+            for feat in features
+        ]
 
-            raw_embed_labels = (
-                [str(l) for l in self._scan_labels_plot]
-                if self._has_labels and self._scan_labels_plot
-                else ["unknown"] * common_n
-            )
-
+        if parts:
+            embed_mat = np.column_stack(parts)
             row_ok = np.isfinite(embed_mat).all(axis=1) & np.array(
-                [str(l).strip().lower() not in excl for l in raw_embed_labels],
-                dtype=bool,
+                [str(lbl).strip().lower() not in excl for lbl in window_labels], dtype=bool
             )
             self._embed_matrix = embed_mat[row_ok]
-            self._embed_labels = [raw_embed_labels[i] for i, ok in enumerate(row_ok) if ok]
+            self._embed_labels = [window_labels[i] for i, ok in enumerate(row_ok) if ok]
         else:
             self._embed_matrix = None
             self._embed_labels = []
@@ -612,7 +541,7 @@ class FeatureAnalysisWidget(QWidget):
     def _refresh_feature_plots(self) -> None:
         channels = self._last_channels
         features = self._last_features
-        excl     = self._get_excluded_labels()
+        excl = self._get_excluded_labels()
 
         self._feat_gw.clear()
         present = [ch for ch in channels if ch in self._features_data]
@@ -625,8 +554,7 @@ class FeatureAnalysisWidget(QWidget):
             and self._show_labels_cb.isChecked()
             and bool(self._scan_labels_plot)
         )
-        all_windows = self._plot_mode_bg.checkedId() == 1
-        x_label     = "Time (ms)" if self._period_ms > 0 else "Scan index"
+        x_label = "Time (ms)"
         first_vb: pg.ViewBox | None = None
         n_ch = len(present)
 
@@ -651,43 +579,32 @@ class FeatureAnalysisWidget(QWidget):
             else:
                 p.hideAxis("bottom")
 
-            t         = ch_data["t"]
-            feat_mats = ch_data["feat_mats"]
-
+            t = ch_data["t"]
+            feat_arrs = ch_data["feat"]
             for feat in features:
-                if feat not in feat_mats:
+                if feat not in feat_arrs:
                     continue
-                mat = feat_mats[feat]
                 r, g, b = _FEATURE_PENS[feat]
-
-                if all_windows:
-                    n_windows = mat.shape[1]
-                    alpha = max(40, min(200, int(220 / max(n_windows, 1))))
-                    for w in range(n_windows):
-                        p.plot(
-                            t, mat[:, w],
-                            pen=pg.mkPen((r, g, b, alpha), width=1),
-                            name=feat if w == 0 else None,
-                        )
-                else:
-                    p.plot(
-                        t, np.mean(mat, axis=1),
-                        pen=pg.mkPen((r, g, b), width=1.5),
-                        name=feat,
-                    )
+                n = min(len(t), len(feat_arrs[feat]))
+                p.plot(
+                    t[:n],
+                    feat_arrs[feat][:n],
+                    pen=pg.mkPen((r, g, b), width=1.5),
+                    name=feat,
+                )
 
         if show_labels:
             raw_labels = np.array(self._scan_labels_plot)
             t_ref_full = self._features_data[present[0]]["t"]
-            n_full     = min(len(t_ref_full), len(raw_labels))
-            raw_labels    = raw_labels[:n_full]
+            n_full = min(len(t_ref_full), len(raw_labels))
+            raw_labels = raw_labels[:n_full]
             t_ref_trimmed = t_ref_full[:n_full]
 
             valid_mask = np.array(
-                [str(l).strip().lower() not in excl for l in raw_labels], dtype=bool
+                [str(lbl).strip().lower() not in excl for lbl in raw_labels], dtype=bool
             )
             labels_arr = raw_labels[valid_mask]
-            t_plot     = t_ref_trimmed[valid_mask]
+            t_plot = t_ref_trimmed[valid_mask]
             codes, unique_labels = pd.factorize(labels_arr, sort=True)
             c_plot = codes.astype(float)
 
@@ -708,8 +625,11 @@ class FeatureAnalysisWidget(QWidget):
                 mask = codes == i
                 r, g, b = LABEL_PALETTE[i % len(LABEL_PALETTE)]
                 p_lbl.plot(
-                    t_plot[mask], c_plot[mask],
-                    pen=None, symbol="s", symbolSize=5,
+                    t_plot[mask],
+                    c_plot[mask],
+                    pen=None,
+                    symbol="s",
+                    symbolSize=5,
                     symbolPen=pg.mkPen(None),
                     symbolBrush=pg.mkBrush(r, g, b, 200),
                     name=str(lbl),

@@ -42,6 +42,47 @@ class LoadedBioFile:
     metadata: dict[str, object]
 
 
+_ULTRASOUND_MARKER_SIGNALS = {"acquisition_number", "tx_rx_id"}
+
+
+def resolve_plotter_key(loaded: LoadedBioFile) -> str:
+    """Infer which post-run plotter should render this file's signals.
+
+    "acquisition_number"/"tx_rx_id" are written only by the WULPUS/WULPUS Pro
+    ultrasound interfaces and are hard-required by the ultrasound dataframe
+    builder, so their presence/absence reliably discriminates an ultrasound
+    recording from a plain time-series one — even though the .bio format
+    itself doesn't persist each signal's ``extras.type``.
+    """
+    if _ULTRASOUND_MARKER_SIGNALS <= loaded.signals.keys():
+        return "ultrasound"
+    return "time-series"
+
+
+def group_channels_by_signal(channels: dict[str, dict]) -> dict[str, dict]:
+    """Regroup flattened per-channel time-series data back into per-signal groups.
+
+    Parameters
+    ----------
+    channels : dict[str, dict]
+        Flattened per-channel data, each entry with "data" (1D ndarray), "fs"
+        and "sigName" (see ``time_series._flatten_channels``).
+
+    Returns
+    -------
+    dict[str, dict]
+        Mapping from signal name to {"fs", "chNames", "data": (nSamp, nCh)}.
+    """
+    groups: dict[str, dict] = {}
+    for ch_name, ch in channels.items():
+        group = groups.setdefault(ch["sigName"], {"fs": ch["fs"], "chNames": [], "cols": []})
+        group["chNames"].append(ch_name)
+        group["cols"].append(np.asarray(ch["data"]))
+    for group in groups.values():
+        group["data"] = np.stack(group.pop("cols"), axis=1)  # (nSamp, nCh)
+    return groups
+
+
 def find_latest_bio_file(runtime_dir: Path | None = None) -> Path | None:
     """Return the newest .bio file in the active runtime directory."""
     search_dir = runtime_dir or paths.DATARUNTIME_DIR

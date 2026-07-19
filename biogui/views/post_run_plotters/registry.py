@@ -36,6 +36,12 @@ def get_plotter(plotter_key: str) -> PlotterFn | None:
         logging.info("Loaded built-in ultrasound plotter.")
         return _PLOTTERS.get(plotter_key)
 
+    if plotter_key == "time-series":
+        from . import time_series  # noqa: F401
+
+        logging.info("Loaded built-in time-series plotter.")
+        return _PLOTTERS.get(plotter_key)
+
     return None
 
 
