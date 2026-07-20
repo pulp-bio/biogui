@@ -16,10 +16,21 @@ from __future__ import annotations
 
 import importlib.util
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
 from sys import platform
 
-from PySide6.QtWidgets import QCheckBox, QDialog, QFileDialog, QMessageBox, QWidget
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtGui import QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QFileDialog,
+    QMessageBox,
+    QTreeView,
+    QWidget,
+)
 
 from biogui import data_sources, paths
 from biogui.platforms.wulpus.runtime import isolate_wulpus_interface_module
@@ -45,21 +56,143 @@ def _is_bundled_interface_path(interface_path: Path) -> bool:
     return True
 
 
-def _loadInterfacesFromDirectory() -> dict[str, Path]:
+@dataclass
+class InterfaceLeaf:
+    """A single bundled interface, shown as a selectable item in the interface tree."""
+
+    displayName: str
+    path: Path
+
+
+@dataclass
+class InterfaceGroup:
+    """A platform folder bundling several interfaces, shown as an expandable sub-menu."""
+
+    name: str
+    children: list["InterfaceLeaf | InterfaceGroup"]
+
+
+# Role used to stash the interface file path on leaf items of the tree model.
+_INTERFACE_PATH_ROLE = Qt.UserRole + 1
+
+
+def _flattenLeaves(nodes: list["InterfaceLeaf | InterfaceGroup"]) -> list[InterfaceLeaf]:
+    """Recursively collect every leaf under the given nodes."""
+    leaves: list[InterfaceLeaf] = []
+    for node in nodes:
+        if isinstance(node, InterfaceLeaf):
+            leaves.append(node)
+        else:
+            leaves.extend(_flattenLeaves(node.children))
+    return leaves
+
+
+def _buildInterfaceNode(dirPath: Path) -> "InterfaceLeaf | InterfaceGroup | None":
     """
-    Load all interface modules from the platforms tree (interface_*.py in subfolders).
+    Recursively turn a platform folder into a tree node: a folder bundling a single interface
+    (whether direct or nested in sub-folders) collapses into a flat leaf, while one bundling
+    several becomes an expandable group so its interfaces open in a sub-menu.
+    """
+    children: list[InterfaceLeaf | InterfaceGroup] = [
+        InterfaceLeaf(filePath.stem[10:], filePath)  # remove 'interface_' prefix
+        for filePath in sorted(dirPath.glob("interface_*.py"))
+    ]
+    subDirPaths = sorted(
+        p for p in dirPath.iterdir() if p.is_dir() and not p.name.startswith((".", "__"))
+    )
+    for subDirPath in subDirPaths:
+        childNode = _buildInterfaceNode(subDirPath)
+        if childNode is not None:
+            children.append(childNode)
+
+    if not children:
+        return None
+    leaves = _flattenLeaves(children)
+    if len(leaves) == 1:
+        return leaves[0]
+
+    children.sort(
+        key=lambda node: node.displayName if isinstance(node, InterfaceLeaf) else node.name
+    )
+    return InterfaceGroup(dirPath.name, children)
+
+
+def _loadInterfaceTree() -> list["InterfaceLeaf | InterfaceGroup"]:
+    """
+    Build the interface tree from the platforms directory (interface_*.py in subfolders).
 
     Returns
     -------
-    dict of {str: Path}
-        Dictionary mapping display names to full file paths.
+    list of InterfaceLeaf or InterfaceGroup
+        Top-level nodes, one per platform folder.
     """
-    interfaceFiles: dict[str, Path] = {}
-    for filePath in sorted(paths.INTERFACES_DIR.rglob("interface_*.py")):
-        displayName = filePath.stem[10:]  # remove 'interface_'
-        interfaceFiles[displayName] = filePath
+    platformDirPaths = sorted(
+        p
+        for p in paths.INTERFACES_DIR.iterdir()
+        if p.is_dir() and not p.name.startswith((".", "__"))
+    )
+    nodes = [_buildInterfaceNode(p) for p in platformDirPaths]
+    nodes = [node for node in nodes if node is not None]
+    nodes.sort(key=lambda node: node.displayName if isinstance(node, InterfaceLeaf) else node.name)
+    return nodes
 
-    return interfaceFiles
+
+def _buildInterfaceTreeModel(tree: list["InterfaceLeaf | InterfaceGroup"]) -> QStandardItemModel:
+    """Turn an interface tree into a QStandardItemModel for the combo box's tree view popup."""
+    model = QStandardItemModel()
+
+    def addNode(parentItem: QStandardItem, node: "InterfaceLeaf | InterfaceGroup") -> None:
+        if isinstance(node, InterfaceLeaf):
+            item = QStandardItem(node.displayName)
+            item.setEditable(False)
+            item.setData(str(node.path), _INTERFACE_PATH_ROLE)
+            parentItem.appendRow(item)
+            return
+
+        groupItem = QStandardItem(node.name)
+        groupItem.setEditable(False)
+        # Group headers are labels, not choices: enabled (so they aren't greyed out) but not
+        # selectable, so a click on one cannot become the current interface.
+        groupItem.setFlags(Qt.ItemIsEnabled)
+        font = groupItem.font()
+        font.setBold(True)
+        groupItem.setFont(font)
+        parentItem.appendRow(groupItem)
+        for childNode in node.children:
+            addNode(groupItem, childNode)
+
+    for node in tree:
+        addNode(model.invisibleRootItem(), node)
+
+    return model
+
+
+def _findLeafIndex(model: QStandardItemModel, parent: QModelIndex, matches) -> QModelIndex:
+    """Recursively search the tree model for the first leaf item for which matches(index) is True."""
+    for row in range(model.rowCount(parent)):
+        index = model.index(row, 0, parent)
+        if index.data(_INTERFACE_PATH_ROLE) is not None and matches(index):
+            return index
+        found = _findLeafIndex(model, index, matches)
+        if found.isValid():
+            return found
+    return QModelIndex()
+
+
+def _findLeafIndexByPath(model: QStandardItemModel, interfacePath: Path) -> QModelIndex:
+    """Search the tree model for the leaf item matching interfacePath, wherever it is nested."""
+    return _findLeafIndex(
+        model, QModelIndex(), lambda index: index.data(_INTERFACE_PATH_ROLE) == str(interfacePath)
+    )
+
+
+def _selectComboBoxIndex(comboBox: QComboBox, index: QModelIndex) -> None:
+    """Select a (possibly nested) model index as the combo box's current item."""
+    if not index.isValid():
+        return
+    comboBox.setRootModelIndex(index.parent())
+    comboBox.setCurrentIndex(index.row())
+    comboBox.setRootModelIndex(QModelIndex())
 
 
 def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]:
@@ -122,14 +255,23 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
         )
     packet_size = module.packetSize
     if not isinstance(packet_size, (int, list)):
-        return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
+        return (
+            None,
+            "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes.",
+        )
     if isinstance(packet_size, int):
         if packet_size <= 0:
-            return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
+            return (
+                None,
+                "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes.",
+            )
     elif isinstance(packet_size, list):
         for header, size in packet_size:
             if not isinstance(header, int) or not isinstance(size, int) or size <= 0:
-                return None, "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes."
+                return (
+                    None,
+                    "The packet size must be a positive integer or a list of (header, size) tuples with positive sizes.",
+                )
 
     platformConfig = getattr(module, "platformConfig", None)
     if platformConfig is not None and not isinstance(platformConfig, PlatformConfig):
@@ -219,12 +361,21 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.setupUi(self)
 
-        # Populate combo box with interface modules
-        self._interfaceModules = _loadInterfacesFromDirectory()
-        # Add browse option as last item
-        self.interfaceModuleComboBox.addItems(list(self._interfaceModules.keys()))
-        self.interfaceModuleComboBox.setCurrentIndex(0)
-        self.interfaceModuleComboBox.addItem(self._BROWSE_INTERFACE)
+        # Populate the interface combo box from a tree grouped by platform folder: a platform
+        # bundling a single interface shows up as a flat entry, one bundling several as an
+        # expandable sub-menu (shown via a QTreeView popup instead of the usual flat list).
+        interfaceModel = _buildInterfaceTreeModel(_loadInterfaceTree())
+        interfaceModel.appendRow(QStandardItem(self._BROWSE_INTERFACE))  # add browse option last
+
+        interfaceTreeView = QTreeView(self.interfaceModuleComboBox)
+        interfaceTreeView.setModel(interfaceModel)
+        interfaceTreeView.setHeaderHidden(True)
+        interfaceTreeView.expandAll()
+
+        self.interfaceModuleComboBox.setModel(interfaceModel)
+        self.interfaceModuleComboBox.setView(interfaceTreeView)
+        firstLeafIndex = _findLeafIndex(interfaceModel, QModelIndex(), lambda _index: True)
+        _selectComboBoxIndex(self.interfaceModuleComboBox, firstLeafIndex)
 
         # Populate combo box with data sources and create configuration widget
         dataSources = list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
@@ -286,16 +437,20 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
         self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
-    def _onInterfaceModuleSelected(self, index: int) -> None:
-        """Handle interface module selection from ComboBox."""
-        itemSelected = self.interfaceModuleComboBox.itemText(index)
+    def _onInterfaceModuleSelected(self, _index: int) -> None:
+        """Handle interface module selection from the combo box (and its tree view popup)."""
+        # The tree view popup nests items under group headers, so the row-only "index" argument
+        # doesn't identify the selected item on its own; read it back via current text/data
+        # instead, which Qt resolves against the full (possibly nested) model index.
+        itemSelected = self.interfaceModuleComboBox.currentText()
         if itemSelected == self._BROWSE_INTERFACE:
             # Browse interface module in external folder
             interfacePath = self._browseInterfaceModule()
             fromBrowsing = True
         else:
-            # Get interface from combo box
-            interfacePath = self._interfaceModules.get(itemSelected)
+            # Get interface path stashed on the selected leaf item
+            pathData = self.interfaceModuleComboBox.currentData(_INTERFACE_PATH_ROLE)
+            interfacePath = Path(pathData) if pathData else None
             fromBrowsing = False
 
         if interfacePath is None:
@@ -428,19 +583,15 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["interfacePath"] = interfacePath
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
+        model = self.interfaceModuleComboBox.model()
         if _is_bundled_interface_path(interfacePath):
-            # Find and select the interface in the ComboBox
-            interfaceName = interfacePath.name
-            if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):
-                displayName = interfaceName[10:-3]
-                index = self.interfaceModuleComboBox.findText(displayName)
-                if index >= 0:
-                    self.interfaceModuleComboBox.setCurrentIndex(index)
+            # Find and select the interface in the tree, wherever it is nested
+            _selectComboBoxIndex(
+                self.interfaceModuleComboBox, _findLeafIndexByPath(model, interfacePath)
+            )
         else:
-            displayName = self._BROWSE_INTERFACE
-            index = self.interfaceModuleComboBox.findText(displayName)
-            if index >= 0:
-                self.interfaceModuleComboBox.setCurrentIndex(index)
+            browseIndex = model.index(model.rowCount() - 1, 0)  # browse option is always last
+            _selectComboBoxIndex(self.interfaceModuleComboBox, browseIndex)
             self.interfaceModulePathLabel.setText(str(interfacePath))
 
         # 2. Data source-specific config

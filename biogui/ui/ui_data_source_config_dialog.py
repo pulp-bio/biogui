@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'data_source_config_dialog.ui'
+## Form generated from reading UI file 'data_source_config_dialogMLuBMA.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.2
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -24,7 +24,7 @@ class Ui_DataSourceConfigDialog(object):
     def setupUi(self, DataSourceConfigDialog):
         if not DataSourceConfigDialog.objectName():
             DataSourceConfigDialog.setObjectName(u"DataSourceConfigDialog")
-        DataSourceConfigDialog.resize(371, 300)
+        DataSourceConfigDialog.resize(600, 300)
         self.verticalLayout = QVBoxLayout(DataSourceConfigDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
