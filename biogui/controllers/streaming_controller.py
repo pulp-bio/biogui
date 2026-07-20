@@ -149,10 +149,10 @@ class _FileWriterWorker(QObject):
 
     def closeFile(self) -> None:
         """Close the file."""
-        # # Check if file is empty
-        # if self._tempData["acq_ts"]["nSamp"] == 0:
-        #     self._resetTempFiles()
-        #     return
+        # Check if file is empty
+        if next(iter(self._tempData.values()))["nSampTs"] == 0:
+            self._resetTempFiles()
+            return
 
         # Add timestamp and extension to filename
         fileName = self._filePath.name
