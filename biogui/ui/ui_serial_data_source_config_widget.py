@@ -16,14 +16,15 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QHBoxLayout,
-    QLabel, QPushButton, QSizePolicy, QWidget)
+    QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QWidget)
 from . import biogui_rc
 
 class Ui_SerialDataSourceConfigWidget(object):
     def setupUi(self, SerialDataSourceConfigWidget):
         if not SerialDataSourceConfigWidget.objectName():
             SerialDataSourceConfigWidget.setObjectName(u"SerialDataSourceConfigWidget")
-        SerialDataSourceConfigWidget.resize(400, 57)
+        SerialDataSourceConfigWidget.resize(400, 84)
         self.formLayout = QFormLayout(SerialDataSourceConfigWidget)
         self.formLayout.setObjectName(u"formLayout")
         self.label1 = QLabel(SerialDataSourceConfigWidget)
@@ -51,7 +52,19 @@ class Ui_SerialDataSourceConfigWidget(object):
 
         self.formLayout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.horizontalLayout)
 
+        self.label2 = QLabel(SerialDataSourceConfigWidget)
+        self.label2.setObjectName(u"label2")
+        self.label2.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label2)
+
+        self.baudRateTextField = QLineEdit(SerialDataSourceConfigWidget)
+        self.baudRateTextField.setObjectName(u"baudRateTextField")
+
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.baudRateTextField)
+
         QWidget.setTabOrder(self.serialPortsComboBox, self.rescanSerialPortsButton)
+        QWidget.setTabOrder(self.rescanSerialPortsButton, self.baudRateTextField)
 
         self.retranslateUi(SerialDataSourceConfigWidget)
 
@@ -68,5 +81,7 @@ class Ui_SerialDataSourceConfigWidget(object):
         self.rescanSerialPortsButton.setToolTip(QCoreApplication.translate("SerialDataSourceConfigWidget", u"Rescan serial ports", None))
 #endif // QT_CONFIG(tooltip)
         self.rescanSerialPortsButton.setText("")
+        self.label2.setText(QCoreApplication.translate("SerialDataSourceConfigWidget", u"Baud rate:", None))
+        self.baudRateTextField.setText(QCoreApplication.translate("SerialDataSourceConfigWidget", u"115200", None))
     # retranslateUi
 

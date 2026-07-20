@@ -13,8 +13,8 @@ import logging
 import time
 from sys import platform
 
-from PySide6.QtCore import QByteArray, QIODevice, QThread
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QByteArray, QIODevice, QLocale, QThread
+from PySide6.QtGui import QIcon, QIntValidator
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtWidgets import QWidget
 
@@ -31,8 +31,6 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_SERIAL_BAUD_RATE = 115_200
 
 
 class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget):
@@ -58,6 +56,9 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         self._rescanSerialPorts()
         self.rescanSerialPortsButton.clicked.connect(self._rescanSerialPorts)
 
+        baudRateValidator = QIntValidator(bottom=1, top=4_000_000)
+        self.baudRateTextField.setValidator(baudRateValidator)
+
     def validateConfig(self) -> DataSourceConfigResult:
         """
         Validate the configuration.
@@ -75,11 +76,20 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
                 errMessage='The "serial port" field is empty.',
             )
 
+        if not self.baudRateTextField.hasAcceptableInput():
+            return DataSourceConfigResult(
+                dataSourceType=DataSourceType.SERIAL,
+                dataSourceConfig={},
+                isValid=False,
+                errMessage='The "baud rate" field is invalid.',
+            )
+
         serialPortName = self.serialPortsComboBox.currentText()
         return DataSourceConfigResult(
             dataSourceType=DataSourceType.SERIAL,
             dataSourceConfig={
                 "serialPortName": serialPortName,
+                "baudRate": QLocale().toInt(self.baudRateTextField.text())[0],
             },
             isValid=True,
             errMessage="",
@@ -95,6 +105,8 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         """
         if "serialPortName" in config:
             self.serialPortsComboBox.setCurrentText(config["serialPortName"])
+        if "baudRate" in config:
+            self.baudRateTextField.setText(QLocale().toString(config["baudRate"]))
 
     def getFieldsInTabOrder(self) -> list[QWidget]:
         """
@@ -108,6 +120,7 @@ class SerialConfigWidget(DataSourceConfigWidget, Ui_SerialDataSourceConfigWidget
         return [
             self.serialPortsComboBox,
             self.rescanSerialPortsButton,
+            self.baudRateTextField,
         ]
 
     def _rescanSerialPorts(self) -> None:
@@ -132,6 +145,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         Sequence of commands to stop the source.
     serialPortName : str
         String representing the serial port.
+    baudRate : int
+        Baud rate.
 
     Attributes
     ----------
@@ -143,6 +158,8 @@ class SerialDataSourceWorker(DataSourceWorker):
         Sequence of commands to stop the source.
     _serialPortName : str
         String representing the serial port.
+    _baudRate : int
+        Baud rate.
     _serialPort : QSerialPort
         Serial port object.
     _buffer : QByteArray
@@ -165,14 +182,16 @@ class SerialDataSourceWorker(DataSourceWorker):
         startSeq: list[bytes | float],
         stopSeq: list[bytes | float],
         serialPortName: str,
+        baudRate: int,
     ) -> None:
         super().__init__(packetSize, startSeq, stopSeq)
 
         self._serialPortName = serialPortName
+        self._baudRate = baudRate
 
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
-        self._serialPort.setBaudRate(DEFAULT_SERIAL_BAUD_RATE)
+        self._serialPort.setBaudRate(baudRate)
         if hasattr(self._serialPort, "setSettingsRestoredOnClose"):
             self._serialPort.setSettingsRestoredOnClose(False)
         self._buffer = QByteArray()
