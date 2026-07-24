@@ -539,6 +539,17 @@ class StreamingController(QObject):
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
 
+        # Only TCPClientDataSourceWorker accepts these; gate on data source
+        # type so other sources (e.g. Serial) sharing the same interface
+        # module aren't passed kwargs their constructor doesn't accept.
+        if dataSourceWorkerArgs.get("dataSourceType") == data_sources.DataSourceType.TCPCLIENT:
+            headerByte = getattr(interfaceModule, "headerByte", None)
+            if headerByte is not None:
+                dataSourceWorkerArgs["headerByte"] = headerByte
+            tailerByte = getattr(interfaceModule, "tailerByte", None)
+            if tailerByte is not None:
+                dataSourceWorkerArgs["tailerByte"] = tailerByte
+
         # 1. Data source settings
         self._dataSourceWorker = data_sources.getDataSourceWorker(
             **dataSourceWorkerArgs

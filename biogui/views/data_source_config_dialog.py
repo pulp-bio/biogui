@@ -167,6 +167,8 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
         sigInfo=module.sigInfo,
         decodeFn=module.decodeFn,
         platformConfig=platformConfig,
+        headerByte=getattr(module, "headerByte", None),
+        tailerByte=getattr(module, "tailerByte", None),
     )
     interface_module = _isolate_platform_interface_module(interface_module)
 

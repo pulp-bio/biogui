@@ -139,6 +139,18 @@ class TCPClientDataSourceWorker(DataSourceWorker):
         TCP port.
     waitStartToken : bytes or None, default=None
         Optional token to wait for in the incoming stream before parsing packets.
+    headerByte : int or None, default=None
+        Expected value of each packet's first byte. If provided, a packet whose
+        first byte doesn't match is treated as a misalignment: one byte is
+        dropped and parsing retries from there instead of accepting a corrupt
+        frame. Only meaningful when packetSize is a plain int (the list form
+        already validates the header while looking up the packet size).
+    tailerByte : int or None, default=None
+        Expected value of each packet's last byte. If provided, checked the
+        same way as headerByte -- this is what actually detects and recovers
+        from a stream that has drifted out of alignment with real packet
+        boundaries, which a header check alone cannot catch on its own if a
+        data byte happens to collide with the header value.
 
     Attributes
     ----------
@@ -170,12 +182,26 @@ class TCPClientDataSourceWorker(DataSourceWorker):
         host: str,
         port: int,
         waitStartToken: Optional[bytes] = None,
+        headerByte: Optional[int] = None,
+        tailerByte: Optional[int] = None,
     ) -> None:
         super().__init__(packetSize, startSeq, stopSeq)
 
         self._host = host
         self._port = int(port)
         self._start_tok = waitStartToken
+        self._header_byte = headerByte
+        self._tailer_byte = tailerByte
+
+        # None-safe: formatting None with :#04x raises TypeError, which Qt
+        # can silently swallow when raised inside __init__/a slot -- that
+        # would explain both of these never printing anything at all rather
+        # than printing "None".
+        header_str = f"{self._header_byte:#04x}" if self._header_byte is not None else "None"
+        tailer_str = f"{self._tailer_byte:#04x}" if self._tailer_byte is not None else "None"
+        logging.info(f"[TCPClient] Using header byte: {header_str}, tailer byte: {tailer_str}")
+        print(f"[TCPClient] Using header byte: {header_str}, tailer byte: {tailer_str}")
+        self._resync_drops = 0
 
         self._sock = QTcpSocket(self)
         self._sock.connected.connect(self._on_connected)
@@ -200,6 +226,7 @@ class TCPClientDataSourceWorker(DataSourceWorker):
         self._manual_close = False
         self._guard = False
         self._buf.clear()
+        self._resync_drops = 0
         self._waiting_token = bool(self._start_tok)
         self._backoff_s = 0.5
         QMetaObject.invokeMethod(self, "_connect", Qt.QueuedConnection)
@@ -238,7 +265,21 @@ class TCPClientDataSourceWorker(DataSourceWorker):
 
         logger.info("TCP client connected to %s:%d", self._host, self._port)
 
-        time.sleep(0.1)
+        # Discard anything already sitting in the socket (e.g. a late reply
+        # to the previous session's stop sequence, arriving right as we
+        # reconnect for a new one), then give a short window for further
+        # stragglers to arrive before actually starting -- mirrors
+        # SerialDataSourceWorker's _clearInputBuffer(), which exists for the
+        # same reason.
+        self._buf.clear()
+        self._sock.readAll()
+        QTimer.singleShot(150, self._start_after_flush)
+
+    def _start_after_flush(self) -> None:
+        # Discard anything that arrived during the flush window above, then
+        # actually start the session from a guaranteed-clean buffer.
+        self._buf.clear()
+        self._sock.readAll()
 
         for c in self._startSeq:
             if isinstance(c, (bytes, bytearray)):
@@ -320,12 +361,43 @@ class TCPClientDataSourceWorker(DataSourceWorker):
                         break
                 if packet_size is None:
                     self._buf.remove(0, 1)
+                    self._resync_drops += 1
                     continue
             else:
                 packet_size = self._packetSize
+                if self._header_byte is not None and buffer_header != self._header_byte:
+                    # Not aligned on a real packet start -- drop one byte and
+                    # look again rather than blindly trusting a fixed stride.
+                    logger.error(f"[TCPClient] Misaligned stream: expected header {self._header_byte:#04x}, got {buffer_header:#04x}. Dropping one byte and retrying.")
+                    self._buf.remove(0, 1)
+                    self._resync_drops += 1
+                    continue
 
             if self._buf.size() < packet_size:
+                logger.info(f"[TCPClient] Waiting for more data: have {self._buf.size()} bytes, need {packet_size} bytes.")
                 return
+
+            if self._tailer_byte is not None:
+                tail = int.from_bytes(self._buf[packet_size - 1])
+                if tail != self._tailer_byte:
+                    logger.error(f"[TCPClient] Misaligned stream: expected tailer {self._tailer_byte:#04x}, got {tail:#04x}. Dropping one byte and retrying.")
+                    # Header matched (or wasn't checked) but the tailer
+                    # didn't land where expected -- this is what actually
+                    # catches a misaligned stream, since a coincidental
+                    # header-byte match alone can't be ruled out otherwise.
+                    # Resync by dropping one byte instead of emitting a
+                    # corrupt/misaligned packet.
+
+                    self._buf.remove(0, 1)
+                    self._resync_drops += 1
+                    continue
+
+            if self._resync_drops:
+                logger.error(
+                    "TCP client resynced after dropping %d byte(s) to realign with packet framing",
+                    self._resync_drops,
+                )
+                self._resync_drops = 0
 
             # Generate timestamp
             ts = time.time()

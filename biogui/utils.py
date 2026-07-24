@@ -46,6 +46,12 @@ class InterfaceModule:
     sigInfo: dict[str, dict[str, Any]]
     decodeFn: DecodeFn
     platformConfig: PlatformConfig | None = None
+    headerByte: int | None = None
+    """Expected first byte of each packet, used by the TCP client data
+    source to detect and resync from a misaligned stream. None if the
+    interface module doesn't define one (no validation is performed)."""
+    tailerByte: int | None = None
+    """Expected last byte of each packet -- see headerByte."""
 
 
 @dataclass

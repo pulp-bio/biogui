@@ -39,6 +39,13 @@ _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 packetSize: int = 211
 """Number of bytes in each BLE packet (EEG_PCKT_SIZE)."""
 
+headerByte: int = 0x55
+"""Expected first byte of each packet (NRF_EXG_HEADER) -- used by the TCP
+client data source to detect and resync from a misaligned stream."""
+
+tailerByte: int = 0xAA
+"""Expected last byte of each packet (NRF_EXG_TAILER) -- see headerByte."""
+
 startSeq: list[bytes | float] = [
     bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
     0.2,
@@ -86,7 +93,9 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
 
     counter = int.from_bytes(data[1:3], "little")
+    #print(f"[EEG] Counter: {counter}")
     timestamp = int.from_bytes(data[3:7], "little")
+
 
     return {
         "eeg_A":     rows_A,
