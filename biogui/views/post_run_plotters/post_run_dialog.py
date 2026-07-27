@@ -101,7 +101,7 @@ class PostRunPlotWindow(QWidget):
         self._enable_bandpass: bool = bool(opts.get("enableBandpass", True))
         self._center_freq_hz: float = float(opts.get("transmissionFrequencyHz", 2.25e6) or 2.25e6)
         self._bandwidth_fraction: float = float(opts.get("bandwidthFraction", 0.30) or 0.30)
-        self._adc_fs: float = float(opts.get("adcSamplingFreqHz", 33.33e6) or 33.33e6)
+        self._adc_fs: float = float(opts.get("adcSamplingFreqHz", 8.0e6) or 8.0e6)
         self._dynamic_range: float = 40.0
 
         # Debounce timer for spinbox valueChanged → avoids reprocessing on every step

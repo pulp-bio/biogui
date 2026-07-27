@@ -189,7 +189,9 @@ class _ForwardingWorker(QObject):
                 continue
             if sigData.data.size == 0:
                 continue
-            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(sigData.data)
+            self._buffers[curDataSourceId][sigData.sigName]["queue"].extend(
+                sigData.data
+            )
 
         # Send packets while buffers are ready
         while True:
@@ -256,8 +258,6 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
         self.socketPathTextField.hide()
 
         self.socketTypeComboBox.currentTextChanged.connect(self._onComboBoxChange)
-        self.windowModeRadioButton.toggled.connect(self._onForwardingModeChanged)
-        self._onForwardingModeChanged(self.windowModeRadioButton.isChecked())
 
         # Disable Unix socket option on Windows
         if platform == "win32":
@@ -307,11 +307,6 @@ class _ForwardingConfigWidget(QWidget, Ui_ForwardingConfigWidget):
             return config, ""
 
         return None, "Invalid socket type"  # should never happen
-
-    def _onForwardingModeChanged(self, window_mode: bool) -> None:
-        if window_mode and not self.winLenTextField.text().strip():
-            self.winLenTextField.setText("33.333")
-            self.winStrideTextField.setText("33.333")
 
     def _onComboBoxChange(self, socketType: str):
         if socketType == "TCP":
