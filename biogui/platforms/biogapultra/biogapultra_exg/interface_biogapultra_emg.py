@@ -47,6 +47,13 @@ stopSeq: list[bytes | float] = [
     bytes([38]),         # STOP_EMG_STREAMING
 ]
 
+headerByte: int = 0x55
+"""Expected first byte of each packet (NRF_EXG_HEADER) -- used by the TCP
+client data source to detect and resync from a misaligned stream."""
+
+tailerByte: int = 0xAA
+"""Expected last byte of each packet (NRF_EXG_TAILER) -- see headerByte."""
+
 sigInfo: dict = {
     "emg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
     "emg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
