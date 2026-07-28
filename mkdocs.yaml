@@ -57,3 +57,4 @@ nav:
       - Teleprompter: modules/teleprompter.md
   - Development:
       - Custom Interfaces: interfaces.md
+      - QtWidgets to QML Migration: qml_migration.md
