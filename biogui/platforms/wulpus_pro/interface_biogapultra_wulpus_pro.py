@@ -62,7 +62,6 @@ Sequence of commands (as bytes) to start the device; floats are
 interpreted as delays (in seconds) between commands.
 """
 
-
 stopSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),  # Send restart command aka stop command,
 ]
@@ -155,7 +154,7 @@ if len(sigInfo) == 0:
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Decode one 211-byte BLE packet. Accumulates 4 packets into one US frame.
+    Decode one BLE packet. Accumulates 4 packets into one US frame.
     Returns empty arrays until a complete frame is assembled.
     Resyncs automatically on unexpected headers.
     """
@@ -166,6 +165,7 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     if header == 0x10:
         if _ble_buffer:
             logger.warning("WULPUS: 0x10 received before previous frame completed, resyncing")
+
         _ble_buffer = [bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES])]
     elif _ble_buffer and header == _BLE_HEADERS[len(_ble_buffer)]:
         _ble_buffer.append(bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES]))

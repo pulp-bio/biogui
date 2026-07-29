@@ -11,10 +11,14 @@ from typing import Any, Callable
 
 from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
 
+#from biogui.platforms.biogapultra.biogapultra_wulpus_pro.interface_biogapultra_wulpus_pro import CMD_START_WULPUS
 from biogui.utils import InterfaceModule
+import logging 
 
 # Must match WULPUS_PLATFORM.id in biogui.platforms.wulpus_pro.
 WULPUS_PLATFORM_ID = "wulpus_pro"
+CMD_START_WULPUS = 41
+_CMD_START_WULPUS_PACKET = bytes([CMD_START_WULPUS])
 
 from .protocol import (
     ACQ_LENGTH_SAMPLES,
@@ -187,6 +191,10 @@ def isolate_wulpus_interface_module(interface_module: InterfaceModule) -> Interf
         sigInfo=sig_info,
         decodeFn=isolated,
         platformConfig=interface_module.platformConfig,
+        headerByte=interface_module.headerByte,
+        tailerByte=interface_module.tailerByte,
+        wifiPacketSize=interface_module.wifiPacketSize,
+        stripTransportFraming=interface_module.stripTransportFraming,
     )
 
 
@@ -210,21 +218,35 @@ def _resolve_num_us_samples(
     return get_num_us_samples_from_config(wulpus_config)
 
 
+
 def build_interface_module(
     interface_module: InterfaceModule,
     wulpus_config: WulpusUssConfig,
-) -> InterfaceModule:
+    ) -> InterfaceModule:
     """Create a WULPUS interface module with parameters updated for a single source."""
     decode_fn = interface_module.decodeFn
     decode_globals = getattr(decode_fn, "__globals__", {})
 
-    start_seq = [
-        wulpus_config.get_restart_package(),
-        0.5,
-        wulpus_config.get_conf_package(),
-    ]
-    stop_seq = [wulpus_config.get_restart_package()]
+    start_seq: list[bytes | float] = []
+    # Preserve the optional WULPUS dispatcher command declared by the interface.
+    
+    if _CMD_START_WULPUS_PACKET in interface_module.startSeq:
+        start_seq.extend(
+            [
+                _CMD_START_WULPUS_PACKET,
+                0.5,
+            ]
+        )
 
+        start_seq.extend(
+            [
+                wulpus_config.get_restart_package(),
+                0.5,
+                wulpus_config.get_conf_package(),
+            ]
+        )
+
+    stop_seq = [wulpus_config.get_restart_package()]
     num_us_samples = _resolve_num_us_samples(decode_globals, wulpus_config)
     accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
     get_rx_channel = decode_globals.get("get_rx_channel_for_config", get_rx_channel_for_config)
