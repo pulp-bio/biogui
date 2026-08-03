@@ -231,13 +231,17 @@ def build_interface_module(
     # Preserve the optional WULPUS dispatcher command declared by the interface.
     
     if _CMD_START_WULPUS_PACKET in interface_module.startSeq:
+        logging.info("Adding WULPUS dispatcher command to startSeq")
         start_seq.extend(
             [
-                _CMD_START_WULPUS_PACKET,
+                _CMD_START_WULPUS_PACKET + wulpus_config.get_restart_package(),
                 0.5,
+                wulpus_config.get_conf_package(),
             ]
         )
-
+        logging.info(f"startSeq: {start_seq}")
+    else:
+        logging.info("Using default WULPUS startSeq")
         start_seq.extend(
             [
                 wulpus_config.get_restart_package(),
@@ -245,6 +249,14 @@ def build_interface_module(
                 wulpus_config.get_conf_package(),
             ]
         )
+    logging.info(f"startSeq: {start_seq}")
+    
+    if interface_module.wifiPacketSize != [0, 0]:
+        logging.info("Adding ESP tailer,tmp for now")
+        logging.info(f"startSeq: {start_seq}")
+    else:
+        logging.info("WULPUS startSeq built")
+        logging.info(f"startSeq: {start_seq}")
 
     stop_seq = [wulpus_config.get_restart_package()]
     num_us_samples = _resolve_num_us_samples(decode_globals, wulpus_config)
