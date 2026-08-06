@@ -169,6 +169,8 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
         platformConfig=platformConfig,
         headerByte=getattr(module, "headerByte", None),
         tailerByte=getattr(module, "tailerByte", None),
+        wifiPacketSize=getattr(module, "wifiPacketSize", None),
+        stripTransportFraming=getattr(module, "stripTransportFraming", False),
     )
     interface_module = _isolate_platform_interface_module(interface_module)
 
