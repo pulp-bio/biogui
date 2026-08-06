@@ -224,8 +224,17 @@ def build_interface_module(
     wulpus_config: WulpusUssConfig,
     ) -> InterfaceModule:
     """Create a WULPUS interface module with parameters updated for a single source."""
+    logging.info("Building WULPUS interface module with updated configuration")
     decode_fn = interface_module.decodeFn
     decode_globals = getattr(decode_fn, "__globals__", {})
+
+            
+    if interface_module.headerByte is not None:
+        logging.info(f"Setting headerByte to {interface_module.headerByte}")
+       
+
+    if interface_module.tailerByte is not None:
+        logging.info(f"Setting tailerByte to {interface_module.tailerByte}")
 
     start_seq: list[bytes | float] = []
     # Preserve the optional WULPUS dispatcher command declared by the interface.
@@ -249,14 +258,13 @@ def build_interface_module(
                 wulpus_config.get_conf_package(),
             ]
         )
-    logging.info(f"startSeq: {start_seq}")
-    
-    if interface_module.wifiPacketSize != [0, 0]:
-        logging.info("Adding ESP tailer,tmp for now")
-        logging.info(f"startSeq: {start_seq}")
-    else:
-        logging.info("WULPUS startSeq built")
-        logging.info(f"startSeq: {start_seq}")
+    logging.info(f"WULPUS startSeq built: {start_seq}")
+
+    # The TCP-vs-BLE end-of-config marker can't be added here: the data
+    # source (and therefore the transport) hasn't been chosen yet at this
+    # point -- this only runs when the WULPUS config dialog is applied.
+    # See configure_transport() (controllers/data_source_utils.py), which
+    # runs later, once the actual data_source_type is known.
 
     stop_seq = [wulpus_config.get_restart_package()]
     num_us_samples = _resolve_num_us_samples(decode_globals, wulpus_config)
@@ -334,6 +342,13 @@ def build_interface_module(
         config_to_signal_name,
     )
 
+
+    #printing again to debug
+    logging.info(f"Final WULPUS headerByte: {interface_module.headerByte}")
+    logging.info(f"Final WULPUS tailerByte: {interface_module.tailerByte}")
+    logging.info(f"Final WULPUS sig_info: {sig_info}")
+
+
     return InterfaceModule(
         packetSize=interface_module.packetSize,
         startSeq=start_seq,
@@ -341,6 +356,10 @@ def build_interface_module(
         sigInfo=sig_info,
         decodeFn=isolated_decode,
         platformConfig=interface_module.platformConfig,
+        headerByte=interface_module.headerByte,
+        tailerByte=interface_module.tailerByte,
+        wifiPacketSize=interface_module.wifiPacketSize,
+        stripTransportFraming=interface_module.stripTransportFraming,
     )
 
 
