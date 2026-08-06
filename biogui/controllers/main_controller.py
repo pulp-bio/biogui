@@ -53,6 +53,7 @@ from biogui.views import (
 from .. import data_sources
 from ..utils import InterfaceModule, PlatformConfig, SigData
 from .streaming_controller import StreamingController
+from .data_source_utils import configure_transport
 
 # Suffix from StreamingController.__str__ (unique dict key); strip for tree labels only.
 _DATA_SOURCE_INTERNAL_ID_SUFFIX = re.compile(r" \[0x[0-9a-fA-F]+\]$")
@@ -436,20 +437,18 @@ class MainController(QObject):
         }
         interfaceModule = dataSourceConfig["interfaceModule"]
         filePath = dataSourceConfig.get("filePath", None)
-        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
+
+        data_source_type = dataSourceWorkerArgs["dataSourceType"]
+        logging .info(f"Configuring transport for data source type: {data_source_type}")
+        configure_transport(
+            interfaceModule,
+            data_source_type,
+            dataSourceWorkerArgs,
+        )
+
+        logging.info(f"\n\n")
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
-
-        # Only TCPClientDataSourceWorker accepts these; gate on data source
-        # type so other sources (e.g. Serial) sharing the same interface
-        # module aren't passed kwargs their constructor doesn't accept.
-        if dataSourceWorkerArgs.get("dataSourceType") == data_sources.DataSourceType.TCPCLIENT:
-            headerByte = getattr(interfaceModule, "headerByte", None)
-            if headerByte is not None:
-                dataSourceWorkerArgs["headerByte"] = headerByte
-            tailerByte = getattr(interfaceModule, "tailerByte", None)
-            if tailerByte is not None:
-                dataSourceWorkerArgs["tailerByte"] = tailerByte
 
         streamingController = StreamingController(
             dataSourceWorkerArgs,

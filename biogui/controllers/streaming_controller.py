@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from types import MappingProxyType
 
+from biogui.controllers.data_source_utils import configure_transport
 import numpy as np
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
@@ -535,20 +536,18 @@ class StreamingController(QObject):
         interfaceModule: InterfaceModule = dataSourceConfig["interfaceModule"]
         filePath: Path | None = dataSourceConfig.get("filePath", None)
         postRunPlotConfig = dataSourceConfig.get("postRunPlotConfig", None)
-        dataSourceWorkerArgs["packetSize"] = interfaceModule.packetSize
+
+
+        data_source_type = dataSourceWorkerArgs["dataSourceType"]
+
+        configure_transport(
+            interfaceModule,
+            data_source_type,
+            dataSourceWorkerArgs,
+        )
+
         dataSourceWorkerArgs["startSeq"] = interfaceModule.startSeq
         dataSourceWorkerArgs["stopSeq"] = interfaceModule.stopSeq
-
-        # Only TCPClientDataSourceWorker accepts these; gate on data source
-        # type so other sources (e.g. Serial) sharing the same interface
-        # module aren't passed kwargs their constructor doesn't accept.
-        if dataSourceWorkerArgs.get("dataSourceType") == data_sources.DataSourceType.TCPCLIENT:
-            headerByte = getattr(interfaceModule, "headerByte", None)
-            if headerByte is not None:
-                dataSourceWorkerArgs["headerByte"] = headerByte
-            tailerByte = getattr(interfaceModule, "tailerByte", None)
-            if tailerByte is not None:
-                dataSourceWorkerArgs["tailerByte"] = tailerByte
 
         # 1. Data source settings
         self._dataSourceWorker = data_sources.getDataSourceWorker(
