@@ -4,10 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-WULPUS interface for ultrasound (default framing: START then newline,
-4-byte header, payload).
-
-Shared helpers live in biogui.platforms.wulpus_pro.runtime.
+WULPUS interface for ultrasound data received via WiFi
+Compared to the BLE case, the US packet is received as a single packet and not split into 4 chunks. 
 """
 
 import logging
@@ -30,34 +28,31 @@ logger = logging.getLogger(__name__)
 
 wulpus_config = create_default_biceps_wulpus_uss_config()
 
-_BLE_NUM_PACKETS = 4
-_BLE_HEADERS = (0x10, 0x11, 0x12, 0x13)
-# Each chunk carries the header/counter/timestamp prefix (harmonized with the
-# ExG/MIC/PPG packets); the 201-byte SPI payload follows at byte 7 and must be
-# extracted from there before concatenating the 4 chunks into one US frame.
-# Per-frame metadata is mirrored into every chunk (see firmware WULPUS_META_*):
-#   [0]      chunk header (0x10..0x13)
+_WULPUS_FULL_HEADER = 0xCC
+_WULPUS_FULL_TAILER = 0xDD
+# One full US frame arrives as a single packet (harmonized with the
+# ExG/MIC/PPG packets); the 804-byte SPI payload (4 x 201-byte chunks,
+# already reassembled firmware-side) follows at byte 7. Per-frame metadata:
+#   [0]      header 0xCC
 #   [1:3]    frame counter (uint16 LE)
 #   [3:7]    timestamp us  (uint32 LE)
-#   [7:208]  201-byte SPI payload chunk
-_WULPUS_SPI_BYTES = 201
-_WULPUS_SPI_OFF = 7          # SPI payload starts here in each chunk
+#   [7:811]   804-byte SPI payload
+#   [811:814] reserved (zero)
+#   [814]     tailer 0xDD
+_WULPUS_SPI_BYTES = 804
+_WULPUS_SPI_OFF = 7          # Payload starts here in each chunk
 _WULPUS_META_CNT_OFF = 1     # frame counter (uint16 LE)
 _WULPUS_META_TS_OFF = 3      # microsecond timestamp (uint32 LE)
 
-_WULPUS_PACKET_SIZE = 211
-_WIFI_PACKET_SIZE = _WULPUS_PACKET_SIZE + 2
+_WULPUS_PACKET_SIZE = 815
 
 packetSize: int = _WULPUS_PACKET_SIZE
-"""Number of bytes in each BLE packet; four packets make one US frame."""
+"""Number of bytes in each packet; one packet is one complete US frame."""
 
-wifiPacketSize: int = _WIFI_PACKET_SIZE
-"""Number of bytes in each Wi-Fi packet; four packets make one US frame."""
+wifiPacketSize: int = _WULPUS_PACKET_SIZE
+"""Number of bytes in each Wi-Fi packet; one packet is one complete US frame."""
 
-_ble_buffer: list[bytes] = []
-"""Accumulates BLE payload chunks until a complete 4-packet frame is ready."""
-
-_active_transport: str = "ble"
+_active_transport: str = "wifi"
 """Set externally by main_controller.py/streaming_controller.py, based on the
 chosen DataSourceType, before streaming starts. """
 
@@ -86,10 +81,10 @@ interpreted as delays (in seconds) between commands.
 platformConfig = WULPUS_PLATFORM
 """Optional curated platform metadata for the WULPUS interface."""
 
-headerByte: int = 0x55
+headerByte: int = 0xCC
 """Expected first byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
 
-tailerByte: int = 0xAA
+tailerByte: int = 0xDD
 """Expected last byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
 
 
@@ -173,54 +168,28 @@ if len(sigInfo) == 0:
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     """
-    Decode one {packetSize}-byte BLE packet. Accumulates 4 packets into one US frame.
-    Returns empty arrays until a complete frame is assembled.
-    Resyncs automatically on unexpected headers.
+    Decode one {packetSize}-byte Wi-Fi packet containing one complete US frame.
     """
-    global _ble_buffer
-
-
-    if _active_transport == "wifi":
-        # Remove the extra header and tailer bytes used by the TCPClient data source
-        data = data[1:-1]
     header = data[0]
-    if header == 0x10:
-        if _ble_buffer:
-            logger.warning("WULPUS: 0x10 received before previous frame completed, resyncing")
-        _ble_buffer = [bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES])]
-    elif _ble_buffer and header == _BLE_HEADERS[len(_ble_buffer)]:
-        _ble_buffer.append(bytes(data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES]))
-    else:
-        logger.warning(f"WULPUS: Unexpected BLE header 0x{header:02X}, resyncing")
-        _ble_buffer = []
+    tailer = data[-1]
+    if header != _WULPUS_FULL_HEADER or tailer != _WULPUS_FULL_TAILER:
+        logger.warning(
+            f"WULPUS: unexpected header/tailer 0x{header:02X}/0x{tailer:02X} "
+            f"(expected 0x{_WULPUS_FULL_HEADER:02X}/0x{_WULPUS_FULL_TAILER:02X})"
+        )
 
-    if len(_ble_buffer) < 4:
-        empty: dict[str, np.ndarray] = {}
-        for signal_name in sigInfo.keys():
-            if signal_name in ("acquisition_number", "wulpus_counter"):
-                empty[signal_name] = np.empty((0, 1), dtype=np.uint16)
-            elif signal_name == "wulpus_timestamp":
-                empty[signal_name] = np.empty((0, 1), dtype=np.uint32)
-            elif signal_name == "tx_rx_id":
-                empty[signal_name] = np.empty((0, 1), dtype=np.uint8)
-            elif signal_name == "imu":
-                empty[signal_name] = np.empty((0, 3), dtype=np.int16)
-            else:
-                empty[signal_name] = np.empty((0, 1), dtype=np.int16)
-        return empty
+    # Per-frame metadata lives at the front of the packet (mirrored in firmware
+    # across the reassembled chunks); read counter/timestamp from there.
+    wulpus_counter = int.from_bytes(data[_WULPUS_META_CNT_OFF:_WULPUS_META_CNT_OFF + 2], "little")
+    wulpus_timestamp = int.from_bytes(data[_WULPUS_META_TS_OFF:_WULPUS_META_TS_OFF + 4], "little")
 
-    payload = b"".join(_ble_buffer)
-    _ble_buffer = []
 
-    # Per-frame metadata lives in the padding tail of each chunk (mirrored);
-    # `data` here is the 4th chunk (0x13), so read counter/timestamp from it.
-    wulpus_counter = int.from_bytes(data[_WULPUS_META_CNT_OFF:_WULPUS_META_CNT_OFF + 2], "little")      #1-2
-    wulpus_timestamp = int.from_bytes(data[_WULPUS_META_TS_OFF:_WULPUS_META_TS_OFF + 4], "little")      #3-6
+    payload = data[_WULPUS_SPI_OFF:_WULPUS_SPI_OFF + _WULPUS_SPI_BYTES]
 
     # Payload layout: [SOF_MASK, tx_rx_id, frame_nr_lo, frame_nr_hi, US data...]
-    sof_mask = payload[0]
-    tx_rx_id = payload[1]
-    acq_nr = np.frombuffer(payload[2:4], dtype="<u2")[0]
+    sof_mask = payload[0]       # 7
+    tx_rx_id = payload[1]       # 8
+    acq_nr = np.frombuffer(payload[2:4], dtype="<u2")[0]            #9-10
     rf_arr = np.frombuffer(payload[4:], dtype="<i2")
 
     print(

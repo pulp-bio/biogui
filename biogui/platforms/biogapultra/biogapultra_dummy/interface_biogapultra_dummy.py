@@ -38,8 +38,9 @@ packetSize: int = 211
 """Number of bytes in each packet (DUMMY_SENSOR_PCKT_SIZE)."""
 
 startSeq: list[bytes | float] = [
-    bytes([243]),  # START_DUMMY_STREAMING
+    bytes([243]),           # START_DUMMY_STREAMING
     0.2,
+    bytes([238]),           # CMD_SENT            0xEE
 ]
 """Commands to start dummy-sensor streaming."""
 

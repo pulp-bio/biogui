@@ -37,10 +37,21 @@ _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 
 packetSize: int = 211
 
+# startSeq: list[bytes | float] = [
+#     bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
+#     0.2,
+#     bytes([37]),         # START_EMG_STREAMING
+# ]
+
+
+# TMP for now for WI-Fi
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
+    #bytes([20, 1, 0]),     # SET_BOARD_STATE → STATE_STREAMING_NORDIC (removed for now)
+    #0.2,
+    bytes([37]),            # START_EMG_STREAMING
     0.2,
-    bytes([37]),         # START_EMG_STREAMING
+    bytes([4, 5, 2, 4, 16]),                 #  
+    bytes([238]),           # CMD_SENT            0xEE
 ]
 
 stopSeq: list[bytes | float] = [
