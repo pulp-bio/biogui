@@ -51,7 +51,7 @@ wifiPacketSize: int = packetSize
 
 
 startSeq: list[bytes | float] = [
-    bytes([18, 6, 5, 2, 4, 0x10]),   # START_EEG_STREAMING + 5-byte ADS config
+    bytes([18, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config
 ]
 """Commands to start EEG streaming."""
 

@@ -38,8 +38,18 @@ _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 packetSize: int = 211
 
 startSeq: list[bytes | float] = [
-    bytes([37, 4, 5, 2, 4, 16]),   # START_EMG_STREAMING + 5-byte ADS config
+    bytes([37, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
+                                    
 ]
+
+#ADS config is: 
+# ADS sample rate = 6 (500 Hz)
+# ADS mode: 0 for normal operation, 5 for square wave test signal
+# channel 2 function (fix to 2)
+# channel 4 function (fix to 4)
+# PGA gain     
+# 0 -- will take 6  
+# (set to 0x10 bytes= 16 if yu want to use squuare wave test signal)
 
 stopSeq: list[bytes | float] = [
     bytes([38]),         # STOP_EMG_STREAMING
