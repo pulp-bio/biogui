@@ -248,7 +248,9 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         # Send start sequence, set guard flag, and connect readyRead signal
         self._sendSequence(self._startSeq)
-        logging.debug(f"Sent start sequence: {self._startSeq}")
+        logging.info(f"Sent start sequence with len: {len(self._startSeq)}")
+        logging.info(f"Start sequence: {self._startSeq}")
+        
         self._guard = True
         self._serialPort.readyRead.connect(self._collectData)
 
