@@ -37,21 +37,8 @@ _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 
 packetSize: int = 211
 
-# startSeq: list[bytes | float] = [
-#     bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
-#     0.2,
-#     bytes([37]),         # START_EMG_STREAMING
-# ]
-
-
-# TMP for now for WI-Fi
 startSeq: list[bytes | float] = [
-    #bytes([20, 1, 0]),     # SET_BOARD_STATE → STATE_STREAMING_NORDIC (removed for now)
-    #0.2,
-    bytes([37]),            # START_EMG_STREAMING
-    0.2,
-    bytes([4, 5, 2, 4, 16]),                 #  
-    bytes([238]),           # CMD_SENT            0xEE
+    bytes([37, 4, 5, 2, 4, 16]),   # START_EMG_STREAMING + 5-byte ADS config
 ]
 
 stopSeq: list[bytes | float] = [
@@ -64,6 +51,9 @@ client data source to detect and resync from a misaligned stream."""
 
 tailerByte: int = 0xAA
 """Expected last byte of each packet (NRF_EXG_TAILER) -- see headerByte."""
+
+wifiPacketSize: int = packetSize
+"""Number of bytes in each Wi-Fi packet; same size as the BLE packet."""
 
 sigInfo: dict = {
     "emg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
