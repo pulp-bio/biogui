@@ -12,14 +12,15 @@ All BLE packets are exactly 211 bytes; the header byte distinguishes the source:
   0x10..0x13  → WULPUS packet (four per ultrasound frame)
 
 Start sequence:
-  1. SET_BOARD_STATE (20) → STATE_STREAMING_NORDIC
-  2. BLE command 18 (START_EEG_STREAMING)
+  1. START_EEG_STREAMING (18) + 5-byte ADS config, in one message
+  2. START_WULPUS_STREAMING (41)
   3. WULPUS restart package  (MSP430 stop/reset)
   4. WULPUS conf package     (MSP430 config + start)
 
 Stop sequence:
-  1. BLE command 19 (STOP_EEG_STREAMING)
-  2. WULPUS restart package  (MSP430 stop)
+  1. STOP_EEG_STREAMING (19)
+  2. STOP_WULPUS_STREAMING (42)
+  3. WULPUS restart package  (MSP430 stop)
 """
 
 import copy
@@ -28,6 +29,7 @@ import types
 
 import numpy as np
 from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
+from biogui.platforms.biogapultra.connectivity_commands import START_EEG_STREAMING, STOP_EEG_STREAMING, START_WULPUS_STREAMING, STOP_WULPUS_STREAMING
 
 from biogui.platforms.wulpus_pro.defaults import create_default_biceps_wulpus_uss_config
 from biogui.platforms.wulpus_pro.protocol import (
@@ -75,17 +77,15 @@ _WULPUS_META_TS_OFF  = 3    # microsecond timestamp (uint32 LE)
 packetSize: int = _BLE_PACKET_SIZE
 
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),                       # SET_BOARD_STATE → Nordic streaming
-    0.2,
-    bytes([18]),                             # START_EEG_STREAMING
-    0.2,
+    bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config
+    bytes([START_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),     # MSP430 reset
-    0.5,
     wulpus_config.get_conf_package(),        # MSP430 config + start
 ]
 
 stopSeq: list[bytes | float] = [
-    bytes([19]),                             # STOP_EEG_STREAMING
+    bytes([STOP_EEG_STREAMING]),             # STOP_EEG_STREAMING
+    bytes([STOP_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),     # MSP430 stop
 ]
 
@@ -315,12 +315,14 @@ def _configure_eeg_wulpus_module(
                 raise ValueError("No active RX configurations found.")
 
             new_start = [
-                bytes([20, 1, 0]), 0.2,
-                bytes([18]), 0.2,
-                new_cfg.get_restart_package(), 0.5,
+                bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # + 5-byte ADS config
+                bytes([START_WULPUS_STREAMING]),
+                new_cfg.get_restart_package(),
                 new_cfg.get_conf_package(),
             ]
-            new_stop = [bytes([19]), new_cfg.get_restart_package()]
+            new_stop = [bytes([STOP_EEG_STREAMING]),
+                        bytes([STOP_WULPUS_STREAMING]),
+                        new_cfg.get_restart_package()]
 
             g = dict(interface_module.decodeFn.__globals__)
             g["wulpus_config"]       = new_cfg

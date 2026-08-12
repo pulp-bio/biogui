@@ -22,6 +22,7 @@ Firmware default: gain = 6, vRef = 2.5 V.
 """
 
 import numpy as np
+from biogui.platforms.biogapultra.connectivity_commands import START_EEG_STREAMING, STOP_EEG_STREAMING 
 
 _VREF  = 2.5          # V
 _GAIN  = 6            # ADS1298 register 0x00 = gain 6
@@ -51,12 +52,12 @@ wifiPacketSize: int = packetSize
 
 
 startSeq: list[bytes | float] = [
-    bytes([18, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config
+    bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config
 ]
 """Commands to start EEG streaming."""
 
 stopSeq: list[bytes | float] = [
-    bytes([19]),         # STOP_EEG_STREAMING
+    bytes([STOP_EEG_STREAMING]),         # STOP_EEG_STREAMING
 ]
 """Commands to stop EEG streaming."""
 

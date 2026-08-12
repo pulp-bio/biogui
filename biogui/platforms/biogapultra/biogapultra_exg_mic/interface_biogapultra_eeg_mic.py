@@ -41,6 +41,11 @@ See ``src_NRF/BLE_PACKET_STRUCTURE.md`` for the authoritative packet reference.
 
 import numpy as np
 
+from biogui.platforms.biogapultra.connectivity_commands import (
+    START_EEG_MIC_STREAMING,
+    STOP_EEG_MIC_STREAMING,
+)
+
 # ── ExG (ADS1298) decode constants ─────────────────────────────────────────
 _VREF  = 2.5          # V
 _GAIN  = 6            # ADS1298 register 0x00 = gain 6
@@ -77,14 +82,12 @@ packetSize: list[tuple[int, int]] = [
 """List of (header_byte, packet_size) tuples: EEG (0x55, 211) and MIC (0xAA, 136)."""
 
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
-    0.2,
-    bytes([35]),         # START_EEG_MIC_STREAMING (synced EEG + MIC)
+    bytes([START_EEG_MIC_STREAMING, 6, 0, 2, 4, 0]),   # + 5-byte ADS config (synced EEG + MIC)
 ]
 """Commands to start synced EEG + microphone streaming."""
 
 stopSeq: list[bytes | float] = [
-    bytes([36]),         # STOP_EEG_MIC_STREAMING
+    bytes([STOP_EEG_MIC_STREAMING]),
 ]
 """Commands to stop EEG + microphone streaming."""
 

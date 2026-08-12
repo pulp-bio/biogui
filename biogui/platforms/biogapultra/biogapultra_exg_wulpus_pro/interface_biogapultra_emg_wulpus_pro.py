@@ -19,6 +19,7 @@ import types
 import numpy as np
 from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
 
+from biogui.platforms.biogapultra.connectivity_commands import START_EMG_STREAMING, STOP_EMG_STREAMING, START_WULPUS_STREAMING, STOP_WULPUS_STREAMING
 from biogui.platforms.wulpus_pro.defaults import create_default_biceps_wulpus_uss_config
 from biogui.platforms.wulpus_pro.protocol import (
     NUM_IMU_SAMPLES,
@@ -61,22 +62,28 @@ _WULPUS_SPI_OFF      = 7    # SPI payload starts here in each chunk
 _WULPUS_META_CNT_OFF = 1    # frame counter (uint16 LE)
 _WULPUS_META_TS_OFF  = 3    # microsecond timestamp (uint32 LE)
 
+
 packetSize: int = _BLE_PACKET_SIZE
 
+
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),                       # SET_BOARD_STATE → Nordic streaming
-    0.2,
-    bytes([37]),                             # START_EMG_STREAMING
-    0.2,
-    wulpus_config.get_restart_package(),
-    0.5,
-    wulpus_config.get_conf_package(),
+    bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
+    bytes([START_WULPUS_STREAMING]),
+    wulpus_config.get_restart_package(),    # MSP430 reset
+    wulpus_config.get_conf_package(),       # MSP430 config + start
 ]
 
 stopSeq: list[bytes | float] = [
-    bytes([38]),                             # STOP_EMG_STREAMING
+    bytes([STOP_EMG_STREAMING]),        # STOP_EMG_STREAMING
+    bytes([STOP_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),
 ]
+
+headerByte: int = 0x55
+"""Expected first byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
+
+tailerByte: int = 0xAA
+"""Expected last byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
 
 # ── Build sigInfo ──────────────────────────────────────────────────────────
 _meas_period_s       = wulpus_config.meas_period / 1e6
@@ -294,12 +301,14 @@ def _configure_emg_wulpus_module(
                 raise ValueError("No active RX configurations found.")
 
             new_start = [
-                bytes([20, 1, 0]), 0.2,
-                bytes([37]), 0.2,
+                bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
+                bytes([START_WULPUS_STREAMING]),
                 new_cfg.get_restart_package(), 0.5,
                 new_cfg.get_conf_package(),
             ]
-            new_stop = [bytes([38]), new_cfg.get_restart_package()]
+            new_stop = [bytes([STOP_EMG_STREAMING]),
+                        bytes([STOP_WULPUS_STREAMING]),
+                        new_cfg.get_restart_package()]
 
             g = dict(interface_module.decodeFn.__globals__)
             g["wulpus_config"]         = new_cfg

@@ -14,6 +14,7 @@ import logging
 
 import numpy as np
 
+from biogui.platforms.biogapultra.connectivity_commands import START_WULPUS_STREAMING, STOP_WULPUS_STREAMING
 from biogui.platforms.wulpus_pro import WULPUS_PLATFORM
 from biogui.platforms.wulpus_pro.protocol import (
     NUM_IMU_SAMPLES,
@@ -61,13 +62,10 @@ _active_transport: str = "ble"
 """Set externally by main_controller.py/streaming_controller.py, based on the
 chosen DataSourceType, before streaming starts. """
 
-CMD_START_WULPUS = 0x29
 
 startSeq: list[bytes | float] = [
-    bytes([CMD_START_WULPUS]),                            # WULPUS platform start command for command dispatcher
-    0.5, 
+    bytes([START_WULPUS_STREAMING]),                            # WULPUS platform start command for command dispatcher
     wulpus_config.get_restart_package(),    # MSP430 reset
-    0.5,
     wulpus_config.get_conf_package(),       # MSP430 config + start
 ]
 """
@@ -76,6 +74,7 @@ interpreted as delays (in seconds) between commands.
 """
 
 stopSeq: list[bytes | float] = [
+    bytes([STOP_WULPUS_STREAMING]),                             # WULPUS platform stop command for command dispatcher
     wulpus_config.get_restart_package(),  # Send restart command aka stop command,
 ]
 """
@@ -223,10 +222,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     acq_nr = np.frombuffer(payload[2:4], dtype="<u2")[0]
     rf_arr = np.frombuffer(payload[4:], dtype="<i2")
 
-    print(
-        f"[WULPUS] SOF=0x{sof_mask:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
-        f"rf_samples={len(rf_arr)} raw_header_bytes={payload[:8].hex()}"
-    )
+    # print(
+    #     f"[WULPUS] SOF=0x{sof_mask:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
+    #     f"rf_samples={len(rf_arr)} raw_header_bytes={payload[:8].hex()}"
+    # )
 
     accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
     num_us_samples = get_num_us_samples_from_config(wulpus_config)

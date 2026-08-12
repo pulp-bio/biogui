@@ -43,6 +43,13 @@ See ``src_NRF/BLE_PACKET_STRUCTURE.md`` for the authoritative packet reference.
 
 import numpy as np
 
+from biogui.platforms.biogapultra.connectivity_commands import (
+    START_EMG_STREAMING,
+    START_MIC_STREAMING,
+    STOP_EMG_STREAMING,
+    STOP_MIC_STREAMING,
+)
+
 # ── ExG (ADS1298) decode constants ─────────────────────────────────────────
 _VREF  = 2.5          # V
 _GAIN  = 6            # ADS1298 register 0x00 = gain 6
@@ -79,18 +86,16 @@ packetSize: list[tuple[int, int]] = [
 """List of (header_byte, packet_size) tuples: EMG (0x55, 211) and MIC (0xAA, 136)."""
 
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
+    bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),   # START_EMG_STREAMING + 5-byte ADS config (resets packet counters)
     0.2,
-    bytes([37]),         # START_EMG_STREAMING (resets packet counters)
-    0.2,
-    bytes([26]),         # START_MIC_STREAMING
+    bytes([START_MIC_STREAMING]),
 ]
 """Commands to start EMG + microphone streaming (no synced combined command exists)."""
 
 stopSeq: list[bytes | float] = [
-    bytes([38]),         # STOP_EMG_STREAMING
+    bytes([STOP_EMG_STREAMING]),
     0.2,
-    bytes([27]),         # STOP_MIC_STREAMING
+    bytes([STOP_MIC_STREAMING]),
 ]
 """Commands to stop EMG + microphone streaming."""
 

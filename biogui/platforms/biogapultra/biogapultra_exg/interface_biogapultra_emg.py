@@ -22,6 +22,7 @@ Only the BLE start/stop commands differ from the EEG interface (37/38 vs 18/19).
 """
 
 import numpy as np
+from biogui.platforms.biogapultra.connectivity_commands import START_EMG_STREAMING, STOP_EMG_STREAMING
 
 _VREF  = 2.5
 _GAIN  = 6
@@ -38,7 +39,7 @@ _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 packetSize: int = 211
 
 startSeq: list[bytes | float] = [
-    bytes([37, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
+    bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
                                     
 ]
 
@@ -52,7 +53,7 @@ startSeq: list[bytes | float] = [
 # (set to 0x10 bytes= 16 if yu want to use squuare wave test signal)
 
 stopSeq: list[bytes | float] = [
-    bytes([38]),         # STOP_EMG_STREAMING
+    bytes([STOP_EMG_STREAMING]),         # STOP_EMG_STREAMING
 ]
 
 headerByte: int = 0x55
