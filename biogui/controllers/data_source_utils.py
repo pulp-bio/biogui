@@ -29,7 +29,7 @@ def configure_transport(
     if data_source_type == data_sources.DataSourceType.TCPCLIENT:
         worker_args["packetSize"] = (
             interface_module.wifiPacketSize
-            if interface_module.wifiPacketSize != [0, 0]
+            if interface_module.wifiPacketSize not in (None, 0, [0, 0])
             else interface_module.packetSize
         )
         
