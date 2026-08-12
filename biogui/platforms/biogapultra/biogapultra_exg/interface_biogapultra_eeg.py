@@ -46,10 +46,12 @@ client data source to detect and resync from a misaligned stream."""
 tailerByte: int = 0xAA
 """Expected last byte of each packet (NRF_EXG_TAILER) -- see headerByte."""
 
+wifiPacketSize: int = packetSize
+"""Number of bytes in each Wi-Fi packet; same size as the BLE packet."""
+
+
 startSeq: list[bytes | float] = [
-    bytes([20, 1, 0]),   # SET_BOARD_STATE → STATE_STREAMING_NORDIC
-    0.2,
-    bytes([18]),         # START_EEG_STREAMING
+    bytes([18, 6, 5, 2, 4, 0x10]),   # START_EEG_STREAMING + 5-byte ADS config
 ]
 """Commands to start EEG streaming."""
 
