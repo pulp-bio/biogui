@@ -59,7 +59,7 @@ from biogui.platforms.biogapultra.biogapultra_mmwave.radar_config_widget import 
     makeConfigureFn,
 )
 from biogui.utils import InterfaceModule, PlatformConfig
-
+from biogui.platforms.biogapultra.connectivity_commands import START_MMWAVE_STREAMING, STOP_MMWAVE_STREAMING
 packetSize: int = radar.PACKET_SIZE
 """Number of bytes in each packet."""
 
@@ -75,7 +75,7 @@ def _buildStartSeq(settings: radar.RadarSettings) -> list[bytes | float]:
         bytes([20, 1, 0]),  # SET_BOARD_STATE -> STATE_STREAMING_NORDIC
         0.2,
         *radar.powerOnAndConfigureSeq(settings),
-        bytes([radar.CMD_START]),  # START_MMWAVE_STREAMING
+        bytes([START_MMWAVE_STREAMING]),
     ]
 
 
