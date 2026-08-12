@@ -73,28 +73,27 @@ packetSize: list[tuple[int, int]] = [
 ]
 """Two packet types on one link, selected by the first byte."""
 
+from biogui.platforms.biogapultra.connectivity_commands import START_EEG_STREAMING, STOP_EEG_STREAMING, START_MMWAVE_STREAMING, STOP_MMWAVE_STREAMING
 def _buildStartSeq(settings: radar.RadarSettings) -> list[bytes | float]:
     return [
-        bytes([20, 1, 0]),  # SET_BOARD_STATE -> STATE_STREAMING_NORDIC
-        0.2,
         # Bring the radar up and configure it first. Its register write burst is
         # the heaviest SPI_A traffic either sensor produces, so getting it done
         # before the ADS1298 starts sampling keeps it off the shared bus at a
         # point where ExG would be contending for it.
         *radar.powerOnAndConfigureSeq(settings),
-        bytes([18]),  # START_EEG_STREAMING
+        bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config]), 
         0.2,
         # Radar streaming last: the ADS1298 is sampling by now, so the bus is
         # shared from this point on.
-        bytes([radar.CMD_START]),  # START_MMWAVE_STREAMING
+        bytes([START_MMWAVE_STREAMING]),  # START_MMWAVE_STREAMING
     ]
 
 
 def _buildStopSeq() -> list[bytes | float]:
     return [
-        bytes([radar.CMD_STOP]),  # STOP_MMWAVE_STREAMING
-        0.05,
-        bytes([19]),  # STOP_EEG_STREAMING
+        bytes([STOP_MMWAVE_STREAMING]),  # STOP_MMWAVE_STREAMING
+        0.05
+        bytes([STOP_EEG_STREAMING]),  # STOP_EEG_STREAMING
         0.05,
         bytes([radar.CMD_TURN_OFF]),  # TURN_OFF_MMWAVE
     ]
