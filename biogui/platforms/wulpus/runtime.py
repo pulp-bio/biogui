@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import types
 from typing import Any, Callable
 
@@ -318,6 +319,10 @@ def configure_interface_module(
         nonlocal configured_interface_module
         try:
             new_config = config_widget.get_current_config()
+
+            logging.info("Applying WULPUS configuration")
+
+            
             configured_interface_module = build_interface_module(interface_module, new_config)
             dialog.accept()
         except Exception as err:
