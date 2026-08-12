@@ -54,7 +54,7 @@ To enable communication between the GUI and a board, one must provide a Python f
   - `fs`: sampling rate (float)
   - `nCh`: number of channels (int)
   - `extras`: dictionary containing additional configurations, must contain at least:
-    - `type`: signal type, either `"ultrasound"` or `"time-series"` (string)
+    - `type`: signal type, one of `"time-series"`, `"ultrasound"` or `"radar"` (string)
 - `decodeFn`: function that decodes each packet of bytes read from the board into the specified signals.
 
 Bundled board interfaces live under [`biogui/platforms`](https://github.com/pulp-bio/biogui/blob/main/biogui/platforms) (each device family in its own subfolder, as `interface_*.py` files).

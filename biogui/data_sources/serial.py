@@ -166,6 +166,19 @@ class SerialDataSourceWorker(DataSourceWorker):
         Input buffer.
     _guard : bool
         Guard flag to control data emission.
+    _headerByte : int or None
+        Expected first byte of every packet, when packetSize is a fixed int.
+        Used to detect a misaligned stream; without it a single lost byte
+        silently misaligns every packet from then on and the decoder rejects
+        all of them. Ignored for the (header, size) form, which resyncs on
+        its own header table instead.
+    _tailerByte : int or None
+        Expected last byte of every packet, checked the same way -- a header
+        byte can match by coincidence, so the tailer is what confirms
+        alignment. Fixed-size packets only.
+    _resyncDrops : int
+        Bytes dropped while hunting for the next packet boundary; reset and
+        logged once alignment is regained.
 
     Class attributes
     ----------------
@@ -183,11 +196,21 @@ class SerialDataSourceWorker(DataSourceWorker):
         stopSeq: list[bytes | float],
         serialPortName: str,
         baudRate: int,
+        headerByte: int | None = None,
+        tailerByte: int | None = None,
     ) -> None:
         super().__init__(packetSize, startSeq, stopSeq)
 
         self._serialPortName = serialPortName
         self._baudRate = baudRate
+
+        # Optional framing markers, used to detect and recover from a misaligned
+        # byte stream (see _collectData). Only meaningful for a fixed packetSize;
+        # the (header, size) form resyncs on the header table instead. Accepted
+        # here so a caller can supply them without another change to this class.
+        self._headerByte = headerByte
+        self._tailerByte = tailerByte
+        self._resyncDrops = 0
 
         self._serialPort = QSerialPort(self)
         self._serialPort.setPortName(serialPortName)
@@ -301,21 +324,61 @@ class SerialDataSourceWorker(DataSourceWorker):
 
         while self._buffer.size() >= min_size:
             buffer_header = int.from_bytes(self._buffer[0])
-            packet_size = None
+
             if isinstance(self._packetSize, list):
+                packet_size = None
                 for header, size in self._packetSize:
                     if header == buffer_header:
                         packet_size = size
                         break
+                if packet_size is None:
+                    # Not aligned on any known packet start. Drop one byte and
+                    # look again rather than leaving packet_size unresolved --
+                    # without this the stream never realigns, and comparing a
+                    # size against None raises inside this slot, which kills
+                    # data collection outright.
+                    self._buffer.remove(0, 1)
+                    self._resyncDrops += 1
+                    continue
+                # Each packet type has its own trailer byte, so a single
+                # _tailerByte cannot describe them all; the header table is
+                # what identifies boundaries here.
+                expected_tailer = None
             else:
                 packet_size = self._packetSize
-            if self._buffer.size() >= packet_size:
-                # Generate timestamp
-                ts = time.time()
+                expected_tailer = self._tailerByte
+                if self._headerByte is not None and buffer_header != self._headerByte:
+                    # Fixed stride is only trustworthy while aligned; a single
+                    # lost byte otherwise misaligns every packet from then on.
+                    self._buffer.remove(0, 1)
+                    self._resyncDrops += 1
+                    continue
 
-                # Emit data packet together with timestamp and trigger
-                data = self._buffer.left(packet_size).data()
-                self.dataPacketReady.emit(data, ts, self._trigger)
-                self._buffer.remove(0, packet_size)
-            else:
+            if self._buffer.size() < packet_size:
                 break
+
+            if (
+                expected_tailer is not None
+                and int.from_bytes(self._buffer[packet_size - 1]) != expected_tailer
+            ):
+                # A header byte can match by coincidence; the tailer landing
+                # where expected is what actually confirms alignment.
+                self._buffer.remove(0, 1)
+                self._resyncDrops += 1
+                continue
+
+            if self._resyncDrops:
+                logger.warning(
+                    "Serial resynced after dropping %d byte(s) to realign with "
+                    "packet framing.",
+                    self._resyncDrops,
+                )
+                self._resyncDrops = 0
+
+            # Generate timestamp
+            ts = time.time()
+
+            # Emit data packet together with timestamp and trigger
+            data = self._buffer.left(packet_size).data()
+            self.dataPacketReady.emit(data, ts, self._trigger)
+            self._buffer.remove(0, packet_size)

@@ -153,7 +153,7 @@ def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]
                 f'Signal "{sigName}": "extras" dictionary must contain a "type" key.',
             )
 
-        validTypes = ("ultrasound", "time-series")
+        validTypes = ("ultrasound", "time-series", "radar")
         if sigData["extras"]["type"] not in validTypes:
             return (
                 None,

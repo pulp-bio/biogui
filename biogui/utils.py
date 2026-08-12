@@ -48,8 +48,8 @@ class InterfaceModule:
 
     """Optional curated-platform metadata necessary for TCPClient data source"""
     headerByte: int | None = None
-    """Expected first byte of each packet, used by the TCP client data
-    source to detect and resync from a misaligned stream. None if the
+    """Expected first byte of each packet, used by the serial and TCP client
+    data sources to detect and resync from a misaligned stream. None if the
     interface module doesn't define one (no validation is performed)."""
     tailerByte: int | None = None
     """Expected last byte of each packet -- see headerByte."""

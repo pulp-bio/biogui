@@ -215,7 +215,7 @@ def createFilter(extras: dict, fs: float, nCh: int) -> SignalFilter:
     Parameters
     ----------
     extras : dict
-        Dictionary containing a "type" key (either "time-series" or "ultrasound")
+        Dictionary containing a "type" key ("time-series", "ultrasound" or "radar")
     fs : float
         Sampling frequency (measurement rate for ultrasound, actual fs for time-series).
     nCh : int
@@ -228,9 +228,12 @@ def createFilter(extras: dict, fs: float, nCh: int) -> SignalFilter:
     """
     signalType = extras.get("type", "time-series")
 
-    if signalType == "ultrasound":
-        # Ultrasound signals: no preprocessing filtering
-        # Filtering happens in plot modes (A-mode, M-mode)
+    if signalType in ("ultrasound", "radar"):
+        # Ultrasound and radar signals: no preprocessing filtering.
+        # For ultrasound, filtering happens in the plot modes (A-mode, M-mode).
+        # For radar, the "channels" of a frame are range bins rather than
+        # independent sensor channels, so a per-channel IIR filter would smear
+        # data across bins; any filtering belongs after range processing.
         return PassthroughFilter()
     else:
         # Time-series signals: apply Butterworth/Notch filters

@@ -164,6 +164,15 @@ class SignalConfigWidget(QWidget, Ui_SignalConfigWidget):
             self._updateMmodeOptionsVisibility(self.ultrasoundModeComboBox.currentText())
             self._onMmodeLogCompressionToggled(self.mmodeLogCompressionCheckBox.isChecked())
 
+        elif extras.get("type") == "radar":
+            # mmWave radar: the "channels" of a frame are range bins, so the
+            # per-channel time-series filters do not apply (createFilter returns
+            # a passthrough). Range processing happens in RadarPlotMode.
+            self.filterGroupBox.setVisible(False)
+            self.notchFilterGroupBox.setVisible(False)
+
+            self._setUltrasoundControlsState(visible=False, enabled=False)
+
         else:
             # Time-series signal - hide ultrasound controls entirely
             self._setUltrasoundControlsState(visible=False, enabled=False)

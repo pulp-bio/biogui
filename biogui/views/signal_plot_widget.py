@@ -16,7 +16,13 @@ from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QWidget
 
 from ..ui.ui_signal_plot_widget import Ui_SignalPlotWidget
-from .plot_modes import AModePlotMode, BasePlotMode, MModePlotMode, TimeSeriesPlotMode
+from .plot_modes import (
+    AModePlotMode,
+    BasePlotMode,
+    MModePlotMode,
+    RadarPlotMode,
+    TimeSeriesPlotMode,
+)
 
 
 class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
@@ -97,6 +103,8 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
         # Set appropriate label for sampling rate display
         if self._is_ultrasound():
             self.label1.setText("Pulse Repetition Frequency (PRF):")
+        elif self._is_radar():
+            self.label1.setText("Frame rate:")
         else:
             self.label1.setText("Sampling rate:")
 
@@ -162,6 +170,10 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             if ultrasound_mode == "a-mode":
                 return AModePlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
 
+        # mmWave radar: scrolling range-time image of the reduced frames
+        if extras.get("type") == "radar":
+            return RadarPlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
+
         # Default: Time-Series mode
         return TimeSeriesPlotMode(fs, nCh, chSpacing, renderLenMs, **kwargs)
 
@@ -185,6 +197,17 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
             True if ultrasound, False otherwise.
         """
         return self._extras.get("type") == "ultrasound"
+
+    def _is_radar(self) -> bool:
+        """
+        Check if the current signal is an mmWave radar signal.
+
+        Returns
+        -------
+        bool
+            True if radar, False otherwise.
+        """
+        return self._extras.get("type") == "radar"
 
     @property
     def dataQueue(self) -> deque:
@@ -273,6 +296,18 @@ class SignalPlotWidget(QWidget, Ui_SignalPlotWidget):
                 self.spsLabel.setText(f"{prf:.2f} Hz (PRF)")
             else:
                 # Fallback if num_samples not available
+                self.spsLabel.setText(f"{sample_count} sps")
+        elif self._is_radar():
+            # For radar: the stream is flattened frames, so report frames/s
+            samples_per_frame = (
+                int(self._extras.get("num_chirps", 0))
+                * int(self._extras.get("num_samples", 0))
+                * int(self._extras.get("num_rx", 1))
+            )
+
+            if samples_per_frame > 0:
+                self.spsLabel.setText(f"{sample_count / samples_per_frame:.2f} fps")
+            else:
                 self.spsLabel.setText(f"{sample_count} sps")
         else:
             # For time-series signals: display SPS

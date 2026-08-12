@@ -64,6 +64,39 @@ def configure_transport(
         worker_args["packetSize"] = interface_module.packetSize
         active_transport = "ble"
 
+        if data_source_type == data_sources.DataSourceType.SERIAL:
+            # Give the serial worker the framing bytes so it can resync: a fixed
+            # packetSize is only trustworthy while the stream stays aligned, and
+            # one dropped byte otherwise cuts every later packet across two real
+            # ones, silently and permanently. ((header, size) tables resync on
+            # the table itself and need nothing here.)
+            #
+            # Only when those bytes are really in this stream, though. An
+            # interface whose wifiPacketSize differs from its packetSize is
+            # declaring framing that the Wi-Fi transport wraps around each
+            # packet and BLE never carries -- biogapultra_wulpus_pro (0x55/0xAA,
+            # 213 vs 211), whose BLE packets start with a 0x10..0x13 chunk
+            # header instead. Checking for bytes that are not there would reject
+            # every packet and the stream would never start.
+            wifi_size = interface_module.wifiPacketSize
+            transport_framed = (
+                not isinstance(interface_module.packetSize, list)
+                and wifi_size not in (None, 0)
+                and wifi_size != interface_module.packetSize
+            )
+            if transport_framed:
+                logging.info(
+                    "Skipping headerByte/tailerByte: Wi-Fi transport framing "
+                    "(wifiPacketSize %s != packetSize %s), absent in this stream",
+                    wifi_size,
+                    interface_module.packetSize,
+                )
+            else:
+                if interface_module.headerByte is not None:
+                    worker_args["headerByte"] = interface_module.headerByte
+                if interface_module.tailerByte is not None:
+                    worker_args["tailerByte"] = interface_module.tailerByte
+
     # Only transport-aware decoders declare this global variable.
     if "_active_transport" in decode_globals:
         decode_globals["_active_transport"] = active_transport
