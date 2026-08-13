@@ -45,21 +45,42 @@ def _is_bundled_interface_path(interface_path: Path) -> bool:
     return True
 
 
-def _loadInterfacesFromDirectory() -> dict[str, Path]:
+def _platform_and_variant_for(filePath: Path) -> tuple[str, str]:
     """
-    Load all interface modules from the platforms tree (interface_*.py in subfolders).
+    Derive the (platform, variant) display names for a bundled interface file.
+
+    The platform is the top-level folder under ``paths.INTERFACES_DIR``; the
+    variant is the filename stem with ``interface_`` and, when present, the
+    redundant ``<platform>_`` prefix stripped (e.g.
+    ``interface_biogapultra_eeg_mic.py`` under platform ``biogapultra`` ->
+    variant ``eeg_mic``). Falls back to the full stem when the file doesn't
+    happen to start with ``<platform>_``.
+    """
+    platformName = filePath.relative_to(paths.INTERFACES_DIR).parts[0]
+    stem = filePath.stem[10:]  # remove 'interface_'
+    prefix = platformName + "_"
+    variantName = stem[len(prefix):] if stem.startswith(prefix) else stem
+    return platformName, variantName
+
+
+def _loadInterfacesFromDirectory() -> dict[str, dict[str, Path]]:
+    """
+    Load all interface modules from the platforms tree (interface_*.py in
+    subfolders), grouped by their top-level platform folder.
 
     Returns
     -------
-    dict of {str: Path}
-        Dictionary mapping display names to full file paths.
+    dict of {str: dict of {str: Path}}
+        Platform display name -> {variant display name -> file path}. A
+        platform with exactly one interface has exactly one entry in its
+        inner dict.
     """
-    interfaceFiles: dict[str, Path] = {}
+    platforms: dict[str, dict[str, Path]] = {}
     for filePath in sorted(paths.INTERFACES_DIR.rglob("interface_*.py")):
-        displayName = filePath.stem[10:]  # remove 'interface_'
-        interfaceFiles[displayName] = filePath
+        platformName, variantName = _platform_and_variant_for(filePath)
+        platforms.setdefault(platformName, {})[variantName] = filePath
 
-    return interfaceFiles
+    return platforms
 
 
 def _loadInterfaceFromFile(filePath: Path) -> tuple[InterfaceModule | None, str]:
@@ -223,12 +244,14 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.setupUi(self)
 
-        # Populate combo box with interface modules
-        self._interfaceModules = _loadInterfacesFromDirectory()
-        # Add browse option as last item
-        self.interfaceModuleComboBox.addItems(list(self._interfaceModules.keys()))
+        # Populate combo box with platforms; the "Shield:" row appears only
+        # when the selected platform has more than one interface variant.
+        self._interfacesByPlatform = _loadInterfacesFromDirectory()
+        self.interfaceModuleComboBox.addItems(sorted(self._interfacesByPlatform.keys()))
         self.interfaceModuleComboBox.setCurrentIndex(0)
+        # Add browse option as last item
         self.interfaceModuleComboBox.addItem(self._BROWSE_INTERFACE)
+        self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
 
         # Populate combo box with data sources and create configuration widget
         dataSources = list(map(lambda sourceType: sourceType.value, data_sources.DataSourceType))
@@ -247,7 +270,8 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
 
         self.buttonBox.accepted.connect(self._validateDialog)
         self.buttonBox.rejected.connect(self.reject)
-        self.interfaceModuleComboBox.activated.connect(self._onInterfaceModuleSelected)
+        self.interfaceModuleComboBox.activated.connect(self._onPlatformSelected)
+        self.interfaceVariantComboBox.activated.connect(self._onVariantSelected)
         self.dataSourceComboBox.currentTextChanged.connect(self._onDataSourceChange)
         self.browseOutDirButton.clicked.connect(self._browseOutDir)
 
@@ -290,22 +314,52 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             self.setTabOrder(tabOrderedFields[i - 1], tabOrderedFields[i])
         self.setTabOrder(tabOrderedFields[-1], self.fileSavingGroupBox)
 
-    def _onInterfaceModuleSelected(self, index: int) -> None:
-        """Handle interface module selection from ComboBox."""
+    def _onPlatformSelected(self, index: int) -> None:
+        """Handle platform selection from the Interface ComboBox."""
         itemSelected = self.interfaceModuleComboBox.itemText(index)
         if itemSelected == self._BROWSE_INTERFACE:
-            # Browse interface module in external folder
+            self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
             interfacePath = self._browseInterfaceModule()
-            fromBrowsing = True
-        else:
-            # Get interface from combo box
-            interfacePath = self._interfaceModules.get(itemSelected)
-            fromBrowsing = False
-
-        if interfacePath is None:
+            if interfacePath is None:
+                return
+            self._loadAndStoreInterface(interfacePath, fromBrowsing=True)
             return
 
-        # Load interface module
+        variants = self._interfacesByPlatform.get(itemSelected, {})
+        if len(variants) <= 1:
+            # Single-shield platform: load it directly, same as before this
+            # platform grouping existed.
+            self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
+            interfacePath = next(iter(variants.values()), None)
+            if interfacePath is None:
+                return
+            self._loadAndStoreInterface(interfacePath, fromBrowsing=False)
+            return
+
+        # Multiple shields under this platform: show the Shield row and
+        # default to its first entry.
+        self.interfaceVariantComboBox.clear()
+        self.interfaceVariantComboBox.addItems(sorted(variants.keys()))
+        self.interfaceVariantComboBox.setCurrentIndex(0)
+        self.formLayout.setRowVisible(self.interfaceVariantComboBox, True)
+        self._loadAndStoreInterface(
+            variants[self.interfaceVariantComboBox.currentText()], fromBrowsing=False
+        )
+
+    def _onVariantSelected(self, index: int) -> None:
+        """Handle shield selection from the Shield ComboBox."""
+        platformSelected = self.interfaceModuleComboBox.currentText()
+        variantSelected = self.interfaceVariantComboBox.itemText(index)
+        interfacePath = self._interfacesByPlatform.get(platformSelected, {}).get(
+            variantSelected
+        )
+        if interfacePath is None:
+            return
+        self._loadAndStoreInterface(interfacePath, fromBrowsing=False)
+
+    def _loadAndStoreInterface(self, interfacePath: Path, fromBrowsing: bool) -> None:
+        """Load an interface module from `interfacePath` and store it in the
+        pending data source config, or show an error and reset on failure."""
         interfaceModule, errMessage = _loadInterfaceFromFile(interfacePath)
         if interfaceModule is None:
             QMessageBox.critical(
@@ -317,6 +371,7 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
             )
             # Reset to placeholder on error
             self.interfaceModuleComboBox.setCurrentIndex(0)
+            self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
             self.interfaceModulePathLabel.setText("")
             return
 
@@ -433,18 +488,27 @@ class DataSourceConfigDialog(QDialog, Ui_DataSourceConfigDialog):
         self._dataSourceConfig["interfaceModule"] = dataSourceConfig["interfaceModule"]
 
         if _is_bundled_interface_path(interfacePath):
-            # Find and select the interface in the ComboBox
-            interfaceName = interfacePath.name
-            if interfaceName.startswith("interface_") and interfaceName.endswith(".py"):
-                displayName = interfaceName[10:-3]
-                index = self.interfaceModuleComboBox.findText(displayName)
-                if index >= 0:
-                    self.interfaceModuleComboBox.setCurrentIndex(index)
+            # Find and select the platform + shield in the ComboBoxes
+            platformName, variantName = _platform_and_variant_for(interfacePath)
+            platformIndex = self.interfaceModuleComboBox.findText(platformName)
+            if platformIndex >= 0:
+                self.interfaceModuleComboBox.setCurrentIndex(platformIndex)
+                variants = self._interfacesByPlatform.get(platformName, {})
+                if len(variants) > 1:
+                    self.interfaceVariantComboBox.clear()
+                    self.interfaceVariantComboBox.addItems(sorted(variants.keys()))
+                    self.formLayout.setRowVisible(self.interfaceVariantComboBox, True)
+                    variantIndex = self.interfaceVariantComboBox.findText(variantName)
+                    if variantIndex >= 0:
+                        self.interfaceVariantComboBox.setCurrentIndex(variantIndex)
+                else:
+                    self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
         else:
             displayName = self._BROWSE_INTERFACE
             index = self.interfaceModuleComboBox.findText(displayName)
             if index >= 0:
                 self.interfaceModuleComboBox.setCurrentIndex(index)
+            self.formLayout.setRowVisible(self.interfaceVariantComboBox, False)
             self.interfaceModulePathLabel.setText(str(interfacePath))
 
         # 2. Data source-specific config
