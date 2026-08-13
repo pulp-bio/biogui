@@ -92,7 +92,7 @@ def _buildStartSeq(settings: radar.RadarSettings) -> list[bytes | float]:
 def _buildStopSeq() -> list[bytes | float]:
     return [
         bytes([STOP_MMWAVE_STREAMING]),  # STOP_MMWAVE_STREAMING
-        0.05
+        0.05, it c
         bytes([STOP_EEG_STREAMING]),  # STOP_EEG_STREAMING
         0.05,
         bytes([radar.CMD_TURN_OFF]),  # TURN_OFF_MMWAVE
