@@ -40,12 +40,23 @@ class Ui_DataSourceConfigDialog(object):
         self.label1.setObjectName(u"label1")
         self.label1.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label1)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label1)
 
         self.dataSourceComboBox = QComboBox(DataSourceConfigDialog)
         self.dataSourceComboBox.setObjectName(u"dataSourceComboBox")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.dataSourceComboBox)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.dataSourceComboBox)
+
+        self.interfaceVariantLabel = QLabel(DataSourceConfigDialog)
+        self.interfaceVariantLabel.setObjectName(u"interfaceVariantLabel")
+        self.interfaceVariantLabel.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.interfaceVariantLabel)
+
+        self.interfaceVariantComboBox = QComboBox(DataSourceConfigDialog)
+        self.interfaceVariantComboBox.setObjectName(u"interfaceVariantComboBox")
+
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.interfaceVariantComboBox)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -127,6 +138,10 @@ class Ui_DataSourceConfigDialog(object):
         self.interfaceModuleComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"Select an interface module", None))
 #endif // QT_CONFIG(tooltip)
         self.interfaceModulePathLabel.setText("")
+        self.interfaceVariantLabel.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Shield:", None))
+#if QT_CONFIG(tooltip)
+        self.interfaceVariantComboBox.setToolTip(QCoreApplication.translate("DataSourceConfigDialog", u"Select the specific interface within this platform", None))
+#endif // QT_CONFIG(tooltip)
         self.fileSavingGroupBox.setTitle(QCoreApplication.translate("DataSourceConfigDialog", u"Configure file saving", None))
         self.browseOutDirButton.setText(QCoreApplication.translate("DataSourceConfigDialog", u"Browse output directory", None))
         self.outDirPathLabel.setText("")
