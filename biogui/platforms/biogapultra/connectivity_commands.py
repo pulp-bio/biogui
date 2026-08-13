@@ -36,7 +36,10 @@ START_PPG_STREAMING = 39
 STOP_PPG_STREAMING = 40
 START_WULPUS_STREAMING = 41
 STOP_WULPUS_STREAMING = 42
-
+TURN_ON_MM_WAVE = 48
+TURN_OFF_MM_WAVE = 49
+START_MMWAVE_STREAMING = 40
+STOP_MMWAVE_STREAMING = 45
 # Extended battery/system status (v2).
 # Response header 43 = 0x2B is chosen to avoid collisions with streaming
 # packet headers:
