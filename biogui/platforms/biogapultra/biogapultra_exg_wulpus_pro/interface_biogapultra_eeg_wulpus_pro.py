@@ -145,16 +145,22 @@ def _build_sig_info(wulpus_cfg: WulpusUssConfig, ads: ads_config.AdsConfig) -> t
 sigInfo, config_to_signal_name = _build_sig_info(wulpus_config, _ads_config)
 
 startSeq: list[bytes | float] = [
-    bytes([START_EEG_STREAMING]) + ads_config.to_bytes(_ads_config),
+    # WULPUS's own start sequence first, unmodified and uninterrupted --
+    # byte-for-byte and timing-wise the same as interface_biogapultra_wulpus_pro.py's
+    # standalone sequence, so WULPUS sees the same conditions here as it does
+    # running alone. EEG starts only once WULPUS's sequence has fully gone out.
     bytes([START_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),     # MSP430 reset
     wulpus_config.get_conf_package(),        # MSP430 config + start
+    bytes([START_EEG_STREAMING]) + ads_config.to_bytes(_ads_config),
 ]
 
 stopSeq: list[bytes | float] = [
-    bytes([STOP_EEG_STREAMING]),             # STOP_EEG_STREAMING
+    # WULPUS's own stop sequence first, unmodified and uninterrupted -- same
+    # reasoning as startSeq above.
     bytes([STOP_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),     # MSP430 stop
+    bytes([STOP_EEG_STREAMING]),             # STOP_EEG_STREAMING
 ]
 
 # ── Internal decode state ──────────────────────────────────────────────────
@@ -291,14 +297,15 @@ def _configure_eeg_wulpus_module(
         new_sig, new_c2s = _build_sig_info(new_cfg, new_ads)
 
         new_start = [
-            bytes([START_EEG_STREAMING]) + ads_config.to_bytes(new_ads),
+            # See startSeq's comment: WULPUS's own sequence first, unmodified.
             bytes([START_WULPUS_STREAMING]),
             new_cfg.get_restart_package(),
             new_cfg.get_conf_package(),
+            bytes([START_EEG_STREAMING]) + ads_config.to_bytes(new_ads),
         ]
-        new_stop = [bytes([STOP_EEG_STREAMING]),
-                    bytes([STOP_WULPUS_STREAMING]),
-                    new_cfg.get_restart_package()]
+        new_stop = [bytes([STOP_WULPUS_STREAMING]),
+                    new_cfg.get_restart_package(),
+                    bytes([STOP_EEG_STREAMING])]
 
         g = dict(interface_module.decodeFn.__globals__)
         g["wulpus_config"]         = new_cfg
