@@ -17,17 +17,25 @@ Packet layout identical to EEG (211 bytes, EMG_PCKT_SIZE):
   [207:210] metadata
   [210]     0xAA  trailer
 
-Firmware default: gain = 6, vRef = 2.5 V.
 Only the BLE start/stop commands differ from the EEG interface (37/38 vs 18/19).
+The ADS1298's sample rate, mode and gain are user-configurable via the
+gear-icon dialog (see biogapultra_ads.ads_config.AdsConfig); the values used
+here at import time are just the defaults, matching what used to be
+hardcoded before that dialog existed.
 """
 
 import numpy as np
-from biogui.platforms.biogapultra.connectivity_commands import START_EMG_STREAMING, STOP_EMG_STREAMING
 
-_VREF  = 2.5
-_GAIN  = 6
-_NBIT  = 24
-_SCALE = _VREF / (_GAIN * (2 ** (_NBIT - 1) - 1)) * 1e6  # ADC → µV
+from biogui.platforms.biogapultra.biogapultra_ads import ads_config
+from biogui.platforms.biogapultra.biogapultra_ads.ads_config_widget import (
+    AdsConfigWidget,
+)
+from biogui.platforms.biogapultra.connectivity_commands import (
+    START_EMG_STREAMING,
+    STOP_EMG_STREAMING,
+)
+from biogui.platforms.biogapultra.shared_config_dialog import openDialogShell
+from biogui.utils import InterfaceModule, PlatformConfig
 
 _N_SAMPLES = 4
 _N_CH      = 8
@@ -37,24 +45,6 @@ _ADS_BYTES = _N_CH * _BYTES_CH
 _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
 
 packetSize: int = 211
-
-startSeq: list[bytes | float] = [
-    bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
-                                    
-]
-
-#ADS config is: 
-# ADS sample rate = 6 (500 Hz)
-# ADS mode: 0 for normal operation, 5 for square wave test signal
-# channel 2 function (fix to 2)
-# channel 4 function (fix to 4)
-# PGA gain     
-# 0 -- will take 6  
-# (set to 0x10 bytes= 16 if yu want to use squuare wave test signal)
-
-stopSeq: list[bytes | float] = [
-    bytes([STOP_EMG_STREAMING]),         # STOP_EMG_STREAMING
-]
 
 headerByte: int = 0x55
 """Expected first byte of each packet (NRF_EXG_HEADER) -- used by the TCP
@@ -66,44 +56,104 @@ tailerByte: int = 0xAA
 wifiPacketSize: int = packetSize
 """Number of bytes in each Wi-Fi packet; same size as the BLE packet."""
 
-sigInfo: dict = {
-    "emg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "emg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    # Packet counter and µs timestamp: one value per BLE packet (500 Hz / 4
-    # samples = 125 Hz). Selectable in the signal wizard like emg_A/emg_B, but
-    # "plotByDefault": False leaves the "Show plot" box unchecked so they are
-    # recorded without cluttering the plots unless explicitly enabled.
-    "counter": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
-    "timestamp": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
-}
+
+def _buildStartSeq(ads: ads_config.AdsConfig) -> list[bytes | float]:
+    return [
+        bytes([START_EMG_STREAMING]) + ads_config.to_bytes(ads),
+    ]
 
 
-def _unpack_ads_block(data: bytes, offset: int) -> np.ndarray:
-    out = np.empty(_N_CH, dtype=np.float32)
-    for ch in range(_N_CH):
-        b = offset + ch * _BYTES_CH
-        raw = (data[b] << 16) | (data[b + 1] << 8) | data[b + 2]
-        if raw >= 0x800000:
-            raw -= 0x1000000
-        out[ch] = raw * _SCALE
-    return out
+def _buildStopSeq() -> list[bytes | float]:
+    return [
+        bytes([STOP_EMG_STREAMING]),
+    ]
 
 
-def decodeFn(data: bytes) -> dict[str, np.ndarray]:
-    """Decode one 211-byte EMG packet into ADS_A and ADS_B signal arrays."""
-    rows_A = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
-    rows_B = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
-
-    for s, base in enumerate(_SAMPLE_OFFSETS):
-        rows_A[s] = _unpack_ads_block(data, base)
-        rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
-
-    counter = int.from_bytes(data[1:3], "little")
-    timestamp = int.from_bytes(data[3:7], "little")
-
+def _buildSigInfo(ads: ads_config.AdsConfig) -> dict:
+    fs = ads_config.sample_rate_hz(ads)
     return {
-        "emg_A":     rows_A,
-        "emg_B":     rows_B,
-        "counter":   np.array([[counter]], dtype=np.uint16),
-        "timestamp": np.array([[timestamp]], dtype=np.uint32),
+        "emg_A": {
+            "fs": fs,
+            "nCh": _N_CH,
+            "extras": {"type": "time-series", **ads_config.extras_for(ads)},
+        },
+        "emg_B": {"fs": fs, "nCh": _N_CH, "extras": {"type": "time-series"}},
+        # Packet counter and µs timestamp: one value per BLE packet. Selectable
+        # in the signal wizard like emg_A/emg_B, but "plotByDefault": False
+        # leaves the "Show plot" box unchecked so they are recorded without
+        # cluttering the plots unless explicitly enabled.
+        "counter": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+        "timestamp": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
     }
+
+
+def _buildDecodeFn(ads: ads_config.AdsConfig):
+    scale = ads_config.scale_uv(ads)
+
+    def decode(data: bytes) -> dict[str, np.ndarray]:
+        """Decode one 211-byte EMG packet into ADS_A and ADS_B signal arrays."""
+        rows_A = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
+        rows_B = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
+
+        for s, base in enumerate(_SAMPLE_OFFSETS):
+            rows_A[s] = ads_config.unpack_ads_channel_block(data, base, scale, _N_CH, _BYTES_CH)
+            rows_B[s] = ads_config.unpack_ads_channel_block(data, base + _ADS_BYTES, scale, _N_CH, _BYTES_CH)
+
+        counter = int.from_bytes(data[1:3], "little")
+        timestamp = int.from_bytes(data[3:7], "little")
+
+        return {
+            "emg_A":     rows_A,
+            "emg_B":     rows_B,
+            "counter":   np.array([[counter]], dtype=np.uint16),
+            "timestamp": np.array([[timestamp]], dtype=np.uint32),
+        }
+
+    return decode
+
+
+def _buildModule(ads: ads_config.AdsConfig) -> InterfaceModule:
+    return InterfaceModule(
+        packetSize=packetSize,
+        startSeq=_buildStartSeq(ads),
+        stopSeq=_buildStopSeq(),
+        sigInfo=_buildSigInfo(ads),
+        decodeFn=_buildDecodeFn(ads),
+        platformConfig=platformConfig,
+        headerByte=headerByte,
+        tailerByte=tailerByte,
+        wifiPacketSize=wifiPacketSize,
+    )
+
+
+def _configure(parent, interfaceModule: InterfaceModule) -> InterfaceModule | None:
+    current = ads_config.settings_from_sig_info(interfaceModule.sigInfo, "emg_A")
+    widget = AdsConfigWidget(parent)
+    widget.loadSettings(current)
+    if not openDialogShell(parent, [widget], "ADS1298 (EMG) Configuration"):
+        return None
+    return _buildModule(widget.currentSettings())
+
+
+platformConfig = PlatformConfig(
+    id="emg_ads",
+    configureInterfaceModule=_configure,
+    configWidgetClass=AdsConfigWidget,
+    hasInlineConfigAction=True,
+    inlineActionIconName="preferences-system",
+    inlineActionToolTip="Configure ADS1298",
+)
+"""Opens the ADS1298 settings dialog before acquisition, and from the
+source's inline configure action."""
+
+startSeq: list[bytes | float] = _buildStartSeq(ads_config.DEFAULT_CONFIG)
+"""Commands to start EMG streaming."""
+
+stopSeq: list[bytes | float] = _buildStopSeq()
+"""Commands to stop EMG streaming."""
+
+sigInfo: dict = _buildSigInfo(ads_config.DEFAULT_CONFIG)
+"""Signal definitions: two 8-channel EMG streams, plus packet counter and timestamp."""
+
+decodeFn = _buildDecodeFn(ads_config.DEFAULT_CONFIG)
+"""Decode one 211-byte EMG packet into ADS_A and ADS_B signal arrays."""

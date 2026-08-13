@@ -35,26 +35,33 @@ EEG packet layout (211 bytes):
 
 Radar packet layout and decoding live in
 ``biogui.platforms.biogapultra.biogapultra_mmwave.radar``, shared with the
-standalone radar interface.
+standalone radar interface. The ADS1298's sample rate, mode and gain are
+user-configurable via the gear-icon dialog (see
+biogapultra_ads.ads_config.AdsConfig), alongside the radar's own settings.
 """
 
 import numpy as np
 
+from biogui.platforms.biogapultra.biogapultra_ads import ads_config
+from biogui.platforms.biogapultra.biogapultra_ads.ads_config_widget import (
+    AdsConfigWidget,
+)
 from biogui.platforms.biogapultra.biogapultra_mmwave import radar
 from biogui.platforms.biogapultra.biogapultra_mmwave.radar_config_widget import (
     RadarConfigWidget,
-    makeConfigureFn,
 )
+from biogui.platforms.biogapultra.connectivity_commands import (
+    START_EEG_STREAMING,
+    STOP_EEG_STREAMING,
+    START_MMWAVE_STREAMING,
+    STOP_MMWAVE_STREAMING,
+)
+from biogui.platforms.biogapultra.shared_config_dialog import openDialogShell
 from biogui.utils import InterfaceModule, PlatformConfig
 
 # =============================================================================
-# EEG constants (ADS1298 x 2, gain 6, vRef 2.5 V)
+# EEG constants
 # =============================================================================
-
-_VREF = 2.5  # V
-_GAIN = 6  # ADS1298 register 0x00 = gain 6
-_NBIT = 24
-_SCALE = _VREF / (_GAIN * (2 ** (_NBIT - 1) - 1)) * 1e6  # ADC -> uV
 
 _N_SAMPLES = 4
 _N_CH = 8  # channels per ADS chip
@@ -73,15 +80,15 @@ packetSize: list[tuple[int, int]] = [
 ]
 """Two packet types on one link, selected by the first byte."""
 
-from biogui.platforms.biogapultra.connectivity_commands import START_EEG_STREAMING, STOP_EEG_STREAMING, START_MMWAVE_STREAMING, STOP_MMWAVE_STREAMING
-def _buildStartSeq(settings: radar.RadarSettings) -> list[bytes | float]:
+
+def _buildStartSeq(ads: ads_config.AdsConfig, settings: radar.RadarSettings) -> list[bytes | float]:
     return [
         # Bring the radar up and configure it first. Its register write burst is
         # the heaviest SPI_A traffic either sensor produces, so getting it done
         # before the ADS1298 starts sampling keeps it off the shared bus at a
         # point where ExG would be contending for it.
         *radar.powerOnAndConfigureSeq(settings),
-        bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config]), 
+        bytes([START_EEG_STREAMING]) + ads_config.to_bytes(ads),
         0.2,
         # Radar streaming last: the ADS1298 is sampling by now, so the bus is
         # shared from this point on.
@@ -92,22 +99,27 @@ def _buildStartSeq(settings: radar.RadarSettings) -> list[bytes | float]:
 def _buildStopSeq() -> list[bytes | float]:
     return [
         bytes([STOP_MMWAVE_STREAMING]),  # STOP_MMWAVE_STREAMING
-        0.05, it c
+        0.05,
         bytes([STOP_EEG_STREAMING]),  # STOP_EEG_STREAMING
         0.05,
         bytes([radar.CMD_TURN_OFF]),  # TURN_OFF_MMWAVE
     ]
 
 
-def _buildSigInfo(settings: radar.RadarSettings) -> dict:
+def _buildSigInfo(ads: ads_config.AdsConfig, settings: radar.RadarSettings) -> dict:
+    fs = ads_config.sample_rate_hz(ads)
     return {
-        "eeg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-        "eeg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-        # Packet counter and us timestamp: one value per EEG packet
-        # (500 Hz / 4 samples = 125 Hz). "plotByDefault": False records them
-        # without cluttering the plots unless explicitly enabled.
-        "counter": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
-        "timestamp": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+        "eeg_A": {
+            "fs": fs,
+            "nCh": _N_CH,
+            "extras": {"type": "time-series", **ads_config.extras_for(ads)},
+        },
+        "eeg_B": {"fs": fs, "nCh": _N_CH, "extras": {"type": "time-series"}},
+        # Packet counter and us timestamp: one value per EEG packet.
+        # "plotByDefault": False records them without cluttering the plots
+        # unless explicitly enabled.
+        "counter": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+        "timestamp": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
         **radar.sigInfoDict(settings),
     }
 
@@ -129,21 +141,10 @@ def _emptyResult() -> dict[str, np.ndarray]:
     }
 
 
-def _unpackAdsBlock(data: bytes, offset: int) -> np.ndarray:
-    """Unpack one 24-byte ADS block (8 ch x 3 B big-endian signed) -> float32 uV."""
-    out = np.empty(_N_CH, dtype=np.float32)
-    for ch in range(_N_CH):
-        b = offset + ch * _BYTES_CH
-        raw = (data[b] << 16) | (data[b + 1] << 8) | data[b + 2]
-        if raw >= 0x800000:
-            raw -= 0x1000000
-        out[ch] = raw * _SCALE
-    return out
-
-
-def _buildDecodeFn(settings: radar.RadarSettings):
+def _buildDecodeFn(ads: ads_config.AdsConfig, settings: radar.RadarSettings):
     """Fresh radar decoder per settings change, so no unwrap state carries over."""
     decoder = radar.RadarDecoder(settings)
+    scale = ads_config.scale_uv(ads)
 
     def decode(data: bytes) -> dict[str, np.ndarray]:
         """
@@ -177,8 +178,8 @@ def _buildDecodeFn(settings: radar.RadarSettings):
             rowsA = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
             rowsB = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
             for s, base in enumerate(_SAMPLE_OFFSETS):
-                rowsA[s] = _unpackAdsBlock(data, base)
-                rowsB[s] = _unpackAdsBlock(data, base + _ADS_BYTES)
+                rowsA[s] = ads_config.unpack_ads_channel_block(data, base, scale, _N_CH, _BYTES_CH)
+                rowsB[s] = ads_config.unpack_ads_channel_block(data, base + _ADS_BYTES, scale, _N_CH, _BYTES_CH)
 
             result["eeg_A"] = rowsA
             result["eeg_B"] = rowsB
@@ -195,36 +196,48 @@ def _buildDecodeFn(settings: radar.RadarSettings):
     return decode
 
 
-def _buildModule(settings: radar.RadarSettings) -> InterfaceModule:
+def _buildModule(ads: ads_config.AdsConfig, settings: radar.RadarSettings) -> InterfaceModule:
     return InterfaceModule(
         packetSize=packetSize,
-        startSeq=_buildStartSeq(settings),
+        startSeq=_buildStartSeq(ads, settings),
         stopSeq=_buildStopSeq(),
-        sigInfo=_buildSigInfo(settings),
-        decodeFn=_buildDecodeFn(settings),
+        sigInfo=_buildSigInfo(ads, settings),
+        decodeFn=_buildDecodeFn(ads, settings),
         platformConfig=platformConfig,
     )
 
 
+def _configure(parent, interfaceModule: InterfaceModule) -> InterfaceModule | None:
+    currentAds = ads_config.settings_from_sig_info(interfaceModule.sigInfo, "eeg_A")
+    currentRadar = radar.settingsFromSigInfo(interfaceModule.sigInfo)
+
+    adsWidget = AdsConfigWidget(parent)
+    adsWidget.loadSettings(currentAds)
+
+    radarWidget = RadarConfigWidget(parent)
+    radarWidget.loadSettings(currentRadar)
+
+    if not openDialogShell(parent, [adsWidget, radarWidget], "EEG + mmWave Radar Configuration"):
+        return None
+    return _buildModule(adsWidget.currentSettings(), radarWidget.currentSettings())
+
+
 platformConfig = PlatformConfig(
     id="eeg_mmwave",
-    configureInterfaceModule=makeConfigureFn(
-        "EEG + mmWave Radar Configuration", _buildModule
-    ),
+    configureInterfaceModule=_configure,
     configWidgetClass=RadarConfigWidget,
 )
-"""Opens the radar settings dialog before acquisition, and from the source's
-inline configure action. Only the radar has adjustable settings; the ExG chain is
-fixed by the firmware."""
+"""Opens the ADS1298 + radar settings dialog before acquisition, and from the
+source's inline configure action."""
 
-startSeq: list[bytes | float] = _buildStartSeq(radar.DEFAULT_SETTINGS)
+startSeq: list[bytes | float] = _buildStartSeq(ads_config.DEFAULT_CONFIG, radar.DEFAULT_SETTINGS)
 """Commands to configure the radar, start EEG, then start radar streaming."""
 
 stopSeq: list[bytes | float] = _buildStopSeq()
 """Commands to stop radar streaming, stop EEG, then cut the radar's power."""
 
-sigInfo: dict = _buildSigInfo(radar.DEFAULT_SETTINGS)
-"""Signal definitions: two 8-channel EEG streams at 500 Hz plus the radar signals."""
+sigInfo: dict = _buildSigInfo(ads_config.DEFAULT_CONFIG, radar.DEFAULT_SETTINGS)
+"""Signal definitions: two 8-channel EEG streams plus the radar signals."""
 
-decodeFn = _buildDecodeFn(radar.DEFAULT_SETTINGS)
+decodeFn = _buildDecodeFn(ads_config.DEFAULT_CONFIG, radar.DEFAULT_SETTINGS)
 """Decode one packet of either type."""

@@ -10,6 +10,10 @@ Identical to interface_eeg_wulpus.py except:
   - BLE start command: 37 (START_EMG_STREAMING)  instead of 18
   - BLE stop  command: 38 (STOP_EMG_STREAMING)   instead of 19
   - Signal names: emg_A / emg_B                  instead of eeg_A / eeg_B
+
+The gear-icon dialog exposes both the ADS1298 settings (see
+biogapultra_ads.ads_config.AdsConfig) and the WULPUS PRO settings in one
+window; accepting rebuilds both.
 """
 
 import copy
@@ -17,9 +21,14 @@ import logging
 import types
 
 import numpy as np
-from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QWidget
 
+from biogui.platforms.biogapultra.biogapultra_ads import ads_config
+from biogui.platforms.biogapultra.biogapultra_ads.ads_config_widget import (
+    AdsConfigWidget,
+)
 from biogui.platforms.biogapultra.connectivity_commands import START_EMG_STREAMING, STOP_EMG_STREAMING, START_WULPUS_STREAMING, STOP_WULPUS_STREAMING
+from biogui.platforms.biogapultra.shared_config_dialog import openDialogShell
 from biogui.platforms.wulpus_pro.defaults import create_default_biceps_wulpus_uss_config
 from biogui.platforms.wulpus_pro.protocol import (
     NUM_IMU_SAMPLES,
@@ -37,16 +46,14 @@ from biogui.utils import InterfaceModule, PlatformConfig
 logger = logging.getLogger(__name__)
 
 # ── ADS1298 decode constants ───────────────────────────────────────────────
-_VREF  = 2.5
-_GAIN  = 6
-_NBIT  = 24
-_SCALE = _VREF / (_GAIN * (2 ** (_NBIT - 1) - 1)) * 1e6
-
-_N_SAMPLES      = 4
 _N_CH           = 8
 _BYTES_CH       = 3
+_N_SAMPLES      = 4
 _ADS_BYTES      = _N_CH * _BYTES_CH
 _SAMPLE_OFFSETS = [7 + i * 50 for i in range(_N_SAMPLES)]
+
+_ads_config = ads_config.DEFAULT_CONFIG
+_SCALE = ads_config.scale_uv(_ads_config)   # ADC → µV; rebuilt on reconfiguration
 
 # ── WULPUS configuration ───────────────────────────────────────────────────
 wulpus_config = create_default_biceps_wulpus_uss_config()
@@ -65,9 +72,74 @@ _WULPUS_META_TS_OFF  = 3    # microsecond timestamp (uint32 LE)
 
 packetSize: int = _BLE_PACKET_SIZE
 
+headerByte: int = 0x55
+"""Expected first byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
+
+tailerByte: int = 0xAA
+"""Expected last byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
+
+
+def _build_sig_info(wulpus_cfg: WulpusUssConfig, ads: ads_config.AdsConfig) -> tuple[dict, dict[int, str]]:
+    """Build sigInfo + config_to_signal_name for a given WULPUS config and ADS
+    config. Shared by the module-level defaults and the reconfiguration dialog,
+    so the two can never drift apart."""
+    meas_period_s       = wulpus_cfg.meas_period / 1e6
+    period_per_config_s = meas_period_s * wulpus_cfg.num_txrx_configs
+    accel_enabled        = is_accelerometer_enabled_from_config(wulpus_cfg)
+    num_us_samples       = get_num_us_samples_from_config(wulpus_cfg)
+    us_fs                = num_us_samples / period_per_config_s
+    adc_start_delay      = (wulpus_cfg.start_adcsampl - wulpus_cfg.start_ppg) * 1e-6
+
+    sig_info: dict = {}
+    config_to_signal_name: dict[int, str] = {}
+    for cfg_id in range(wulpus_cfg.num_txrx_configs):
+        rx_ch = get_rx_channel_for_config(wulpus_cfg, cfg_id)
+        if rx_ch is None:
+            continue
+        sig_name = (
+            "ultrasound" if wulpus_cfg.num_txrx_configs == 1
+            else f"ultrasound_cfg{cfg_id}_rx{rx_ch}"
+        )
+        config_to_signal_name[cfg_id] = sig_name
+        sig_info[sig_name] = {
+            "fs": us_fs,
+            "nCh": 1,
+            "extras": {
+                "type": "ultrasound",
+                "config_id": cfg_id,
+                "rx_channel": rx_ch,
+                "num_samples": num_us_samples,
+                "meas_period": wulpus_cfg.meas_period,
+                "adc_sampling_freq": wulpus_cfg.sampling_freq,
+                "adc_start_delay": adc_start_delay,
+            },
+        }
+
+    sig_info.update(get_standard_signal_definitions_for_mode(meas_period_s, accel_enabled))
+
+    emg_fs = ads_config.sample_rate_hz(ads)
+    emg_packet_rate = emg_fs / _N_SAMPLES
+    sig_info["emg_A"] = {
+        "fs": emg_fs,
+        "nCh": _N_CH,
+        "extras": {"type": "time-series", **ads_config.extras_for(ads)},
+    }
+    sig_info["emg_B"]         = {"fs": emg_fs, "nCh": _N_CH, "extras": {"type": "time-series"}}
+    # ExG packet counter + µs timestamp: selectable in the wizard like emg_A/emg_B,
+    # but off by default (mirrors the standalone ExG interface).
+    sig_info["emg_counter"]   = {"fs": emg_packet_rate, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
+    sig_info["emg_timestamp"] = {"fs": emg_packet_rate, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
+
+    if not sig_info:
+        raise ValueError("No active RX configurations in WULPUS setup.")
+
+    return sig_info, config_to_signal_name
+
+
+sigInfo, config_to_signal_name = _build_sig_info(wulpus_config, _ads_config)
 
 startSeq: list[bytes | float] = [
-    bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
+    bytes([START_EMG_STREAMING]) + ads_config.to_bytes(_ads_config),
     bytes([START_WULPUS_STREAMING]),
     wulpus_config.get_restart_package(),    # MSP430 reset
     wulpus_config.get_conf_package(),       # MSP430 config + start
@@ -79,69 +151,7 @@ stopSeq: list[bytes | float] = [
     wulpus_config.get_restart_package(),
 ]
 
-headerByte: int = 0x55
-"""Expected first byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
-
-tailerByte: int = 0xAA
-"""Expected last byte of each packet when using TCP client data source to detect and resync from a misaligned stream."""
-
-# ── Build sigInfo ──────────────────────────────────────────────────────────
-_meas_period_s       = wulpus_config.meas_period / 1e6
-_period_per_config_s = _meas_period_s * wulpus_config.num_txrx_configs
-_accel_enabled       = is_accelerometer_enabled_from_config(wulpus_config)
-_num_us_samples      = get_num_us_samples_from_config(wulpus_config)
-_us_fs               = _num_us_samples / _period_per_config_s
-_adc_start_delay     = (wulpus_config.start_adcsampl - wulpus_config.start_ppg) * 1e-6
-
-sigInfo: dict = {}
-
-config_to_signal_name: dict[int, str] = {}
-for _cfg_id in range(wulpus_config.num_txrx_configs):
-    _rx_ch = get_rx_channel_for_config(wulpus_config, _cfg_id)
-    if _rx_ch is None:
-        continue
-    _sig = (
-        "ultrasound" if wulpus_config.num_txrx_configs == 1
-        else f"ultrasound_cfg{_cfg_id}_rx{_rx_ch}"
-    )
-    config_to_signal_name[_cfg_id] = _sig
-    sigInfo[_sig] = {
-        "fs": _us_fs,
-        "nCh": 1,
-        "extras": {
-            "type": "ultrasound",
-            "config_id": _cfg_id,
-            "rx_channel": _rx_ch,
-            "num_samples": _num_us_samples,
-            "meas_period": wulpus_config.meas_period,
-            "adc_sampling_freq": wulpus_config.sampling_freq,
-            "adc_start_delay": _adc_start_delay,
-        },
-    }
-
-sigInfo.update(get_standard_signal_definitions_for_mode(_meas_period_s, _accel_enabled))
-sigInfo["emg_A"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-sigInfo["emg_B"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-# ExG packet counter + µs timestamp: selectable in the wizard like emg_A/emg_B,
-# but off by default (mirrors the standalone ExG interface).
-sigInfo["emg_counter"]   = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
-sigInfo["emg_timestamp"] = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
-
-if not sigInfo:
-    raise ValueError("No active RX configurations in WULPUS setup.")
-
 _wulpus_buf: list[bytes] = []
-
-
-def _unpack_ads_block(data: bytes, offset: int) -> np.ndarray:
-    arr = np.empty(_N_CH, dtype=np.float32)
-    for ch in range(_N_CH):
-        b = offset + ch * _BYTES_CH
-        raw = (data[b] << 16) | (data[b + 1] << 8) | data[b + 2]
-        if raw >= 0x800000:
-            raw -= 0x1000000
-        arr[ch] = raw * _SCALE
-    return arr
 
 
 def decodeFn(data: bytes) -> dict[str, np.ndarray]:
@@ -173,8 +183,8 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
         rows_A = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
         rows_B = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
         for s, base in enumerate(_SAMPLE_OFFSETS):
-            rows_A[s] = _unpack_ads_block(data, base)
-            rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
+            rows_A[s] = ads_config.unpack_ads_channel_block(data, base, _SCALE, _N_CH, _BYTES_CH)
+            rows_B[s] = ads_config.unpack_ads_channel_block(data, base + _ADS_BYTES, _SCALE, _N_CH, _BYTES_CH)
         counter = int.from_bytes(data[1:3], "little")
         timestamp = int.from_bytes(data[3:7], "little")
         result["emg_A"]         = rows_A
@@ -235,107 +245,69 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     return result
 
 
-# ── WULPUS reconfiguration support ────────────────────────────────────────
+# ── ADS1298 + WULPUS reconfiguration support ──────────────────────────────
 
 def _configure_emg_wulpus_module(
     parent: QWidget,
     interface_module: InterfaceModule,
 ) -> InterfaceModule | None:
-    """Open the WULPUS PRO config dialog and return an updated EMG+WULPUS module."""
+    """Open the ADS1298 + WULPUS PRO config dialogs and return an updated
+    EMG+WULPUS module."""
     decode_globals = getattr(interface_module.decodeFn, "__globals__", {})
-    current_config = decode_globals.get("wulpus_config")
+    current_wulpus_config = decode_globals.get("wulpus_config")
+    current_ads = ads_config.settings_from_sig_info(interface_module.sigInfo, "emg_A")
 
-    dialog = QDialog(parent)
-    dialog.setWindowTitle("EMG + WULPUS PRO Configuration")
-    dialog.setModal(True)
-    dialog.resize(650, 750)
-    layout = QVBoxLayout(dialog)
-    config_widget = WulpusConfigWidget(dialog)
-    layout.addWidget(config_widget)
+    ads_widget = AdsConfigWidget(parent)
+    ads_widget.loadSettings(current_ads)
 
-    if isinstance(current_config, WulpusUssConfig):
-        config_widget.load_config(copy.deepcopy(current_config))
+    wulpus_widget = WulpusConfigWidget(parent)
+    if isinstance(current_wulpus_config, WulpusUssConfig):
+        wulpus_widget.load_config(copy.deepcopy(current_wulpus_config))
+    # The shell's own Ok button now drives acceptance for both sections.
+    wulpus_widget.applyConfigButton.setVisible(False)
 
     configured: list[InterfaceModule | None] = [None]
 
-    def _apply_and_accept() -> None:
-        try:
-            new_cfg = config_widget.get_current_config()
-            mp_s  = new_cfg.meas_period / 1e6
-            ppc_s = mp_s * new_cfg.num_txrx_configs
-            acc   = is_accelerometer_enabled_from_config(new_cfg)
-            n_us  = get_num_us_samples_from_config(new_cfg)
-            us_fs = n_us / ppc_s
-            adc_delay = (new_cfg.start_adcsampl - new_cfg.start_ppg) * 1e-6
+    def _apply() -> None:
+        new_ads = ads_widget.currentSettings()
+        new_cfg = wulpus_widget.get_current_config()
 
-            new_c2s: dict[int, str] = {}
-            new_sig: dict = {}
-            for _cid in range(new_cfg.num_txrx_configs):
-                rx_ch = get_rx_channel_for_config(new_cfg, _cid)
-                if rx_ch is None:
-                    continue
-                _sname = (
-                    "ultrasound" if new_cfg.num_txrx_configs == 1
-                    else f"ultrasound_cfg{_cid}_rx{rx_ch}"
-                )
-                new_c2s[_cid] = _sname
-                new_sig[_sname] = {
-                    "fs": us_fs, "nCh": 1,
-                    "extras": {
-                        "type": "ultrasound",
-                        "config_id": _cid,
-                        "rx_channel": rx_ch,
-                        "num_samples": n_us,
-                        "meas_period": new_cfg.meas_period,
-                        "adc_sampling_freq": new_cfg.sampling_freq,
-                        "adc_start_delay": adc_delay,
-                    },
-                }
-            new_sig.update(get_standard_signal_definitions_for_mode(mp_s, acc))
-            new_sig["emg_A"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-            new_sig["emg_B"]         = {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}}
-            new_sig["emg_counter"]   = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
-            new_sig["emg_timestamp"] = {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}}
+        new_sig, new_c2s = _build_sig_info(new_cfg, new_ads)
 
-            if not new_sig:
-                raise ValueError("No active RX configurations found.")
+        new_start = [
+            bytes([START_EMG_STREAMING]) + ads_config.to_bytes(new_ads),
+            bytes([START_WULPUS_STREAMING]),
+            new_cfg.get_restart_package(), 0.5,
+            new_cfg.get_conf_package(),
+        ]
+        new_stop = [bytes([STOP_EMG_STREAMING]),
+                    bytes([STOP_WULPUS_STREAMING]),
+                    new_cfg.get_restart_package()]
 
-            new_start = [
-                bytes([START_EMG_STREAMING, 6, 0, 2, 4, 0]),    # START_EMG_STREAMING + 5-byte ADS config
-                bytes([START_WULPUS_STREAMING]),
-                new_cfg.get_restart_package(), 0.5,
-                new_cfg.get_conf_package(),
-            ]
-            new_stop = [bytes([STOP_EMG_STREAMING]),
-                        bytes([STOP_WULPUS_STREAMING]),
-                        new_cfg.get_restart_package()]
+        g = dict(interface_module.decodeFn.__globals__)
+        g["wulpus_config"]         = new_cfg
+        g["sigInfo"]               = new_sig
+        g["config_to_signal_name"] = new_c2s
+        g["_SCALE"]                = ads_config.scale_uv(new_ads)
+        new_decode = types.FunctionType(
+            interface_module.decodeFn.__code__,
+            g,
+            interface_module.decodeFn.__name__,
+            interface_module.decodeFn.__defaults__,
+            interface_module.decodeFn.__closure__,
+        )
+        configured[0] = InterfaceModule(
+            packetSize=interface_module.packetSize,
+            startSeq=new_start,
+            stopSeq=new_stop,
+            sigInfo=new_sig,
+            decodeFn=new_decode,
+            platformConfig=interface_module.platformConfig,
+        )
 
-            g = dict(interface_module.decodeFn.__globals__)
-            g["wulpus_config"]         = new_cfg
-            g["sigInfo"]               = new_sig
-            g["config_to_signal_name"] = new_c2s
-            new_decode = types.FunctionType(
-                interface_module.decodeFn.__code__,
-                g,
-                interface_module.decodeFn.__name__,
-                interface_module.decodeFn.__defaults__,
-                interface_module.decodeFn.__closure__,
-            )
-            configured[0] = InterfaceModule(
-                packetSize=interface_module.packetSize,
-                startSeq=new_start,
-                stopSeq=new_stop,
-                sigInfo=new_sig,
-                decodeFn=new_decode,
-                platformConfig=interface_module.platformConfig,
-            )
-            dialog.accept()
-        except Exception as err:
-            QMessageBox.critical(dialog, "Configuration Error", f"Invalid configuration: {err}")
-
-    config_widget.applyConfigButton.clicked.connect(_apply_and_accept)
-
-    if dialog.exec() != QDialog.DialogCode.Accepted:
+    if not openDialogShell(
+        parent, [ads_widget, wulpus_widget], "EMG + WULPUS PRO Configuration", onAccept=_apply
+    ):
         return None
     return configured[0]
 
@@ -346,5 +318,5 @@ platformConfig = PlatformConfig(
     configWidgetClass=WulpusConfigWidget,
     hasInlineConfigAction=True,
     inlineActionIconName="preferences-system",
-    inlineActionToolTip="Configure WULPUS PRO",
+    inlineActionToolTip="Configure ADS1298 + WULPUS PRO",
 )

@@ -19,16 +19,14 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QSpinBox,
-    QVBoxLayout,
     QWidget,
 )
 
 from biogui.platforms.biogapultra.biogapultra_mmwave import radar
+from biogui.platforms.biogapultra.shared_config_dialog import openDialogShell
 
 
 class RadarConfigWidget(QWidget):
@@ -128,24 +126,10 @@ def openConfigDialog(
     RadarSettings or None
         The edited settings, or None if the dialog was cancelled.
     """
-    dialog = QDialog(parent)
-    dialog.setWindowTitle(title)
-    dialog.setModal(True)
-
-    layout = QVBoxLayout(dialog)
-    widget = RadarConfigWidget(dialog)
+    widget = RadarConfigWidget(parent)
     widget.loadSettings(settings)
-    layout.addWidget(widget)
 
-    buttons = QDialogButtonBox(
-        QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-        dialog,
-    )
-    buttons.accepted.connect(dialog.accept)
-    buttons.rejected.connect(dialog.reject)
-    layout.addWidget(buttons)
-
-    if dialog.exec() != QDialog.DialogCode.Accepted:
+    if not openDialogShell(parent, [widget], title):
         return None
     return widget.currentSettings()
 

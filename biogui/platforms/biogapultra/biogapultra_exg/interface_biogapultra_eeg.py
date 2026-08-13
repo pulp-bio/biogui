@@ -18,20 +18,28 @@ Packet layout (211 bytes, EEG_PCKT_SIZE):
   [210]     0xAA  trailer
 
 Each ADS block is 8 channels × 3 bytes (big-endian 24-bit 2's complement).
-Firmware default: gain = 6, vRef = 2.5 V.
+The ADS1298's sample rate, mode and gain are user-configurable via the
+gear-icon dialog (see biogapultra_ads.ads_config.AdsConfig); the values used
+here at import time are just the defaults, matching what used to be
+hardcoded before that dialog existed.
 """
 
 import numpy as np
-from biogui.platforms.biogapultra.connectivity_commands import START_EEG_STREAMING, STOP_EEG_STREAMING 
 
-_VREF  = 2.5          # V
-_GAIN  = 6            # ADS1298 register 0x00 = gain 6
-_NBIT  = 24
-_SCALE = _VREF / (_GAIN * (2 ** (_NBIT - 1) - 1)) * 1e6  # ADC → µV
+from biogui.platforms.biogapultra.biogapultra_ads import ads_config
+from biogui.platforms.biogapultra.biogapultra_ads.ads_config_widget import (
+    AdsConfigWidget,
+)
+from biogui.platforms.biogapultra.connectivity_commands import (
+    START_EEG_STREAMING,
+    STOP_EEG_STREAMING,
+)
+from biogui.platforms.biogapultra.shared_config_dialog import openDialogShell
+from biogui.utils import InterfaceModule, PlatformConfig
 
 _N_SAMPLES = 4
 _N_CH      = 8        # channels per ADS chip
-_BYTES_CH  = 3        # 24-bit
+_BYTES_CH  = 3         # 24-bit
 _ADS_BYTES = _N_CH * _BYTES_CH   # 24
 
 # Byte offsets for each sample block (50 bytes each, starting at byte 7)
@@ -51,58 +59,103 @@ wifiPacketSize: int = packetSize
 """Number of bytes in each Wi-Fi packet; same size as the BLE packet."""
 
 
-startSeq: list[bytes | float] = [
-    bytes([START_EEG_STREAMING, 6, 0, 2, 4, 0]),   # START_EEG_STREAMING + 5-byte ADS config
-]
+def _buildStartSeq(ads: ads_config.AdsConfig) -> list[bytes | float]:
+    return [
+        bytes([START_EEG_STREAMING]) + ads_config.to_bytes(ads),
+    ]
+
+
+def _buildStopSeq() -> list[bytes | float]:
+    return [
+        bytes([STOP_EEG_STREAMING]),
+    ]
+
+
+def _buildSigInfo(ads: ads_config.AdsConfig) -> dict:
+    fs = ads_config.sample_rate_hz(ads)
+    return {
+        "eeg_A": {
+            "fs": fs,
+            "nCh": _N_CH,
+            "extras": {"type": "time-series", **ads_config.extras_for(ads)},
+        },
+        "eeg_B": {"fs": fs, "nCh": _N_CH, "extras": {"type": "time-series"}},
+        # Packet counter and µs timestamp: one value per BLE packet. Selectable
+        # in the signal wizard like eeg_A/eeg_B, but "plotByDefault": False
+        # leaves the "Show plot" box unchecked so they are recorded without
+        # cluttering the plots unless explicitly enabled.
+        "counter": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+        "timestamp": {"fs": fs / _N_SAMPLES, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
+    }
+
+
+def _buildDecodeFn(ads: ads_config.AdsConfig):
+    scale = ads_config.scale_uv(ads)
+
+    def decode(data: bytes) -> dict[str, np.ndarray]:
+        """Decode one 211-byte EEG packet into ADS_A and ADS_B signal arrays."""
+        rows_A = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
+        rows_B = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
+
+        for s, base in enumerate(_SAMPLE_OFFSETS):
+            rows_A[s] = ads_config.unpack_ads_channel_block(data, base, scale, _N_CH, _BYTES_CH)
+            rows_B[s] = ads_config.unpack_ads_channel_block(data, base + _ADS_BYTES, scale, _N_CH, _BYTES_CH)
+
+        counter = int.from_bytes(data[1:3], "little")
+        timestamp = int.from_bytes(data[3:7], "little")
+
+        return {
+            "eeg_A":     rows_A,
+            "eeg_B":     rows_B,
+            "counter":   np.array([[counter]], dtype=np.uint16),
+            "timestamp": np.array([[timestamp]], dtype=np.uint32),
+        }
+
+    return decode
+
+
+def _buildModule(ads: ads_config.AdsConfig) -> InterfaceModule:
+    return InterfaceModule(
+        packetSize=packetSize,
+        startSeq=_buildStartSeq(ads),
+        stopSeq=_buildStopSeq(),
+        sigInfo=_buildSigInfo(ads),
+        decodeFn=_buildDecodeFn(ads),
+        platformConfig=platformConfig,
+        headerByte=headerByte,
+        tailerByte=tailerByte,
+        wifiPacketSize=wifiPacketSize,
+    )
+
+
+def _configure(parent, interfaceModule: InterfaceModule) -> InterfaceModule | None:
+    current = ads_config.settings_from_sig_info(interfaceModule.sigInfo, "eeg_A")
+    widget = AdsConfigWidget(parent)
+    widget.loadSettings(current)
+    if not openDialogShell(parent, [widget], "ADS1298 (EEG) Configuration"):
+        return None
+    return _buildModule(widget.currentSettings())
+
+
+platformConfig = PlatformConfig(
+    id="eeg_ads",
+    configureInterfaceModule=_configure,
+    configWidgetClass=AdsConfigWidget,
+    hasInlineConfigAction=True,
+    inlineActionIconName="preferences-system",
+    inlineActionToolTip="Configure ADS1298",
+)
+"""Opens the ADS1298 settings dialog before acquisition, and from the
+source's inline configure action."""
+
+startSeq: list[bytes | float] = _buildStartSeq(ads_config.DEFAULT_CONFIG)
 """Commands to start EEG streaming."""
 
-stopSeq: list[bytes | float] = [
-    bytes([STOP_EEG_STREAMING]),         # STOP_EEG_STREAMING
-]
+stopSeq: list[bytes | float] = _buildStopSeq()
 """Commands to stop EEG streaming."""
 
-sigInfo: dict = {
-    "eeg_A": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    "eeg_B": {"fs": 500.0, "nCh": _N_CH, "extras": {"type": "time-series"}},
-    # Packet counter and µs timestamp: one value per BLE packet (500 Hz / 4
-    # samples = 125 Hz). Selectable in the signal wizard like eeg_A/eeg_B, but
-    # "plotByDefault": False leaves the "Show plot" box unchecked so they are
-    # recorded without cluttering the plots unless explicitly enabled.
-    "counter": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
-    "timestamp": {"fs": 125.0, "nCh": 1, "extras": {"type": "time-series", "plotByDefault": False}},
-}
-"""Signal definitions: two 8-channel EEG streams at 500 Hz, plus packet counter and timestamp."""
+sigInfo: dict = _buildSigInfo(ads_config.DEFAULT_CONFIG)
+"""Signal definitions: two 8-channel EEG streams, plus packet counter and timestamp."""
 
-
-def _unpack_ads_block(data: bytes, offset: int) -> np.ndarray:
-    """Unpack one 24-byte ADS block (8 ch × 3 B big-endian signed) → float32 µV."""
-    out = np.empty(_N_CH, dtype=np.float32)
-    for ch in range(_N_CH):
-        b = offset + ch * _BYTES_CH
-        raw = (data[b] << 16) | (data[b + 1] << 8) | data[b + 2]
-        if raw >= 0x800000:
-            raw -= 0x1000000
-        out[ch] = raw * _SCALE
-    return out
-
-
-def decodeFn(data: bytes) -> dict[str, np.ndarray]:
-    """Decode one 211-byte EEG packet into ADS_A and ADS_B signal arrays."""
-    rows_A = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
-    rows_B = np.empty((_N_SAMPLES, _N_CH), dtype=np.float32)
-
-    for s, base in enumerate(_SAMPLE_OFFSETS):
-        rows_A[s] = _unpack_ads_block(data, base)
-        rows_B[s] = _unpack_ads_block(data, base + _ADS_BYTES)
-
-    counter = int.from_bytes(data[1:3], "little")
-    #print(f"[EEG] Counter: {counter}")
-    timestamp = int.from_bytes(data[3:7], "little")
-
-
-    return {
-        "eeg_A":     rows_A,
-        "eeg_B":     rows_B,
-        "counter":   np.array([[counter]], dtype=np.uint16),
-        "timestamp": np.array([[timestamp]], dtype=np.uint32),
-    }
+decodeFn = _buildDecodeFn(ads_config.DEFAULT_CONFIG)
+"""Decode one 211-byte EEG packet into ADS_A and ADS_B signal arrays."""
