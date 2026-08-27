@@ -191,10 +191,10 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     acq_nr = np.frombuffer(payload[2:4], dtype="<u2")[0]            #9-10
     rf_arr = np.frombuffer(payload[4:], dtype="<i2")
 
-    print(
-        f"[WULPUS] SOF=0x{sof_mask:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
-        f"rf_samples={len(rf_arr)} raw_header_bytes={payload[:8].hex()}"
-    )
+    # print(
+    #     f"[WULPUS] SOF=0x{sof_mask:02X} tx_rx_id={tx_rx_id} acq_nr={acq_nr} "
+    #     f"rf_samples={len(rf_arr)} raw_header_bytes={payload[:8].hex()}"
+    # )
 
     accelerometer_enabled = is_accelerometer_enabled_from_config(wulpus_config)
     num_us_samples = get_num_us_samples_from_config(wulpus_config)
