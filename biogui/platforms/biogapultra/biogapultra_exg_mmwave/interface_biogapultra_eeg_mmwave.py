@@ -88,8 +88,9 @@ def _buildStartSeq(ads: ads_config.AdsConfig, settings: radar.RadarSettings) -> 
         # before the ADS1298 starts sampling keeps it off the shared bus at a
         # point where ExG would be contending for it.
         *radar.powerOnAndConfigureSeq(settings),
+        0.5, 
         bytes([START_EEG_STREAMING]) + ads_config.to_bytes(ads),
-        0.2,
+        0.5,
         # Radar streaming last: the ADS1298 is sampling by now, so the bus is
         # shared from this point on.
         bytes([START_MMWAVE_STREAMING]),  # START_MMWAVE_STREAMING
