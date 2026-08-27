@@ -36,10 +36,6 @@ START_PPG_STREAMING = 39
 STOP_PPG_STREAMING = 40
 START_WULPUS_STREAMING = 41
 STOP_WULPUS_STREAMING = 42
-TURN_ON_MM_WAVE = 48
-TURN_OFF_MM_WAVE = 49
-START_MMWAVE_STREAMING = 40
-STOP_MMWAVE_STREAMING = 45
 # Extended battery/system status (v2).
 # Response header 43 = 0x2B is chosen to avoid collisions with streaming
 # packet headers:
@@ -52,6 +48,19 @@ STOP_MMWAVE_STREAMING = 45
 # This avoids the ambiguity of the legacy REQUEST_BATTERY_STATE echo
 # (17 = 0x11), which overlaps with WULPUS chunk 2 during ultrasound streaming.
 REQUEST_SYSTEM_STATUS = 43
+
+# mmWave radar (Infineon BGT60TR13C on the SENSEI mmWave shield).
+# Ordering the host must respect: TURN_ON before CONFIGURE, CONFIGURE before
+# START. The three CHANGE_* take one value byte and are only read at the next
+# CONFIGURE, so they belong before it.
+START_MMWAVE_STREAMING = 44
+STOP_MMWAVE_STREAMING = 45
+CONFIGURE_MMWAVE = 46
+TURN_OFF_MMWAVE = 47
+TURN_ON_MMWAVE = 48
+CHANGE_IFGAIN_MMWAVE = 49
+CHANGE_TXPOWER_MMWAVE = 50
+CHANGE_FPS_MMWAVE = 51
 
 # Deliberately NOT 250/251 (0xFA/0xFB):
 # sensors/wulpus/wulpus_appl.c treats those values as protocol-internal

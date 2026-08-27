@@ -37,6 +37,8 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
+from biogui.platforms.biogapultra import connectivity_commands as _cmd
+
 # =============================================================================
 # Frame geometry - must match the firmware's register profile
 # =============================================================================
@@ -145,17 +147,22 @@ PAYLOAD_SIZE = PACKET_SIZE - 8  # 7 leading + 1 trailing framing byte
 TIMESTAMP_GAP_RESET_US = 1_000_000
 
 # =============================================================================
-# BLE opcodes (must stay in sync with ble/ble_commands.h)
+# BLE opcodes
 # =============================================================================
+# Aliases of the shared table, which mirrors ble/ble_commands.h. The radar's
+# own sequences read as radar.CMD_*, but the numbers live in exactly one place:
+# a second copy here once drifted from it (START became 40, i.e.
+# STOP_PPG_STREAMING), and because that opcode's firmware case body is compiled
+# out the radar simply never started, with nothing logged either side.
 
-CMD_START = 44
-CMD_STOP = 45
-CMD_CONFIGURE = 46
-CMD_TURN_OFF = 47
-CMD_TURN_ON = 48
-CMD_SET_IF_GAIN = 49
-CMD_SET_TX_POWER = 50
-CMD_SET_FPS = 51
+CMD_START = _cmd.START_MMWAVE_STREAMING
+CMD_STOP = _cmd.STOP_MMWAVE_STREAMING
+CMD_CONFIGURE = _cmd.CONFIGURE_MMWAVE
+CMD_TURN_OFF = _cmd.TURN_OFF_MMWAVE
+CMD_TURN_ON = _cmd.TURN_ON_MMWAVE
+CMD_SET_IF_GAIN = _cmd.CHANGE_IFGAIN_MMWAVE
+CMD_SET_TX_POWER = _cmd.CHANGE_TXPOWER_MMWAVE
+CMD_SET_FPS = _cmd.CHANGE_FPS_MMWAVE
 
 _WINDOW = np.hanning(NUM_SAMPLES)
 
