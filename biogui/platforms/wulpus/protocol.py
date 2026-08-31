@@ -60,6 +60,43 @@ def get_num_us_samples_from_config(config: "WulpusUssConfig") -> int:
     return get_num_us_samples_from_mode(config.meas_mode)
 
 
+def decode_imu_block(imu_bytes: bytes) -> np.ndarray:
+    """Decode the accelerometer block from the tail of a WULPUS frame.
+
+    The block must be decoded from the raw bytes, not sliced out of an array
+    that was parsed as "<i2" along with the ultrasound samples, because the two
+    do not share a byte order.
+
+    The nRF52 firmware fills the block straight from the IIS2DH output
+    registers, high byte first for each axis::
+
+        X_H X_L  Y_H Y_L  Z_H Z_L
+
+    so the block is big-endian per axis while the ultrasound samples in front of
+    it are little-endian. Reading it as "<i2" swaps the bytes of every axis and
+    produces noise.
+
+    The sensor is configured for high-resolution mode at +/-2 g, which returns
+    12-bit values left-justified in 16 bits, so the four unused LSBs are shifted
+    out. Sensitivity at that setting is 1 mg/digit, so the result is in mg.
+
+    Args:
+        imu_bytes: Exactly ``NUM_IMU_SAMPLES * 2`` bytes from the end of a frame.
+
+    Returns:
+        Array of ``NUM_IMU_SAMPLES`` int16 values in mg, ordered X, Y, Z.
+    """
+    if len(imu_bytes) != NUM_IMU_SAMPLES * 2:
+        raise ValueError(
+            f"IMU block must be {NUM_IMU_SAMPLES * 2} bytes, got {len(imu_bytes)}"
+        )
+
+    raw = np.frombuffer(imu_bytes, dtype=">i2")
+    # >> 4 drops the unused LSBs of the left-justified 12-bit value; astype also
+    # brings the result back to native byte order for downstream consumers.
+    return (raw >> 4).astype(np.int16)
+
+
 USS_CAPTURE_OVER_SAMPLE_RATES = (10, 20, 40, 80, 160)
 USS_CAPT_OVER_SAMPLE_RATES_REG = (0, 1, 2, 3, 4)
 USS_CAPTURE_ACQ_RATES = [80e6 / x for x in USS_CAPTURE_OVER_SAMPLE_RATES]

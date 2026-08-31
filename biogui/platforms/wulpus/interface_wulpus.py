@@ -17,6 +17,7 @@ import numpy as np
 from biogui.platforms.wulpus import (
     NUM_IMU_SAMPLES,
     WULPUS_PLATFORM,
+    decode_imu_block,
     get_num_us_samples_from_config,
     is_accelerometer_enabled_from_config,
 )
@@ -156,7 +157,12 @@ def decodeFn(data: bytes) -> dict[str, np.ndarray]:
     us_samples = rf_arr[:num_us_samples]
     imu_samples = None
     if accelerometer_enabled:
-        imu_samples = rf_arr[num_us_samples : num_us_samples + NUM_IMU_SAMPLES]
+        # The IMU block is big-endian per axis, so it cannot be sliced out of
+        # rf_arr (parsed "<i2") - decode it from the raw bytes instead.
+        imu_offset = 7 + num_us_samples * 2
+        imu_samples = decode_imu_block(
+            data[imu_offset : imu_offset + NUM_IMU_SAMPLES * 2]
+        )
 
     result = {}
 
