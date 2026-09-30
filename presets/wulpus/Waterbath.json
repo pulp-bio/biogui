@@ -18,7 +18,7 @@
     {
       "tx_channels": [7],
       "rx_channels": [7],
-      "optimized_switching": true
+      "optimized_switching": false
     }
   ]
 }
